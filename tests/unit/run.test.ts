@@ -333,3 +333,48 @@ describe('world 1 level 1 data', () => {
     expect(run.foods.every((f) => f.taken)).toBe(true);
   });
 });
+
+describe('designer decisions (ef3d033)', () => {
+  it('hazards wake at the larger of wakeDistance and the road visible ahead + 40', () => {
+    const run = new Run(level({ hazards: [['goat', 1000]] }));
+    run.viewAhead = 600; // a wide phone
+    runUntil(run, (r) => r.hazards[0]!.mode === 'move');
+    expect(1000 - run.hero.x).toBeGreaterThan(636);
+    expect(1000 - run.hero.x).toBeLessThanOrEqual(640);
+    const narrow = new Run(level({ hazards: [['goat', 1000]] }));
+    narrow.viewAhead = 300; // the level minimum wins
+    runUntil(narrow, (r) => r.hazards[0]!.mode === 'move');
+    expect(1000 - narrow.hero.x).toBeLessThanOrEqual(520);
+  });
+
+  it('a goat trots off to the right', () => {
+    const run = new Run(level({ hazards: [['goat', 600]], foods: [[100, 272, 'amala']] }));
+    runUntil(run, (r) => r.hazards[0]!.mode === 'runAway');
+    const x = run.hazards[0]!.x;
+    runUntil(run, () => false, 10);
+    expect(run.hazards[0]!.x).toBeGreaterThan(x);
+  });
+
+  it('corn speed comes from the level file (228 only when missing)', () => {
+    expect(level().cornSpeed).toBe(228);
+    const run = new Run(level({ cornSpeed: 200, foods: [[100, 272, 'corn']] }));
+    runUntil(run, (r) => r.power.corn > 0);
+    run.step(DT);
+    expect(run.hero.speed).toBe(200);
+  });
+
+  it('hints show again after Play again (a new run of the level)', () => {
+    const lvl = level({ hints: [[100, 'One.']] });
+    const first = runUntil(new Run(lvl), (r) => r.hero.x > 200);
+    const again = runUntil(new Run(lvl), (r) => r.hero.x > 200);
+    expect(first.filter((e) => e.type === 'hint')).toHaveLength(1);
+    expect(again.filter((e) => e.type === 'hint')).toHaveLength(1);
+  });
+
+  it('a fall on the last life ends food effects too', () => {
+    const run = new Run(level({ foods: [[100, 272, 'garri']], ground: [[-400, 300], [400, 20000]] }));
+    run.lives = 1;
+    runUntil(run, (r) => r.phase === 'over');
+    expect(run.power).toEqual({ corn: 0, amala: 0, shield: false });
+  });
+});
