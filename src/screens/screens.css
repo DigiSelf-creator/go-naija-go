@@ -224,3 +224,116 @@
     font-size: 1.5rem;
   }
 }
+
+/* HUD (in a run). Only the buttons take taps; the rest lets taps through to jump. */
+.hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: max(6px, var(--safe-top)) max(10px, var(--safe-right)) 0 max(10px, var(--safe-left));
+  pointer-events: none;
+  color: #fff;
+  font: bold 1.05rem 'Trebuchet MS', Verdana, sans-serif;
+  text-shadow: 0 2px 0 #000, 0 0 3px #000;
+}
+.hud[hidden] {
+  display: none;
+}
+.hud-left,
+.hud-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.hud-left > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.32);
+}
+.hud-food[hidden] {
+  display: none !important;
+}
+.hud-icon {
+  width: 28px;
+  height: 28px;
+}
+.hud-btn {
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.38);
+  color: #fff;
+  font: bold 1rem 'Trebuchet MS', Verdana, sans-serif;
+  cursor: pointer;
+}
+.hud-sound .off {
+  display: none;
+}
+.hud-sound.is-off .off {
+  display: inline;
+}
+.hud-sound.is-off .waves {
+  display: none;
+}
+.blink {
+  animation: hud-blink 0.5s steps(2, start) infinite;
+}
+@keyframes hud-blink {
+  to {
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blink {
+    animation: none;
+    text-decoration: underline;
+  }
+}
+
+/* Toast: short words in the run (hints, foods). Never takes taps. */
+.toast {
+  position: fixed;
+  left: 50%;
+  top: 24%;
+  z-index: 6;
+  transform: translateX(-50%);
+  max-width: min(86vw, 560px);
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #f2b300;
+  color: #1d1a14;
+  font: bold 1.05rem 'Trebuchet MS', Verdana, sans-serif;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+}
+.go.secondary {
+  background: #5d574b;
+}
+.screen .stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+.screen .stack .go {
+  margin: 0;
+}

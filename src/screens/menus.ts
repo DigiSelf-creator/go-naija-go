@@ -1,5 +1,6 @@
 /**
- * Title, hero builder and credits screens (docs/design.md: Screens, Hero builder).
+ * Menu screens (docs/design.md: Screens, Hero builder): title, hero builder, credits,
+ * and in the run: pause, game over, and a "boss next" placeholder until piece E.
  * An HTML layer over the canvas; one screen shows at a time.
  */
 import { HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
@@ -8,7 +9,11 @@ import type { Store } from '../storage';
 import { button, h } from './dom';
 import { GAME_NAME, WORDS } from './words';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'pause' | 'gameover' | 'bossnext' | null;
+
+/** Screens the game opens by itself, often while the player is tapping to jump: their buttons wait a moment. */
+const EVENT_SCREENS: readonly MenuScreen[] = ['gameover', 'bossnext'];
+export const EVENT_SCREEN_GUARD_MS = 400;
 
 /**
  * The second tap of a double tap lands about where the first one did, very soon after.
@@ -29,6 +34,17 @@ export interface MenuHooks {
   start(at: TapPoint | null): void;
   /** The look changed in the builder (already saved). */
   lookChanged(look: HeroLook): void;
+  /** Pause: "Keep running". */
+  resume(): void;
+  /** "Start the level again" or "Play again": the level from the start, full lives, 0 kobo. */
+  restart(at: TapPoint | null): void;
+  /** "Home": back to the title. */
+  home(): void;
+}
+
+/** What the game over screen shows. */
+export interface RunSummary {
+  kobo: number;
 }
 
 export class Menus {
@@ -38,6 +54,8 @@ export class Menus {
   private previewFrame = 0;
   /** The tap that opened the current screen, if it was a tap. */
   private opener: (TapPoint & { t: number }) | null = null;
+  private shownAt = 0;
+  private summary: RunSummary = { kobo: 0 };
 
   constructor(
     parent: HTMLElement,
@@ -63,9 +81,22 @@ export class Menus {
     return this.settings.gentle;
   }
 
+  /** The HUD sound button. Remembered on the phone. */
+  toggleSound(): boolean {
+    this.settings.sound = !this.settings.sound;
+    saveSettings(this.store, this.settings);
+    return this.settings.sound;
+  }
+
+  showGameOver(summary: RunSummary): void {
+    this.summary = summary;
+    this.show('gameover');
+  }
+
   show(screen: MenuScreen, by?: MouseEvent): void {
     cancelAnimationFrame(this.previewFrame);
     this.screen = screen;
+    this.shownAt = performance.now();
     const at = by ? tapPoint(by) : null;
     this.opener = at ? { ...at, t: performance.now() } : null;
     this.layer.replaceChildren();
@@ -73,6 +104,75 @@ export class Menus {
     if (screen === 'title') this.layer.append(this.title());
     if (screen === 'builder') this.layer.append(this.builder());
     if (screen === 'credits') this.layer.append(this.credits());
+    if (screen === 'pause') this.layer.append(this.pause());
+    if (screen === 'gameover') this.layer.append(this.gameOver());
+    if (screen === 'bossnext') this.layer.append(this.bossNext());
+  }
+
+  /** A tap that should not count: the second half of a double tap, or too soon after the game opened a screen. */
+  private ignoreTap(e: MouseEvent): boolean {
+    if (isSecondTap(this.opener, tapPoint(e))) return true;
+    return EVENT_SCREENS.includes(this.screen) && performance.now() - this.shownAt < EVENT_SCREEN_GUARD_MS;
+  }
+
+  /** A button whose taps go through ignoreTap first. */
+  private guarded(label: string, cls: string, onTap: (e: MouseEvent) => void, attrs: Record<string, string> = {}): HTMLButtonElement {
+    return button(label, cls, (e) => {
+      if (!this.ignoreTap(e)) onTap(e);
+    }, attrs);
+  }
+
+  private gentleSwitch(): HTMLButtonElement {
+    const sw = button(WORDS.title.gentle, 'minor', (e) => {
+      if (this.ignoreTap(e)) return;
+      this.settings.gentle = !this.settings.gentle;
+      saveSettings(this.store, this.settings);
+      sw.setAttribute('aria-checked', String(this.settings.gentle));
+    }, { role: 'switch', 'aria-checked': String(this.settings.gentle) });
+    return sw;
+  }
+
+  private pause(): HTMLElement {
+    const w = WORDS.pause;
+    return h(
+      'div',
+      { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
+      h('h2', {}, w.heading),
+      h(
+        'div',
+        { class: 'stack' },
+        this.guarded(w.keepRunning, 'go', () => this.hooks.resume()),
+        this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
+        this.guarded(w.home, 'minor', () => this.hooks.home()),
+      ),
+    );
+  }
+
+  private gameOver(): HTMLElement {
+    const w = WORDS.gameOver;
+    return h(
+      'div',
+      { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
+      h('h2', {}, w.heading),
+      h('p', {}, w.text(this.summary.kobo)),
+      this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
+      // Gentle mode is offered only while it is off; it counts from the next run (Q15).
+      !this.settings.gentle && h('p', { class: 'small' }, w.gentleOffer),
+      !this.settings.gentle && h('div', { class: 'minor-row' }, this.gentleSwitch()),
+      h('div', { class: 'minor-row' }, this.guarded(w.home, 'minor', () => this.hooks.home())),
+    );
+  }
+
+  private bossNext(): HTMLElement {
+    const w = WORDS.bossNext;
+    return h(
+      'div',
+      { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
+      h('h2', {}, w.heading),
+      h('p', {}, w.text),
+      this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
+      h('div', { class: 'minor-row' }, this.guarded(w.home, 'minor', () => this.hooks.home())),
+    );
   }
 
   private title(): HTMLElement {
@@ -83,11 +183,7 @@ export class Menus {
       saveSettings(this.store, this.settings);
       sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
     });
-    const gentle = button(w.gentle, 'minor', () => {
-      this.settings.gentle = !this.settings.gentle;
-      saveSettings(this.store, this.settings);
-      gentle.setAttribute('aria-checked', String(this.settings.gentle));
-    }, { role: 'switch', 'aria-checked': String(this.settings.gentle) });
+    const gentle = this.gentleSwitch();
 
     return h(
       'div',
@@ -112,7 +208,7 @@ export class Menus {
     const preview = h('canvas', { class: 'preview', role: 'img', 'aria-label': 'Your hero' });
 
     const pick = (part: keyof HeroLook, i: number, e: MouseEvent): void => {
-      if (this.secondHalfOfDoubleTap(e)) return; // the builder opened under the finger
+      if (this.ignoreTap(e)) return; // the builder opened under the finger
       this.look = saveLook(this.store, { ...this.look, [part]: i });
       this.hooks.lookChanged(this.look);
       for (const b of this.layer.querySelectorAll<HTMLButtonElement>(`[data-part="${part}"]`)) {
@@ -148,7 +244,7 @@ export class Menus {
         ),
       ),
       button(w.start, 'go', (e) => {
-        if (this.secondHalfOfDoubleTap(e)) return;
+        if (this.ignoreTap(e)) return;
         // Starting keeps the look shown, even if nothing was tapped.
         this.look = saveLook(this.store, this.look);
         this.hooks.start(tapPoint(e));
@@ -157,10 +253,6 @@ export class Menus {
     );
     this.animatePreview(preview);
     return card;
-  }
-
-  private secondHalfOfDoubleTap(e: MouseEvent): boolean {
-    return isSecondTap(this.opener, tapPoint(e));
   }
 
   private animatePreview(c: HTMLCanvasElement): void {
