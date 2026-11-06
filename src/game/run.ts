@@ -5,7 +5,7 @@
  * restart point come back, and kobo already taken stay counted and do not come back.
  * Q15 (provisional): the number of lives is fixed when the run starts.
  */
-import { PHYSICS, bounce, createBody, groundAt, press, release, step, type Body } from '../engine/physics';
+import { bounce, createBody, groundAt, press, release, step, type Body } from '../engine/physics';
 import type { FoodKind, HazardKind, Level } from './level';
 
 export const STEPS_PER_SECOND = 60;
@@ -26,9 +26,10 @@ export const RULES = {
   /** Hero box: feet centre x, this wide each side, this tall. */
   heroHalfW: 7,
   heroH: 44,
-  /** A landing counts as "on top" if the feet were this close above the top last step. */
+  /** On top: falling, and on the step before the feet were no lower than this below the top. */
   stompSlack: 6,
-  goatRunAwaySpeed: 140,
+  /** Goats trot off to the right, faster than the hero even on corn. */
+  goatRunAwaySpeed: 240,
   goatRunAwaySteps: secs(2.5),
   /** Tyres that leave the road fall until this far below it, then are gone. */
   tyreFallSpeed: 300,
@@ -112,7 +113,15 @@ export class Run {
   readonly coins: CoinState[];
   readonly foods: FoodState[];
   readonly hazards: HazardState[];
+  /** Hints already shown in this play of the level (not again after a fall). */
   private readonly hintsShown = new Set<number>();
+  /**
+   * How much road the screen shows ahead of the hero (set by the game from the screen size).
+   * Hazards wake at the larger of the level's wakeDistance and this + 40, so they always
+   * start moving just off the right edge and are never seen standing still.
+   * With no screen (unit tests), only the level's wakeDistance counts.
+   */
+  viewAhead = -Infinity;
 
   constructor(
     readonly level: Level,
@@ -148,7 +157,7 @@ export class Run {
     this.steps++;
     this.tickPower(ev);
     const h = this.hero;
-    h.speed = this.power.corn > 0 ? PHYSICS.fastRunSpeed : this.level.runSpeed;
+    h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
 
     step(h, this.level.terrain, dt);
     if (h.fallen) {
@@ -228,7 +237,8 @@ export class Run {
   }
 
   private moveHazards(dt: number): void {
-    const { terrain, wakeDistance, hazardSpeeds, groundY } = this.level;
+    const { terrain, hazardSpeeds, groundY } = this.level;
+    const wakeDistance = Math.max(this.level.wakeDistance, this.viewAhead + 40);
     const heroX = this.hero.x;
     for (const z of this.hazards) {
       switch (z.mode) {
@@ -258,7 +268,7 @@ export class Run {
           if (z.y > groundY + 120) z.mode = 'gone';
           break;
         case 'runAway':
-          z.x -= RULES.goatRunAwaySpeed * dt;
+          z.x += RULES.goatRunAwaySpeed * dt;
           if (++z.t > RULES.goatRunAwaySteps) z.mode = 'gone';
           break;
         case 'gone':
@@ -318,6 +328,9 @@ export class Run {
   private fall(ev: RunEvent[]): void {
     this.lives--;
     ev.push({ type: 'fall' });
+    // Food effects end on every fall, the last one too (so the HUD never shows a food at 0 lives).
+    this.power = { corn: 0, amala: 0, shield: false };
+    this.safe = 0;
     if (this.lives <= 0) {
       this.gameOver(ev);
       return;
@@ -327,8 +340,6 @@ export class Run {
     const down = this.hero.down;
     this.hero = this.newHero(this.spawnX);
     this.hero.down = down;
-    this.power = { corn: 0, amala: 0, shield: false };
-    this.safe = 0;
     for (const f of this.foods) if (f.x >= this.spawnX) f.taken = false;
     this.hazards.forEach((z, i) => {
       if (z.x0 >= this.spawnX) this.hazards[i] = freshHazard(z.kind, z.x0, this.level.groundY);
