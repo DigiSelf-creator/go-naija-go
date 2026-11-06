@@ -276,7 +276,7 @@
   place-items: center;
   border: 2px solid #fff;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.38);
+  background: #0e7a3e; /* solid, so it reads over the sun and the sky */
   color: #fff;
   font: bold 1rem 'Trebuchet MS', Verdana, sans-serif;
   cursor: pointer;

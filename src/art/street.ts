@@ -292,7 +292,13 @@ export function drawBusShape(g: CanvasRenderingContext2D, x: number, y: number, 
 export function drawPassingBus(g: CanvasRenderingContext2D, camX: number, viewW: number, time: number, groundY = GROUND_Y): void {
   const span = viewW + 600;
   const x = ((((time * 90 - camX * 0.7) % span) + span) % span) - 200;
-  drawBusShape(g, x, groundY - 10, time);
+  // gamedev (qa C7): small, on the back lane in front of the shops, so it reads as
+  // far away and nobody tries to jump it. Full-size buses belong to the bus stop.
+  g.save();
+  g.translate(x, groundY - 26);
+  g.scale(0.5, 0.5);
+  drawBusShape(g, 0, 0, time);
+  g.restore();
 }
 
 // ---------- Road and potholes (world space) ----------
