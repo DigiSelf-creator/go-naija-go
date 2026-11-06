@@ -4,7 +4,7 @@
  * no network after load, a real offline second visit, and installability.
  */
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun } from './helpers';
 
 const hero = (page: Page) => page.evaluate(() => window.__game!.hero);
 const paused = (page: Page) => page.evaluate(() => window.__game!.paused);
@@ -239,13 +239,14 @@ for (const size of [
     // Pixel ratio capped at 2.
     expect(c.w).toBe(size.width * 2);
     expect(c.h).toBe(size.height * 2);
-    // The hero is drawn where it should be: 30 percent across, standing on the road.
+    // The hero is drawn where it should be: 30 percent across (C, qa: further left on narrow
+    // screens, so the hook says where), standing on the road.
     // B3: the drawn hero (default look: green jersey) replaced the capsule, and arms swing
     // across the body, so look for jersey green anywhere in a short column through the chest.
     const px = await page.evaluate(() => {
       const el = document.querySelector('canvas')!;
       const g = el.getContext('2d')!;
-      const x = Math.round(el.width * 0.3);
+      const x = Math.round(el.width * window.__game!.heroScreenX);
       const out: number[][] = [];
       for (let wy = 266; wy <= 290; wy++) {
         out.push(Array.from(g.getImageData(x, Math.round(el.height * (wy / 360)), 1, 1).data.slice(0, 3)));
@@ -296,6 +297,7 @@ test('no network requests after the first load', async ({ page, context }) => {
     document.dispatchEvent(new Event('visibilitychange'));
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
   });
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS); // design: Pause ignores taps for its first 0.4 s
   await page.getByRole('button', { name: 'Keep running' }).tap();
   await page.touchscreen.tap(500, 150);
   await page.waitForTimeout(1000);

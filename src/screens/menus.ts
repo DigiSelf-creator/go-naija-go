@@ -9,10 +9,10 @@ import type { Store } from '../storage';
 import { button, h } from './dom';
 import { GAME_NAME, WORDS } from './words';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | 'pause' | 'gameover' | 'bossnext' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'pause' | 'gameover' | 'bossnext' | 'win' | null;
 
-/** Screens the game opens by itself, often while the player is tapping to jump: their buttons wait a moment. */
-const EVENT_SCREENS: readonly MenuScreen[] = ['gameover', 'bossnext'];
+/** Screens that open during play (design.md: Pause, Game over, Win): their buttons ignore taps for 0.4 s. */
+const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'bossnext', 'win'];
 export const EVENT_SCREEN_GUARD_MS = 400;
 
 /**
