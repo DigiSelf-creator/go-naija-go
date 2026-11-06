@@ -1,5 +1,5 @@
-/** Placeholder drawing for terrain and hero. Real art arrives in pieces B and C. */
-import type { Body, Terrain } from '../engine/physics';
+/** Placeholder drawing for terrain. Real art arrives in pieces B and C. */
+import type { Terrain } from '../engine/physics';
 import type { View } from '../engine/view';
 
 export function drawTerrain(g: CanvasRenderingContext2D, view: View, t: Terrain, camX: number): void {
@@ -25,27 +25,6 @@ export function drawTerrain(g: CanvasRenderingContext2D, view: View, t: Terrain,
     g.fillStyle = '#b5651d';
     g.beginPath();
     g.roundRect(p.x, p.y, p.w, 12, 4);
-    g.fill();
-  }
-}
-
-/** A capsule: 16 u wide, 44 u tall, feet at (x, y). */
-export function drawHeroPlaceholder(g: CanvasRenderingContext2D, b: Body): void {
-  const w = 16;
-  const h = 44;
-  g.fillStyle = b.holding ? '#f2b300' : '#0e7a3e';
-  g.beginPath();
-  g.roundRect(b.x - w / 2, b.y - h, w, h, w / 2);
-  g.fill();
-  g.fillStyle = '#fffaf0';
-  g.beginPath();
-  g.arc(b.x + 3 * b.dir, b.y - h + 10, 3, 0, Math.PI * 2);
-  g.fill();
-  // Dot over the head while the air jump is still there.
-  if (!b.grounded && b.airJump) {
-    g.fillStyle = 'rgba(255,255,255,0.8)';
-    g.beginPath();
-    g.arc(b.x, b.y - h - 8, 3, 0, Math.PI * 2);
     g.fill();
   }
 }
