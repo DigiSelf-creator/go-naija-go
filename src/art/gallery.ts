@@ -62,11 +62,11 @@ export function drawGallery(g: CanvasRenderingContext2D, viewW: number, viewH: n
     for (let c = 0; c < HAIRS.length; c++) {
       const o = (r + c) % OUTFITS.length;
       const x = 40 + c * 52;
-      const y = 250 + r * 66;
+      const y = 264 + r * 66;
       hero(g, x, y, r, c, o, { ...run, phase: (run.phase + r * 0.13 + c * 0.07) % 1 });
     }
   }
-  for (let c = 0; c < HAIRS.length; c++) label(g, HAIRS[c]?.label ?? '', 40 + c * 52, 186);
+  for (let c = 0; c < HAIRS.length; c++) label(g, HAIRS[c]?.label ?? '', 40 + c * 52, 184);
 
   // 3. Each outfit standing, plus poses
   for (let o = 0; o < OUTFITS.length; o++) {
