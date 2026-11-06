@@ -4,6 +4,7 @@
  * no network after load, a real offline second visit, and installability.
  */
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
+import { startRun } from './helpers';
 
 const hero = (page: Page) => page.evaluate(() => window.__game!.hero);
 const paused = (page: Page) => page.evaluate(() => window.__game!.paused);
@@ -11,6 +12,7 @@ const steps = (page: Page) => page.evaluate(() => window.__game!.steps);
 
 async function ready(page: Page): Promise<void> {
   await page.goto('./');
+  await startRun(page); // B3: the run starts from the title screen
   await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
   await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded)).toBe(true);
 }
@@ -167,7 +169,8 @@ test('turning the phone upright mid-jump pauses; turning back and tapping carrie
   await midJump(page);
   await page.setViewportSize({ width: vp.height, height: vp.width });
   await expect(page.getByText('Turn your phone sideways to play.')).toBeVisible();
-  expect(await paused(page)).toBe(true);
+  // The note is CSS (instant); the game hears about the turn on the next frame.
+  await expect.poll(() => paused(page)).toBe(true);
   const frozen = await hero(page);
   const s = await steps(page);
   // A tap while upright does not unpause or jump.
@@ -223,14 +226,19 @@ for (const size of [
     expect(c.w).toBe(size.width * 2);
     expect(c.h).toBe(size.height * 2);
     // The hero is drawn where it should be: 30 percent across, standing on the road.
+    // B3: the drawn hero (default look: green jersey) replaced the capsule, and arms swing
+    // across the body, so look for jersey green anywhere in a short column through the chest.
     const px = await page.evaluate(() => {
       const el = document.querySelector('canvas')!;
       const g = el.getContext('2d')!;
       const x = Math.round(el.width * 0.3);
-      const y = Math.round(el.height * (280 / 360));
-      return Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3));
+      const out: number[][] = [];
+      for (let wy = 266; wy <= 290; wy++) {
+        out.push(Array.from(g.getImageData(x, Math.round(el.height * (wy / 360)), 1, 1).data.slice(0, 3)));
+      }
+      return out;
     });
-    expect(px).toEqual([0x0e, 0x7a, 0x3e]);
+    expect(px).toContainEqual([0x0e, 0x7a, 0x3e]);
     await page.touchscreen.tap(Math.round(size.width * 0.7), Math.round(size.height / 3));
     await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { intervals: [16] }).toBe(false);
     await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { timeout: 3000 }).toBe(true);
@@ -292,6 +300,7 @@ test('offline second visit really comes from the service worker cache', async ({
     if (!r.fromServiceWorker()) notFromSw.push(r.url());
   });
   await page.reload();
+  await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
   expect(notFromSw).toEqual([]);
   expect(network).toEqual([]);
@@ -310,6 +319,7 @@ test('offline in a fresh tab of the same browser (cold start from cache)', async
   await context.setOffline(true);
   const p2 = await context.newPage();
   await p2.goto('./');
+  await startRun(p2);
   await expect.poll(() => p2.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
 });
 
