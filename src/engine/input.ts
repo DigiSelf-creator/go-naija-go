@@ -3,19 +3,23 @@
  * lifting the finger or key is a "release". Holding = time between the two.
  */
 export interface InputHandlers {
-  onPress(): void;
+  /** at: where a finger or mouse pressed (CSS px); null for a key. */
+  onPress(at: { x: number; y: number } | null): void;
   onRelease(): void;
 }
 
 const JUMP_KEYS = new Set(['Space', 'ArrowUp']);
+/** Real controls handle their own taps and keys. */
+const UI = 'button, a, input, select, textarea, [data-ui]';
 
 export function attachInput(target: Window, handlers: InputHandlers): () => void {
   let down = false;
-  const press = (): void => {
+  const press = (at: { x: number; y: number } | null): void => {
     if (down) return;
     down = true;
-    handlers.onPress();
+    handlers.onPress(at);
   };
+  const onUi = (t: EventTarget | null): boolean => t instanceof Element && t.closest(UI) !== null;
   const release = (): void => {
     if (!down) return;
     down = false;
@@ -24,14 +28,15 @@ export function attachInput(target: Window, handlers: InputHandlers): () => void
 
   const onPointerDown = (e: PointerEvent): void => {
     // Real buttons (pause, sound) handle their own taps.
-    if (e.target instanceof Element && e.target.closest('button, a, input, select, [data-ui]')) return;
+    if (onUi(e.target)) return;
     e.preventDefault();
-    press();
+    press({ x: e.clientX, y: e.clientY });
   };
   const onKeyDown = (e: KeyboardEvent): void => {
-    if (!JUMP_KEYS.has(e.code)) return;
+    // Space on a focused menu button presses that button, not a jump.
+    if (!JUMP_KEYS.has(e.code) || onUi(e.target)) return;
     e.preventDefault();
-    if (!e.repeat) press();
+    if (!e.repeat) press(null);
   };
   const onKeyUp = (e: KeyboardEvent): void => {
     if (JUMP_KEYS.has(e.code)) release();
