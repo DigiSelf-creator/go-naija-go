@@ -1,6 +1,6 @@
-# Gidi Dash (working name)
+# Go Naija Go
 
-A free, light, one-tap running game set on Nigerian streets. The player builds a hero that looks like them, runs through a state, across Nigeria and later into West Africa, and beats bosses that are everyday problems (traffic, power cuts, bad roads, red tape). Power-ups are Nigerian food. The full spec is docs/brief.md. The playable reference is docs/prototype.html.
+A free, light running and jumping game set on Nigerian streets, where the player is in control. The player builds a hero that looks like them, runs through a state, across Nigeria and later into West Africa, and beats bosses that are everyday problems (traffic, power cuts, bad roads, red tape). Power-ups are Nigerian food. The full spec is docs/brief.md. The playable reference is docs/prototype.html.
 
 ## The team
 
@@ -20,7 +20,7 @@ How work flows:
 1. docs/brief.md and docs/decisions.md are owned by Tp. No agent edits them.
 2. Original only. The game may play like other runner games, but its name, characters, art, music, sounds and levels are our own. Never copy or imitate Mario or any Nintendo game: no red caps, plumbers, pipes, question blocks, mushrooms, their fonts, sounds or level layouts. The same goes for any other existing game.
 3. No real people. No real politicians, officials, celebrities or their faces, names or likeness. No party names, colours or logos. Bosses are problems, not people.
-4. Mock no one. No tribe, region, faith, accent or job is a joke. Foods, places and sayings come from every part of Nigeria, shown with pride.
+4. Mock no one. No tribe, region, faith, accent or job is a joke. Hausa, Igbo and Yoruba get an equal share of foods, tools, worlds, music and helpers, and other groups join over time. Bosses never belong to any group.
 5. Privacy first. No accounts in version 1. No photo upload. Saves stay on the phone. No trackers, no ads in version 1.
 6. Light. First load under 3 MB, plays offline after the first visit, runs smoothly on a cheap Android phone.
 7. Plain words a smart 10 year old follows.
