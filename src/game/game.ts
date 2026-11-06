@@ -12,8 +12,13 @@ import type { Level } from './level';
 import { Run, type RunEvent } from './run';
 import { DEFAULT_LOOK } from './save';
 
-/** The hero stands at 30 percent of the screen width. */
-const HERO_SCREEN_X = 0.3;
+/**
+ * The hero stands at 30 percent of the screen width. On narrow screens (under 640 u) the hero
+ * moves left, down to 12 percent, to keep about 448 u of road visible ahead.
+ */
+export function heroScreenX(viewW: number): number {
+  return Math.min(0.3, Math.max(0.12, (viewW - 448) / viewW));
+}
 /** Ground covered by one run cycle (two steps), u. At run speed that is 3 cycles a second. */
 const STRIDE = 52;
 /** Anything this far outside the screen is not drawn. */
@@ -78,7 +83,9 @@ export class Game {
     this.clock += dt;
     for (const e of this.run.step(dt)) {
       if (e.type === 'kobo' || e.type === 'food' || e.type === 'smash' || e.type === 'bounce') {
-        this.effects.push({ kind: 'sparkle', x: e.x, y: e.y, t0: this.clock, len: 0.4 });
+        // A tyre that is bounced on or smashed vanishes in a short sparkle (0.3 s).
+        const len = (e.type === 'smash' || e.type === 'bounce') && e.kind === 'tyre' ? 0.3 : 0.4;
+        this.effects.push({ kind: 'sparkle', x: e.x, y: e.y, t0: this.clock, len });
       } else if (e.type === 'shieldPop') {
         this.effects.push({ kind: 'pop', x: this.hero.x, y: this.hero.y, t0: this.clock, len: 0.3 });
       }
@@ -88,7 +95,7 @@ export class Game {
   }
 
   cameraX(view: View): number {
-    return this.hero.x - view.width * HERO_SCREEN_X;
+    return this.hero.x - view.width * heroScreenX(view.width);
   }
 
   render(g: CanvasRenderingContext2D, view: View): void {
@@ -97,6 +104,7 @@ export class Game {
     const H = view.height;
     const t = this.clock;
     const camX = this.cameraX(view);
+    run.viewAhead = W * (1 - heroScreenX(W));
     const L = camX - MARGIN;
     const R = camX + W + MARGIN;
     const gy = level.groundY;
@@ -119,7 +127,7 @@ export class Game {
     for (const f of run.foods) if (!f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, t);
     for (const z of run.hazards) {
       if (z.mode === 'gone' || z.x < L || z.x > R) continue;
-      if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx <= 0 ? -1 : 1);
+      if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx > 0 ? 1 : -1);
       else drawTyre(g, z.x, z.y, z.rot);
     }
 

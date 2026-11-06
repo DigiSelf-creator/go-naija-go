@@ -4,7 +4,7 @@ import { FixedLoop } from './engine/loop';
 import { fitView, readSafeArea, type View } from './engine/view';
 import levelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
-import { Game } from './game/game';
+import { Game, heroScreenX } from './game/game';
 import { parseLevel } from './game/level';
 import type { RunPhase } from './game/run';
 import { loadLook } from './game/save';
@@ -252,6 +252,9 @@ function startGame(): void {
     get toast() {
       return toast.text;
     },
+    get heroScreenX() {
+      return heroScreenX(view.width);
+    },
     get sound() {
       return { enabled: sound.enabled, started: sound.started };
     },
@@ -279,6 +282,8 @@ declare global {
       };
       readonly level: { readonly gaps: readonly (readonly [number, number])[]; readonly checkpoint: number; readonly arenaX: number };
       readonly toast: string;
+      /** Where the hero stands across the screen, 0 to 1. */
+      readonly heroScreenX: number;
       readonly sound: { readonly enabled: boolean; readonly started: boolean };
     };
   }
