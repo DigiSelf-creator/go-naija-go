@@ -4,6 +4,7 @@
  * The game keeps hopping the whole time, so physics and drawing both run.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { startRun } from './helpers';
 
 interface Sample {
   fps: number;
@@ -52,6 +53,7 @@ async function measure(page: Page, ms = 3000): Promise<Sample> {
 test('frame rate on a slowed-down CPU (phone profile)', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto('./');
+  await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
   const dpr = await page.evaluate(() => devicePixelRatio);
   const canvas = await page.evaluate(() => `${document.querySelector('canvas')!.width}x${document.querySelector('canvas')!.height}`);

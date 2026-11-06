@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openAndRun, startRun } from './helpers';
 
 test('game loads on a phone held sideways', async ({ page }) => {
   const errors: string[] = [];
@@ -8,6 +9,8 @@ test('game loads on a phone held sideways', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
 
   await page.goto('./');
+  await expect(page.getByRole('heading', { name: 'Gidi Dash' })).toBeVisible();
+  await startRun(page);
   const canvas = page.locator('canvas#game');
   await expect(canvas).toBeVisible();
 
@@ -34,7 +37,7 @@ test('game loads on a phone held sideways', async ({ page }) => {
 });
 
 test('pauses when the tab is hidden and a tap keeps running', async ({ page }) => {
-  await page.goto('./');
+  await openAndRun(page);
   await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
 
   await page.evaluate(() => {
@@ -57,10 +60,11 @@ test('pauses when the tab is hidden and a tap keeps running', async ({ page }) =
 });
 
 test('shows the turn sideways note when held upright', async ({ page }) => {
+  await openAndRun(page);
   await page.setViewportSize({ width: 393, height: 851 });
-  await page.goto('./');
   await expect(page.getByText('Turn your phone sideways to play.')).toBeVisible();
-  expect(await page.evaluate(() => window.__game?.paused)).toBe(true);
+  // The note is CSS (instant); the game hears about the turn on the next frame.
+  await expect.poll(() => page.evaluate(() => window.__game?.paused)).toBe(true);
 });
 
 test('plays offline on the second visit', async ({ page, context }) => {
@@ -71,11 +75,12 @@ test('plays offline on the second visit', async ({ page, context }) => {
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('canvas#game')).toBeVisible();
+  await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
 });
 
 test('a tap anywhere makes the hero jump and land again', async ({ page }) => {
-  await page.goto('./');
+  await openAndRun(page);
   await expect.poll(() => page.evaluate(() => window.__game?.hero.grounded)).toBe(true);
   const start = await page.evaluate(() => window.__game!.hero);
 

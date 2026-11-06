@@ -465,14 +465,18 @@ function drawHead(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean)
   g.moveTo(3, HEAD_Y - 4.4);
   g.lineTo(6.8, HEAD_Y - 4.8);
   g.stroke();
-  // Happy open smile with teeth
-  g.fillStyle = '#5a1a14';
+  // Happy open smile: light coral mouth, white teeth, ink outline, so it reads
+  // the same on all five skin tones (a dark mouth vanished on the darkest ones)
+  g.fillStyle = '#ef7a64';
   g.beginPath();
-  g.arc(4.6, HEAD_Y + 3.3, 2.3, 0.05, Math.PI - 0.05);
+  g.arc(4.6, HEAD_Y + 2.9, 2.7, 0, Math.PI);
   g.closePath();
   g.fill();
   g.fillStyle = WHITE;
-  g.fillRect(2.8, HEAD_Y + 3.3, 3.6, 0.9);
+  g.fillRect(2.1, HEAD_Y + 2.9, 5, 1.1);
+  g.strokeStyle = INK;
+  g.lineWidth = 1;
+  g.stroke();
 }
 
 /**

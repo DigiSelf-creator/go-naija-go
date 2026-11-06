@@ -72,7 +72,7 @@ describe('storage', () => {
       removeItem: (k: string) => void data.delete(k),
     } as unknown as Storage;
     const store = createStore(() => fake);
-    data.set('gidi-dash:look', '{not json');
+    data.set('gidi-look', '{not json');
     expect(store.load('look')).toBeUndefined();
     store.save('look', 'x');
     const isObj = (v: unknown): v is object => typeof v === 'object' && v !== null;

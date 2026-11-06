@@ -2,7 +2,8 @@
  * Safe saves. Everything stays on the phone (localStorage). If storage is blocked
  * (private mode, settings, full disk) the game keeps working with an in-memory copy.
  */
-const PREFIX = 'gidi-dash:';
+/** Keys on the phone: gidi-look, gidi-sound, gidi-gentle (see docs/design.md). */
+const PREFIX = 'gidi-';
 
 export interface Store {
   load<T>(key: string, isValid?: (v: unknown) => v is T): T | undefined;
@@ -29,15 +30,17 @@ export function createStore(get: () => Storage | null | undefined = () => global
   const backing = probe(get);
   const memory = new Map<string, string>();
 
+  // Memory holds every value written this visit, so it is always the newest copy,
+  // even when a write to the phone failed (storage full) after reads worked.
   const read = (key: string): string | null => {
-    if (backing) {
-      try {
-        return backing.getItem(PREFIX + key);
-      } catch {
-        /* fall through to memory */
-      }
+    const mem = memory.get(key);
+    if (mem !== undefined) return mem;
+    if (!backing) return null;
+    try {
+      return backing.getItem(PREFIX + key);
+    } catch {
+      return null;
     }
-    return memory.get(key) ?? null;
   };
 
   return {

@@ -56,9 +56,11 @@
         color: #fff;
         font-size: 1.2rem;
         text-align: center;
+        z-index: 20;
       }
+      /* Only during a run: the menus work upright too. */
       @media (orientation: portrait) and (max-width: 700px) {
-        #rotate {
+        body.playing #rotate {
           display: grid;
         }
       }
