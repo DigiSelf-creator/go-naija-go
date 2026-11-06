@@ -3,7 +3,7 @@
  * The look is stored as indices under `gidi-look`, and always passed through clampLook,
  * so a look saved today still loads after the option lists grow.
  */
-import { clampLook, type HeroLook } from '../art/hero';
+import { HAIRS, OUTFITS, SKINS, clampLook, type HeroLook } from '../art/hero';
 import type { Store } from '../storage';
 
 export const DEFAULT_LOOK: HeroLook = { skin: 2, hair: 0, outfit: 0 };
@@ -23,13 +23,23 @@ export function hasSavedLook(store: Store): boolean {
   return store.load(KEY_LOOK, isLookShape) !== undefined;
 }
 
+/** Each part that is out of its list goes back to the default for that part only. */
+export function fixLook(look: HeroLook): HeroLook {
+  const fix = (n: number, len: number, def: number): number => (Number.isInteger(n) && n >= 0 && n < len ? n : def);
+  return clampLook({
+    skin: fix(look.skin, SKINS.length, DEFAULT_LOOK.skin),
+    hair: fix(look.hair, HAIRS.length, DEFAULT_LOOK.hair),
+    outfit: fix(look.outfit, OUTFITS.length, DEFAULT_LOOK.outfit),
+  });
+}
+
 export function loadLook(store: Store): HeroLook {
   const saved = store.load(KEY_LOOK, isLookShape);
-  return saved ? clampLook(saved) : { ...DEFAULT_LOOK };
+  return saved ? fixLook(saved) : { ...DEFAULT_LOOK };
 }
 
 export function saveLook(store: Store, look: HeroLook): HeroLook {
-  const clean = clampLook(look);
+  const clean = fixLook(look);
   store.save(KEY_LOOK, clean);
   return clean;
 }

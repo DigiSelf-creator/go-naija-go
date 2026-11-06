@@ -42,10 +42,14 @@ describe('hero look save', () => {
     }
   });
 
-  it('keeps each part inside the lists (a save from a future or broken version still draws)', () => {
+  it('puts each bad part back to its default and keeps the good parts', () => {
     const { storage, data } = fakeStorage();
     data.set('gidi-look', JSON.stringify({ skin: SKINS.length + 3, hair: -1, outfit: 1.5 }));
-    expect(loadLook(createStore(() => storage))).toEqual({ skin: 0, hair: 0, outfit: 0 });
+    expect(loadLook(createStore(() => storage))).toEqual(DEFAULT_LOOK);
+    data.set('gidi-look', JSON.stringify({ skin: 99, hair: 3, outfit: 4 }));
+    expect(loadLook(createStore(() => storage))).toEqual({ skin: DEFAULT_LOOK.skin, hair: 3, outfit: 4 });
+    data.set('gidi-look', JSON.stringify({ skin: 0, hair: 1, outfit: -2 }));
+    expect(loadLook(createStore(() => storage))).toEqual({ skin: 0, hair: 1, outfit: DEFAULT_LOOK.outfit });
     data.set('gidi-look', JSON.stringify({ skin: SKINS.length - 1, hair: HAIRS.length - 1, outfit: OUTFITS.length - 1 }));
     expect(loadLook(createStore(() => storage))).toEqual({ skin: SKINS.length - 1, hair: HAIRS.length - 1, outfit: OUTFITS.length - 1 });
   });
