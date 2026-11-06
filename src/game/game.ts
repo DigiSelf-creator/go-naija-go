@@ -3,6 +3,7 @@
  * with the art in src/art/. Background layers draw in screen space with parallax; the
  * road, stalls, pickups, hazards and hero draw in world space (art "space rule").
  */
+import { drawBoss, drawDustPop, drawGoLight, drawHitCounter, drawHonkCloud, type GoLightState } from '../art/boss';
 import { drawHero, type HeroLook } from '../art/hero';
 import { drawGoat, drawTyre } from '../art/hazards';
 import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
@@ -25,7 +26,7 @@ const STRIDE = 52;
 const MARGIN = 60;
 
 interface Effect {
-  kind: 'sparkle' | 'pop';
+  kind: 'sparkle' | 'pop' | 'dust';
   x: number;
   y: number;
   /** Animation clock when it started. */
@@ -45,6 +46,8 @@ export class Game {
   /** Seconds, for animation. Moves only while the run is being played. */
   clock = 0;
   private effects: Effect[] = [];
+  /** Camera left edge (world x). */
+  private camX = 0;
 
   constructor(readonly level: Level) {
     this.run = new Run(level);
@@ -86,6 +89,8 @@ export class Game {
         // A tyre that is bounced on or smashed vanishes in a short sparkle (0.3 s).
         const len = (e.type === 'smash' || e.type === 'bounce') && e.kind === 'tyre' ? 0.3 : 0.4;
         this.effects.push({ kind: 'sparkle', x: e.x, y: e.y, t0: this.clock, len });
+      } else if (e.type === 'dust') {
+        this.effects.push({ kind: 'dust', x: e.x, y: e.y, t0: this.clock, len: 0.3 });
       } else if (e.type === 'shieldPop') {
         this.effects.push({ kind: 'pop', x: this.hero.x, y: this.hero.y, t0: this.clock, len: 0.3 });
       }
@@ -94,8 +99,21 @@ export class Game {
     this.effects = this.effects.filter((f) => this.clock - f.t0 < f.len);
   }
 
+  /**
+   * The camera follows the hero at heroScreenX. In the boss arena it glides to the arena's
+   * left edge and stays there (design.md: Boss).
+   */
   cameraX(view: View): number {
-    return this.hero.x - view.width * heroScreenX(view.width);
+    const follow = this.hero.x - view.width * heroScreenX(view.width);
+    const inArena = this.run.phase === 'arena' || this.run.phase === 'won';
+    if (!inArena || Math.abs(this.camX - follow) > view.width * 2) {
+      this.camX = inArena ? this.level.arena.x : follow;
+      return this.camX;
+    }
+    const target = this.level.arena.x;
+    this.camX += (target - this.camX) * 0.12;
+    if (Math.abs(target - this.camX) < 0.5) this.camX = target;
+    return this.camX;
   }
 
   render(g: CanvasRenderingContext2D, view: View): void {
@@ -123,12 +141,34 @@ export class Game {
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
 
+    const boss = run.boss;
+    const bossData = level.boss;
+    if (bossData && bossData.x - 100 < R) {
+      bossData.lights.forEach((p, i) => {
+        const state: GoLightState = boss && i < boss.hits ? 'done' : boss && boss.lit === i ? 'lit' : 'off';
+        drawGoLight(g, p.x, p.y, p.w, state, t, gy);
+      });
+      drawBoss(g, bossData.x, gy, {
+        mode: boss?.mode ?? 'idle',
+        t: boss?.modeTime ?? 0,
+        hits: boss?.hits ?? 0,
+        time: t,
+      });
+    }
+
     for (const c of run.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
     for (const f of run.foods) if (!f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, t);
     for (const z of run.hazards) {
       if (z.mode === 'gone' || z.x < L || z.x > R) continue;
       if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx > 0 ? 1 : -1);
       else drawTyre(g, z.x, z.y, z.rot);
+    }
+
+    if (boss) {
+      for (const th of boss.throws) {
+        if (th.kind === 'tyre') drawTyre(g, th.x, th.y, th.rot);
+        else drawHonkCloud(g, th.x, th.y, t);
+      }
     }
 
     const h = run.hero;
@@ -143,7 +183,7 @@ export class Game {
         facing: h.dir,
         glow: run.power.amala > 0,
         fast: run.power.corn > 0,
-        standing: this.idle || run.phase === 'arena',
+        standing: this.idle || ((boss?.defeated ?? false) && h.grounded),
         time: t,
       });
       g.restore();
@@ -153,8 +193,11 @@ export class Game {
     for (const f of this.effects) {
       const k = (t - f.t0) / f.len;
       if (f.kind === 'sparkle') drawSparkle(g, f.x, f.y, k);
+      else if (f.kind === 'dust') drawDustPop(g, f.x, f.y, k);
       else drawShieldPop(g, f.x, f.y, k);
     }
     g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+    // Boss hit counter, below the HUD.
+    if (boss) drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
   }
 }

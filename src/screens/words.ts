@@ -53,10 +53,11 @@ export const WORDS = {
     gentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
     home: 'Home',
   },
-  /** Placeholder until piece E builds the boss. Not po-approved words. */
-  bossNext: {
-    heading: 'General Go-Slow blocks the road!',
-    text: 'The boss fight comes in the next build.',
+  win: {
+    heading: 'Road cleared!',
+    text: (kobo: number, lives: number) =>
+      `You beat General Go-Slow with ${kobo} kobo and ${lives} ${lives === 1 ? 'life' : 'lives'} left.`,
+    more: 'More roads are coming soon.',
     playAgain: 'Play again',
     home: 'Home',
   },
@@ -68,6 +69,9 @@ export const WORDS = {
     cornWearingOff: 'Corn is wearing off!',
     amalaWearingOff: 'Amala is wearing off!',
     shieldUsed: 'Shield used up!',
+    bossArrives: 'General Go-Slow blocks the road! Jump onto the green light.',
+    greenLight: (left: number) => `Green light! ${left} more.`,
+    roadFree: 'Green light! The road is free!',
   },
   closingLine: 'Remember: a wrong premise often leads to a misleading conclusion.',
 } as const;

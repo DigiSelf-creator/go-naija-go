@@ -70,9 +70,12 @@ function startGame(): void {
   // Pause when the tab is hidden or the phone turns upright (the "turn sideways" note shows).
   const portrait = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
 
+  /** The street or the boss fight is being played (not game over or won). */
+  const inPlay = (): boolean => game.run.phase === 'run' || game.run.phase === 'arena';
+
   /** Pause the run and show the pause screen (button, app switch, or phone upright). */
   function pause(by?: MouseEvent): void {
-    if (!playing || game.paused || game.run.phase !== 'run') return;
+    if (!playing || game.paused || !inPlay()) return;
     loop.pause();
     game.paused = true;
     game.release();
@@ -168,13 +171,30 @@ function startGame(): void {
         sound.play('gameOver');
         loop.pause();
         toast.hide();
-        menus.showGameOver({ kobo: game.run.kobo });
+        menus.showGameOver({ kobo: game.run.kobo, lives: 0 });
         break;
       case 'arena':
         sound.play('arena');
+        toast.show(W.bossArrives, 3000);
+        break;
+      case 'bossThrow':
+        if (e.kind === 'honk') sound.play('honk');
+        break;
+      case 'bossHit':
+        sound.play('greenHit');
+        if (e.left > 0) toast.show(W.greenLight(e.left));
+        break;
+      case 'bossDefeat':
+      case 'dust':
+        break;
+      case 'roadFree':
+        sound.play('bossWin');
+        toast.show(W.roadFree, 2000);
+        break;
+      case 'win':
         loop.pause();
         toast.hide();
-        menus.show('bossnext');
+        menus.showWin({ kobo: game.run.kobo, lives: game.run.lives });
         break;
     }
   };
@@ -196,7 +216,7 @@ function startGame(): void {
 
   attachInput(window, {
     onPress: (at) => {
-      if (!playing || game.paused || game.run.phase !== 'run') return;
+      if (!playing || game.paused || !inPlay()) return;
       if (isSecondTap(startTap, at)) return;
       const jump = game.press();
       if (jump === 'ground') sound.play('jump');
@@ -219,8 +239,8 @@ function startGame(): void {
       return loop.stepCount;
     },
     get hero() {
-      const { x, y, vy, grounded } = game.hero;
-      return { x, y, vy, grounded };
+      const { x, y, vy, grounded, dir, speed, airJump } = game.hero;
+      return { x, y, vy, grounded, dir, speed, airJump };
     },
     get look() {
       return { ...game.look };
@@ -247,10 +267,27 @@ function startGame(): void {
         gaps: level.ground.slice(1).map((s, i) => [level.ground[i]![1], s[0]] as const),
         checkpoint: level.checkpoint,
         arenaX: level.arena.x,
+        turnLeftX: level.arena.turnLeftX,
+        turnRightX: level.arena.turnRightX,
+        groundY: level.groundY,
+        lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
       };
     },
     get toast() {
       return toast.text;
+    },
+    get boss() {
+      const b = game.run.boss;
+      return b
+        ? {
+            hits: b.hits,
+            lit: b.lit,
+            litLight: b.litLight ? { ...b.litLight } : null,
+            mode: b.mode,
+            defeated: b.defeated,
+            throws: b.throws.map((t) => ({ kind: t.kind, x: t.x, y: t.y, vx: t.vx })),
+          }
+        : null;
     },
     get heroScreenX() {
       return heroScreenX(view.width);
@@ -266,7 +303,15 @@ declare global {
     __game?: {
       readonly paused: boolean;
       readonly steps: number;
-      readonly hero: { readonly x: number; readonly y: number; readonly vy: number; readonly grounded: boolean };
+      readonly hero: {
+        readonly x: number;
+        readonly y: number;
+        readonly vy: number;
+        readonly grounded: boolean;
+        readonly dir: 1 | -1;
+        readonly speed: number;
+        readonly airJump: boolean;
+      };
       readonly look: { readonly skin: number; readonly hair: number; readonly outfit: number };
       readonly screen: MenuScreen | 'play';
       readonly run: {
@@ -280,8 +325,24 @@ declare global {
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
       };
-      readonly level: { readonly gaps: readonly (readonly [number, number])[]; readonly checkpoint: number; readonly arenaX: number };
+      readonly level: {
+        readonly gaps: readonly (readonly [number, number])[];
+        readonly checkpoint: number;
+        readonly arenaX: number;
+        readonly turnLeftX: number;
+        readonly turnRightX: number;
+        readonly groundY: number;
+        readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
+      };
       readonly toast: string;
+      readonly boss: {
+        readonly hits: number;
+        readonly lit: number;
+        readonly litLight: { readonly x: number; readonly y: number; readonly w: number } | null;
+        readonly mode: string;
+        readonly defeated: boolean;
+        readonly throws: readonly { readonly kind: string; readonly x: number; readonly y: number; readonly vx: number }[];
+      } | null;
       /** Where the hero stands across the screen, 0 to 1. */
       readonly heroScreenX: number;
       readonly sound: { readonly enabled: boolean; readonly started: boolean };

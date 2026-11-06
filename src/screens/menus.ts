@@ -9,10 +9,10 @@ import type { Store } from '../storage';
 import { button, h } from './dom';
 import { GAME_NAME, WORDS } from './words';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | 'pause' | 'gameover' | 'bossnext' | 'win' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'pause' | 'gameover' | 'win' | null;
 
 /** Screens that open during play (design.md: Pause, Game over, Win): their buttons ignore taps for 0.4 s. */
-const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'bossnext', 'win'];
+const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'win'];
 export const EVENT_SCREEN_GUARD_MS = 400;
 
 /**
@@ -42,9 +42,10 @@ export interface MenuHooks {
   home(): void;
 }
 
-/** What the game over screen shows. */
+/** What the game over and win screens show. */
 export interface RunSummary {
   kobo: number;
+  lives: number;
 }
 
 export class Menus {
@@ -55,7 +56,7 @@ export class Menus {
   /** The tap that opened the current screen, if it was a tap. */
   private opener: (TapPoint & { t: number }) | null = null;
   private shownAt = 0;
-  private summary: RunSummary = { kobo: 0 };
+  private summary: RunSummary = { kobo: 0, lives: 0 };
 
   constructor(
     parent: HTMLElement,
@@ -93,6 +94,11 @@ export class Menus {
     this.show('gameover');
   }
 
+  showWin(summary: RunSummary): void {
+    this.summary = summary;
+    this.show('win');
+  }
+
   show(screen: MenuScreen, by?: MouseEvent): void {
     cancelAnimationFrame(this.previewFrame);
     this.screen = screen;
@@ -106,7 +112,7 @@ export class Menus {
     if (screen === 'credits') this.layer.append(this.credits());
     if (screen === 'pause') this.layer.append(this.pause());
     if (screen === 'gameover') this.layer.append(this.gameOver());
-    if (screen === 'bossnext') this.layer.append(this.bossNext());
+    if (screen === 'win') this.layer.append(this.win());
   }
 
   /** A tap that should not count: the second half of a double tap, or too soon after the game opened a screen. */
@@ -163,15 +169,17 @@ export class Menus {
     );
   }
 
-  private bossNext(): HTMLElement {
-    const w = WORDS.bossNext;
+  private win(): HTMLElement {
+    const w = WORDS.win;
     return h(
       'div',
       { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
-      h('p', {}, w.text),
+      h('p', {}, w.text(this.summary.kobo, this.summary.lives)),
+      h('p', {}, w.more),
       this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
       h('div', { class: 'minor-row' }, this.guarded(w.home, 'minor', () => this.hooks.home())),
+      h('p', { class: 'small closing' }, WORDS.closingLine),
     );
   }
 
