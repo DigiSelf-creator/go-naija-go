@@ -19,7 +19,7 @@ test('game loads on a phone held sideways', async ({ page }) => {
 
   // Landscape: no "turn sideways" note. The loop is running.
   await expect(page.locator('#rotate')).toBeHidden();
-  await expect.poll(() => page.evaluate(() => window.__gidi?.steps ?? 0)).toBeGreaterThan(10);
+  await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(10);
 
   // No scrolling.
   const scrolls = await page.evaluate(
@@ -35,17 +35,17 @@ test('game loads on a phone held sideways', async ({ page }) => {
 
 test('pauses when the tab is hidden and a tap keeps running', async ({ page }) => {
   await page.goto('./');
-  await expect.poll(() => page.evaluate(() => window.__gidi?.steps ?? 0)).toBeGreaterThan(5);
+  await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
 
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  expect(await page.evaluate(() => window.__gidi?.paused)).toBe(true);
-  const before = await page.evaluate(() => window.__gidi!.steps);
+  expect(await page.evaluate(() => window.__game?.paused)).toBe(true);
+  const before = await page.evaluate(() => window.__game!.steps);
   await page.waitForTimeout(300);
-  expect(await page.evaluate(() => window.__gidi!.steps)).toBe(before);
+  expect(await page.evaluate(() => window.__game!.steps)).toBe(before);
 
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
@@ -53,14 +53,14 @@ test('pauses when the tab is hidden and a tap keeps running', async ({ page }) =
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.touchscreen.tap(200, 200);
-  expect(await page.evaluate(() => window.__gidi?.paused)).toBe(false);
+  expect(await page.evaluate(() => window.__game?.paused)).toBe(false);
 });
 
 test('shows the turn sideways note when held upright', async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 851 });
   await page.goto('./');
   await expect(page.getByText('Turn your phone sideways to play.')).toBeVisible();
-  expect(await page.evaluate(() => window.__gidi?.paused)).toBe(true);
+  expect(await page.evaluate(() => window.__game?.paused)).toBe(true);
 });
 
 test('plays offline on the second visit', async ({ page, context }) => {
@@ -71,5 +71,19 @@ test('plays offline on the second visit', async ({ page, context }) => {
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('canvas#game')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.__gidi?.steps ?? 0)).toBeGreaterThan(5);
+  await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
+});
+
+test('a tap anywhere makes the hero jump and land again', async ({ page }) => {
+  await page.goto('./');
+  await expect.poll(() => page.evaluate(() => window.__game?.hero.grounded)).toBe(true);
+  const start = await page.evaluate(() => window.__game!.hero);
+
+  await page.touchscreen.tap(600, 120);
+  await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { intervals: [16] }).toBe(false);
+  await expect.poll(() => page.evaluate(() => window.__game!.hero.y)).toBeLessThan(start.y - 20);
+  await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { timeout: 3000 }).toBe(true);
+  const end = await page.evaluate(() => window.__game!.hero);
+  expect(end.y).toBe(300);
+  expect(end.x).toBeGreaterThan(start.x);
 });

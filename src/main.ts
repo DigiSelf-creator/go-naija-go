@@ -48,12 +48,10 @@ if (portrait.matches) pause();
 
 attachInput(window, {
   onPress: () => {
-    if (game.paused) resume();
-    // A5: jump goes here.
+    if (game.paused) resume(); // the tap that ends a pause does not jump
+    else game.press();
   },
-  onRelease: () => {
-    // A5: end of a held jump goes here.
-  },
+  onRelease: () => game.release(),
 });
 
 loop.start();
@@ -62,14 +60,22 @@ registerServiceWorker();
 // Read-only hooks for end to end tests.
 declare global {
   interface Window {
-    __gidi?: { readonly paused: boolean; readonly steps: number };
+    __game?: {
+      readonly paused: boolean;
+      readonly steps: number;
+      readonly hero: { readonly x: number; readonly y: number; readonly vy: number; readonly grounded: boolean };
+    };
   }
 }
-window.__gidi = {
+window.__game = {
   get paused() {
     return game.paused;
   },
   get steps() {
     return loop.stepCount;
+  },
+  get hero() {
+    const { x, y, vy, grounded } = game.hero;
+    return { x, y, vy, grounded };
   },
 };

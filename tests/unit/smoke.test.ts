@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FixedLoop, STEP_MS, accumulate } from '../../src/engine/loop';
+import { FixedLoop, MAX_STEPS, STEP_MS, accumulate } from '../../src/engine/loop';
 import { WORLD_H, fitView } from '../../src/engine/view';
 import { createStore } from '../../src/storage';
 
@@ -20,7 +20,9 @@ describe('fixed time step', () => {
   });
 
   it('drops time after a long stall instead of running hundreds of steps', () => {
-    expect(accumulate(0, 5000).steps).toBe(Math.floor(100 / STEP_MS));
+    const r = accumulate(0, 5000);
+    expect(r.steps).toBe(MAX_STEPS);
+    expect(r.acc).toBeLessThan(STEP_MS);
   });
 
   it('does not step while paused', () => {

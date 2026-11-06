@@ -1,10 +1,9 @@
 /**
- * Placeholder street scene for the setup piece: sky, sun, far buildings and a road.
+ * Placeholder backdrop: sky, sun and far buildings (screen space, parallax).
  * Real art and levels replace this in pieces B and C.
  */
+import { GROUND_Y } from '../engine/physics';
 import type { View } from '../engine/view';
-
-export const GROUND_Y = 300;
 
 export function drawPlaceholderScene(g: CanvasRenderingContext2D, view: View, scrollX: number): void {
   const { width: W, height: H } = view;
@@ -31,12 +30,4 @@ export function drawPlaceholderScene(g: CanvasRenderingContext2D, view: View, sc
     g.fillRect(x, GROUND_Y - 40 - h, 54, h + 40);
   }
 
-  // Road.
-  g.fillStyle = '#3c3c3c';
-  g.fillRect(0, GROUND_Y, W, H - GROUND_Y);
-  g.fillStyle = '#d8c27a';
-  g.fillRect(0, GROUND_Y, W, 5);
-  g.fillStyle = '#f4f1e6';
-  const dash = 60;
-  for (let x = -(scrollX % dash); x < W; x += dash) g.fillRect(x, GROUND_Y + 28, 30, 4);
 }

@@ -3,8 +3,8 @@
  * the same height at 30 and 60 frames a second. Drawing happens once per screen frame.
  */
 export const STEP_MS = 1000 / 60;
-/** After a long stall (slow phone, tab switch) we drop time instead of running many steps at once. */
-export const MAX_FRAME_MS = 100;
+/** At most this many steps per drawn frame. Below 15 fps the game slows down instead of jumping ahead. */
+export const MAX_STEPS = 4;
 
 export interface Accumulated {
   /** How many fixed steps to run this frame. */
@@ -14,13 +14,17 @@ export interface Accumulated {
 }
 
 /** Pure helper: add a frame's elapsed time and work out how many fixed steps to run. */
-export function accumulate(acc: number, elapsedMs: number, stepMs = STEP_MS, maxFrameMs = MAX_FRAME_MS): Accumulated {
-  let total = acc + Math.min(Math.max(elapsedMs, 0), maxFrameMs);
+export function accumulate(acc: number, elapsedMs: number, stepMs = STEP_MS, maxSteps = MAX_STEPS): Accumulated {
+  let total = acc + Math.max(elapsedMs, 0);
   let steps = 0;
   // Small epsilon so 1000/60 rounding never loses a step.
   while (total + 1e-9 >= stepMs) {
     total -= stepMs;
     steps++;
+    if (steps === maxSteps) {
+      // Too far behind: drop the rest rather than catch up.
+      return { steps, acc: Math.min(Math.max(total, 0), stepMs - 1e-6) };
+    }
   }
   return { steps, acc: Math.max(total, 0) };
 }
