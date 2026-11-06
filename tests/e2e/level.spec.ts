@@ -14,7 +14,7 @@ function finger(cdp: CDPSession) {
   };
 }
 
-test('a bot plays level 1 by touch from the start to the arena with lives to spare', async ({ page }) => {
+test('a bot plays level 1 by touch from the start to the boss fight with lives to spare', async ({ page }) => {
   test.setTimeout(150_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -68,12 +68,13 @@ test('a bot plays level 1 by touch from the start to the arena with lives to spa
   console.log(`bot: reached ${end.phase} at x ${hero.x} in ${end.time.toFixed(1)} s of play, ${end.lives} lives, ${end.kobo} kobo, ${taps} presses, foods ${[...seen.foods].join(', ')}`);
   test.info().annotations.push({ type: 'level time', description: `${end.time.toFixed(1)} s` });
   expect(end.phase).toBe('arena');
-  expect(hero.x).toBe(level.arenaX);
+  expect(hero.x).toBeGreaterThanOrEqual(level.arenaX);
   expect(end.lives).toBeGreaterThanOrEqual(1);
   expect(end.checkpoint).toBe(true);
   expect([...seen.foods].sort()).toEqual(['amala', 'corn', 'garri']);
-  // The run stops at the arena with the placeholder for piece E.
-  await expect(page.getByRole('dialog', { name: 'General Go-Slow blocks the road!' })).toBeVisible();
+  // The boss fight starts: the left light is lit and the arrival words show.
+  await expect.poll(() => page.evaluate(() => window.__game!.boss?.lit)).toBe(0);
+  await expect(page.getByText('General Go-Slow blocks the road! Jump onto the green light.')).toBeVisible();
   expect(errors).toEqual([]);
 });
 

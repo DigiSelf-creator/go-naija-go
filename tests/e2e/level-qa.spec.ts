@@ -225,10 +225,11 @@ test('C7/D4: a sloppy player (+/- 80 ms) plays level 1 by touch, gets all three 
   expect(last).toBeTruthy();
   expect(pausedOnCorn).toBe(true);
 
-  // Reached the arena (placeholder for piece E) without running out of lives.
+  // Reached the arena without running out of lives.
   expect(end.r.phase).toBe('arena');
   expect(end.r.lives).toBeGreaterThanOrEqual(1);
-  await expect(page.getByRole('dialog', { name: 'General Go-Slow blocks the road!' })).toBeVisible();
+  // gamedev (piece E): the placeholder card is gone; the boss fight starts instead.
+  await expect.poll(() => page.evaluate(() => window.__game!.boss?.lit)).toBe(0);
 
   // Every food: its toast word for word, in level order, plus the shield and wearing-off toasts.
   const toasts = log.filter((l) => l.kind === 'toast').map((l) => l.text);
