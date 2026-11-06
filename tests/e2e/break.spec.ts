@@ -239,6 +239,20 @@ for (const size of [
       return out;
     });
     expect(px).toContainEqual([0x0e, 0x7a, 0x3e]);
+    // qa B4: and the green is the hero's, not the street's: the same column 60 and 90
+    // percent across has none of it.
+    const elsewhere = await page.evaluate(() => {
+      const el = document.querySelector('canvas')!;
+      const g = el.getContext('2d')!;
+      const out: number[][] = [];
+      for (const fx of [0.6, 0.9]) {
+        for (let wy = 266; wy <= 290; wy++) {
+          out.push(Array.from(g.getImageData(Math.round(el.width * fx), Math.round(el.height * (wy / 360)), 1, 1).data.slice(0, 3)));
+        }
+      }
+      return out;
+    });
+    expect(elsewhere).not.toContainEqual([0x0e, 0x7a, 0x3e]);
     await page.touchscreen.tap(Math.round(size.width * 0.7), Math.round(size.height / 3));
     await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { intervals: [16] }).toBe(false);
     await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { timeout: 3000 }).toBe(true);
