@@ -29,4 +29,25 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 
 ## Sound
 
-No sound files yet. Sounds are short code-made beeps (gamedev, task F4), and every sound can be turned off.
+All sounds are made in code with WebAudio in src/engine/sound.ts: original, no sound files, no outside licence. Soft sine and triangle tones plus a little filtered hiss, each under half a second (the win tune is about 1.5 s). Nothing plays until the first tap, and the sound button turns every one off.
+
+| Sound | What it is |
+|---|---|
+| jump / airJump | Talking-drum style pitch bend, up then settling; the air jump is higher |
+| kobo | Shekere-style hiss tick with one soft high pling that dips |
+| food | "Yum" drum bend up and down, then a small sparkle |
+| bounce | Springy sine boing |
+| meeh | Friendly, wobbly two-part goat bleat |
+| smash | Soft thump, dust puff, tiny ping |
+| hit | One sagging "oof" bend |
+| shieldPop | Bubble pop: quick rise and a tick |
+| fall | Drip then puddle splash |
+| checkpoint | One bright bell ding at the bus stop |
+| tick | Woodblock tick as a food wears off |
+| gameOver | A dip, then a hopeful lift ("try again") |
+| arena | Low two-tone bus-style horn, "pa-paaam" (no real horn copied) |
+| honk | Boss honk-cloud throw: one sagging two-tone "POOO" |
+| greenHit | Drum knock and bright ding when landing on the green light |
+| bossWin | Happy "pom pom" from the cars, then our own short highlife-style tune |
+
+Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.
