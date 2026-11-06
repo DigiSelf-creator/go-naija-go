@@ -97,7 +97,7 @@
 /* Hero builder */
 .builder {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 140px minmax(0, 1fr);
   gap: 14px;
   align-items: center;
 }
@@ -111,7 +111,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 6px 0;
+  margin: 8px 0; /* design.md: 8 px between targets, rows too */
 }
 .choice-row > b {
   flex: 0 0 56px;
@@ -195,5 +195,32 @@
   }
   .builder {
     grid-template-columns: 120px 1fr;
+  }
+}
+/* Tiny or narrow screens (e.g. 320 x 240 sideways): one column, small preview,
+   labels above the choices, chips wrap. Nothing may scroll sideways. */
+@media (max-width: 560px), (max-height: 260px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .preview {
+    margin: 0 auto;
+    width: 72px;
+    height: 92px;
+  }
+  .choice-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .choice-row > b {
+    flex: none;
+  }
+  .card {
+    padding: 10px 12px;
+  }
+  .screen h1 {
+    font-size: 1.5rem;
   }
 }
