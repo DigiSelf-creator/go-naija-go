@@ -1,5 +1,17 @@
 # Open questions for the product owner
 
+## po session note, 6 Nov 2026 (design review)
+
+Accepted: nothing yet. docs/design.md wording is approved by po, but no task has passed qa.
+
+Words checked in docs/design.md: plain, warm, no real people, nothing mocks anyone, nothing echoes another game. General Go-Slow is a heap of cars under a traffic light, loses by untangling and driving off happily. The win and credits screens carry the closing line. Two word changes made:
+- Garri toast: "Garri, sugar and epa!" is now "Garri, sugar and epa (groundnut)!" so players outside the south-west know what epa is (brief, Power-ups 2, uses the same words).
+- Game over: "Too hard?" is now "Want more tries?" so no player feels judged.
+
+Waiting for Tp: Q14 and Q15 below, both built with the recommended option. Recommendations in short:
+- Q14 after a fall: food effects end, foods and hazards past the restart point come back, kobo already picked up stay counted and do not come back.
+- Q15 gentle mode switch: on the title and game over screens only, never mid-level.
+
 ## po session note, 6 Nov 2026
 
 Accepted: nothing yet. No task has passed qa.
@@ -130,4 +142,24 @@ Format: question, options, recommended option, what is blocked.
      c. Ship a, then add levels 2 and 3 in an update, with the boss moving to the end. Best case: test the fun first, then grow.
    - Recommended: a for version 1, then c once Tp has played it.
    - Blocks: the plan after the slice only.
+   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+
+14. After falling in a pothole, what happens to food and to things already passed?
+   - Asked by designer (docs/design.md, Level 1, Losing a life). The brief says only "A bus stop halfway is the checkpoint" and "Falling into a pothole ... costs one" (How it plays 3 and 4).
+   - Options:
+     a. Food effects end (the garri shield too). Foods and hazards past the restart point come back. Kobo already picked up stay counted and do not come back. Best case: every try is the same fair road, the foods are there to use again, and nobody can farm kobo by falling.
+     b. Food effects carry on after the restart. Best case: kinder, but a shield or corn could carry across the whole level and the teaching order breaks.
+     c. Everything resets, kobo too, back to what it was at the restart point. Best case: cleanest rule, but losing kobo feels harsh after a fall.
+   - Recommended: a. It keeps the level teaching in order and matches the prototype. Build note: picked-up kobo must not reappear, or falling becomes a way to earn more.
+   - Blocks: C5, D1. Not blocking.
+   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+
+15. Where does the Gentle mode switch sit?
+   - Asked by designer (docs/design.md, Screens). Follows Q8, which is itself provisional. The brief does not mention gentle mode.
+   - Options:
+     a. On the title screen and the game over screen, never during a level. Best case: easy to find when it helps (after running out of lives), and lives never change mid-run.
+     b. Title screen only. Best case: simplest, but a struggling player may never find it.
+     c. Also on the pause screen. Best case: most reachable, but switching mid-level muddles the lives count.
+   - Recommended: a. The game over line "Want more tries? Gentle mode gives you 5 lives." offers it at the right moment without judging anyone. A change takes effect on the next "Play again".
+   - Blocks: C6. Not blocking.
    - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
