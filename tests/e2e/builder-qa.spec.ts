@@ -443,3 +443,52 @@ test('no network requests while using the builder, starting and changing hero', 
   await page.waitForTimeout(1000);
   expect(late).toEqual([]);
 });
+
+test('the double-tap guard never blocks a real tap: elsewhere at once, or the same spot later', async ({ page }) => {
+  // Guard (B4 fix): only a tap within 300 ms AND 48 px of the opening tap is ignored.
+  for (const vp of [
+    { width: 851, height: 393 },
+    { width: 727, height: 393 },
+    { width: 393, height: 851 },
+    { width: 320, height: 240 },
+  ]) {
+    await page.setViewportSize(vp);
+    await page.goto('./');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    const open = (await page.getByRole('button', { name: 'Make your hero' }).boundingBox())!;
+    const ox = open.x + open.width / 2;
+    const oy = open.y + open.height / 2;
+    await page.touchscreen.tap(ox, oy);
+    const d = builderDialog(page);
+    await expect(d).toBeVisible();
+    // A chip far from the opening tap (more than 48 px away), tapped well inside 300 ms.
+    const far = await page.$$eval(
+      '[data-part]',
+      (els, [x, y]) =>
+        els
+          .map((e) => {
+            const r = e.getBoundingClientRect();
+            return { part: (e as HTMLElement).dataset['part']!, index: Number((e as HTMLElement).dataset['index']), cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
+          })
+          .filter((c) => !(c.part === 'skin' && c.index === 2) && !(c.part !== 'skin' && c.index === 0))
+          .filter((c) => c.cy >= 0 && c.cy <= innerHeight && Math.hypot(c.cx - x!, c.cy - y!) > 80)[0],
+      [ox, oy],
+    );
+    expect(far, `a chip far from the tap at ${vp.width}x${vp.height}`).toBeTruthy();
+    const t0 = Date.now();
+    await page.touchscreen.tap(far!.cx, far!.cy);
+    expect(Date.now() - t0, 'tap sent inside the guard time').toBeLessThan(300);
+    await expect.poll(() => look(page).then((l) => l[far!.part as 'skin'])).toBe(far!.index);
+    // The spot under the finger works once the guard time is over (a person's next tap).
+    const under = await page.evaluate(([x, y]) => {
+      const e = document.elementFromPoint(x!, y!)?.closest<HTMLElement>('[data-part]');
+      return e ? { part: e.dataset['part']!, index: Number(e.dataset['index']) } : null;
+    }, [ox, oy]);
+    if (under) {
+      await page.waitForTimeout(350);
+      await page.touchscreen.tap(ox, oy);
+      await expect.poll(() => look(page).then((l) => l[under.part as 'skin'])).toBe(under.index);
+    }
+  }
+});
