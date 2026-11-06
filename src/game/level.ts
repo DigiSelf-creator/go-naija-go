@@ -3,7 +3,7 @@
  * schema). This turns one into the shapes the game uses, with a light check of its shape,
  * so a typo in a data file gives a clear message instead of a strange game.
  */
-import { FALL_Y, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
+import { FALL_Y, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
 
 export type HazardKind = 'goat' | 'tyre';
 export type FoodKind = 'corn' | 'garri' | 'amala';
@@ -13,6 +13,8 @@ export interface Level {
   name: string;
   groundY: number;
   runSpeed: number;
+  /** Run speed with roasted corn. */
+  cornSpeed: number;
   spawnX: number;
   koboSpacing: number;
   /** A hazard starts moving when it is this far ahead of the hero. */
@@ -119,6 +121,8 @@ export function parseLevel(raw: unknown): Level {
     name: str(r['name'], 'name'),
     groundY,
     runSpeed: num(r['runSpeed'], 'runSpeed'),
+    // design.md: the level carries cornSpeed; 228 is only the fallback when it is missing.
+    cornSpeed: r['cornSpeed'] === undefined ? PHYSICS.fastRunSpeed : num(r['cornSpeed'], 'cornSpeed'),
     spawnX: num(r['spawnX'], 'spawnX'),
     koboSpacing,
     wakeDistance: num(r['wakeDistance'], 'wakeDistance'),

@@ -4,6 +4,7 @@
   "schemaNote": "World units, y grows down. See docs/design.md, Level 1. ground: [startX, endX] (gaps are potholes). platforms: [x, topY, width]. kobo: [x, centreY, count] spaced koboSpacing. foods: [x, centreY, kind]. hazards: [kind, x]. hints: [x, words].",
   "groundY": 300,
   "runSpeed": 156,
+  "cornSpeed": 228,
   "spawnX": 80,
   "koboSpacing": 24,
   "wakeDistance": 520,
@@ -71,7 +72,7 @@
       { "every": 1.8, "speed": 192, "pattern": ["tyre", "tyre", "honk"] },
       { "every": 1.4, "speed": 228, "pattern": ["tyre", "tyre", "honk"] }
     ],
-    "honkY": 248,
+    "honkY": 236,
     "honkSpeed": 120
   }
 }
