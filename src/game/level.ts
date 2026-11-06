@@ -6,6 +6,23 @@
 import { FALL_Y, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
 
 export type HazardKind = 'goat' | 'tyre';
+export type ThrowKind = 'tyre' | 'honk';
+
+/** Boss rules from the level file (design.md: Boss). */
+export interface BossData {
+  kind: string;
+  /** Bottom centre of the heap on the road. */
+  x: number;
+  /** Light platforms in the order they light up. */
+  lights: readonly Platform[];
+  /** Seconds with no throws after a hit. */
+  breakAfterHit: number;
+  /** One phase per hit taken so far: throw gap (s), tyre speed (u/s), repeating pattern. */
+  phases: readonly { every: number; speed: number; pattern: readonly ThrowKind[] }[];
+  /** Honk cloud centre y and speed. */
+  honkY: number;
+  honkSpeed: number;
+}
 export type FoodKind = 'corn' | 'garri' | 'amala';
 
 export interface Level {
@@ -30,8 +47,8 @@ export interface Level {
   hints: readonly { x: number; words: string }[];
   checkpoint: number;
   arena: { x: number; width: number; turnLeftX: number; turnRightX: number };
-  /** Boss rules, kept as data for piece E. */
-  boss: unknown;
+  /** Boss rules, or null for a level with no boss. */
+  boss: BossData | null;
 }
 
 export class LevelError extends Error {
@@ -115,6 +132,32 @@ export function parseLevel(raw: unknown): Level {
     turnRightX: num(a['turnRightX'], 'arena.turnRightX'),
   };
 
+  const parseBoss = (v: unknown): BossData | null => {
+    if (v === undefined || (isObj(v) && Object.keys(v).length === 0)) return null;
+    const b = obj(v, 'boss');
+    const lights = list(b['lights'], 'boss.lights').map((l, i) => {
+      const [x, y, w] = tuple(l, `boss.lights[${i}]`, 3);
+      return { x: num(x, `boss.lights[${i}][0]`), y: num(y, `boss.lights[${i}][1]`), w: num(w, `boss.lights[${i}][2]`) };
+    });
+    const phases = list(b['phases'], 'boss.phases').map((ph, i) => {
+      const p = obj(ph, `boss.phases[${i}]`);
+      const pattern = list(p['pattern'], `boss.phases[${i}].pattern`).map((k, j) => oneOf(k, `boss.phases[${i}].pattern[${j}]`, ['tyre', 'honk'] as const));
+      if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
+      return { every: num(p['every'], `boss.phases[${i}].every`), speed: num(p['speed'], `boss.phases[${i}].speed`), pattern };
+    });
+    if (lights.length === 0) fail('boss.lights', 'should have at least one light');
+    if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
+    return {
+      kind: str(b['kind'], 'boss.kind'),
+      x: num(b['x'], 'boss.x'),
+      lights,
+      breakAfterHit: num(b['breakAfterHit'], 'boss.breakAfterHit'),
+      phases,
+      honkY: num(b['honkY'], 'boss.honkY'),
+      honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
+    };
+  };
+
   const spans: GroundSpan[] = ground.map(([x0, x1]) => ({ x0, x1 }));
   return {
     id: str(r['id'], 'id'),
@@ -135,7 +178,7 @@ export function parseLevel(raw: unknown): Level {
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
     arena,
-    boss: r['boss'],
+    boss: parseBoss(r['boss']),
   };
 }
 

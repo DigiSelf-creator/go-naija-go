@@ -5,7 +5,8 @@
  * restart point come back, and kobo already taken stay counted and do not come back.
  * Q15 (provisional): the number of lives is fixed when the run starts.
  */
-import { bounce, createBody, groundAt, press, release, step, type Body } from '../engine/physics';
+import { bounce, createBody, groundAt, press, release, step, type Body, type Terrain } from '../engine/physics';
+import { BOSS_RULES, BossFight, type BossEvent } from './boss';
 import type { FoodKind, HazardKind, Level } from './level';
 
 export const STEPS_PER_SECOND = 60;
@@ -76,7 +77,7 @@ export type RunEvent =
   | { type: 'food'; kind: FoodKind; x: number; y: number }
   | { type: 'hint'; words: string }
   | { type: 'bounce'; kind: HazardKind; x: number; y: number }
-  | { type: 'smash'; kind: HazardKind; x: number; y: number }
+  | { type: 'smash'; kind: HazardKind | 'honk'; x: number; y: number }
   | { type: 'hit' }
   | { type: 'shieldPop' }
   | { type: 'fall' }
@@ -85,9 +86,11 @@ export type RunEvent =
   | { type: 'tick' }
   | { type: 'powerEnd'; kind: 'corn' | 'amala' }
   | { type: 'gameOver' }
-  | { type: 'arena' };
+  | { type: 'arena' }
+  | BossEvent;
 
-export type RunPhase = 'run' | 'arena' | 'over';
+/** run: the street. arena: the boss fight. won: General Go-Slow beaten. over: out of lives. */
+export type RunPhase = 'run' | 'arena' | 'won' | 'over';
 
 export interface Power {
   /** Steps of roasted corn left. */
@@ -113,6 +116,10 @@ export class Run {
   readonly coins: CoinState[];
   readonly foods: FoodState[];
   readonly hazards: HazardState[];
+  /** The fight, once the hero reaches the arena. */
+  boss: BossFight | null = null;
+  /** The level's road and roofs, plus the boss's light platforms (solid all fight long). */
+  readonly terrain: Terrain;
   /** Hints already shown in this play of the level (not again after a fall). */
   private readonly hintsShown = new Set<number>();
   /**
@@ -130,6 +137,7 @@ export class Run {
     this.maxLives = opts.gentle ? RULES.gentleLives : RULES.lives;
     this.lives = this.maxLives;
     this.spawnX = level.spawnX;
+    this.terrain = level.boss ? { ...level.terrain, platforms: [...level.terrain.platforms, ...level.boss.lights] } : level.terrain;
     this.hero = this.newHero(level.spawnX);
     this.coins = level.coins.map((c) => ({ ...c, taken: false }));
     this.foods = level.foods.map((f) => ({ ...f, taken: false }));
@@ -142,7 +150,8 @@ export class Run {
   }
 
   press(): ReturnType<typeof press> {
-    if (this.phase !== 'run') return null;
+    if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches
+    if (this.phase !== 'run' && this.phase !== 'arena') return null;
     return press(this.hero);
   }
 
@@ -153,22 +162,23 @@ export class Run {
   /** One fixed step (dt is always 1/60 s). Returns what happened, for sounds and words. */
   step(dt: number): RunEvent[] {
     const ev: RunEvent[] = [];
+    if (this.phase === 'arena') return this.arenaStep(dt);
     if (this.phase !== 'run') return ev;
     this.steps++;
     this.tickPower(ev);
     const h = this.hero;
     h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
 
-    step(h, this.level.terrain, dt);
+    step(h, this.terrain, dt);
     if (h.fallen) {
       this.fall(ev);
       return ev;
     }
 
     if (h.x >= this.level.arena.x) {
-      h.x = this.level.arena.x;
       this.phase = 'arena';
       ev.push({ type: 'arena' });
+      if (this.level.boss) this.boss = new BossFight(this.level.boss, this.level.arena.x, this.level.groundY);
       return ev;
     }
 
@@ -191,8 +201,75 @@ export class Run {
     return ev;
   }
 
+  /** One step of the boss fight (design.md: Boss). */
+  private arenaStep(dt: number): RunEvent[] {
+    const ev: RunEvent[] = [];
+    const boss = this.boss;
+    this.steps++;
+    this.tickPower(ev);
+    const h = this.hero;
+    const { turnLeftX, turnRightX } = this.level.arena;
+    if (boss?.defeated) {
+      h.speed = 0; // stops and stands
+    } else {
+      h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
+      // Runs by itself and turns around at once at each end.
+      if (h.dir === 1 && h.x >= turnRightX) h.dir = -1;
+      else if (h.dir === -1 && h.x <= turnLeftX) h.dir = 1;
+    }
+    const wasGrounded = h.grounded;
+    step(h, this.terrain, dt);
+    if (h.fallen) {
+      this.fall(ev);
+      return ev;
+    }
+    if (!boss) {
+      if (this.safe > 0) this.safe--;
+      return ev;
+    }
+    if (h.grounded && !wasGrounded) {
+      const hit = boss.landedOn(h.on);
+      if (hit.length > 0) {
+        bounce(h); // off the light, second jump still there
+        ev.push(...hit);
+      }
+    }
+    ev.push(...boss.step(dt));
+    if (boss.defeated) {
+      if (ev.some((e) => e.type === 'win')) this.phase = 'won';
+      return ev;
+    }
+    this.touchThrows(boss, ev);
+    if (this.safe > 0) this.safe--;
+    return ev;
+  }
+
+  private touchThrows(boss: BossFight, ev: RunEvent[]): void {
+    const h = this.hero;
+    const box = this.heroBox();
+    for (const t of [...boss.throws]) {
+      const size = BOSS_RULES[t.kind];
+      const top = t.kind === 'tyre' ? t.y - size.h : t.y - size.h / 2;
+      const bottom = t.kind === 'tyre' ? t.y : t.y + size.h / 2;
+      if (box.r < t.x - size.halfW || box.l > t.x + size.halfW || box.b < top || box.t > bottom) continue;
+      if (t.kind === 'tyre' && h.vy > 0 && h.prevY <= top + RULES.stompSlack) {
+        bounce(h);
+        h.y = Math.min(h.y, top);
+        boss.remove(t);
+        ev.push({ type: 'bounce', kind: 'tyre', x: t.x, y: top });
+      } else if (this.power.amala > 0) {
+        // Smashed (never counts as a hit on the boss, Q6).
+        boss.remove(t);
+        this.kobo += RULES.smashKobo;
+        ev.push({ type: 'smash', kind: t.kind === 'tyre' ? 'tyre' : 'honk', x: t.x, y: top });
+      } else {
+        this.hurt(ev);
+      }
+    }
+  }
+
   private newHero(x: number): Body {
-    const b = createBody(x, this.level.terrain);
+    const b = createBody(x, this.terrain);
     b.speed = this.level.runSpeed;
     return b;
   }

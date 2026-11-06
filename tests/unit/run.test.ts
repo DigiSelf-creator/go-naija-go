@@ -287,13 +287,12 @@ describe('hints, bus stop and arena', () => {
     expect(again.filter((e) => e.type === 'hint')).toEqual([]);
   });
 
-  it('the run stops at the arena start', () => {
+  it('the boss fight starts when the hero passes the arena start', () => {
     const run = new Run(level({ arena: { x: 600, width: 560, turnLeftX: 615, turnRightX: 1040 } }));
     const ev = runUntil(run, (r) => r.phase === 'arena');
     expect(types(ev).at(-1)).toBe('arena');
-    expect(run.hero.x).toBe(600);
-    run.step(DT);
-    expect(run.hero.x).toBe(600);
+    expect(run.hero.x).toBeGreaterThanOrEqual(600);
+    expect(run.hero.x).toBeLessThan(604);
   });
 });
 
