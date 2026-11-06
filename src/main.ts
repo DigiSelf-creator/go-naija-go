@@ -4,7 +4,7 @@ import { FixedLoop } from './engine/loop';
 import { fitView, readSafeArea, type View } from './engine/view';
 import { Game } from './game/game';
 import { loadLook } from './game/save';
-import { Menus, type MenuScreen } from './screens/menus';
+import { Menus, isSecondTap, type MenuScreen, type TapPoint } from './screens/menus';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
 
@@ -52,6 +52,9 @@ function startGame(): void {
   });
 
   let playing = false;
+  // The tap that pressed "Start running": a second tap on the same spot right after it is the
+  // other half of a double tap, not a jump. A tap anywhere else jumps at once.
+  let startTap: (TapPoint & { t: number }) | null = null;
   // Pause when the tab is hidden or the phone turns upright (the "turn sideways" note shows).
   const portrait = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
 
@@ -67,7 +70,8 @@ function startGame(): void {
   }
 
   const menus = new Menus(document.body, store, game.look, {
-    start: () => {
+    start: (at) => {
+      startTap = at ? { ...at, t: performance.now() } : null;
       menus.show(null);
       playing = true;
       document.body.classList.add('playing');
@@ -91,8 +95,9 @@ function startGame(): void {
   window.addEventListener('resize', checkUpright);
 
   attachInput(window, {
-    onPress: () => {
+    onPress: (at) => {
       if (!playing) return;
+      if (isSecondTap(startTap, at)) return;
       if (game.paused) resume(); // the tap that ends a pause does not jump
       else game.press();
     },

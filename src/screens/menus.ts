@@ -10,9 +10,23 @@ import { GAME_NAME, WORDS } from './words';
 
 export type MenuScreen = 'title' | 'builder' | 'credits' | null;
 
+/**
+ * The second tap of a double tap lands about where the first one did, very soon after.
+ * A tap that soon and that close to the tap that opened a screen (or started the run)
+ * is ignored; a deliberate tap anywhere else works at once.
+ */
+export const DOUBLE_TAP_MS = 300;
+export const DOUBLE_TAP_PX = 48;
+
+/** Where the "Start running" tap landed (CSS px), so the game can ignore a double tap's second half. */
+export interface TapPoint {
+  x: number;
+  y: number;
+}
+
 export interface MenuHooks {
   /** "Start running" was tapped. */
-  start(): void;
+  start(at: TapPoint | null): void;
   /** The look changed in the builder (already saved). */
   lookChanged(look: HeroLook): void;
 }
@@ -22,6 +36,8 @@ export class Menus {
   private screen: MenuScreen = null;
   private settings: Settings;
   private previewFrame = 0;
+  /** The tap that opened the current screen, if it was a tap. */
+  private opener: (TapPoint & { t: number }) | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -47,9 +63,11 @@ export class Menus {
     return this.settings.gentle;
   }
 
-  show(screen: MenuScreen): void {
+  show(screen: MenuScreen, by?: MouseEvent): void {
     cancelAnimationFrame(this.previewFrame);
     this.screen = screen;
+    const at = by ? tapPoint(by) : null;
+    this.opener = at ? { ...at, t: performance.now() } : null;
     this.layer.replaceChildren();
     this.layer.hidden = screen === null;
     if (screen === 'title') this.layer.append(this.title());
@@ -77,11 +95,11 @@ export class Menus {
       h('h1', {}, GAME_NAME),
       h('p', { class: 'tagline' }, w.tagline),
       h('p', {}, w.howTo),
-      saved ? button(w.start, 'go', () => this.hooks.start()) : button(w.makeHero, 'go', () => this.show('builder')),
+      saved ? button(w.start, 'go', (e) => this.hooks.start(tapPoint(e))) : button(w.makeHero, 'go', (e) => this.show('builder', e)),
       h(
         'div',
         { class: 'minor-row' },
-        saved && button(w.changeHero, 'minor', () => this.show('builder')),
+        saved && button(w.changeHero, 'minor', (e) => this.show('builder', e)),
         button(w.credits, 'minor', () => this.show('credits')),
         sound,
         gentle,
@@ -93,7 +111,8 @@ export class Menus {
     const w = WORDS.builder;
     const preview = h('canvas', { class: 'preview', role: 'img', 'aria-label': 'Your hero' });
 
-    const pick = (part: keyof HeroLook, i: number): void => {
+    const pick = (part: keyof HeroLook, i: number, e: MouseEvent): void => {
+      if (this.secondHalfOfDoubleTap(e)) return; // the builder opened under the finger
       this.look = saveLook(this.store, { ...this.look, [part]: i });
       this.hooks.lookChanged(this.look);
       for (const b of this.layer.querySelectorAll<HTMLButtonElement>(`[data-part="${part}"]`)) {
@@ -101,7 +120,7 @@ export class Menus {
       }
     };
     const opt = (part: keyof HeroLook, i: number, label: string, cls: string, style?: string): HTMLButtonElement => {
-      return button(cls === 'swatch' ? '' : label, cls, () => pick(part, i), {
+      return button(cls === 'swatch' ? '' : label, cls, (e) => pick(part, i, e), {
         'data-part': part,
         'data-index': String(i),
         'aria-pressed': String(this.look[part] === i),
@@ -128,15 +147,20 @@ export class Menus {
           row(w.outfit, ...OUTFITS.map((o, i) => opt('outfit', i, o.label, 'chip'))),
         ),
       ),
-      button(w.start, 'go', () => {
+      button(w.start, 'go', (e) => {
+        if (this.secondHalfOfDoubleTap(e)) return;
         // Starting keeps the look shown, even if nothing was tapped.
         this.look = saveLook(this.store, this.look);
-        this.hooks.start();
+        this.hooks.start(tapPoint(e));
       }),
       h('p', { class: 'small' }, w.savedNote),
     );
     this.animatePreview(preview);
     return card;
+  }
+
+  private secondHalfOfDoubleTap(e: MouseEvent): boolean {
+    return isSecondTap(this.opener, tapPoint(e));
   }
 
   private animatePreview(c: HTMLCanvasElement): void {
@@ -182,4 +206,15 @@ export class Menus {
       button(w.back, 'go', () => this.show('title')),
     );
   }
+}
+
+function tapPoint(e: MouseEvent): TapPoint | null {
+  // Keyboard "clicks" have no position (detail 0).
+  return e.detail > 0 ? { x: e.clientX, y: e.clientY } : null;
+}
+
+/** True when `tap` is the second half of a double tap that began with `first`. */
+export function isSecondTap(first: (TapPoint & { t: number }) | null, tap: TapPoint | null, now = performance.now()): boolean {
+  if (!first || !tap) return false;
+  return now - first.t < DOUBLE_TAP_MS && Math.hypot(tap.x - first.x, tap.y - first.y) < DOUBLE_TAP_PX;
 }

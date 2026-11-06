@@ -251,6 +251,9 @@ test('builder fits a tiny 320x240 screen: nothing cut off at the side, Start run
   expect(cut, 'buttons past the right edge').toEqual([]);
   const card = await page.locator('.screen .card').evaluate((c) => ({ sw: c.scrollWidth, cw: c.clientWidth }));
   expect(card.sw, 'the card scrolls sideways').toBeLessThanOrEqual(card.cw);
+  // gamedev (B4 fix): on this tiny screen Start running sits where "Make your hero" was, so an
+  // instant tap there is the double-tap guard's case; a person's tap comes later than 300 ms.
+  await page.waitForTimeout(350);
   await builderDialog(page).getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
 });

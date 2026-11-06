@@ -2,6 +2,7 @@
  * B3: hero builder on the phone profile, by touch.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { PAST_DOUBLE_TAP_MS } from './helpers';
 
 const look = (page: Page) => page.evaluate(() => window.__game!.look);
 
@@ -15,6 +16,7 @@ function watchErrors(page: Page): string[] {
 async function pickLook(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const builder = page.getByRole('dialog', { name: 'Make your hero' });
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS); // a chip may sit where the finger was
   await builder.getByRole('button', { name: 'Skin tone 4' }).tap();
   await builder.getByRole('button', { name: 'Afro' }).tap();
   await builder.getByRole('button', { name: 'Kaftan' }).tap();
@@ -128,4 +130,47 @@ test('the builder works with the phone upright', async ({ page }) => {
   await page.getByRole('button', { name: 'Start running' }).tap();
   await expect(page.getByText('Turn your phone sideways to play.')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__game!.paused)).toBe(true);
+});
+
+test('a fast double tap on "Start running" does not jump; a tap elsewhere right away does', async ({ page }) => {
+  await page.goto('./');
+  await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":1,"hair":1,"outfit":1}'));
+  await page.reload();
+  const box = (await page.getByRole('button', { name: 'Start running' }).boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.touchscreen.tap(x, y);
+  await page.touchscreen.tap(x, y); // second half of the double tap
+  await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
+  // Watch the hero for half a second: it never leaves the road.
+  const minY = await page.evaluate(
+    () =>
+      new Promise<number>((done) => {
+        let m = Infinity;
+        const t0 = performance.now();
+        const f = (): void => {
+          m = Math.min(m, window.__game!.hero.y);
+          if (performance.now() - t0 < 500) requestAnimationFrame(f);
+          else done(m);
+        };
+        requestAnimationFrame(f);
+      }),
+  );
+  expect(minY).toBe(300);
+
+  // A quick tap far from the button is a real jump, even straight after starting.
+  await page.reload();
+  await page.getByRole('button', { name: 'Start running' }).tap();
+  await page.touchscreen.tap(700, 60);
+  await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { intervals: [16] }).toBe(false);
+});
+
+test('Space on a focused builder button presses that button, not a jump', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Make your hero' }).tap();
+  const afro = page.getByRole('button', { name: 'Afro' });
+  await afro.focus();
+  await page.keyboard.press('Space');
+  await expect(afro).toHaveAttribute('aria-pressed', 'true');
+  expect((await page.evaluate(() => window.__game!.look)).hair).toBe(1);
 });

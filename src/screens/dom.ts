@@ -17,7 +17,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 }
 
 /** A real button (type="button"), so taps on it never reach the jump input. */
-export function button(label: string, cls: string, onTap: () => void, attrs: Attrs = {}): HTMLButtonElement {
+export function button(label: string, cls: string, onTap: (e: MouseEvent) => void, attrs: Attrs = {}): HTMLButtonElement {
   const b = h('button', { type: 'button', class: cls, ...attrs }, label);
   b.addEventListener('click', onTap);
   return b;
