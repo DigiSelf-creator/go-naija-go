@@ -83,9 +83,12 @@ function startGame(): void {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pause();
   });
-  portrait.addEventListener('change', () => {
+  // Both: the resize event can arrive a frame before the media query change event.
+  const checkUpright = (): void => {
     if (portrait.matches) pause();
-  });
+  };
+  portrait.addEventListener('change', checkUpright);
+  window.addEventListener('resize', checkUpright);
 
   attachInput(window, {
     onPress: () => {
