@@ -31,6 +31,18 @@ export interface PhysicsConfig {
   platformSnap: number;
   /** Feet may be this far below the road top last step and still land. */
   groundSnap: number;
+  /** Player-moved hero (docs/design.md S2.2, Speeds). Speeds up from 0 to walk speed, u/s². */
+  walkAccel: number;
+  /** Speeds up from walk to run speed, u/s². */
+  runAccel: number;
+  /** Seconds a direction must be held before the top speed on the ground is run speed. */
+  runAfter: number;
+  /** Slows down when no direction is held (on the ground), u/s². */
+  stopDecel: number;
+  /** Slows down when the other direction is held (on the ground), u/s². */
+  turnDecel: number;
+  /** Speeds up or slows down in the air, u/s². */
+  airAccel: number;
 }
 
 export const PHYSICS: PhysicsConfig = {
@@ -47,7 +59,21 @@ export const PHYSICS: PhysicsConfig = {
   platformGrace: 6,
   platformSnap: 1,
   groundSnap: 2,
+  walkAccel: 900,
+  runAccel: 300,
+  runAfter: 0.5,
+  stopDecel: 1200,
+  turnDecel: 1800,
+  airAccel: 600,
 };
+
+/** Walk and run speeds for a player-moved hero, u/s (from the level file; corn changes both). */
+export interface Gait {
+  walk: number;
+  run: number;
+}
+
+export const GAIT: Gait = { walk: 90, run: 156 };
 
 /** A stretch of road from x0 to x1. Between spans are gaps (potholes). */
 export interface GroundSpan {
@@ -82,10 +108,26 @@ export interface Body {
   vy: number;
   /** Feet y one step ago. */
   prevY: number;
-  /** Run speed, u/s. */
+  /**
+   * Auto-run (slice 1 levels): run speed, u/s. Player-moved: a copy of |vx| for readers.
+   */
   speed: number;
-  /** 1 runs right, -1 runs left. */
+  /** Auto-run: 1 runs right, -1 runs left. Player-moved: the way the hero faces. */
   dir: 1 | -1;
+  /** Moved by the player (S2.2) instead of running by itself. */
+  manual: boolean;
+  /** Player-moved: walk and run speeds right now. */
+  gait: Gait;
+  /** Player-moved: speed across, u/s (negative = left). */
+  vx: number;
+  /** Player-moved: the direction held, 0 for none. */
+  move: -1 | 0 | 1;
+  /** Player-moved: seconds the same direction has been held (the run timer). */
+  runTime: number;
+  /** Player-moved: speed across when the feet left the ground, u/s. */
+  airTop: number;
+  /** Player-moved: the way the hero was going when the feet left the ground (0 straight up). */
+  airDir: -1 | 0 | 1;
   grounded: boolean;
   /** The platform stood on, or null for the road or the air. */
   on: Platform | null;
@@ -111,6 +153,13 @@ export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHY
     prevY: terrain.groundY,
     speed: cfg.runSpeed,
     dir: 1,
+    manual: false,
+    gait: { ...GAIT },
+    vx: 0,
+    move: 0,
+    runTime: 0,
+    airTop: 0,
+    airDir: 0,
     grounded: true,
     on: null,
     airJump: true,
@@ -127,7 +176,78 @@ export function groundAt(terrain: Terrain, x: number): boolean {
   return false;
 }
 
+/** A hero the player moves: stands still until a direction is held (S2.2). */
+export function createWalker(x: number, terrain: Terrain, gait: Gait = GAIT, cfg: PhysicsConfig = PHYSICS): Body {
+  const b = createBody(x, terrain, cfg);
+  b.manual = true;
+  b.gait = { ...gait };
+  b.speed = 0;
+  return b;
+}
+
+/**
+ * The direction held (-1 back, 0 none, 1 forward). Any change starts the run timer again:
+ * letting go, or pressing the other way.
+ */
+export function steer(b: Body, move: -1 | 0 | 1): void {
+  if (move !== b.move) b.runTime = 0;
+  b.move = move;
+}
+
+/** Stops dead (a wall, or a lost life): no speed across, run timer back to 0. */
+export function halt(b: Body): void {
+  b.vx = 0;
+  b.speed = 0;
+  b.runTime = 0;
+}
+
+function toward(v: number, target: number, by: number): number {
+  return v < target ? Math.min(target, v + by) : Math.max(target, v - by);
+}
+
+/** Player-moved speed across for one step (S2.2: Speeds, The run timer, In the air). */
+function walk(b: Body, dt: number, cfg: PhysicsConfig): void {
+  const m = b.move;
+  const { walk: walkTop, run: runTop } = b.gait;
+  let v = b.vx;
+  if (b.grounded) {
+    const top = b.runTime >= cfg.runAfter ? runTop : walkTop;
+    if (m === 0) v = toward(v, 0, cfg.stopDecel * dt);
+    else if (v * m < 0) v = toward(v, 0, cfg.turnDecel * dt); // skid, then walk the other way
+    else {
+      let s = Math.abs(v);
+      if (s < walkTop) s = Math.min(s + cfg.walkAccel * dt, walkTop, top);
+      else if (s < top) s = Math.min(s + cfg.runAccel * dt, top);
+      else if (s > top) s = Math.max(top, s - cfg.stopDecel * dt); // corn wore off
+      v = s * m;
+    }
+  } else if (m !== 0) {
+    // A running jump keeps its speed; turned round in the air, walk speed is the top.
+    const top = m === b.airDir ? Math.max(walkTop, b.airTop) : walkTop;
+    if (v * m >= 0) {
+      const s = Math.abs(v);
+      if (s < top) v = Math.min(top, s + cfg.airAccel * dt) * m;
+    } else {
+      // Pulling back: slows, and may turn into the other direction up to walk speed.
+      v += m * cfg.airAccel * dt;
+      if (v * m > walkTop) v = m * walkTop;
+    }
+  } // Nothing held in the air: speed is kept (no air drag).
+  if (m !== 0) {
+    b.dir = m; // facing follows the direction pressed, on the first step of a turn too
+    b.runTime += dt;
+  }
+  b.vx = v;
+  b.speed = Math.abs(v);
+}
+
+function leaveGround(b: Body): void {
+  b.airTop = Math.abs(b.vx);
+  b.airDir = b.vx > 0 ? 1 : b.vx < 0 ? -1 : 0;
+}
+
 function groundJump(b: Body, cfg: PhysicsConfig): void {
+  leaveGround(b);
   b.vy = cfg.jumpVy;
   b.grounded = false;
   b.on = null;
@@ -166,6 +286,7 @@ export function release(b: Body): void {
  * so one jump in the air is left.
  */
 export function bounce(b: Body, cfg: PhysicsConfig = PHYSICS): void {
+  if (Math.abs(b.vx) > b.airTop) leaveGround(b);
   b.vy = cfg.bounceVy;
   b.grounded = false;
   b.on = null;
@@ -188,7 +309,10 @@ function land(b: Body, y: number, on: Platform | null, cfg: PhysicsConfig): void
 export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig = PHYSICS): void {
   if (b.fallen) return;
 
-  b.x += b.speed * b.dir * dt;
+  if (b.manual) {
+    walk(b, dt, cfg);
+    b.x += b.vx * dt;
+  } else b.x += b.speed * b.dir * dt;
 
   if (!(b.down && b.holding && b.vy < 0)) b.holding = false;
   const g = b.holding ? cfg.holdGravity : cfg.gravity;
@@ -223,7 +347,9 @@ export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig =
 
   if (b.grounded) {
     if (!wasGrounded && b.buffer > 0) groundJump(b, cfg); // tapped just before landing
-  } else if (b.coyote > 0 && !wasGrounded) {
+  } else if (wasGrounded) {
+    leaveGround(b); // walked off an edge
+  } else if (b.coyote > 0) {
     // Counts from the first step in the air.
     b.coyote--;
   }
