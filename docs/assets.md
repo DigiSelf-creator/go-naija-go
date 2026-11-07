@@ -73,3 +73,18 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | parcel | Warm two-note "got it", up a fifth, over a low hum |
 
 Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.
+
+## Music
+
+All music is made in code with WebAudio: our own melodies kept as note data in src/art/tunes.ts (one string of 16 steps per bar, easy to read), played by src/engine/music.ts. No music files, no outside licence. Instruments are built from oscillators and hiss: bass (triangle, low-pass), highlife guitar pluck (two slightly apart square waves, low-pass 1800 Hz, falling away fast so it never sounds like a chip tune), agogo bell (two sines at 1 : 2.7), shekere (high hiss), talking drum (sine bend), kalimba (sine and a soft third partial), horn stab (sawtooth, low-pass) and a soft drone. At most 6 notes at once; music sits well under the sound effects (music gain 0.3).
+
+| Tune | Mood | Tempo | Key and chords |
+|---|---|---|---|
+| menu | warm, welcoming: the street tune, bass and guitar only, 70 percent volume | 96 | G major |
+| street | bright, busy walking-to-work highlife; street 3 adds a second agogo line | 108, 112, 116 | G major. A: G C D G. B: Em C D D. 16 bars |
+| well | cosy, secret, calm kalimba over a low drone | 84 | A minor pentatonic. Am G F G. 8 bars |
+| hall | tense but funny and honky; walking bass, horn stabs on 2 and 4; a shaker joins after hit 1 and a second horn after hit 2 | 128, 134, 140 | E minor. Em Em C B. 8 bars |
+| cleared | our "pa-paam" bus horn, then a 4-note guitar figure ending on G, about 2.5 s | 120 | G major |
+| win | a broken run up the G major scale, an agogo flourish, a talking-drum "pom pom", a full G chord, about 5 s | 120 | G major |
+
+Originality: tests/unit/music.test.ts checks every melody against the openings of well-known game tunes (platformer overworld, underground, star and castle themes, the falling-blocks theme, an adventure overworld theme) and our list of famous game sound motifs. While writing, the check caught three real near-copies, which were rewritten: the well and hall tunes each had the five-note turn "A C E D C" (and the hall a "C D C B A" turn) from the falling-blocks theme, and the win run was a plain major-scale run like an adventure theme's, so it now climbs in broken steps. The check cannot know Nigerian songs: qa should still listen for known Nigerian songs, adverts, anthems, hymns and chants (S2.9).
