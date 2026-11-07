@@ -300,7 +300,7 @@ function walkRig(phase: number): Rig {
 const SKID: Rig = { thigh: [-0.2, 0.78], knee: [0.95, 0.12], foot: [0.1, -0.45], arm: [1.5, 2.0], elbow: [0.35, 0.25], lean: -0.22, lift: 0, tilt: 0.04 };
 
 /** Holding the well rope: both hands up on the rope, legs together and a little bent. */
-const ROPE: Rig = { thigh: [0.12, 0.3], knee: [0.3, 0.5], foot: [0.35, 0.45], arm: [2.95, 3.1], elbow: [0.25, 0.15], lean: 0, lift: 0, tilt: -0.12 };
+const ROPE: Rig = { thigh: [0.12, 0.3], knee: [0.3, 0.5], foot: [0.35, 0.45], arm: [3.4, 3.35], elbow: [0.45, 0.5], lean: 0, lift: 0, tilt: -0.12 };
 
 const JUMP: Rig = { thigh: [0.55, 1.3], knee: [1.9, 2.1], foot: [0.8, 0.7], arm: [2.75, 1.7], elbow: [0.4, 0.8], lean: 0.06, lift: 0, tilt: -0.12 };
 const FALL: Rig = { thigh: [-0.3, 0.42], knee: [0.95, 0.3], foot: [0.7, 0.2], arm: [-1.95, 1.75], elbow: [-0.45, 0.3], lean: -0.02, lift: 0, tilt: 0.05 };
