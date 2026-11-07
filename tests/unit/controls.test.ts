@@ -4,7 +4,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Controls, type Dir, type Source, type TouchAreas } from '../../src/engine/input';
-import { buttonLayout } from '../../src/screens/controls';
+import lagos1 from '../../src/data/levels/lagos-1.json';
+import { fitView } from '../../src/engine/view';
+import { Game } from '../../src/game/game';
+import { parseLevel } from '../../src/game/level';
+import { MIN_D, buttonLayout } from '../../src/screens/controls';
+import { recorder } from './recorder';
 
 /** A 727 x 393 phone held sideways (the test profile): D 80, Back 12-92, Forward 102-182. */
 const PHONE: TouchAreas = { width: 727, height: 393, midX: 97, buttons: true };
@@ -52,6 +57,66 @@ describe('S2.2 button sizes', () => {
     expect(l.back.x).toBe(44);
     expect(l.jump.x + l.jump.w).toBe(851 - 44);
     expect(l.midX).toBe(44 + 80 + 5);
+  });
+});
+
+describe('very short screens: the road line is raised clear of the 56 px buttons', () => {
+  /** Where the road line (world y 300) is drawn, CSS px from the top, with the layout's lift. */
+  const roadY = (w: number, h: number, lift: number): number => {
+    const v = fitView(w, h, 1);
+    return (300 - lift) * (h / v.height);
+  };
+
+  it('no lift on any normal screen, from 238 px tall up', () => {
+    for (const w of [320, 480, 568, 640, 727, 851, 932, 1024, 1280]) {
+      for (let h = 238; h <= 800; h++) {
+        if (h > w) continue; // upright: not played
+        expect(buttonLayout(w, h).lift, `${w}x${h}`).toBe(0);
+      }
+    }
+  });
+
+  it('640x200: buttons stay 56 px, the road line moves up to 4 px above them', () => {
+    const l = buttonLayout(640, 200);
+    expect(l.d).toBe(MIN_D);
+    expect(l.back.y).toBe(136);
+    // Without the lift the road line would be at 142.9 px, 7 px below the button tops.
+    expect(roadY(640, 200, 0)).toBeGreaterThan(l.back.y);
+    expect(l.lift).toBeCloseTo(22.8, 1);
+    expect(roadY(640, 200, l.lift)).toBeCloseTo(l.back.y - 4, 6);
+  });
+
+  it('every short screen (and a home bar inset): just enough lift, never more', () => {
+    for (const bottom of [0, 21]) {
+      for (const w of [480, 640, 800]) {
+        for (let h = 120; h < 300; h++) {
+          const l = buttonLayout(w, h, { top: 0, left: 0, right: 0, bottom });
+          expect(l.d).toBeGreaterThanOrEqual(MIN_D);
+          const top = Math.min(l.back.y, l.forward.y, l.jump.y);
+          const y = roadY(w, h, l.lift);
+          expect(y, `${w}x${h} bottom ${bottom}`).toBeLessThanOrEqual(top - 4 + 1e-6);
+          // Raised only when needed, and then only to the 4 px gap.
+          if (l.lift > 0) expect(y).toBeCloseTo(top - 4, 6);
+          else expect(roadY(w, h, 0)).toBeLessThanOrEqual(top - 4 + 1e-6);
+        }
+      }
+    }
+  });
+
+  it('the game draws the world raised by the lift, and the HUD layer is not moved', () => {
+    const game = new Game(parseLevel(structuredClone(lagos1)));
+    const view = fitView(640, 200, 1);
+    const r = recorder();
+    game.lift = buttonLayout(640, 200).lift;
+    game.render(r.g, view);
+    const transforms = r.calls.filter((c) => c.name === 'setTransform').map((c) => c.args);
+    expect(transforms[0]).toEqual([view.scale, 0, 0, view.scale, 0, -game.lift * view.scale]);
+    expect(transforms.at(-1)).toEqual([view.scale, 0, 0, view.scale, 0, 0]);
+    // The road is filled down to the bottom of the raised picture (no strip left unpainted).
+    const road = r.calls.filter((c) => c.name === 'fillRect' && c.args[1] === 300);
+    expect(road.length).toBeGreaterThan(0);
+    const lowest = Math.max(...road.map((c) => (c.args[1] as number) + (c.args[3] as number)));
+    expect(lowest).toBeGreaterThanOrEqual(view.height + game.lift - 1e-6);
   });
 });
 

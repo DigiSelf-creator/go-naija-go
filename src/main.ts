@@ -64,7 +64,11 @@ function startGame(): void {
   const game = new Game(startLevel);
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const buttons = new TouchButtons(document.body, coarse);
-  const placeButtons = (): void => buttons.place(window.innerWidth, window.innerHeight, readSafeArea());
+  const placeButtons = (): void => {
+    buttons.place(window.innerWidth, window.innerHeight, readSafeArea());
+    // A very short screen: raise the road line clear of the buttons (0 almost always).
+    game.lift = buttons.layout.lift;
+  };
   onResize.push(placeButtons, () => game.setView(view));
   placeButtons();
   game.setView(view);
@@ -430,6 +434,8 @@ declare global {
           readonly back: { x: number; y: number; w: number; h: number };
           readonly forward: { x: number; y: number; w: number; h: number };
           readonly jump: { x: number; y: number; w: number; h: number };
+          /** World units the picture is raised on a very short screen. */
+          readonly lift: number;
         };
       };
       readonly look: { readonly skin: number; readonly hair: number; readonly outfit: number };

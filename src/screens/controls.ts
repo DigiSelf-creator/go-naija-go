@@ -6,11 +6,15 @@
  */
 import { CONTROL_WORDS, controlSvg, type ControlKind } from '../art/controls';
 import type { Insets } from '../engine/view';
-import { WORLD_H } from '../engine/view';
+import { MIN_WORLD_W, WORLD_H } from '../engine/view';
 import { h } from './dom';
 
 /** The bottom strip is this much of the 420 u view: road front (300 to 360) and pavement (360 to 420). */
 const STRIP_U = 120;
+/** Smallest button, CSS px: the touch minimum, never shrunk. */
+export const MIN_D = 56;
+/** Space between the road line and the tops of the buttons, CSS px (as on a normal screen). */
+const ROAD_GAP = 4;
 
 export interface Box {
   x: number;
@@ -28,13 +32,19 @@ export interface ButtonLayout {
   jump: Box;
   /** Midpoint between the Back and Forward centres: left of it is Back. */
   midX: number;
+  /**
+   * World units the camera raises the road line (0 on almost every screen). On a very short
+   * screen (under about 238 px tall) the 56 px buttons would reach above the road line, so the
+   * whole picture moves up just enough to keep the road 4 px clear of them.
+   */
+  lift: number;
 }
 
 /** Sizes and places for a screen (CSS px), per the S2.2 table. */
 export function buttonLayout(cssW: number, cssH: number, safe: Insets = { top: 0, right: 0, bottom: 0, left: 0 }): ButtonLayout {
   const strip = (cssH * STRIP_U) / WORLD_H;
   const bottom = Math.max(8, safe.bottom);
-  const d = Math.floor(Math.min(80, Math.max(56, strip - bottom - 4)));
+  const d = Math.floor(Math.min(80, Math.max(MIN_D, strip - bottom - ROAD_GAP)));
   const left = Math.max(12, safe.left);
   const right = Math.max(12, safe.right);
   const y = cssH - bottom - d;
@@ -42,7 +52,10 @@ export function buttonLayout(cssW: number, cssH: number, safe: Insets = { top: 0
   const forward = { x: left + d + 10, y, w: d, h: d };
   const jw = Math.round(1.5 * d);
   const jump = { x: cssW - right - jw, y, w: jw, h: d };
-  return { d, strip, back, forward, jump, midX: left + d + 5 };
+  // World units per CSS px, as fitView picks them (420 u tall, or 480 u across when upright).
+  const perPx = Math.max(WORLD_H / cssH, MIN_WORLD_W / cssW);
+  const lift = Math.max(0, WORLD_H - STRIP_U - (y - ROAD_GAP) * perPx);
+  return { d, strip, back, forward, jump, midX: left + d + 5, lift };
 }
 
 /** Both looks of one button: plain, then pressed (CSS shows one). */

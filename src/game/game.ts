@@ -91,6 +91,11 @@ export class Game {
   private cam: Camera | null = null;
   /** World width shown, from the last view (the camera steps with it). */
   viewW = 640;
+  /**
+   * World units the picture is raised so the road line clears the phone buttons on a very
+   * short screen (screens/controls.ts, ButtonLayout.lift). 0 on almost every screen.
+   */
+  lift = 0;
 
   constructor(public level: Level) {
     this.run = new Run(level);
@@ -311,7 +316,9 @@ export class Game {
   render(g: CanvasRenderingContext2D, view: View): void {
     const { level, run } = this;
     const W = view.width;
-    const H = view.height;
+    // Raised by `lift`: the screen shows world y from lift down to view.height + lift.
+    const lift = this.lift;
+    const H = view.height + lift;
     const t = this.clock;
     if (view.width !== this.viewW) this.setView(view);
     const camX = this.cameraX(view);
@@ -320,7 +327,7 @@ export class Game {
     const R = camX + W + MARGIN;
     const gy = level.groundY;
 
-    g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+    g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
     // Screen space, parallax.
     drawSky(g, camX, W, t, H);
     drawSkyline(g, camX, W, gy);

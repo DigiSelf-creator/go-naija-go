@@ -272,6 +272,16 @@ test('buttons: sizes and places per screen, see-through, spoken names; pressed s
   const small = await page.evaluate(() => window.__game!.input.layout);
   expect(small.forward.x + small.forward.w).toBe(134);
   expect(small.jump.x).toBe(224);
+  expect(small.lift).toBe(0);
+  // 640 x 200, very short: D stays 56 and the picture is raised so the road line (drawn at
+  // world y 300 - lift) sits 4 px above the buttons instead of 7 px below their tops.
+  await page.setViewportSize({ width: 640, height: 200 });
+  await expect.poll(() => page.evaluate(() => window.__game!.input.layout.lift)).toBeGreaterThan(0);
+  const short = await page.evaluate(() => window.__game!.input.layout);
+  expect(short.d).toBe(56);
+  const road = ((300 - short.lift) * 200) / 420;
+  expect(road).toBeCloseTo(short.back.y - 4, 1);
+  await page.screenshot({ path: join(SHOTS, 'buttons-640x200-raised-road.png') });
 });
 
 test('keys on a computer: arrows and A/D walk and run, Space and Up jump, the last direction pressed wins', async ({ page }) => {
