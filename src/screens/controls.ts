@@ -1,9 +1,10 @@
 /**
  * The phone buttons (docs/design.md S2.2, Phone buttons): Back and Forward under the left thumb,
- * Jump under the right, all in the bottom strip. Placeholder drawings (see-through circles and a
- * pill, plain CSS); art draws the real ones in H5. The buttons only show; the touch areas
- * (src/engine/input.ts) are much bigger than the drawings.
+ * Jump under the right, all in the bottom strip. Art's drawings (src/art/controls.ts, H5): each
+ * button holds its plain and pressed SVG, and CSS shows one by the `down` class. The buttons
+ * only show; the touch areas (src/engine/input.ts) are much bigger than the drawings.
  */
+import { CONTROL_WORDS, controlSvg, type ControlKind } from '../art/controls';
 import type { Insets } from '../engine/view';
 import { WORLD_H } from '../engine/view';
 import { h } from './dom';
@@ -44,9 +45,10 @@ export function buttonLayout(cssW: number, cssH: number, safe: Insets = { top: 0
   return { d, strip, back, forward, jump, midX: left + d + 5 };
 }
 
-const ARROW_L = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5 L7 12 L16 19 Z"/></svg>`;
-const ARROW_R = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 L17 12 L8 19 Z"/></svg>`;
-const CHEVRON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15 L12 8 L19 15" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+/** Both looks of one button: plain, then pressed (CSS shows one). */
+export function padInner(kind: ControlKind): string {
+  return `<span class="pad-up">${controlSvg(kind, false)}</span><span class="pad-down">${controlSvg(kind, true)}</span>`;
+}
 
 export class TouchButtons {
   readonly root: HTMLElement;
@@ -62,14 +64,14 @@ export class TouchButtons {
   constructor(parent: HTMLElement, coarse: boolean) {
     this.touchSeen = coarse;
     // Not real <button>s: the touch areas take the presses; these are what the thumb aims at.
-    const make = (cls: string, label: string, inner: string): HTMLElement => {
-      const el = h('div', { class: `pad ${cls}`, role: 'button', 'aria-label': label });
-      el.innerHTML = inner;
+    const make = (kind: ControlKind): HTMLElement => {
+      const el = h('div', { class: `pad pad-${kind}`, role: 'button', 'aria-label': CONTROL_WORDS[kind] });
+      el.innerHTML = padInner(kind);
       return el;
     };
-    this.back = make('pad-back', 'Back', ARROW_L);
-    this.forward = make('pad-forward', 'Forward', ARROW_R);
-    this.jump = make('pad-jump', 'Jump', `${CHEVRON}<span>Jump</span>`);
+    this.back = make('back');
+    this.forward = make('forward');
+    this.jump = make('jump');
     this.root = h('div', { class: 'pads', hidden: true }, this.back, this.forward, this.jump);
     parent.append(this.root);
   }
