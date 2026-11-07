@@ -8,6 +8,7 @@ export type Snap = Awaited<ReturnType<typeof snap>>;
 export const snap = (page: Page) =>
   page.evaluate(() => ({
     h: window.__game!.hero,
+    a: window.__game!.anim,
     r: window.__game!.run,
     i: window.__game!.input,
     screen: window.__game!.screen,

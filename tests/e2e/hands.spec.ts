@@ -48,10 +48,25 @@ test('street 1 by hand with two thumbs: walk, run, potholes, the big pit by a ru
 
   let shotPlaying = false;
   let shotPit = false;
+  let shotWalk = false;
+  let shotRun = false;
+  const seen = { walk: false, run: false, dust: false };
   let fellAt: { x: number; lives: number } | null = null;
   const { stats, last } = await playStreetByHand(page, h, {
     fallIntoOnce: (a) => a === bigPit[0],
     onPoll: async (s) => {
+      // H5 poses: a walk at walk speed, a run (with the start-of-run dust puff) at run speed.
+      if (s.h.grounded && s.h.speed === 90) seen.walk ||= s.a.gait === 'walk';
+      if (s.h.grounded && s.h.speed === 156) seen.run ||= s.a.gait === 'run';
+      seen.dust ||= s.a.dust;
+      if (!shotWalk && s.h.grounded && s.h.speed === 90 && s.h.x > level.spawnX + 30) {
+        shotWalk = true;
+        await page.screenshot({ path: join(SHOTS, 'walking.png') });
+      }
+      if (!shotRun && s.h.grounded && s.h.speed === 156 && s.h.x > 300) {
+        shotRun = true;
+        await page.screenshot({ path: join(SHOTS, 'running.png') });
+      }
       if (!shotPlaying && s.h.x > 600 && s.i.dir === 1) {
         shotPlaying = true;
         await page.screenshot({ path: join(SHOTS, 'playing-by-hand.png') });
@@ -70,6 +85,11 @@ test('street 1 by hand with two thumbs: walk, run, potholes, the big pit by a ru
       `big pit take-offs ${stats.bigPitJumps.map((j) => `x ${j.x.toFixed(0)} at ${j.speed.toFixed(0)} u/s`).join('; ')}`,
   );
   await h.upAll();
+  // Getting on: the door is open and the hero is hopping through it (0.2 to 0.8 s).
+  await page.waitForFunction(() => window.__game!.run.busTime >= 0.5, undefined, { polling: 16 });
+  await page.screenshot({ path: join(SHOTS, 'boarding-the-bus.png') });
+  expect(seen).toEqual({ walk: true, run: true, dust: true });
+  expect(shotWalk && shotRun).toBe(true);
 
   // Reached the bus: controls locked, then on to the boss fight (slice 1's, until piece M).
   expect(last.r.phase).toBe('bus');

@@ -5,9 +5,9 @@ import { fitView, readSafeArea, type View } from './engine/view';
 import street1Data from './data/levels/lagos-1.json';
 import bossLevelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
-import { Game, heroScreenX } from './game/game';
+import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel } from './game/level';
-import type { RunPhase } from './game/run';
+import { STEPS_PER_SECOND, type RunPhase } from './game/run';
 import { loadLook } from './game/save';
 import { TouchButtons } from './screens/controls';
 import { Hud, Toast } from './screens/hud';
@@ -318,6 +318,9 @@ function startGame(): void {
     get look() {
       return { ...game.look };
     },
+    get anim() {
+      return { gait: game.gait, skid: game.skid, dust: game.dustAge < DUST_TIME };
+    },
     get screen() {
       return menus.current ?? (playing ? 'play' : null);
     },
@@ -329,6 +332,7 @@ function startGame(): void {
         maxLives: r.maxLives,
         kobo: r.kobo,
         time: r.time,
+        busTime: r.phase === 'bus' || r.phase === 'cleared' ? r.endSteps / STEPS_PER_SECOND : 0,
         checkpoint: r.checkpointReached,
         safe: r.safe,
         power: { ...r.power },
@@ -429,6 +433,8 @@ declare global {
         };
       };
       readonly look: { readonly skin: number; readonly hair: number; readonly outfit: number };
+      /** How the hero is drawn: walk or run, skid (0 to 1), dust puff showing. */
+      readonly anim: { readonly gait: 'walk' | 'run'; readonly skid: number; readonly dust: boolean };
       readonly screen: MenuScreen | 'play';
       readonly run: {
         readonly phase: RunPhase;
@@ -436,6 +442,8 @@ declare global {
         readonly maxLives: number;
         readonly kobo: number;
         readonly time: number;
+        /** Seconds since the hero reached the bus door (0 before). */
+        readonly busTime: number;
         readonly checkpoint: boolean;
         readonly safe: number;
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
