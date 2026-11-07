@@ -1,4 +1,4 @@
-# Test, build and put Gidi Dash on GitHub Pages.
+# Test, build and put Gbese! on GitHub Pages.
 # Runs on every push to main, and by hand from the Actions tab.
 name: Test and deploy
 

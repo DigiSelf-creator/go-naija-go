@@ -1,5 +1,12 @@
 # Open questions for the product owner
 
+## Answered by Tp in chat, 6 Nov 2026
+
+- Q1 game name: **Gbese!** Title, home-screen name and page title now say "Gbese!".
+- Q11 credits: **"Made by CoachNaz."** Credits screen updated.
+- Tp also asked for a better-drawn hero with a normal-looking head and human-like running. Art is redrawing it.
+- For Tp to copy into docs/decisions.md (only Tp edits that file): "5. The game is called Gbese!" and "6. Credits read: Made by CoachNaz."
+
 ## po acceptance note, 6 Nov 2026 (first slice: A7, B5, C8, D5, E6, F5)
 
 Accepted: pieces A to F, the whole first slice, against the brief's "Done when" 1 to 8 and the CLAUDE.md rules. G1 (deploy workflow) is in the repo. qa passed every piece.

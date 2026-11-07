@@ -27,7 +27,7 @@ async function lines(page: Page, selector: string): Promise<string[]> {
 test('words on the title and builder match docs/design.md exactly', async ({ page }) => {
   await page.goto('./');
   expect(await lines(page, '.screen .card')).toEqual([
-    'Gidi Dash',
+    'Gbese!',
     'Run your street. Clear the jam.',
     'Tap to jump. Tap again in the air to jump again. Hold to jump higher. You run by yourself.',
     'Make your hero',
@@ -69,7 +69,7 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
   await d.getByRole('button', { name: 'Start running' }).tap();
   await page.reload();
   expect(await lines(page, '.screen .card')).toEqual([
-    'Gidi Dash',
+    'Gbese!',
     'Run your street. Clear the jam.',
     'Tap to jump. Tap again in the air to jump again. Hold to jump higher. You run by yourself.',
     'Start running',

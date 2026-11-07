@@ -9,7 +9,7 @@ test('game loads on a phone held sideways', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
 
   await page.goto('./');
-  await expect(page.getByRole('heading', { name: 'Gidi Dash' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Gbese!' })).toBeVisible();
   await startRun(page);
   const canvas = page.locator('canvas#game');
   await expect(canvas).toBeVisible();

@@ -3,7 +3,7 @@
  * (Hero builder, Screens), approved by po. Change words there first, then here.
  */
 /** The game name is one setting (docs/questions.md Q1). */
-export const GAME_NAME = 'Gidi Dash';
+export const GAME_NAME = 'Gbese!';
 
 export const WORDS = {
   title: {
@@ -27,7 +27,7 @@ export const WORDS = {
   },
   credits: {
     heading: 'Credits',
-    lines: ['Made by Tp and team.', 'Every picture and sound is our own.'],
+    lines: ['Made by CoachNaz.', 'Every picture and sound is our own.'],
     back: 'Back',
   },
   hud: {
