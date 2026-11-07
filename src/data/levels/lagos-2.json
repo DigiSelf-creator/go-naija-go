@@ -67,7 +67,7 @@
     { "x": 2950, "exitX": 4100, "room": "lagos-well" }
   ],
   "hints": [
-    [1000, "Crates hang over stall roofs too. Jump up from the roof."],
+    [1000, "Crates hang over stall roofs too. Jump up from the roof.", "crates"],
     [2780, "A well! Stand by it, then press {down}."],
     [5200, "Bus stop! If you fall, you start again here."],
     [5450, "Big pit! Run first, then jump twice."]

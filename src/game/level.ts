@@ -5,10 +5,11 @@
  *
  * Two formats: slice 1 (no `schema`, docs/design.md Level 1: the hero runs by itself and the
  * boss arena is at the end) and schema 2 streets (S2.6 Level data format: the player moves the
- * hero, a start fence and a bus at the end). Crates and wells are read and kept; the game
- * draws them as plain placeholders until their pieces (J, L) are built.
+ * hero, a start fence and a bus at the end). Crates and wells are read and kept; wells draw as
+ * plain placeholders until piece L, and crates draw only once their switch is on (features.ts, J2).
  */
 import { FALL_Y, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
+import { FEATURE_NAMES, type Feature } from './features';
 
 export type HazardKind = 'goat' | 'tyre' | 'drum';
 export type ThrowKind = 'tyre' | 'honk';
@@ -80,7 +81,8 @@ export interface Level {
   coins: readonly { x: number; y: number }[];
   foods: readonly { x: number; y: number; kind: FoodKind }[];
   hazards: readonly { kind: HazardKind; x: number }[];
-  hints: readonly { x: number; words: string }[];
+  /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
+  hints: readonly { x: number; words: string; needs?: Feature }[];
   checkpoint: number;
   /** Slice 1 only: the boss arena at the end of the street. */
   arena: { x: number; width: number; turnLeftX: number; turnRightX: number } | null;
@@ -161,9 +163,13 @@ export function parseLevel(raw: unknown): Level {
     return { kind: oneOf(kind, `hazards[${i}][0]`, HAZARD_KINDS), x: num(x, `hazards[${i}][1]`) };
   });
 
+  // [x, words], or [x, words, piece] for a hint that only shows once that piece is on.
   const hints = list(r['hints'], 'hints').map((h, i) => {
-    const [x, words] = tuple(h, `hints[${i}]`, 2);
-    return { x: num(x, `hints[${i}][0]`), words: str(words, `hints[${i}][1]`) };
+    const a = list(h, `hints[${i}]`);
+    const [x, words, needs] = a.length === 3 ? a : tuple(h, `hints[${i}]`, 2);
+    const hint: { x: number; words: string; needs?: Feature } = { x: num(x, `hints[${i}][0]`), words: str(words, `hints[${i}][1]`) };
+    if (a.length === 3) hint.needs = oneOf(needs, `hints[${i}][2]`, FEATURE_NAMES);
+    return hint;
   });
 
   const speeds = obj(r['hazardSpeeds'], 'hazardSpeeds');

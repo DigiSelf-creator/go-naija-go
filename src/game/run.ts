@@ -7,6 +7,7 @@
  */
 import { bounce, createBody, createWalker, groundAt, halt, press, release, steer, step, type Body, type Gait, type Terrain } from '../engine/physics';
 import { BOSS_RULES, BossFight, type BossEvent } from './boss';
+import { featureOn } from './features';
 import type { FoodKind, HazardKind, Level } from './level';
 
 export const STEPS_PER_SECOND = 60;
@@ -278,6 +279,7 @@ export class Run {
       ev.push({ type: 'checkpoint' });
     }
     this.level.hints.forEach((hint, i) => {
+      if (!featureOn(hint.needs)) return; // about a piece not built yet (features.ts)
       // A hint at or before the spawn (player-moved streets) shows 0.5 s after the start.
       const atStart = h.manual && hint.x <= this.level.spawnX;
       const due = atStart ? this.steps >= RULES.firstHintSteps : h.x >= hint.x;

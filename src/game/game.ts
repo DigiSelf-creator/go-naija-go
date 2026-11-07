@@ -11,6 +11,7 @@ import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, d
 import { drawBusStop, drawPassingBus, drawRoad, drawShopRow, drawSky, drawSkyline, drawStall } from '../art/street';
 import { STRIP_Y, type View } from '../engine/view';
 import { Camera, heroScreenX } from './camera';
+import { FEATURES } from './features';
 import type { CrateData, Level } from './level';
 import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from './run';
 import { DEFAULT_LOOK } from './save';
@@ -331,7 +332,7 @@ export class Game {
     drawRoad(g, camX, W, level.ground, gy, H);
     if (level.manual) drawStreetBits(g, level, camX, W, L, R, H);
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawStall(g, p.x, p.y, p.w, gy);
-    for (const c of level.crates) if (c.x + 20 > L && c.x - 20 < R) drawCratePlaceholder(g, c);
+    if (FEATURES.crates) for (const c of level.crates) if (c.x + 20 > L && c.x - 20 < R) drawCratePlaceholder(g, c);
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
 
@@ -427,7 +428,7 @@ export class Game {
 /**
  * Slice 2 street pieces behind the hero (art H5, src/art/roadside.ts): the pavement strip under
  * the road, the start fence with its parked bus, and cones on both lips of every big pit. Wells
- * stay placeholders until piece L, crates until piece J.
+ * stay placeholders until piece L. Crates are not drawn at all until J2 (features.ts).
  */
 function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number, viewW: number, L: number, R: number, H: number): void {
   const gy = level.groundY;
