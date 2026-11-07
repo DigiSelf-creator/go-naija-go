@@ -1,4 +1,4 @@
-/* Gidi Dash service worker. Built by vite.config.ts: the two placeholders are filled at build time.
+/* Gbese! service worker. Built by vite.config.ts: the two placeholders are filled at build time.
    Precaches the game on the first visit, then serves everything from the cache (offline play).
    Same-origin GET only. It never talks to any other site. */
 const VERSION = '__VERSION__';

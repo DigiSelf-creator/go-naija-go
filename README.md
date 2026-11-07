@@ -1,4 +1,4 @@
-# Gidi Dash (working name)
+# Gbese!
 
 A free, light, one-tap running game set on Nigerian streets. Build a hero that looks like you, run through the city, eat Nigerian food for power-ups, and beat bosses that are everyday problems like traffic, power cuts and bad roads.
 

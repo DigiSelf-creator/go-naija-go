@@ -160,6 +160,6 @@ test('pause screen: Start the level again and Home', async ({ page }) => {
   await page.getByRole('button', { name: 'Pause' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await card.getByRole('button', { name: 'Home' }).tap();
-  await expect(page.getByRole('heading', { name: 'Gidi Dash' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Gbese!' })).toBeVisible();
   await expect(page.locator('.hud')).toBeHidden();
 });

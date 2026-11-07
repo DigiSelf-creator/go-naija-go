@@ -1,4 +1,4 @@
-# Gidi Dash: design notes
+# Gbese!: design notes
 
 Owner: designer. World is 360 units tall; road top at y = 300 (y grows downward). Feel reference: docs/prototype.html.
 
@@ -170,13 +170,13 @@ Gentle mode: one switch, "Gentle mode: 5 lives instead of 3", on the title scree
 
 | Screen | Who sees it | One job | Exact words |
 |---|---|---|---|
-| Title | Everyone who opens the game | Start running | "Gidi Dash" (the name is one setting). "Run your street. Clear the jam." Button "Make your hero" (first visit) or "Start running" (hero saved). Smaller: "Change hero", "Credits", "Sound: on", "Gentle mode: 5 lives instead of 3". How to play: "Tap to jump. Tap again in the air to jump again. Hold to jump higher. You run by yourself." |
+| Title | Everyone who opens the game | Start running | "Gbese!" (the name is one setting). "Run your street. Clear the jam." Button "Make your hero" (first visit) or "Start running" (hero saved). Smaller: "Change hero", "Credits", "Sound: on", "Gentle mode: 5 lives instead of 3". How to play: "Tap to jump. Tap again in the air to jump again. Hold to jump higher. You run by yourself." |
 | Hero builder | First-time players, and anyone changing their look | Pick a look | See Hero builder |
 | HUD (in play) | The player, all run long | Show lives, kobo, food | Hearts plus a number, e.g. "♥ 3". "Kobo 12". Food slot as in Power-ups. Buttons: sound, pause (spoken "Pause") |
 | Pause | A player who tapped pause, left the app, or turned the phone upright | Get back to the run | "Paused". Buttons "Keep running", "Start the level again", "Home". Tapping outside the buttons does nothing |
 | Turn phone | A player holding the phone upright during a level | Get the phone sideways | "Turn your phone sideways to play." The game pauses; once sideways, the Pause screen shows |
 | Game over | A player who lost the last life | Try again | "Out of lives". "You got {kobo} kobo. The road is still here. Try again!" Button "Play again". If gentle mode is off: "Want more tries? Gentle mode gives you 5 lives." with the switch. Small button "Home" |
 | Win | A player who beat General Go-Slow | Celebrate, then play again | "Road cleared!" "You beat General Go-Slow with {kobo} kobo and {lives} lives left." ("1 life left" when one.) "More roads are coming soon." Button "Play again", small "Home". Small line: "Remember: a wrong premise often leads to a misleading conclusion." |
-| Credits | Anyone who taps "Credits" on the title screen | Say who made it | "Credits". "Made by Tp and team." "Every picture and sound is our own." "Remember: a wrong premise often leads to a misleading conclusion." Button "Back" |
+| Credits | Anyone who taps "Credits" on the title screen | Say who made it | "Credits". "Made by CoachNaz." "Every picture and sound is our own." "Remember: a wrong premise often leads to a misleading conclusion." Button "Back" |
 
 Level hints (in the data file): "Tap to jump." / "Hold your finger down to jump higher." / "Pothole! Tap to jump over it." / "Tap again in the air for a second jump." / "Big pothole! Jump, then tap again in the air." / "Goat! Jump over it, or land on it to bounce." / "Rolling tyre! Jump over it." / "Bus stop! If you fall, you start again here."

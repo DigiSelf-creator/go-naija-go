@@ -1,5 +1,5 @@
 /**
- * Shared colours for every Gidi Dash drawing. Bright, warm, drawn 2D.
+ * Shared colours for every Gbese! drawing. Bright, warm, drawn 2D.
  * Hero and hazards use strong, darker outlines (INK) so they stand out from the
  * softer, paler background colours.
  */

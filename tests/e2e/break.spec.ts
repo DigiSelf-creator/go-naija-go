@@ -4,7 +4,7 @@
  * no network after load, a real offline second visit, and installability.
  */
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS, startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock } from './helpers';
 
 const hero = (page: Page) => page.evaluate(() => window.__game!.hero);
 const paused = (page: Page) => page.evaluate(() => window.__game!.paused);
@@ -38,6 +38,8 @@ async function keepRunningAndRead(page: Page): Promise<{ vy: number; paused: boo
   await page.waitForTimeout(150);
   expect(await paused(page)).toBe(true);
   expect(await hero(page)).toEqual(frozen);
+  // The pause screen ignores taps for its first 0.4 s.
+  await waitOutTapLock(page);
   await page.evaluate(() => {
     // Bubble phase on window: runs after the button's own click handler.
     window.addEventListener(
