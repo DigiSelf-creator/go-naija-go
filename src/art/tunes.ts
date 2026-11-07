@@ -12,7 +12,8 @@
  * Every melody is new, written inside the S2.9 keys and chords. None follows a
  * known tune: no game music (Nintendo or other), no advert, anthem, hymn,
  * chant, party song or known Nigerian song. tests/unit/music.test.ts checks the
- * keys, the lengths, the note count and the openings of well-known game tunes.
+ * keys, the lengths, the note count, and every run of 5 melody notes against
+ * the openings of well-known game tunes, hymns and songs.
  */
 export type Instrument = 'bass' | 'guitar' | 'agogo' | 'shekere' | 'drum' | 'kalimba' | 'horn' | 'drone';
 
@@ -53,14 +54,14 @@ const byChord = (table: Record<string, string>, chords: readonly string[]): stri
 const STREET_CHORDS = ['G', 'G', 'C', 'C', 'D', 'D', 'G', 'G', 'Em', 'Em', 'C', 'C', 'D', 'D', 'D', 'D'] as const;
 
 const STREET_MELODY = [
-  'B4 . D5 - . G5 . F#5 - . D5 . E5 - D5 .',
-  'B4 - - . G4 . A4 . B4 - - - . . . .',
+  'B4 . D5 - . G5 . F#5 - . D5 . A4 - C5 .',
+  'D5 - - . G4 . A4 . B4 - - - . . . .',
   'C5 . E5 - . G5 . E5 - . D5 . C5 - G4 .',
   'A4 - - . C5 . E5 . G5 - E5 . D5 - - .',
   'A4 . D5 - . A5 . F#5 - . D5 . E5 - F#5 .',
   'D5 - - . C5 . A4 . F#4 - A4 . C5 - - .',
-  'B4 - G4 . B4 . D5 - G5 - - . F#5 . E5 .',
-  'D5 - - - B4 . . . G4 - - - . . . .',
+  'B4 - G4 . B4 . D5 - G5 - - . F#5 . A5 .',
+  'G5 - - - D5 . . . G4 - - - . . . .',
   'G4 . B4 . E5 - - . D5 . B4 . G4 - E4 .',
   'G4 - - . A4 . B4 . . . E5 . D5 - - .',
   'E5 . G5 . E5 - C5 . D5 . E5 . G5 - - .',
