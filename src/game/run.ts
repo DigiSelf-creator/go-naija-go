@@ -40,11 +40,17 @@ export const RULES = {
   leaveDistance: 200,
   /** S2.2: a hint at or before the spawn shows this long after the street starts. */
   firstHintSteps: secs(0.5),
-  /** S2.6 street end: hazards fade, the hero hops in, the bus pulls away, then the street is cleared. */
+  /**
+   * S2.6 street end: hazards fade, the door slides open, the hero hops in, the door shuts and
+   * the bus pulls away, then the street is cleared. Same times as art's busEndAt (BUS_END).
+   */
   fadeSteps: secs(0.3),
+  doorSteps: secs(0.2),
   hopSteps: secs(0.6),
   busLeaveSteps: secs(1.4),
   clearedSteps: secs(2.2),
+  /** The bus speeds up evenly as it pulls away, u/s² (about 600 u gone in 1.4 s). */
+  busAccel: 612,
 } as const;
 
 /** Size of each hazard's box (half width, height), feet on the road. */
@@ -100,6 +106,7 @@ export type RunEvent =
   | { type: 'gameOver' }
   | { type: 'arena' }
   | { type: 'busBoard' }
+  | { type: 'busGo' }
   | { type: 'streetCleared' }
   | BossEvent;
 
@@ -155,7 +162,7 @@ export class Run {
    */
   viewLeft = -Infinity;
   viewRight = Infinity;
-  /** Steps since the street end started (phase 'bus'). */
+  /** Steps since the street end started (phase 'bus'). Seconds = endSteps / STEPS_PER_SECOND. */
   endSteps = 0;
   /** Where the hero's hop onto the bus starts. */
   private hopFrom = 0;
@@ -304,14 +311,16 @@ export class Run {
     this.endSteps++;
     const h = this.hero;
     const end = this.level.end!;
-    if (this.endSteps <= RULES.hopSteps) {
-      // Into the door: a small hop from where the feet touched to the door.
-      const k = this.endSteps / RULES.hopSteps;
+    const inAt = RULES.doorSteps + RULES.hopSteps;
+    if (this.endSteps > RULES.doorSteps && this.endSteps <= inAt) {
+      // Into the open door: a small hop from where the feet touched to the door.
+      const k = (this.endSteps - RULES.doorSteps) / RULES.hopSteps;
       h.x = this.hopFrom + (end.x + 10 - this.hopFrom) * k;
       h.y = this.level.groundY - Math.sin(k * Math.PI) * 18;
       h.grounded = k >= 1;
       halt(h);
     }
+    if (this.endSteps === inAt) ev.push({ type: 'busGo' });
     if (this.endSteps === RULES.clearedSteps) {
       this.phase = 'cleared';
       ev.push({ type: 'streetCleared' });
@@ -326,14 +335,14 @@ export class Run {
 
   /** The hero is on the bus (hidden). */
   get boarded(): boolean {
-    return (this.phase === 'bus' || this.phase === 'cleared') && this.endSteps >= RULES.hopSteps;
+    return (this.phase === 'bus' || this.phase === 'cleared') && this.endSteps >= RULES.doorSteps + RULES.hopSteps;
   }
 
   /** How far the bus has pulled away to the right, u. */
   get busGone(): number {
     if (this.phase !== 'bus' && this.phase !== 'cleared') return 0;
-    const t = Math.max(0, this.endSteps - RULES.hopSteps) / STEPS_PER_SECOND;
-    return 0.5 * 400 * t * t; // gentle pull-away
+    const t = Math.max(0, this.endSteps - RULES.doorSteps - RULES.hopSteps) / STEPS_PER_SECOND;
+    return 0.5 * RULES.busAccel * t * t;
   }
 
   /** One step of the boss fight (design.md: Boss). */

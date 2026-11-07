@@ -9,8 +9,9 @@ import lagos3 from '../../src/data/levels/lagos-3.json';
 import lagosWell from '../../src/data/levels/lagos-well.json';
 import lagosHall from '../../src/data/levels/lagos-hall.json';
 import { LevelError, parseLevel, type Level } from '../../src/game/level';
-import { RULES, Run, type RunEvent } from '../../src/game/run';
+import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
 import { hintWords } from '../../src/screens/words';
+import { BUS_END, busEndAt } from '../../src/art/roadside';
 
 const DT = 1 / 60;
 const L1 = parseLevel(structuredClone(lagos1));
@@ -145,12 +146,40 @@ describe('S2.2 street rules', () => {
     expect(run.hero.move).toBe(0);
     steps(run, RULES.fadeSteps);
     expect(run.hazardFade).toBe(1);
-    steps(run, RULES.hopSteps - RULES.fadeSteps);
+    const inAt = RULES.doorSteps + RULES.hopSteps;
+    const hop = steps(run, inAt - 1 - RULES.fadeSteps);
+    expect(run.boarded).toBe(false);
+    expect(hop.map((e) => e.type)).not.toContain('busGo');
+    expect(steps(run, 1)).toContainEqual({ type: 'busGo' });
     expect(run.boarded).toBe(true);
-    const rest = steps(run, RULES.clearedSteps - RULES.hopSteps);
+    const rest = steps(run, RULES.clearedSteps - inAt);
     expect(rest).toContainEqual({ type: 'streetCleared' });
     expect(run.phase).toBe('cleared');
     expect(run.busGone).toBeGreaterThan(200);
+  });
+
+  it('the street end keeps art\'s bus timing: door, hop, pull-away, cleared (busEndAt)', () => {
+    expect(RULES.doorSteps / STEPS_PER_SECOND).toBeCloseTo(BUS_END.doorOpen, 6);
+    expect((RULES.doorSteps + RULES.hopSteps) / STEPS_PER_SECOND).toBeCloseTo(BUS_END.hopEnd, 6);
+    expect(RULES.clearedSteps / STEPS_PER_SECOND).toBeCloseTo(BUS_END.pullAway, 6);
+    const run = at(L1, 10590);
+    run.steer(1);
+    for (let i = 0; i < 60 && run.phase === 'run'; i++) run.step(DT);
+    expect(run.phase).toBe('bus');
+    const end = L1.end!;
+    let hopTop = 0;
+    for (let n = 1; n <= RULES.clearedSteps; n++) {
+      run.step(DT);
+      const f = busEndAt(run.endSteps / STEPS_PER_SECOND);
+      // The bus the player sees and the bus the rules move are the same bus.
+      expect(run.busGone).toBeCloseTo(f.dx ?? 0, 6);
+      expect(run.boarded).toBe(!f.heroShown);
+      // The hero waits while the door opens, then hops in through it.
+      if (run.endSteps <= RULES.doorSteps) expect(run.hero.grounded).toBe(true);
+      hopTop = Math.max(hopTop, L1.groundY - run.hero.y);
+    }
+    expect(hopTop).toBeGreaterThan(10);
+    expect(run.hero.x).toBeCloseTo(end.x + 10, 6);
   });
 
   it('a jump that lands past the bus door also ends the street', () => {
