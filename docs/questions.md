@@ -212,6 +212,13 @@ qa checks every new picture, sound and tune against this list.
 14. A region is a group of states, each state has 3 streets, and the region ends in the boss hall. Version 1: World 1 is Lagos, 3 streets plus Go-Slow Hall.
 15. The game never ends: it grows region by region until all 36 states and the FCT work, then West Africa. After the big finish, a gentle offline "keep it working" mode gives fixed states new problems, never taking progress away.
 
+### Designer's questions for Tp (Q22 to Q25), from the slice 2 design
+Each is built with the recommendation until Tp answers.
+- **Q22 Street names.** Made-up names ("Your street", "Market road", "Bus park road") or real Lagos areas (Oshodi, Balogun)? Recommended: made-up for now, so no area feels singled out. Affects K2, N1, N2.
+- **Q23 Parcel strength.** Does the garri parcel start every hall try with a shield, or only the next try? Recommended: every try. Affects L2, M2, M3.
+- **Q24 Left-handed players.** A "Swap sides" switch to put the jump button on the left? Recommended: add it in slice 3, after testers try the layout. Affects H3, H5, N2.
+- **Q25 Elder look.** No walking stick, so the elder never looks frail, and elder men have a short grey beard. Recommended: yes to both. Affects I1, I2.
+
 Suggested brief wording for Tp (po does not edit the brief):
 - The idea in one line: "A free run-and-jump game where you play as yourself, fix the everyday problems in each state of Nigeria Company, eat Nigerian food for power, and get Nigeria's wheel turning."
 - How it plays 1: "You move the hero yourself: walk forward or back, hold to build a run, tap to jump. Tap again in the air to jump again. Holding jumps higher."
