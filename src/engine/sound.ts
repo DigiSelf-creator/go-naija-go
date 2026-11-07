@@ -246,6 +246,9 @@ const SOUNDS: Record<SoundName, Recipe> = {
   },
 };
 
+/** Every tone and hiss fades in over this long from near silence, so none starts with a tick. */
+export const ATTACK = 0.003;
+
 export class Sound {
   private ac: AudioContext | null = null;
   enabled = true;
@@ -285,8 +288,9 @@ export class Sound {
         osc.frequency.setValueAtTime(tone.f, t);
         if (tone.peak) osc.frequency.linearRampToValueAtTime(tone.peak, t + tone.len * 0.35);
         if (tone.to) osc.frequency.linearRampToValueAtTime(tone.to, end);
-        gain.gain.setValueAtTime(tone.vol ?? 0.06, t);
-        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(tone.vol ?? 0.06, t + ATTACK);
+        gain.gain.exponentialRampToValueAtTime(0.0001, Math.max(end, t + ATTACK + 0.01));
         osc.connect(gain).connect(ac.destination);
         osc.start(t);
         osc.stop(end + 0.02);
@@ -311,8 +315,9 @@ export class Sound {
         filter.type = h.lp ? 'lowpass' : 'highpass';
         filter.frequency.setValueAtTime(h.lp ?? h.hp ?? 4000, t);
         const gain = ac.createGain();
-        gain.gain.setValueAtTime(h.vol ?? 0.04, t);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + h.len);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(h.vol ?? 0.04, t + ATTACK);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(h.len, ATTACK + 0.01));
         src.connect(filter).connect(gain).connect(ac.destination);
         src.start(t);
         src.stop(t + h.len + 0.02);

@@ -24,6 +24,8 @@ export const LOOKAHEAD = 0.1;
 export const TICK_MS = 25;
 const FADE_OUT = 0.3;
 const QUIET = 0.2;
+/** Every note fades in over this long from near silence, so no note starts with a tick. */
+export const ATTACK = 0.003;
 
 // ---------------------------------------------------------------- notes (pure)
 
@@ -428,8 +430,10 @@ export class Music {
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(6000, t);
     const gain = ac.createGain();
-    gain.gain.setValueAtTime(vol, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    // A short fade-in: a shake that starts at full volume clicks on every beat.
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(vol, t + ATTACK);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(len, ATTACK + 0.01));
     src.connect(filter).connect(gain).connect(this.out!);
     src.start(t);
     src.stop(t + len + 0.02);
