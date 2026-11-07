@@ -393,6 +393,7 @@ export class Music {
     const ac = this.ac!;
     const osc = ac.createOscillator();
     const gain = ac.createGain();
+    gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
     osc.type = type;
     osc.frequency.setValueAtTime(f, t);
     if (o.bend) {
@@ -430,6 +431,7 @@ export class Music {
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(6000, t);
     const gain = ac.createGain();
+    gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
     // A short fade-in: a shake that starts at full volume clicks on every beat.
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.linearRampToValueAtTime(vol, t + ATTACK);

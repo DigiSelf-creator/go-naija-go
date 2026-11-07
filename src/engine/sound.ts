@@ -284,6 +284,7 @@ export class Sound {
         const end = t + tone.len;
         const osc = ac.createOscillator();
         const gain = ac.createGain();
+        gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
         osc.type = tone.wave ?? 'triangle';
         osc.frequency.setValueAtTime(tone.f, t);
         if (tone.peak) osc.frequency.linearRampToValueAtTime(tone.peak, t + tone.len * 0.35);
@@ -315,6 +316,7 @@ export class Sound {
         filter.type = h.lp ? 'lowpass' : 'highpass';
         filter.frequency.setValueAtTime(h.lp ?? h.hp ?? 4000, t);
         const gain = ac.createGain();
+        gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(h.vol ?? 0.04, t + ATTACK);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(h.len, ATTACK + 0.01));
