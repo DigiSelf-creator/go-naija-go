@@ -337,3 +337,61 @@
 .screen .stack .go {
   margin: 0;
 }
+
+/* Phone buttons (S2.2). Placeholder look: see-through white, near-black outline, white icon
+   with a dark edge. Pressed: fuller, 94 percent size, icon solid dark. They never take
+   pointer events: the touch areas behind them are much bigger (src/engine/input.ts). */
+.pads {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.pads[hidden],
+.pad[hidden] {
+  display: none;
+}
+.pad {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 50%;
+  border: 2px solid rgba(20, 20, 20, 0.5);
+  background: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font: bold 1rem 'Trebuchet MS', Verdana, sans-serif;
+  text-shadow: 0 0 2px #000, 0 1px 2px #000;
+  transition: transform 60ms linear;
+}
+.pad-jump {
+  border-radius: 999px;
+}
+.pad svg {
+  width: 46%;
+  height: 46%;
+  fill: #fff;
+  stroke: #fff;
+  filter: drop-shadow(0 0 1.5px #000);
+}
+.pad-jump svg {
+  width: 30%;
+  height: 46%;
+  fill: none;
+}
+.pad.down {
+  background: rgba(255, 255, 255, 0.6);
+  transform: scale(0.94);
+  color: #1d1a14;
+  text-shadow: none;
+}
+.pad.down svg {
+  fill: #1d1a14;
+  stroke: #1d1a14;
+  filter: none;
+}
+.pad-jump.down svg {
+  fill: none;
+}
