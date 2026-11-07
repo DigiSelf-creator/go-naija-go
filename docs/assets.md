@@ -16,6 +16,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | Slice 2 gallery pages (?gallery=1 and up; &t=1.5 holds the time) | src/art/gallery2.ts | Drawn in code, original | No outside licence |
 | Phone buttons: Back, Forward (circle, triangle), Jump (pill, chevron, word), Go down and Go up (pill, bucket, arrow), each with a pressed look; as SVG for HTML buttons and as canvas drawing | src/art/controls.ts | Drawn in code, original | No outside licence |
 | Hero walk, run with dust puff, skid on a turn (same rig, face, skins and hitbox) | src/art/hero.ts, src/art/dust.ts | Drawn in code, original | No outside licence |
+| Hanging market crates: pale slatted wood, rope handles, one rope to a line on two wooden poles; stamps (coin stack, corn cob, cup, bowl); swing, open lid hanging down, kobo fan, food pop | src/art/crate.ts | Drawn in code, original | No outside licence |
 | Pavement and gutter strip, big pit cones, start fence (zinc sheets, posts, arrow board) with a parked bus, bus park (shelter, "BUS PARK" board, wall), big yellow market bus with roof rack and sliding door, bus end timeline | src/art/roadside.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
@@ -24,6 +25,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - No real people, brands or logos. Shop names are everyday words. The bus is plain yellow with black stripes and no writing.
 - General Go-Slow is a traffic light and a heap of cars: no uniform, cap, medals, flag, party colours, and no faces in the cars.
 - Slice 2 (R8 list checked): no run button (buttons are plain arrows and "Jump"); the street ends at a bus park with a market bus (roof rack, sliding door), never a flagpole or castle; the start is a zinc compound fence. The end bus was reshaped from a long rounded body to a boxy van with a sloped nose and roof load, so it does not read as a school bus.
+- Crates (R5): orange-brown wood, never yellow or gold (a unit test checks every colour); no "?" or "!" or any writing; no rivets or brick row; always hung by a rope. The first kobo stamp (rings) looked like a target, so it became a small stack of coins. The open lid hangs down the side, so an empty crate reads as "opened", not as a new block.
 
 ## Pride check (things we chose not to do)
 
@@ -57,5 +59,9 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | runStart | Soft dust whoosh: low hiss over a faint low swell |
 | skid | Short gritty scuff: two rough hisses and a low drag |
 | busBoard | Door hiss, then our "pa-paam" horn |
+| crateHit | Hollow wooden "tok", then a soft rope creak |
+| crateEmpty | Duller, lower "tok", no creak |
+| crateKobo | Our kobo pling three times quickly, each a semitone higher (no chime run) |
+| cratePop | Soft round pop as a food comes out |
 
 Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.

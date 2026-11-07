@@ -25,7 +25,12 @@ export type SoundName =
   // Slice 2: moving and the street end (H5)
   | 'runStart'
   | 'skid'
-  | 'busBoard';
+  | 'busBoard'
+  // Slice 2: hanging crates (J1)
+  | 'crateHit'
+  | 'crateEmpty'
+  | 'crateKobo'
+  | 'cratePop';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -172,6 +177,34 @@ const SOUNDS: Record<SoundName, Recipe> = {
   busBoard: {
     tones: [...horn(311, 392, 0.1, 0.32), ...horn(311, 392, 0.3, 0.46, 0.94)],
     hiss: [{ len: 0.26, hp: 2500, vol: 0.04 }],
+  },
+  // Slice 2 (J1). Crate knocked: a hollow wooden "tok", then a soft rope creak (two slow wobbles).
+  crateHit: {
+    tones: [
+      { f: 820, len: 0.06, wave: 'triangle', to: 560, vol: 0.09 },
+      { f: 410, len: 0.08, wave: 'sine', to: 300, vol: 0.05 },
+      { f: 150, len: 0.18, wave: 'sawtooth', peak: 175, to: 140, at: 0.09, vol: 0.012 },
+      { f: 165, len: 0.16, wave: 'sawtooth', peak: 150, to: 172, at: 0.3, vol: 0.01 },
+    ],
+    hiss: [{ len: 0.025, hp: 2000, vol: 0.04 }],
+  },
+  // An empty crate: a duller, lower "tok" and no creak.
+  crateEmpty: {
+    tones: [
+      { f: 560, len: 0.05, wave: 'triangle', to: 400, vol: 0.07 },
+      { f: 280, len: 0.06, wave: 'sine', to: 220, vol: 0.04 },
+    ],
+    hiss: [{ len: 0.02, lp: 1500, vol: 0.03 }],
+  },
+  // Three kobo out of a crate: our kobo pling three times quickly, each a little higher.
+  crateKobo: {
+    tones: [0, 1, 2].map((i): Tone => ({ f: 1175 * 2 ** (i / 12), len: 0.08, wave: 'sine', to: 1110 * 2 ** (i / 12), at: i * 0.07, vol: 0.04 })),
+    hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.04, hp: 5000, at: i * 0.07, vol: 0.04 })),
+  },
+  // Food out of a crate: a soft round pop.
+  cratePop: {
+    tones: [{ f: 260, len: 0.09, wave: 'sine', peak: 620, to: 480, vol: 0.07 }],
+    hiss: [{ len: 0.03, lp: 2500, at: 0.01, vol: 0.03 }],
   },
 };
 

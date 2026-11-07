@@ -4,6 +4,8 @@
  * Add &t=1.5 to the address to hold the time, for still review pictures.
  */
 import { CONTROL_ASPECT, drawControl, type ControlKind } from './controls';
+import { CRATE_STAMPS, crateAngle, crateLineY, crateTopY, drawCrate, drawCrateLine, foodPopAt, koboFanAt } from './crate';
+import { drawFood, drawKobo } from './items';
 import { HAIRS, OUTFITS, SKINS, drawHero, type HeroPose } from './hero';
 import { INK } from './palette';
 import { BUS_END, busEndAt, drawBigPitCones, drawBusPark, drawCone, drawEndBus, drawEndBusInside, drawPavement, drawStartFence } from './roadside';
@@ -151,5 +153,70 @@ const poses: Page = (g, time) => {
   }
 };
 
+/** Page 3 (J1): hanging market crates, full, knocked, kobo fan, food pop, and open. */
+const crates: Page = (g, time) => {
+  title(g, 'J1: hanging market crates. Row 1: full (4 stamps), knocked, kobo fan, food pop. Row 2: open and empty, a hero knocking one from below');
+  const S = 1.6;
+  const rowY = [24, 372];
+  const bottom = 204;
+  for (let row = 0; row < 2; row++) {
+    g.save();
+    g.translate(0, rowY[row]!);
+    g.scale(S, S);
+    g.translate(0, -(crateLineY(bottom) - 16));
+    g.fillStyle = '#efe2c4';
+    g.fillRect(0, crateLineY(bottom) - 16, 600, GROUND_Y - crateLineY(bottom) + 16);
+    g.fillStyle = '#3e3e42';
+    g.fillRect(0, GROUND_Y, 600, 12);
+    drawCrateLine(g, 14, 586, crateLineY(bottom), GROUND_Y);
+    const xs = [56, 126, 196, 266, 346, 426, 516];
+    if (row === 0) {
+      CRATE_STAMPS.forEach((stamp, i) => {
+        drawCrate(g, xs[i]!, bottom, { stamp, open: false, angle: crateAngle({ time: time + i * 0.7 }) });
+        label(g, stamp, xs[i]!, GROUND_Y - 30, 7);
+      });
+      // Knocked from below (loops every 1.6 s)
+      const k = time % 1.6;
+      drawCrate(g, xs[4]!, bottom, { stamp: 'corn', open: false, angle: crateAngle({ time, sinceKnock: k, knock: 'hit' }) });
+      label(g, 'knocked (swing)', xs[4]!, GROUND_Y - 30, 7);
+      // Kobo fan out of the top
+      const f = (time % 1) * 0.5;
+      drawCrate(g, xs[5]!, bottom, { stamp: 'kobo', open: true, angle: crateAngle({ time, sinceKnock: f, knock: 'hit' }), lid: Math.min(1, f / 0.15) });
+      for (const p of koboFanAt(Math.min(f, 0.35))) {
+        g.save();
+        g.translate(xs[5]! + p.x, crateTopY(bottom) + p.y);
+        g.scale(0.7, 0.7);
+        drawKobo(g, 0, 0, time);
+        g.restore();
+      }
+      label(g, 'kobo fan', xs[5]!, GROUND_Y - 30, 7);
+      // Food pop and drop to the road
+      const ft = time % 2.2;
+      drawCrate(g, xs[6]!, bottom, { stamp: 'bowl', open: true, angle: crateAngle({ time, sinceKnock: ft, knock: 'hit' }) });
+      drawFood(g, 'amala', xs[6]!, foodPopAt(ft, bottom, 272).y, time);
+      label(g, 'food pop', xs[6]! + 30, GROUND_Y - 30, 7);
+    } else {
+      CRATE_STAMPS.forEach((stamp, i) => {
+        drawCrate(g, xs[i]!, bottom, { stamp, open: true, angle: crateAngle({ time: time + i * 0.7 }) });
+        label(g, `${stamp}, empty`, xs[i]!, GROUND_Y - 30, 7);
+      });
+      // A hero jumps and knocks a crate with their head
+      const t = time % 1.4;
+      const up = t < 0.5 ? Math.sin((t / 0.5) * (Math.PI / 2)) : t < 0.9 ? 1 - ((t - 0.5) / 0.4) ** 2 : 0;
+      const feet = GROUND_Y - up * (GROUND_Y - 44 - bottom);
+      const sinceKnock = t >= 0.5 ? t - 0.5 : undefined;
+      drawCrate(g, xs[5]!, bottom, { stamp: 'cup', open: false, angle: crateAngle({ time, sinceKnock, knock: 'hit' }) });
+      g.save();
+      g.translate(xs[5]!, feet);
+      drawHero(g, { skin: 3, hair: 1, outfit: 0 }, { phase: 0, inAir: up > 0.01, facing: 1, glow: false, vy: t < 0.5 ? -300 : 200 });
+      g.restore();
+      label(g, 'head knock from below', xs[5]!, GROUND_Y + 2, 7);
+      drawCrate(g, xs[6]!, bottom, { stamp: 'kobo', open: true, angle: crateAngle({ time, sinceKnock: (time + 0.4) % 1.6, knock: 'hit' }) });
+      label(g, 'empty, knocked', xs[6]!, GROUND_Y - 30, 7);
+    }
+    g.restore();
+  }
+};
+
 /** Slice 2 pages in order. Later pieces of work push their pages onto this list. */
-export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses];
+export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses, crates];
