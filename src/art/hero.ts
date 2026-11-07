@@ -11,10 +11,10 @@
  */
 import { GLOW, INK, WHITE } from './palette';
 
-/** Lip rose for light and medium skins (outlined thinly in INK) and for skin 5. */
+/** Lip rose. Every skin draws the same lip shape with a thin outline darker than the skin. */
 const LIP = '#d9705f';
-/** A lighter rose for skin 4, where LIP alone is too close to the skin. */
-const LIP_LIGHT = '#f29a86';
+/** A slightly lighter rose for skin 4, so the lip is 3:1 against that skin like the others. */
+const LIP_SOFT = '#e8907c';
 const FACE_LIGHT: FaceColours = { line: INK, lip: LIP, lipLine: INK };
 
 export interface SkinOption {
@@ -28,19 +28,28 @@ export interface SkinOption {
 }
 
 /**
- * Face feature colours for one skin tone. Whatever touches the skin (the rim if
- * there is one, else the line; the lip outline if there is one, else the lip)
- * is 3:1 or better against the skin, so brows and mouth show on every tone.
+ * Face feature colours for one skin tone. Every skin gets the same face: ink
+ * brows, the same lip shape and size, a thin deep-toned lip outline.
+ * The brow (or its rim) and the lip (or its outline) are 3:1 or better against
+ * the skin, so brows and mouth show on every tone.
  */
 export interface FaceColours {
   /** Brows, the smile line and the closed-eye line. */
   line: string;
-  /** A soft light rim under the brows on darker skins (a brow-bone highlight). */
+  /** Brow thickness (u). Default 0.8; a little more on darker skins so the dark brow stays the main shape. */
+  brow?: number;
+  /**
+   * A thin light line along the top of the near brow on darker skins: light
+   * catching the brow ridge. It sits ABOVE the brow, never between brow and eye.
+   */
   rim?: string;
   /** The lower lip. */
   lip: string;
-  /** Thin outline round the lip, only where the lip alone would be too soft. */
-  lipLine?: string;
+  /**
+   * Thin outline round the lip, in a deep tone between the lip and the skin: INK
+   * on light and medium skins, deep browns on darker skins (never INK there).
+   */
+  lipLine: string;
 }
 
 export interface HairOption {
@@ -66,8 +75,8 @@ export const SKINS: readonly SkinOption[] = [
   { id: 'skin1', label: 'Skin tone 1', base: '#f1c9a5', shade: '#dcae86', face: FACE_LIGHT },
   { id: 'skin2', label: 'Skin tone 2', base: '#d9a172', shade: '#c0875a', face: FACE_LIGHT },
   { id: 'skin3', label: 'Skin tone 3', base: '#a8693f', shade: '#8d5530', face: FACE_LIGHT },
-  { id: 'skin4', label: 'Skin tone 4', base: '#7a4a2a', shade: '#653b20', face: { line: INK, rim: '#e9a07f', lip: LIP_LIGHT } },
-  { id: 'skin5', label: 'Skin tone 5', base: '#4b2c1a', shade: '#3a2113', face: { line: INK, rim: '#c98a66', lip: LIP } },
+  { id: 'skin4', label: 'Skin tone 4', base: '#7a4a2a', shade: '#653b20', face: { line: INK, brow: 0.95, rim: '#d29a72', lip: LIP_SOFT, lipLine: '#3a2113' } },
+  { id: 'skin5', label: 'Skin tone 5', base: '#4b2c1a', shade: '#3a2113', face: { line: INK, brow: 0.95, rim: '#a87656', lip: LIP, lipLine: '#7a4a2a' } },
 ];
 
 export const HAIRS: readonly HairOption[] = [
@@ -601,33 +610,32 @@ function drawEar(g: CanvasRenderingContext2D, skin: string, shade: string): void
 }
 
 /**
- * Strokes a face line made by `path`. On darker skins a thin light line is drawn
- * first, a little lower, so a soft highlight shows just under the line (like
- * light on the brow bone) and the line reads against the skin.
+ * Brows: short, slightly angled (calm and focused). On darker skins a thin light
+ * line first runs along the TOP of the outer two thirds of the near brow (light
+ * on the brow ridge), touching it, so the ink brow reads against the skin and
+ * nothing light sits between brow and eye. The far brow has no rim.
  */
-function faceLine(g: CanvasRenderingContext2D, f: FaceColours, width: number, dy: number, path: () => void): void {
+function drawBrows(g: CanvasRenderingContext2D, f: FaceColours): void {
+  const w = f.brow ?? 0.8;
   if (f.rim) {
-    g.save();
-    g.translate(0, dy);
+    const rw = w * 0.5;
+    const dy = -(w + rw) / 2 + 0.25;
+    // The near brow curve from its outer end to about two thirds along.
     g.beginPath();
-    path();
+    g.moveTo(1.9, -1.95 + dy);
+    g.quadraticCurveTo(2.49, -2.31 + dy, 3.07, -2.29 + dy);
     g.strokeStyle = f.rim;
-    g.lineWidth = width * 0.75;
+    g.lineWidth = rw;
     g.stroke();
-    g.restore();
   }
   g.beginPath();
-  path();
-  g.strokeStyle = f.line;
-  g.lineWidth = width;
-  g.stroke();
-}
-
-function browPath(g: CanvasRenderingContext2D): void {
   g.moveTo(1.9, -1.95);
   g.quadraticCurveTo(2.8, -2.5, 3.7, -2.15);
   g.moveTo(4.3, -2.2);
   g.lineTo(5, -2);
+  g.strokeStyle = f.line;
+  g.lineWidth = w;
+  g.stroke();
 }
 
 function blinkPath(g: CanvasRenderingContext2D): void {
@@ -642,7 +650,11 @@ function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean)
   g.lineCap = 'round';
   // Eyes: the near eye is a little bigger than the far one (three-quarter view).
   if (blink) {
-    faceLine(g, f, 0.7, 0.45, () => blinkPath(g));
+    g.beginPath();
+    blinkPath(g);
+    g.strokeStyle = f.line;
+    g.lineWidth = 0.7;
+    g.stroke();
   } else {
     g.fillStyle = WHITE;
     g.beginPath();
@@ -662,9 +674,7 @@ function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean)
     // Tiny catch-light
     dot(g, 3.3, -0.55, 0.18, WHITE);
   }
-  // Brows: short, slightly angled (calm and focused). On darker skins a soft
-  // light rim sits just under them, like light on the brow bone.
-  faceLine(g, f, 0.8, 0.55, () => browPath(g));
+  drawBrows(g, f);
   // Nostril and a soft shade under the nose
   g.strokeStyle = skin.shade;
   g.lineWidth = 0.6;
@@ -672,24 +682,24 @@ function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean)
   g.moveTo(5.2, 1.2);
   g.quadraticCurveTo(5.6, 1.6, 5.2, 1.85);
   g.stroke();
-  // Rose lower lip under a short smile line
+  // Rose lower lip: the same crescent on every skin, corners turned up so it
+  // reads as a smile even when it is only a few pixels wide.
   g.beginPath();
-  g.moveTo(3.2, 2.8);
-  g.quadraticCurveTo(4.05, 4.95, 5.2, 2.7);
-  g.quadraticCurveTo(4.2, 3.3, 3.2, 2.8);
+  g.moveTo(2.35, 2.45);
+  g.quadraticCurveTo(3.85, 5.15, 5.15, 2.4);
+  g.quadraticCurveTo(3.75, 3.35, 2.35, 2.45);
   g.fillStyle = f.lip;
   g.fill();
-  if (f.lipLine) {
-    g.strokeStyle = f.lipLine;
-    g.lineWidth = 0.3;
-    g.stroke();
-  }
+  g.strokeStyle = f.lipLine;
+  g.lineWidth = 0.24;
+  g.stroke();
+  // Smile line along the top of the lip, with a small lift at the back corner
   g.strokeStyle = f.line;
   g.lineWidth = 0.5;
   g.beginPath();
-  g.moveTo(2.9, 2.55);
-  g.quadraticCurveTo(3.05, 2.85, 3.2, 2.8);
-  g.quadraticCurveTo(4.2, 3.3, 5.2, 2.7);
+  g.moveTo(2.1, 2.15);
+  g.quadraticCurveTo(2.2, 2.45, 2.35, 2.45);
+  g.quadraticCurveTo(3.75, 3.35, 5.15, 2.4);
   g.stroke();
 }
 
@@ -769,37 +779,65 @@ function hairBack(g: CanvasRenderingContext2D, h: HairOption, swing: number): vo
 }
 
 /** Hair or headwear on top of the skull, following its shape. */
-function hairFront(g: CanvasRenderingContext2D, h: HairOption): void {
+function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): void {
   g.strokeStyle = INK;
   g.lineWidth = 0.9;
   switch (h.id) {
     case 'lowcut': {
-      // Close crop: a thin layer hugging the skull, with a soft hairline at the
-      // forehead and temple, a short sideburn and a neat edge round the ear.
+      // Close crop following the skull: a soft hairline at the forehead and
+      // temple, a tapered sideburn, and the crop stopping above the ear so the
+      // back of the head and neck show skin. Where hair is the edge of the head,
+      // the thick head outline gives way to a thin, slightly bumpy one, so it
+      // reads as hair and not as a hard shell.
+      const A0 = 2.42; // back of the head, above the nape
+      const A1 = TAU - 0.88; // top front, where the forehead starts
+      const crop = (): void => {
+        g.moveTo(CX + Math.cos(A0) * RX, CY + Math.sin(A0) * RY);
+        const n = 12;
+        for (let i = 1; i <= n; i++) {
+          const a = A0 + ((A1 - A0) * i) / n;
+          const m = a - (A1 - A0) / n / 2;
+          g.quadraticCurveTo(CX + Math.cos(m) * (RX + 0.62), CY + Math.sin(m) * (RY + 0.62), CX + Math.cos(a) * (RX + 0.4), CY + Math.sin(a) * (RY + 0.4));
+        }
+      };
       g.beginPath();
-      g.moveTo(-3.3, 3.7);
-      g.ellipse(CX, CY, RX - 0.1, RY - 0.1, 0, 2.3, -0.88);
+      crop();
+      // Forehead hairline, then the sideburn tapering to a point in front of the ear
       g.quadraticCurveTo(2.3, -4.3, 1.6, -3.75);
       g.quadraticCurveTo(1.05, -3.2, 1.05, -2.3);
-      g.lineTo(0.75, -0.2);
-      g.quadraticCurveTo(-0.6, -1.9, -2.1, -0.6);
-      g.quadraticCurveTo(-2.8, 0.9, -2.7, 2.9);
+      g.lineTo(0.55, 0.2);
+      g.quadraticCurveTo(0.15, -1.2, -0.6, -1.75);
+      // Over the top of the ear, then up and back above the nape
+      g.quadraticCurveTo(-1.9, -2.2, -2.7, -1.1);
+      g.quadraticCurveTo(-3.3, 0.2, -3.5, 2.3);
+      g.quadraticCurveTo(-3.7, 3, CX + Math.cos(A0) * RX, CY + Math.sin(A0) * RY);
       g.closePath();
-      // Inside the head outline (no extra ink), and a touch see-through so a
-      // little scalp warmth shows through the crop
+      // Skin first, so the thick head outline under the crop is covered, then
+      // the hair a touch see-through so a little scalp warmth shows
+      g.fillStyle = skin;
+      g.fill();
       g.globalAlpha = 0.85;
       g.fillStyle = h.colour;
       g.fill();
       g.globalAlpha = 1;
-      // A sheen following the round of the head, and fine grain
-      g.strokeStyle = h.accent;
-      g.lineWidth = 0.5;
+      // The thin outer edge
       g.beginPath();
-      g.ellipse(CX, CY, RX - 1, RY - 1, 0, -2.45, -1.35);
+      crop();
+      g.strokeStyle = INK;
+      g.lineWidth = 0.6;
+      g.stroke();
+      // A few short sheen strokes and fine grain
+      g.strokeStyle = h.accent;
+      g.lineWidth = 0.45;
+      g.beginPath();
+      for (const [a, b] of [[-2.55, -2.3], [-2.05, -1.8], [-1.55, -1.35]] as const) {
+        g.moveTo(CX + Math.cos(a) * (RX - 1.1), CY + Math.sin(a) * (RY - 1.1));
+        g.ellipse(CX, CY, RX - 1.1, RY - 1.1, 0, a, b);
+      }
       g.stroke();
       g.fillStyle = h.accent;
       g.beginPath();
-      for (const [x, y] of [[-3.8, -0.4], [-2.4, -2.4], [-0.4, -3.2], [-3.3, 1.8], [0.3, -1.6]] as const) {
+      for (const [x, y] of [[-3.8, -1.2], [-2.4, -2.9], [-0.4, -3.6], [-4.3, 0.6], [0.2, -2.3]] as const) {
         g.moveTo(x + 0.22, y);
         g.arc(x, y, 0.22, 0, TAU);
       }
@@ -1035,7 +1073,7 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.lineWidth = OUTLINE * 0.55;
   g.stroke();
   drawFace(g, skin, pose.blink === true);
-  hairFront(g, hair);
+  hairFront(g, hair, skin.base);
   if (hair.id !== 'headscarf') drawEar(g, skin.base, skin.shade);
   g.restore();
 

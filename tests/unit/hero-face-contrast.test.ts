@@ -1,7 +1,9 @@
 /**
- * qa: brows and mouth must show on every skin tone. Whatever face colour touches
- * the skin must be 3:1 or better against it (WCAG contrast ratio), and the dark
- * line must stand out from the rim and lip it sits on.
+ * qa: brows and mouth must show on every skin tone, and every skin gets its face
+ * built the same way. The brow (or its light rim) and the lip (or its outline)
+ * must be 3:1 or better against the skin (WCAG contrast ratio). Every skin has a
+ * deep-toned lip outline, so the lip has an edge and the same size everywhere
+ * (ink on lighter skins, a brown on darker ones). The dark brow stays the main shape.
  */
 import { describe, expect, it } from 'vitest';
 import { SKINS, drawHero } from '../../src/art/hero';
@@ -43,15 +45,23 @@ describe('hero face contrast', () => {
   SKINS.forEach((s, i) => {
     it(`${s.label}: brows and mouth stand out at 3:1 or better`, () => {
       const f = s.face;
-      const browEdge = f.rim ?? f.line;
-      const mouthEdge = f.lipLine ?? f.lip;
-      expect(contrast(browEdge, s.base)).toBeGreaterThanOrEqual(3);
-      expect(contrast(mouthEdge, s.base)).toBeGreaterThanOrEqual(3);
-      // The smile line sits on the lip, and the brow line on its rim
-      expect(contrast(f.line, f.lip)).toBeGreaterThanOrEqual(3);
+      // Brow: the ink line itself, or its light brow-ridge rim, reads on the skin
+      expect(Math.max(contrast(f.line, s.base), f.rim ? contrast(f.rim, s.base) : 0)).toBeGreaterThanOrEqual(3);
+      if (contrast(f.line, s.base) < 3) {
+        expect(f.rim).toBeDefined();
+        // The ink brow is a little heavier there, so it stays the main shape
+        expect(f.brow ?? 0.8).toBeGreaterThan(0.8);
+      }
       if (f.rim) expect(contrast(f.line, f.rim)).toBeGreaterThanOrEqual(3);
-      // Where the dark line alone is too close to the skin, there must be a rim
-      if (contrast(f.line, s.base) < 3) expect(f.rim).toBeDefined();
+      // Mouth: lip or its outline reads on the skin
+      expect(Math.max(contrast(f.lip, s.base), contrast(f.lipLine, s.base))).toBeGreaterThanOrEqual(3);
+      // Every skin has a lip outline, deeper than the lip, so the lip has an edge
+      expect(luminance(f.lipLine)).toBeLessThan(luminance(f.lip));
+      expect(contrast(f.lipLine, f.lip)).toBeGreaterThanOrEqual(2);
+      // Where ink would be harsh on the skin (under 3:1), the outline is a brown, not ink
+      if (contrast(f.line, s.base) < 3) expect(f.lipLine.toLowerCase()).not.toBe(f.line.toLowerCase());
+      // The smile line sits on the lip
+      expect(contrast(f.line, f.lip)).toBeGreaterThanOrEqual(3);
       // And the drawing really uses these colours
       const used = coloursUsed(i);
       for (const c of [f.line, f.lip, f.rim, f.lipLine]) if (c) expect(used.has(c.toLowerCase())).toBe(true);
