@@ -232,6 +232,9 @@ test('E5 break it: the last life lost to a honk cloud, by touch: game over, the 
   expect(end.r).toMatchObject({ lives: 0, power: { corn: 0, amala: 0, shield: false } });
   await expect(page.locator('.hud-food:not([hidden])')).toHaveCount(0);
   await expectFrozen(page, 1000);
+  // The arena view stays behind the game over screen (the camera does not jump back to the hero).
+  const arenaX = await page.evaluate(() => window.__game!.level.arenaX);
+  expect(await page.evaluate(() => window.__game!.camX)).toBe(arenaX);
   await shot(page, 'e5-game-over-in-arena');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await over.getByRole('button', { name: 'Play again' }).tap();
