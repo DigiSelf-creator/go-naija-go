@@ -306,10 +306,11 @@ export function drawPassingBus(g: CanvasRenderingContext2D, camX: number, viewW:
 export function drawPothole(g: CanvasRenderingContext2D, x0: number, x1: number, groundY = GROUND_Y, viewH = 360): void {
   g.fillStyle = P.POTHOLE;
   g.fillRect(x0, groundY, x1 - x0, viewH - groundY);
+  // A thin band of rain water near the top; dark below it, down to the bottom edge (S2.1).
   g.fillStyle = P.POTHOLE_WATER;
-  g.fillRect(x0 + 2, groundY + 34, x1 - x0 - 4, viewH - groundY);
+  g.fillRect(x0 + 2, groundY + 34, x1 - x0 - 4, 7);
   g.fillStyle = 'rgba(255,255,255,0.35)';
-  g.fillRect(x0 + 6, groundY + 38, Math.min(14, x1 - x0 - 12), 2);
+  g.fillRect(x0 + 6, groundY + 36, Math.min(14, x1 - x0 - 12), 2);
   // Broken rims on both sides so it reads as a hole, not just a dark patch
   g.fillStyle = P.POTHOLE_RIM;
   for (const [x, dir] of [[x0, 1], [x1, -1]] as const) {
