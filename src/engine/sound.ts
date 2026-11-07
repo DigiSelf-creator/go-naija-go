@@ -21,7 +21,11 @@ export type SoundName =
   // Boss (General Go-Slow)
   | 'honk'
   | 'greenHit'
-  | 'bossWin';
+  | 'bossWin'
+  // Slice 2: moving and the street end (H5)
+  | 'runStart'
+  | 'skid'
+  | 'busBoard';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -153,6 +157,21 @@ const SOUNDS: Record<SoundName, Recipe> = {
       { len: 0.04, hp: 5000, at: 1.0, vol: 0.03 },
       { len: 0.04, hp: 5000, at: 1.22, vol: 0.03 },
     ],
+  },
+  // Slice 2 (H5). Run start: a soft dust whoosh, low hiss with a faint low swell under it.
+  runStart: {
+    tones: [{ f: 140, len: 0.16, wave: 'sine', peak: 190, to: 120, vol: 0.03 }],
+    hiss: [{ len: 0.16, lp: 1400, vol: 0.05 }, { len: 0.08, hp: 3000, at: 0.03, vol: 0.015 }],
+  },
+  // Skid on a turn: a short gritty scuff, two rough hisses and a low drag.
+  skid: {
+    tones: [{ f: 220, len: 0.12, wave: 'triangle', to: 150, vol: 0.035 }],
+    hiss: [{ len: 0.07, lp: 2600, vol: 0.06 }, { len: 0.08, lp: 1800, at: 0.06, vol: 0.045 }],
+  },
+  // Getting on the bus: the door hiss, then our "pa-paam" horn (same as the arena horn).
+  busBoard: {
+    tones: [...horn(311, 392, 0.1, 0.32), ...horn(311, 392, 0.3, 0.46, 0.94)],
+    hiss: [{ len: 0.26, hp: 2500, vol: 0.04 }],
   },
 };
 

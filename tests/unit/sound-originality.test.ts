@@ -109,6 +109,8 @@ describe('code-made sounds are our own', () => {
 const ALL_SOUNDS: readonly SoundName[] = [
   'jump', 'airJump', 'kobo', 'food', 'bounce', 'meeh', 'smash', 'hit', 'shieldPop', 'fall',
   'checkpoint', 'tick', 'gameOver', 'arena', 'honk', 'greenHit', 'bossWin',
+  // Slice 2
+  'runStart', 'skid', 'busBoard',
 ];
 // If a new sound name is added, this line fails to compile until it is in the list above.
 const _everyName: Record<SoundName, true> = Object.fromEntries(ALL_SOUNDS.map((n) => [n, true])) as Record<SoundName, true>;

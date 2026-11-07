@@ -13,12 +13,17 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | Kobo coin (spinning), roasted corn, garri sugar and epa, amala gbegiri and ewedu, HUD food icons, pickup sparkle, shield bubble and pop | src/art/items.ts | Drawn in code, original | No outside licence |
 | General Go-Slow (idle, hit, honk attack, defeat), "POOO!" honk cloud, dust pop, GO light platform (off, lit, done), hit counter | src/art/boss.ts | Drawn in code, original | No outside licence |
 | Art gallery (debug view of every asset) | src/art/gallery.ts | Drawn in code, original | No outside licence |
+| Slice 2 gallery pages (?gallery=1 and up; &t=1.5 holds the time) | src/art/gallery2.ts | Drawn in code, original | No outside licence |
+| Phone buttons: Back, Forward (circle, triangle), Jump (pill, chevron, word), Go down and Go up (pill, bucket, arrow), each with a pressed look; as SVG for HTML buttons and as canvas drawing | src/art/controls.ts | Drawn in code, original | No outside licence |
+| Hero walk, run with dust puff, skid on a turn (same rig, face, skins and hitbox) | src/art/hero.ts, src/art/dust.ts | Drawn in code, original | No outside licence |
+| Pavement and gutter strip, big pit cones, start fence (zinc sheets, posts, arrow board) with a parked bus, bus park (shelter, "BUS PARK" board, wall), big yellow market bus with roof rack and sliding door, bus end timeline | src/art/roadside.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
 
 - No red caps, plumbers, pipes, question blocks, mushrooms, or shapes from any other game.
 - No real people, brands or logos. Shop names are everyday words. The bus is plain yellow with black stripes and no writing.
 - General Go-Slow is a traffic light and a heap of cars: no uniform, cap, medals, flag, party colours, and no faces in the cars.
+- Slice 2 (R8 list checked): no run button (buttons are plain arrows and "Jump"); the street ends at a bus park with a market bus (roof rack, sliding door), never a flagpole or castle; the start is a zinc compound fence. The end bus was reshaped from a long rounded body to a boxy van with a sloped nose and roof load, so it does not read as a school bus.
 
 ## Pride check (things we chose not to do)
 
@@ -49,5 +54,8 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | honk | Boss honk-cloud throw: one sagging two-tone "POOO" |
 | greenHit | Drum knock and bright ding when landing on the green light |
 | bossWin | Happy "pom pom" from the cars, then our own short highlife-style tune |
+| runStart | Soft dust whoosh: low hiss over a faint low swell |
+| skid | Short gritty scuff: two rough hisses and a low drag |
+| busBoard | Door hiss, then our "pa-paam" horn |
 
 Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.
