@@ -68,7 +68,7 @@ function startGame(): void {
   // other half of a double tap, not a jump. A tap anywhere else jumps at once.
   let startTap: (TapPoint & { t: number }) | null = null;
   // Pause when the tab is hidden or the phone turns upright (the "turn sideways" note shows).
-  const portrait = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
+  const portrait = window.matchMedia('(orientation: portrait)');
 
   /** The street or the boss fight is being played (not game over or won). */
   const inPlay = (): boolean => game.run.phase === 'run' || game.run.phase === 'arena';
@@ -292,6 +292,9 @@ function startGame(): void {
     get heroScreenX() {
       return heroScreenX(view.width);
     },
+    get camX() {
+      return game.camera;
+    },
     get sound() {
       return { enabled: sound.enabled, started: sound.started };
     },
@@ -303,6 +306,8 @@ declare global {
     __game?: {
       readonly paused: boolean;
       readonly steps: number;
+      /** Camera left edge (world x) as last drawn. */
+      readonly camX: number;
       readonly hero: {
         readonly x: number;
         readonly y: number;
