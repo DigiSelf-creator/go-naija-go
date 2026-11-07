@@ -415,8 +415,13 @@ test('C7 gentle mode: switched on from the game over screen, the next run has 5 
 });
 
 test('C7 bounce: landing on the goat and on the tyre by touch bounces, costs nothing, the goat runs off', async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
+  // The page clock is ours: once the run starts it stands still and moves one screen frame
+  // (16 ms, so at most one physics step) at a time. Every decision below is made from the
+  // game state after each physics step, so a busy computer cannot make a tap late.
+  await page.clock.install();
   await openAndRun(page, OLD_WAY);
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 50);
   const f = finger(await page.context().newCDPSession(page));
   const level = await page.evaluate(() => window.__game!.level);
   const bounced: string[] = [];
@@ -424,8 +429,13 @@ test('C7 bounce: landing on the goat and on the tyre by touch bounces, costs not
   let holding = false;
   let second = false;
   const done = new Set<number>();
+  let lastStep = -1;
   for (;;) {
+    await page.clock.runFor(16);
     const s = await state(page);
+    if (s.steps === lastStep) continue; // no physics step this frame: nothing new to decide
+    expect(s.steps - lastStep === 1 || lastStep < 0, 'one physics step at a time').toBe(true);
+    lastStep = s.steps;
     if (s.r.phase !== 'run' || s.h.x > 5600) break;
     const goat = s.r.hazards[0]!;
     const tyre = s.r.hazards[1]!;
@@ -464,6 +474,7 @@ test('C7 bounce: landing on the goat and on the tyre by touch bounces, costs not
     }
   }
   const r = (await state(page)).r;
+  await page.clock.resume();
   console.log(`bounce run: ${JSON.stringify(r.hazards.slice(0, 2))}, lives ${r.lives}`);
   expect(bounced).toEqual(['goat', 'tyre']);
   expect(r.lives).toBe(3);
