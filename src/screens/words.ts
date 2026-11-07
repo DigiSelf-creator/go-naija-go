@@ -73,5 +73,4 @@ export const WORDS = {
     greenLight: (left: number) => `Green light! ${left} more.`,
     roadFree: 'Green light! The road is free!',
   },
-  closingLine: 'Remember: a wrong premise often leads to a misleading conclusion.',
 } as const;

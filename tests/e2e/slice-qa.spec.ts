@@ -15,7 +15,7 @@ mkdirSync(SHOTS, { recursive: true });
 const shot = (page: Page, name: string) => page.screenshot({ path: join(SHOTS, `${name}.png`) });
 
 const PHONE = { width: 727, height: 393 }; // Playwright's Pixel 5, sideways
-const WIN_LINE = 'Remember: a wrong premise often leads to a misleading conclusion.';
+const WIN_LINE = /wrong premise/;
 
 const snap = (page: Page) =>
   page.evaluate(() => ({ h: window.__game!.hero, r: window.__game!.run, b: window.__game!.boss, steps: window.__game!.steps, paused: window.__game!.paused, screen: window.__game!.screen }));
@@ -166,7 +166,7 @@ test('E5 break it: boss in every state, pause and turn the phone mid-fight, tiny
   if (tappedAt - shownAt < 350) expect((await snap(page)).screen).toBe('win');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   if ((await snap(page)).screen === 'win') {
-    await expect(won.getByText(WIN_LINE)).toBeVisible();
+    await expect(won.getByText(WIN_LINE)).toHaveCount(0);
     await shot(page, 'e5-win-screen');
   }
   // 20 very fast taps all over the win screen and on its buttons.

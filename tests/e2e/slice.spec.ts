@@ -67,7 +67,7 @@ test('the first slice from a fresh visit: hero, level 1, all foods, General Go-S
   const lifeWord = end.lives === 1 ? 'life' : 'lives';
   await expect(won.getByText(`You beat General Go-Slow with ${end.kobo} kobo and ${end.lives} ${lifeWord} left.`)).toBeVisible();
   await expect(won.getByText('More roads are coming soon.')).toBeVisible();
-  await expect(won.getByText('Remember: a wrong premise often leads to a misleading conclusion.')).toBeVisible();
+  await expect(won.getByText(/wrong premise/)).toHaveCount(0);
   await expect(won.getByRole('button', { name: 'Play again' })).toBeVisible();
   await expect(won.getByRole('button', { name: 'Home' })).toBeVisible();
 

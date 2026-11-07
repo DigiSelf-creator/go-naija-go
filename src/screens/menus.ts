@@ -179,7 +179,6 @@ export class Menus {
       h('p', {}, w.more),
       this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
       h('div', { class: 'minor-row' }, this.guarded(w.home, 'minor', () => this.hooks.home())),
-      h('p', { class: 'small closing' }, WORDS.closingLine),
     );
   }
 
@@ -302,7 +301,6 @@ export class Menus {
       { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       ...w.lines.map((l) => h('p', {}, l)),
-      h('p', { class: 'small' }, WORDS.closingLine),
       button(w.back, 'go', () => this.show('title')),
     );
   }

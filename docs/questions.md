@@ -41,7 +41,7 @@ Rules (CLAUDE.md rules 3 and 4, and po's own):
 
 The game never ends (Tp, 7 Nov 2026: "That way the game never ends."). po recommendation:
 1. The game keeps growing one region at a time: World 1 is Lagos, then its neighbours (Ogun, Oyo, Osun, Ondo, Ekiti), then the other regions, until all 36 states and the FCT work. Then West Africa, as the brief says, as friendly neighbours, never mocked.
-2. A big finish when all 37 departments work: Nigeria's wheel spins, and the screen shows "Remember: a wrong premise often leads to a misleading conclusion."
+2. A big finish when all 37 departments work: Nigeria's wheel spins and the nation celebrates.
 3. After that, a light "keep it working" mode: now and then a fixed state gets a new everyday problem to clear. All on the phone, offline, no accounts, no server. Never punishing: a fixed state never loses its cog or the player's progress; the new problem is a bonus job, not a loss.
 4. What it changes in slice 2: only the save. Progress is saved per state and per street (not as "level 1"), so new states and regions can be added later without breaking saves on phones. No question for Tp; it is built that way.
 
@@ -217,6 +217,9 @@ Suggested brief wording for Tp (po does not edit the brief):
 - How it plays 1: "You move the hero yourself: walk forward or back, hold to build a run, tap to jump. Tap again in the air to jump again. Holding jumps higher."
 - Done when 2: "World 1 (Lagos) plays from street 1, through streets 2 and 3, into Go-Slow Hall, to General Go-Slow and the win screen, on a phone, by touch."
 - Done when, new: "Music plays, with an on/off switch." and "The hero builder offers male or female and teen, adult or elder."
+
+## Answered by Tp in chat, 7 Nov 2026
+- The line "Remember: a wrong premise often leads to a misleading conclusion." is **not** in the game. It belongs to another project. It has been removed from the win and credits screens, and CLAUDE.md rule 8 now says so. For Tp: docs/brief.md (Done when 8) still asks for it; please edit or remove that line there. Suggested decision line: "7. The 'wrong premise' line is not in the game."
 
 ## Answered by Tp in chat, 6 Nov 2026
 
