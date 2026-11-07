@@ -425,6 +425,8 @@ export class Run {
 
   private gameOver(ev: RunEvent[]): void {
     this.lives = 0;
+    // Food effects end on every game over, a hit or a fall (the HUD never shows a food at 0 lives).
+    this.power = { corn: 0, amala: 0, shield: false };
     this.phase = 'over';
     ev.push({ type: 'gameOver' });
   }

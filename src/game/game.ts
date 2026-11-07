@@ -53,6 +53,11 @@ export class Game {
     this.run = new Run(level);
   }
 
+  /** Camera left edge (world x) as last drawn. */
+  get camera(): number {
+    return this.camX;
+  }
+
   get hero(): Run['hero'] {
     return this.run.hero;
   }
@@ -101,11 +106,13 @@ export class Game {
 
   /**
    * The camera follows the hero at heroScreenX. In the boss arena it glides to the arena's
-   * left edge and stays there (design.md: Boss).
+   * left edge and stays there (design.md: Boss), also behind the game over screen when the
+   * last life was lost in the fight (run.boss is set from the moment the arena starts).
    */
   cameraX(view: View): number {
     const follow = this.hero.x - view.width * heroScreenX(view.width);
-    const inArena = this.run.phase === 'arena' || this.run.phase === 'won';
+    const phase = this.run.phase;
+    const inArena = phase === 'arena' || phase === 'won' || (phase === 'over' && this.run.boss !== null);
     if (!inArena || Math.abs(this.camX - follow) > view.width * 2) {
       this.camX = inArena ? this.level.arena.x : follow;
       return this.camX;
