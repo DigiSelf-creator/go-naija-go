@@ -106,8 +106,8 @@ describe('note data', () => {
 });
 
 /**
- * Openings of well-known game tunes (first notes only, as a fingerprint) and our
- * sound-effect motifs. A melody copies one if any run of 5 of its notes moves by
+ * Openings of well-known game tunes, hymns, anthems and songs sung across Nigeria
+ * (first notes only, as a fingerprint) and our sound-effect motifs. A melody copies one if any run of 5 of its notes moves by
  * the same steps (within half a semitone) as a run of 5 in the fingerprint, or
  * if its first 4 notes move like the fingerprint's first 4.
  */
@@ -124,6 +124,22 @@ const KNOWN: Record<string, string[]> = {
   'course clear run': ['G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'E5'],
   'secret found jingle': ['G5', 'F#5', 'D#5', 'A4', 'G#4', 'E5', 'G#5', 'C6'],
   'item fanfare': ['A4', 'A#4', 'B4', 'C5'],
+  // Hymns, anthems and songs widely sung in Nigeria (opening notes only, no words).
+  'Amazing Grace': ['D4', 'G4', 'B4', 'G4', 'B4', 'A4', 'G4', 'E4', 'D4'],
+  'Michael, Row the Boat Ashore': ['C4', 'E4', 'G4', 'E4', 'G4', 'A4', 'G4'],
+  'Camptown Races': ['G4', 'G4', 'E4', 'G4', 'A4', 'G4', 'E4'],
+  'Happy Birthday': ['G4', 'G4', 'A4', 'G4', 'C5', 'B4', 'G4', 'G4', 'A4', 'G4', 'D5', 'C5'],
+  'Twinkle, Twinkle, Little Star': ['C4', 'C4', 'G4', 'G4', 'A4', 'A4', 'G4', 'F4', 'F4', 'E4', 'E4', 'D4', 'D4', 'C4'],
+  'Silent Night': ['G4', 'A4', 'G4', 'E4', 'G4', 'A4', 'G4', 'E4'],
+  'Joy to the World': ['D5', 'C#5', 'B4', 'A4', 'G4', 'F#4', 'E4', 'D4'],
+  'O Come, All Ye Faithful': ['G4', 'G4', 'D4', 'G4', 'A4', 'D4', 'B4', 'A4', 'B4', 'C5', 'B4', 'A4'],
+  'Holy, Holy, Holy': ['D4', 'D4', 'F#4', 'F#4', 'A4', 'A4'],
+  'Old Hundredth (the Doxology)': ['G4', 'G4', 'F#4', 'E4', 'D4', 'G4', 'A4', 'B4'],
+  'Abide with Me': ['E4', 'E4', 'D4', 'C4', 'G4', 'A4', 'G4', 'F4', 'E4'],
+  'When the Saints Go Marching In': ['C4', 'E4', 'F4', 'G4', 'C4', 'E4', 'F4', 'G4'],
+  'Ode to Joy': ['E4', 'E4', 'F4', 'G4', 'G4', 'F4', 'E4', 'D4', 'C4', 'C4', 'D4', 'E4', 'E4', 'D4', 'D4'],
+  'Auld Lang Syne': ['C4', 'F4', 'F4', 'F4', 'A4', 'G4', 'F4', 'G4', 'A4', 'F4'],
+  'Jingle Bells (chorus)': ['E4', 'E4', 'E4', 'E4', 'E4', 'E4', 'E4', 'G4', 'C4', 'D4', 'E4'],
 };
 
 const iv = (xs: number[]): number[] => xs.slice(1).map((x, i) => x - xs[i]!);
@@ -157,7 +173,7 @@ describe('every tune is our own', () => {
   });
 
   for (const p of PLACES) {
-    it(`${p}: no melody follows a well-known game tune or our sound motifs`, () => {
+    it(`${p}: no melody follows a well-known game tune, hymn, song or our sound motifs`, () => {
       const mel = melody(TUNES[p]);
       expect(mel.length).toBeGreaterThan(3);
       for (const [name, notes] of Object.entries(KNOWN)) {
