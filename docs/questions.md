@@ -9,7 +9,8 @@ Accepted: nothing new today. Nothing for slice 2 has been built or passed by qa 
 What happened: Tp played the first slice and asked for eight changes (R1 to R8 below), then gave the big idea behind the game (R0). Tp's word overrides the brief. Where a request changes docs/brief.md or docs/decisions.md, it says so plainly, and section "Lines for Tp to copy" at the end gives the wording. Only Tp edits those two files.
 
 Waiting for Tp: Q16 to Q21. My recommendations in short:
-- Q16 how the game is built: a region is a group of states; each state has 3 streets; the region's last state ends in the boss's hall. Version 1: World 1 is Lagos only, 3 streets plus General Go-Slow's hall.
+- Q16 how the game is built: a region is a group of states; each state has 3 streets; the region's last state ends in the boss's hall. Version 1: World 1 is Lagos only, 3 streets plus General Go-Slow's hall; Lagos's neighbours join World 1 in later updates.
+- Tp's "the game never ends" is recorded under R0 as a goal (grow state by state, big finish, gentle "keep it working" mode). It only changes how slice 2 saves progress, so no question.
 - Q17 progress picture: the "Nigeria wheel", one cog per state, in version 1. A full map later.
 - Q18 auto-run: no auto-run anywhere in slice 2. Gentle mode stays 5 lives.
 - Q19 the well gift: a food parcel you carry into the boss hall (a ready-made garri shield). The boss stays beatable without it.
@@ -37,6 +38,12 @@ Rules (CLAUDE.md rules 3 and 4, and po's own):
 4. No party colours or logos. The wheel and the map use the game's own warm colours, and no state colour may match a party. Green and white together means Nigeria, which is fine.
 5. "Nigeria Company" has no boss person: no chairman, no governor, no president. The player is a worker who gets things working.
 6. A map, if drawn, must have correct state borders and names, all 36 states and the FCT.
+
+The game never ends (Tp, 7 Nov 2026: "That way the game never ends."). po recommendation:
+1. The game keeps growing one region at a time: World 1 is Lagos, then its neighbours (Ogun, Oyo, Osun, Ondo, Ekiti), then the other regions, until all 36 states and the FCT work. Then West Africa, as the brief says, as friendly neighbours, never mocked.
+2. A big finish when all 37 departments work: Nigeria's wheel spins, and the screen shows "Remember: a wrong premise often leads to a misleading conclusion."
+3. After that, a light "keep it working" mode: now and then a fixed state gets a new everyday problem to clear. All on the phone, offline, no accounts, no server. Never punishing: a fixed state never loses its cog or the player's progress; the new problem is a bonus job, not a loss.
+4. What it changes in slice 2: only the save. Progress is saved per state and per street (not as "level 1"), so new states and regions can be added later without breaking saves on phones. No question for Tp; it is built that way.
 
 Changes to the brief: the brief's Worlds list (Your street, The market, Down the well, Across Nigeria, Abuja) becomes regions of states. "The idea in one line" gains the company goal. Line for Tp: see the end of this section.
 
@@ -203,6 +210,7 @@ qa checks every new picture, sound and tune against this list.
 12. Streets can hide a village well that leads to a small bonus room with kobo and a food parcel for the boss fight. This brings a small part of "Down the well" into World 1.
 13. Boss fights happen in the boss's hall (for World 1, "Go-Slow Hall"), not on the road.
 14. A region is a group of states, each state has 3 streets, and the region ends in the boss hall. Version 1: World 1 is Lagos, 3 streets plus Go-Slow Hall.
+15. The game never ends: it grows region by region until all 36 states and the FCT work, then West Africa. After the big finish, a gentle offline "keep it working" mode gives fixed states new problems, never taking progress away.
 
 Suggested brief wording for Tp (po does not edit the brief):
 - The idea in one line: "A free run-and-jump game where you play as yourself, fix the everyday problems in each state of Nigeria Company, eat Nigerian food for power, and get Nigeria's wheel turning."
