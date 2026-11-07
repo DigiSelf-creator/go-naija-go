@@ -13,12 +13,23 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | Kobo coin (spinning), roasted corn, garri sugar and epa, amala gbegiri and ewedu, HUD food icons, pickup sparkle, shield bubble and pop | src/art/items.ts | Drawn in code, original | No outside licence |
 | General Go-Slow (idle, hit, honk attack, defeat), "POOO!" honk cloud, dust pop, GO light platform (off, lit, done), hit counter | src/art/boss.ts | Drawn in code, original | No outside licence |
 | Art gallery (debug view of every asset) | src/art/gallery.ts | Drawn in code, original | No outside licence |
+| Slice 2 gallery pages (?gallery=1 and up; &t=1.5 holds the time) | src/art/gallery2.ts | Drawn in code, original | No outside licence |
+| Phone buttons: Back, Forward (circle, triangle), Jump (pill, chevron, word), Go down and Go up (pill, bucket, arrow), each with a pressed look; as SVG for HTML buttons and as canvas drawing | src/art/controls.ts | Drawn in code, original | No outside licence |
+| Hero walk, run with dust puff, skid on a turn (same rig, face, skins and hitbox) | src/art/hero.ts, src/art/dust.ts | Drawn in code, original | No outside licence |
+| Hanging market crates: pale slatted wood, rope handles, one rope to a line on two wooden poles; stamps (coin stack, corn cob, cup, bowl); swing, open lid hanging down, kobo fan, food pop | src/art/crate.ts | Drawn in code, original | No outside licence |
+| Village well: round plastered wall with chips showing brick, wooden frame with a small roof board, log roller, turning crank, rope and metal bucket; entrance (bucket, bobbing arrow) and exit (no bucket); back and front layers with a mouth clip; going down and up timelines; screen fade | src/art/well.ts | Drawn in code, original | No outside licence |
+| Well store room: earth walls with layers and stones, beam, side posts, ceiling light holes, three hanging clay oil lamps with a soft flicker, clay pots, woven baskets, plank shelves, rope and bucket back up; garri parcel (leaf wrap, string, bow, glint) and its HUD icon; hero rope pose | src/art/wellRoom.ts, src/art/hero.ts | Drawn in code, original | No outside licence |
+| Pavement and gutter strip, big pit cones, start fence (zinc sheets, posts, arrow board) with a parked bus, bus park (shelter, "BUS PARK" board, wall), big yellow market bus with roof rack and sliding door, bus end timeline | src/art/roadside.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
 
 - No red caps, plumbers, pipes, question blocks, mushrooms, or shapes from any other game.
 - No real people, brands or logos. Shop names are everyday words. The bus is plain yellow with black stripes and no writing.
 - General Go-Slow is a traffic light and a heap of cars: no uniform, cap, medals, flag, party colours, and no faces in the cars.
+- Slice 2 (R8 list checked): no run button (buttons are plain arrows and "Jump"); the street ends at a bus park with a market bus (roof rack, sliding door), never a flagpole or castle; the start is a zinc compound fence. The end bus was reshaped from a long rounded body to a boxy van with a sloped nose and roof load, so it does not read as a school bus.
+- Crates (R5): orange-brown wood, never yellow or gold (a unit test checks every colour); no "?" or "!" or any writing; no rivets or brick row; always hung by a rope. The first kobo stamp (rings) looked like a target, so it became a small stack of coins. The open lid hangs down the side, so an empty crate reads as "opened", not as a new block.
+- Well (R4): rope, roller, crank and bucket on a short, wide plastered wall; never a pipe, tube or green cylinder, and no water anywhere (unit tests check for pipe green and water blue in the well and room colours). The going-down clicks step by a whole tone, never by the semitone or fourth steps of famous warp or item sounds. The first brick chips looked like beans, so they became ragged holes showing bricks.
+- Store room: lamp-lit earth, never blue bricks or any game's underground. A dry, plainly magic bonus place: nobody is stuck, nothing suggests climbing into a real well.
 
 ## Pride check (things we chose not to do)
 
@@ -49,5 +60,31 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | honk | Boss honk-cloud throw: one sagging two-tone "POOO" |
 | greenHit | Drum knock and bright ding when landing on the green light |
 | bossWin | Happy "pom pom" from the cars, then our own short highlife-style tune |
+| runStart | Soft dust whoosh: low hiss over a faint low swell |
+| skid | Short gritty scuff: two rough hisses and a low drag |
+| busBoard | Door hiss, then our "pa-paam" horn |
+| crateHit | Hollow wooden "tok", then a soft rope creak |
+| crateEmpty | Duller, lower "tok", no creak |
+| crateKobo | Our kobo pling three times quickly, each a semitone higher (no chime run) |
+| cratePop | Soft round pop as a food comes out |
+| wellDown | Wooden crank clicks, a whole tone lower each time, under a slow rope creak |
+| wellUp | The same clicks, a whole tone higher each time |
+| roomThump | Soft hollow thump with two quiet echoes |
+| parcel | Warm two-note "got it", up a fifth, over a low hum |
 
 Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.
+
+## Music
+
+All music is made in code with WebAudio: our own melodies kept as note data in src/art/tunes.ts (one string of 16 steps per bar, easy to read), played by src/engine/music.ts. No music files, no outside licence. Instruments are built from oscillators and hiss: bass (triangle, low-pass), highlife guitar pluck (two slightly apart square waves, low-pass 1800 Hz, falling away fast so it never sounds like a chip tune), agogo bell (two sines at 1 : 2.7), shekere (high hiss), talking drum (sine bend), kalimba (sine and a soft third partial), horn stab (sawtooth, low-pass) and a soft drone. At most 6 notes at once; music sits well under the sound effects (music gain 0.3).
+
+| Tune | Mood | Tempo | Key and chords |
+|---|---|---|---|
+| menu | warm, welcoming: the street tune, bass and guitar only, 70 percent volume | 96 | G major |
+| street | bright, busy walking-to-work highlife; street 3 adds a second agogo line | 108, 112, 116 | G major. A: G C D G. B: Em C D D. 16 bars |
+| well | cosy, secret, calm kalimba over a low drone | 84 | A minor pentatonic. Am G F G. 8 bars |
+| hall | tense but funny and honky; walking bass, horn stabs on 2 and 4; a shaker joins after hit 1 and a second horn after hit 2 | 128, 134, 140 | E minor. Em Em C B. 8 bars |
+| cleared | our "pa-paam" bus horn, then a 4-note guitar figure ending on G, about 2.5 s | 120 | G major |
+| win | a broken run up the G major scale, an agogo flourish, a talking-drum "pom pom", a full G chord, about 5 s | 120 | G major |
+
+Originality: tests/unit/music.test.ts checks every melody against the openings of well-known game tunes (platformer overworld, underground, star and castle themes, the falling-blocks theme, an adventure overworld theme) and our list of famous game sound motifs. While writing, the check caught three real near-copies, which were rewritten: the well and hall tunes each had the five-note turn "A C E D C" (and the hall a "C D C B A" turn) from the falling-blocks theme, and the win run was a plain major-scale run like an adventure theme's, so it now climbs in broken steps. The check cannot know Nigerian songs: qa should still listen for known Nigerian songs, adverts, anthems, hymns and chants (S2.9).

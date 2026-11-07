@@ -21,7 +21,21 @@ export type SoundName =
   // Boss (General Go-Slow)
   | 'honk'
   | 'greenHit'
-  | 'bossWin';
+  | 'bossWin'
+  // Slice 2: moving and the street end (H5)
+  | 'runStart'
+  | 'skid'
+  | 'busBoard'
+  // Slice 2: hanging crates (J1)
+  | 'crateHit'
+  | 'crateEmpty'
+  | 'crateKobo'
+  | 'cratePop'
+  // Slice 2: the well and its room (L1)
+  | 'wellDown'
+  | 'wellUp'
+  | 'roomThump'
+  | 'parcel';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -152,6 +166,82 @@ const SOUNDS: Record<SoundName, Recipe> = {
       { len: 0.04, hp: 5000, at: 0.69, vol: 0.03 },
       { len: 0.04, hp: 5000, at: 1.0, vol: 0.03 },
       { len: 0.04, hp: 5000, at: 1.22, vol: 0.03 },
+    ],
+  },
+  // Slice 2 (H5). Run start: a soft dust whoosh, low hiss with a faint low swell under it.
+  runStart: {
+    tones: [{ f: 140, len: 0.16, wave: 'sine', peak: 190, to: 120, vol: 0.03 }],
+    hiss: [{ len: 0.16, lp: 1400, vol: 0.05 }, { len: 0.08, hp: 3000, at: 0.03, vol: 0.015 }],
+  },
+  // Skid on a turn: a short gritty scuff, two rough hisses and a low drag.
+  skid: {
+    tones: [{ f: 220, len: 0.12, wave: 'triangle', to: 150, vol: 0.035 }],
+    hiss: [{ len: 0.07, lp: 2600, vol: 0.06 }, { len: 0.08, lp: 1800, at: 0.06, vol: 0.045 }],
+  },
+  // Getting on the bus: the door hiss, then our "pa-paam" horn (same as the arena horn).
+  busBoard: {
+    tones: [...horn(311, 392, 0.1, 0.32), ...horn(311, 392, 0.3, 0.46, 0.94)],
+    hiss: [{ len: 0.26, hp: 2500, vol: 0.04 }],
+  },
+  // Slice 2 (J1). Crate knocked: a hollow wooden "tok", then a soft rope creak (two slow wobbles).
+  crateHit: {
+    tones: [
+      { f: 820, len: 0.06, wave: 'triangle', to: 560, vol: 0.09 },
+      { f: 410, len: 0.08, wave: 'sine', to: 300, vol: 0.05 },
+      { f: 150, len: 0.18, wave: 'sawtooth', peak: 175, to: 140, at: 0.09, vol: 0.012 },
+      { f: 165, len: 0.16, wave: 'sawtooth', peak: 150, to: 172, at: 0.3, vol: 0.01 },
+    ],
+    hiss: [{ len: 0.025, hp: 2000, vol: 0.04 }],
+  },
+  // An empty crate: a duller, lower "tok" and no creak.
+  crateEmpty: {
+    tones: [
+      { f: 560, len: 0.05, wave: 'triangle', to: 400, vol: 0.07 },
+      { f: 280, len: 0.06, wave: 'sine', to: 220, vol: 0.04 },
+    ],
+    hiss: [{ len: 0.02, lp: 1500, vol: 0.03 }],
+  },
+  // Three kobo out of a crate: our kobo pling three times quickly, each a little higher.
+  crateKobo: {
+    tones: [0, 1, 2].map((i): Tone => ({ f: 1175 * 2 ** (i / 12), len: 0.08, wave: 'sine', to: 1110 * 2 ** (i / 12), at: i * 0.07, vol: 0.04 })),
+    hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.04, hp: 5000, at: i * 0.07, vol: 0.04 })),
+  },
+  // Food out of a crate: a soft round pop.
+  cratePop: {
+    tones: [{ f: 260, len: 0.09, wave: 'sine', peak: 620, to: 480, vol: 0.07 }],
+    hiss: [{ len: 0.03, lp: 2500, at: 0.01, vol: 0.03 }],
+  },
+  // Slice 2 (L1). Going down: wooden crank clicks a whole tone lower each time, under a slow rope creak.
+  wellDown: {
+    tones: [
+      ...[0, 1, 2, 3, 4, 5, 6].map((i): Tone => ({ f: 1400 * 2 ** (-i / 6), len: 0.025, wave: 'triangle', to: 1300 * 2 ** (-i / 6), at: i * 0.15, vol: 0.05 })),
+      { f: 170, len: 0.5, wave: 'sawtooth', peak: 200, to: 140, at: 0.1, vol: 0.01 },
+    ],
+    hiss: [0, 1, 2, 3, 4, 5, 6].map((i): Hiss => ({ len: 0.02, hp: 3000, at: i * 0.15, vol: 0.025 })),
+  },
+  // Going up: the same clicks, a whole tone higher each time, a little quicker.
+  wellUp: {
+    tones: [
+      ...[0, 1, 2, 3, 4, 5].map((i): Tone => ({ f: 800 * 2 ** (i / 6), len: 0.025, wave: 'triangle', to: 760 * 2 ** (i / 6), at: i * 0.13, vol: 0.05 })),
+      { f: 150, len: 0.45, wave: 'sawtooth', peak: 190, to: 175, at: 0.05, vol: 0.01 },
+    ],
+    hiss: [0, 1, 2, 3, 4, 5].map((i): Hiss => ({ len: 0.02, hp: 3000, at: i * 0.13, vol: 0.025 })),
+  },
+  // Arriving in the room: a soft hollow thump with two quiet echoes.
+  roomThump: {
+    tones: [
+      { f: 120, len: 0.22, wave: 'sine', to: 60, vol: 0.11 },
+      { f: 118, len: 0.18, wave: 'sine', to: 64, at: 0.17, vol: 0.035 },
+      { f: 116, len: 0.16, wave: 'sine', to: 66, at: 0.33, vol: 0.015 },
+    ],
+    hiss: [{ len: 0.08, lp: 600, vol: 0.05 }],
+  },
+  // Garri parcel: a warm two-note "got it", up a fifth, soft triangle.
+  parcel: {
+    tones: [
+      { f: 392, len: 0.13, wave: 'triangle', vol: 0.06 },
+      { f: 587, len: 0.3, wave: 'triangle', peak: 594, to: 587, at: 0.12, vol: 0.06 },
+      { f: 294, len: 0.4, wave: 'sine', at: 0.12, vol: 0.03 },
     ],
   },
 };

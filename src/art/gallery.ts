@@ -4,6 +4,7 @@
  * fits a fixed 960 x 720 layout into it.
  */
 import { drawBoss, drawDustPop, drawGoLight, drawHitCounter, drawHonkCloud, type BossMode } from './boss';
+import { SLICE2_PAGES } from './gallery2';
 import { drawGoat, drawTyre } from './hazards';
 import { HAIRS, OUTFITS, SKINS, drawHero, type HeroPose } from './hero';
 import { drawFood, drawKobo, drawShield, drawSparkle, type FoodKind } from './items';
@@ -28,12 +29,22 @@ function hero(g: CanvasRenderingContext2D, x: number, y: number, skin: number, h
   g.restore();
 }
 
-export function drawGallery(g: CanvasRenderingContext2D, viewW: number, viewH: number, time: number): void {
+/**
+ * page 0: slice 1 art. Pages 1 and up: slice 2 art (src/art/gallery2.ts), one page
+ * per piece of work so each can be reviewed on its own.
+ */
+export function drawGallery(g: CanvasRenderingContext2D, viewW: number, viewH: number, time: number, page = 0): void {
   g.save();
   g.fillStyle = '#fbf3df';
   g.fillRect(0, 0, viewW, viewH);
   const s = Math.min(viewW / LAYOUT_W, viewH / LAYOUT_H);
   g.scale(s, s);
+  const extra = SLICE2_PAGES[page - 1];
+  if (extra) {
+    extra(g, time);
+    g.restore();
+    return;
+  }
 
   // 1. Street strip at the top (a 360-tall slice squeezed to half size)
   g.save();

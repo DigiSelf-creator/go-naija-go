@@ -36,13 +36,16 @@ resize();
 
 registerServiceWorker();
 
-if (new URLSearchParams(location.search).has('gallery')) {
-  // Debug only: every picture at once, for art checks (?gallery).
+const query = new URLSearchParams(location.search);
+if (query.has('gallery')) {
+  // Debug only: every picture at once, for art checks (?gallery, ?gallery=2 for page 2, &t=1.5 to hold the time).
   void import('./art/gallery').then(({ drawGallery }) => {
     const t0 = performance.now();
+    const page = Number(query.get('gallery')) || 0;
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
     const frame = (now: number): void => {
       g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawGallery(g, view.width, view.height, (now - t0) / 1000);
+      drawGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
