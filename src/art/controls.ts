@@ -1,7 +1,7 @@
 /**
  * Phone buttons (docs/design.md S2.2 "Phone buttons", S2.5 well buttons): Back,
  * Forward, Jump, Go down, Go up. Our own simple shapes: circles with a triangle,
- * a pill with an up chevron and a word, a pill with a bucket and an arrow.
+ * a pill with an up chevron above a word, a pill with a bucket and an arrow.
  *
  * One description of each button is turned into either:
  * - controlSvg(kind, pressed): SVG markup for an HTML button (the HUD is HTML), or
@@ -63,20 +63,23 @@ export function controlParts(kind: ControlKind, label?: string): Prim[] {
     }
     case 'jump': {
       const text = label ?? CONTROL_WORDS.jump;
+      // The chevron sits above the word, both centred, so neither crowds the other
+      // or the outline at any size.
+      const cx = W / 2;
       return [
         { t: 'pill', x: 4, y: 4, w: W - 8, h: 92, face: true },
         {
           t: 'poly',
           pts: [
-            [22, 60],
-            [40, 40],
-            [58, 60],
+            [cx - 17, 33],
+            [cx, 16],
+            [cx + 17, 33],
           ],
           closed: false,
           fill: false,
-          w: 10,
+          w: 9,
         },
-        { t: 'text', x: 100, y: 52, size: fitSize(text, 64, 30), text },
+        { t: 'text', x: cx, y: 67, size: fitSize(text, 96, 30), text },
       ];
     }
     case 'down':
