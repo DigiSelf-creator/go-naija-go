@@ -30,7 +30,12 @@ export type SoundName =
   | 'crateHit'
   | 'crateEmpty'
   | 'crateKobo'
-  | 'cratePop';
+  | 'cratePop'
+  // Slice 2: the well and its room (L1)
+  | 'wellDown'
+  | 'wellUp'
+  | 'roomThump'
+  | 'parcel';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -205,6 +210,39 @@ const SOUNDS: Record<SoundName, Recipe> = {
   cratePop: {
     tones: [{ f: 260, len: 0.09, wave: 'sine', peak: 620, to: 480, vol: 0.07 }],
     hiss: [{ len: 0.03, lp: 2500, at: 0.01, vol: 0.03 }],
+  },
+  // Slice 2 (L1). Going down: wooden crank clicks a whole tone lower each time, under a slow rope creak.
+  wellDown: {
+    tones: [
+      ...[0, 1, 2, 3, 4, 5, 6].map((i): Tone => ({ f: 1400 * 2 ** (-i / 6), len: 0.025, wave: 'triangle', to: 1300 * 2 ** (-i / 6), at: i * 0.15, vol: 0.05 })),
+      { f: 170, len: 0.5, wave: 'sawtooth', peak: 200, to: 140, at: 0.1, vol: 0.01 },
+    ],
+    hiss: [0, 1, 2, 3, 4, 5, 6].map((i): Hiss => ({ len: 0.02, hp: 3000, at: i * 0.15, vol: 0.025 })),
+  },
+  // Going up: the same clicks, a whole tone higher each time, a little quicker.
+  wellUp: {
+    tones: [
+      ...[0, 1, 2, 3, 4, 5].map((i): Tone => ({ f: 800 * 2 ** (i / 6), len: 0.025, wave: 'triangle', to: 760 * 2 ** (i / 6), at: i * 0.13, vol: 0.05 })),
+      { f: 150, len: 0.45, wave: 'sawtooth', peak: 190, to: 175, at: 0.05, vol: 0.01 },
+    ],
+    hiss: [0, 1, 2, 3, 4, 5].map((i): Hiss => ({ len: 0.02, hp: 3000, at: i * 0.13, vol: 0.025 })),
+  },
+  // Arriving in the room: a soft hollow thump with two quiet echoes.
+  roomThump: {
+    tones: [
+      { f: 120, len: 0.22, wave: 'sine', to: 60, vol: 0.11 },
+      { f: 118, len: 0.18, wave: 'sine', to: 64, at: 0.17, vol: 0.035 },
+      { f: 116, len: 0.16, wave: 'sine', to: 66, at: 0.33, vol: 0.015 },
+    ],
+    hiss: [{ len: 0.08, lp: 600, vol: 0.05 }],
+  },
+  // Garri parcel: a warm two-note "got it", up a fifth, soft triangle.
+  parcel: {
+    tones: [
+      { f: 392, len: 0.13, wave: 'triangle', vol: 0.06 },
+      { f: 587, len: 0.3, wave: 'triangle', peak: 594, to: 587, at: 0.12, vol: 0.06 },
+      { f: 294, len: 0.4, wave: 'sine', at: 0.12, vol: 0.03 },
+    ],
   },
 };
 

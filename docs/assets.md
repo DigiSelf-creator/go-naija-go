@@ -17,6 +17,8 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | Phone buttons: Back, Forward (circle, triangle), Jump (pill, chevron, word), Go down and Go up (pill, bucket, arrow), each with a pressed look; as SVG for HTML buttons and as canvas drawing | src/art/controls.ts | Drawn in code, original | No outside licence |
 | Hero walk, run with dust puff, skid on a turn (same rig, face, skins and hitbox) | src/art/hero.ts, src/art/dust.ts | Drawn in code, original | No outside licence |
 | Hanging market crates: pale slatted wood, rope handles, one rope to a line on two wooden poles; stamps (coin stack, corn cob, cup, bowl); swing, open lid hanging down, kobo fan, food pop | src/art/crate.ts | Drawn in code, original | No outside licence |
+| Village well: round plastered wall with chips showing brick, wooden frame with a small roof board, log roller, turning crank, rope and metal bucket; entrance (bucket, bobbing arrow) and exit (no bucket); back and front layers with a mouth clip; going down and up timelines; screen fade | src/art/well.ts | Drawn in code, original | No outside licence |
+| Well store room: earth walls with layers and stones, beam, side posts, ceiling light holes, three hanging clay oil lamps with a soft flicker, clay pots, woven baskets, plank shelves, rope and bucket back up; garri parcel (leaf wrap, string, bow, glint) and its HUD icon; hero rope pose | src/art/wellRoom.ts, src/art/hero.ts | Drawn in code, original | No outside licence |
 | Pavement and gutter strip, big pit cones, start fence (zinc sheets, posts, arrow board) with a parked bus, bus park (shelter, "BUS PARK" board, wall), big yellow market bus with roof rack and sliding door, bus end timeline | src/art/roadside.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
@@ -26,6 +28,8 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - General Go-Slow is a traffic light and a heap of cars: no uniform, cap, medals, flag, party colours, and no faces in the cars.
 - Slice 2 (R8 list checked): no run button (buttons are plain arrows and "Jump"); the street ends at a bus park with a market bus (roof rack, sliding door), never a flagpole or castle; the start is a zinc compound fence. The end bus was reshaped from a long rounded body to a boxy van with a sloped nose and roof load, so it does not read as a school bus.
 - Crates (R5): orange-brown wood, never yellow or gold (a unit test checks every colour); no "?" or "!" or any writing; no rivets or brick row; always hung by a rope. The first kobo stamp (rings) looked like a target, so it became a small stack of coins. The open lid hangs down the side, so an empty crate reads as "opened", not as a new block.
+- Well (R4): rope, roller, crank and bucket on a short, wide plastered wall; never a pipe, tube or green cylinder, and no water anywhere (unit tests check for pipe green and water blue in the well and room colours). The going-down clicks step by a whole tone, never by the semitone or fourth steps of famous warp or item sounds. The first brick chips looked like beans, so they became ragged holes showing bricks.
+- Store room: lamp-lit earth, never blue bricks or any game's underground. A dry, plainly magic bonus place: nobody is stuck, nothing suggests climbing into a real well.
 
 ## Pride check (things we chose not to do)
 
@@ -63,5 +67,9 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | crateEmpty | Duller, lower "tok", no creak |
 | crateKobo | Our kobo pling three times quickly, each a semitone higher (no chime run) |
 | cratePop | Soft round pop as a food comes out |
+| wellDown | Wooden crank clicks, a whole tone lower each time, under a slow rope creak |
+| wellUp | The same clicks, a whole tone higher each time |
+| roomThump | Soft hollow thump with two quiet echoes |
+| parcel | Warm two-note "got it", up a fifth, over a low hum |
 
 Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.

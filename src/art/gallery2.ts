@@ -6,6 +6,8 @@
 import { CONTROL_ASPECT, drawControl, type ControlKind } from './controls';
 import { CRATE_STAMPS, crateAngle, crateLineY, crateTopY, drawCrate, drawCrateLine, foodPopAt, koboFanAt } from './crate';
 import { drawFood, drawKobo } from './items';
+import { WELL, clipWellMouth, drawFade, drawWell, drawWellBack, drawWellFront, wellDownAt } from './well';
+import { ROOM, ROOM_ROPE_BUCKET_Y, drawGarriParcel, drawParcelIcon, drawRoomRope, drawShelf, drawWellRoom } from './wellRoom';
 import { HAIRS, OUTFITS, SKINS, drawHero, type HeroPose } from './hero';
 import { INK } from './palette';
 import { BUS_END, busEndAt, drawBigPitCones, drawBusPark, drawCone, drawEndBus, drawEndBusInside, drawPavement, drawStartFence } from './roadside';
@@ -135,7 +137,7 @@ const POSE_COLS: [string, (t: number) => HeroPose][] = [
 ];
 
 /** Extra pose columns added by later pages of work (the rope pose, L1). */
-export const EXTRA_POSES: [string, (t: number) => HeroPose][] = [];
+export const EXTRA_POSES: [string, (t: number) => HeroPose][] = [['rope (well)', () => ({ phase: 0, inAir: false, facing: 1, glow: false, rope: true })]];
 
 /** Page 2 (H5): every new pose on all five skins, large. Same face and pose on every skin. */
 const poses: Page = (g, time) => {
@@ -218,5 +220,113 @@ const crates: Page = (g, time) => {
   }
 };
 
+/** Draws a hero going down a well at time t of the 1.2 s sequence (back, clipped hero, front). */
+function wellDescent(g: CanvasRenderingContext2D, x: number, t: number, look: { skin: number; hair: number; outfit: number }): void {
+  const m = wellDownAt(t);
+  drawWellBack(g, x, GROUND_Y, { kind: 'entrance', drop: m.drop, crank: m.crank });
+  g.save();
+  clipWellMouth(g, x, GROUND_Y);
+  const hx = x - 26 + m.toRope * 26;
+  hero(g, hx, GROUND_Y + m.heroDy, look, m.toRope < 1 ? { phase: 0.2, inAir: false, facing: 1, glow: false, gait: 'walk' } : { phase: 0, inAir: false, facing: 1, glow: false, rope: true });
+  g.restore();
+  drawWellFront(g, x, GROUND_Y);
+}
+
+/** Page 4 (L1): the village well on the street, going down, and the fade. */
+const wellPage: Page = (g, time) => {
+  title(g, 'L1: village well. Entrance (bucket, arrow, Go down button), exit (no bucket), going down (loops)');
+  g.save();
+  g.translate(0, 34);
+  g.scale(1.6, 1.6);
+  g.translate(0, -126);
+  g.beginPath();
+  g.rect(0, 126, 600, 254);
+  g.clip();
+  drawSky(g, 0, 600, time, 420);
+  drawSkyline(g, 0, 600);
+  drawShopRow(g, 0, 600);
+  drawRoad(g, 0, 600, [[-20, 620]], GROUND_Y, 420);
+  drawPavement(g, 0, 600, [[-20, 620]]);
+  drawWell(g, 110, GROUND_Y, { kind: 'entrance', time });
+  hero(g, 140, GROUND_Y, { skin: 2, hair: 3, outfit: 1 }, { phase: 0, inAir: false, facing: -1, glow: false, standing: true, time });
+  // The Go down button sits 8 px above the crank top (here in world units, for the look)
+  drawControl(g, 'down', 110, GROUND_Y - WELL.frameH - 34 - 30, 36);
+  drawWell(g, 300, GROUND_Y, { kind: 'exit', time });
+  label(g, 'exit well', 300, GROUND_Y + 40, 9);
+  wellDescent(g, 480, (time % 2) * 0.75, { skin: 4, hair: 0, outfit: 2 });
+  label(g, 'going down', 480, GROUND_Y + 40, 9);
+  g.restore();
+  // Frames of the 1.2 s descent
+  const frames = [0, 0.15, 0.3, 0.6, 0.9, 1.15];
+  frames.forEach((t, i) => {
+    g.save();
+    const fx = 80 + i * 160;
+    g.translate(0, 470);
+    g.beginPath();
+    g.rect(fx - 78, 0, 156, 210);
+    g.clip();
+    g.fillStyle = '#cdb98f';
+    g.fillRect(fx - 78, 0, 156, 160);
+    g.fillStyle = '#3e3e42';
+    g.fillRect(fx - 78, 160, 156, 50);
+    g.translate(0, 160 - GROUND_Y);
+    wellDescent(g, fx, t, { skin: i % 5, hair: (i + 2) % 5, outfit: (i + 1) % 5 });
+    g.restore();
+    g.save();
+    g.translate(fx - 78, 470);
+    drawFade(g, 156, 210, wellDownAt(t).fade);
+    g.restore();
+    label(g, `t = ${t} s`, fx, 684, 10);
+  });
+};
+
+/** Page 5 (L1): the lamp-lit store room under the well, with the parcel and the way back up. */
+const roomPage: Page = (g, time) => {
+  title(g, 'L1: the store room under the well (shelves, lamps, pots, baskets, kobo crate, garri parcel, rope back up)');
+  g.save();
+  g.translate(0, 26);
+  g.scale(1.6, 1.6);
+  g.translate(20, -0);
+  g.beginPath();
+  g.rect(-20, 0, 600, 430);
+  g.clip();
+  drawWellRoom(g, -20, 600, time);
+  for (const [x, y, w] of [
+    [120, 250, 80],
+    [250, 200, 90],
+    [400, 240, 80],
+  ] as const) drawShelf(g, x, y, w);
+  for (const [x, y] of [
+    [80, 272],
+    [140, 228],
+    [160, 228],
+    [195, 200],
+    [220, 180],
+    [420, 218],
+    [440, 218],
+    [460, 218],
+    [420, 272],
+    [440, 272],
+  ] as const) drawKobo(g, x, y, time);
+  drawCrate(g, 370, 204, { stamp: 'kobo', open: false, angle: crateAngle({ time }) });
+  drawGarriParcel(g, 295, 176, time);
+  // Arriving: the hero holds the rope as the bucket comes down at x 60
+  const arrive = 40 + ((time * 60) % 220);
+  drawRoomRope(g, ROOM.arriveX, Math.min(arrive, 289), time * 0);
+  hero(g, ROOM.arriveX, Math.min(arrive, 289) + 9, { skin: 1, hair: 4, outfit: 3 }, { phase: 0, inAir: false, facing: 1, glow: false, rope: true });
+  drawRoomRope(g, ROOM.exitX, ROOM_ROPE_BUCKET_Y, time);
+  hero(g, ROOM.exitX + 12, ROOM.floorY, { skin: 4, hair: 1, outfit: 0 }, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, time });
+  g.restore();
+  // HUD icon at a few sizes
+  g.fillStyle = 'rgba(29,26,20,0.75)';
+  g.fillRect(840, 620, 110, 90);
+  drawParcelIcon(g, 870, 645, 24);
+  drawParcelIcon(g, 915, 645, 36);
+  g.fillStyle = '#ffffff';
+  g.font = 'bold 14px sans-serif';
+  g.textAlign = 'center';
+  g.fillText('Parcel', 895, 690);
+};
+
 /** Slice 2 pages in order. Later pieces of work push their pages onto this list. */
-export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses, crates];
+export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses, crates, wellPage, roomPage];

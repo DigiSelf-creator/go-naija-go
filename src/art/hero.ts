@@ -137,6 +137,8 @@ export interface HeroPose {
   skid?: number;
   /** Start-of-run dust puff behind the feet: 0 just started, 1 gone. Leave unset for none. */
   dust?: number;
+  /** Holding the well rope with both hands above the head (going down or up). */
+  rope?: boolean;
 }
 
 /** A walking stride is this share of a running one, so feet never slide. */
@@ -297,6 +299,9 @@ function walkRig(phase: number): Rig {
 /** Skid on a turn: leaning back, near foot braced ahead (toe up), arms out for balance. */
 const SKID: Rig = { thigh: [-0.2, 0.78], knee: [0.95, 0.12], foot: [0.1, -0.45], arm: [1.5, 2.0], elbow: [0.35, 0.25], lean: -0.22, lift: 0, tilt: 0.04 };
 
+/** Holding the well rope: both hands up on the rope, legs together and a little bent. */
+const ROPE: Rig = { thigh: [0.12, 0.3], knee: [0.3, 0.5], foot: [0.35, 0.45], arm: [2.95, 3.1], elbow: [0.25, 0.15], lean: 0, lift: 0, tilt: -0.12 };
+
 const JUMP: Rig = { thigh: [0.55, 1.3], knee: [1.9, 2.1], foot: [0.8, 0.7], arm: [2.75, 1.7], elbow: [0.4, 0.8], lean: 0.06, lift: 0, tilt: -0.12 };
 const FALL: Rig = { thigh: [-0.3, 0.42], knee: [0.95, 0.3], foot: [0.7, 0.2], arm: [-1.95, 1.75], elbow: [-0.45, 0.3], lean: -0.02, lift: 0, tilt: 0.05 };
 const CROUCH: Rig = { thigh: [0.5, 0.95], knee: [1.25, 1.6], foot: [0, -0.05], arm: [-0.5, 0.9], elbow: [0.7, 0.9], lean: 0.34, lift: 0, tilt: 0.12 };
@@ -327,6 +332,7 @@ function clamp01(x: number): number {
 
 function rigFor(pose: HeroPose, t: number): Rig {
   let r: Rig;
+  if (pose.rope) return ROPE;
   if (pose.inAir) {
     const k = typeof pose.vy === 'number' && Number.isFinite(pose.vy) ? clamp01((pose.vy + 80) / 300) : 0;
     r = mix(JUMP, FALL, k * k * (3 - 2 * k));
