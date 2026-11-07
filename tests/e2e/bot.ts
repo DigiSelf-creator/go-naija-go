@@ -58,19 +58,19 @@ export async function playStreet(page: Page, cdp: CDPSession): Promise<number> {
 }
 
 /** The arena, read from the game (so the bot follows the level data). */
-interface Arena {
+export interface Arena {
   terrain: Terrain;
   turnLeftX: number;
   turnRightX: number;
 }
 
-type Plan = 'tap' | 'hold' | 'holdAir';
+export type Plan = 'tap' | 'hold' | 'holdAir';
 
 /**
  * Where does this jump land? Simulated with the game's physics and the arena's turn-around.
  * delay: steps before the press arrives; lag: steps late on each release.
  */
-function landing(a: Arena, h: Hero, plan: Plan, delay = 0, lag = 0): Platform | null {
+export function landing(a: Arena, h: Hero, plan: Plan, delay = 0, lag = 0): Platform | null {
   const { terrain: arenaTerrain, turnLeftX, turnRightX } = a;
   const b = createBody(h.x, arenaTerrain);
   Object.assign(b, { y: h.y, prevY: h.y, vy: h.vy, dir: h.dir, speed: h.speed, grounded: h.grounded, airJump: h.airJump, coyote: h.grounded ? 5 : 0 });

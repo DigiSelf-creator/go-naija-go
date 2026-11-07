@@ -131,6 +131,9 @@ test('slowed CPU: 4x in the boss fight, at least 30 fps', async ({ page }) => {
   const cdp = await page.context().newCDPSession(page);
   await playStreet(page, cdp);
   expect(await page.evaluate(() => window.__game!.run.phase)).toBe('arena');
+  // qa: start measuring once the first throw is out, so the 6 s always has a throw on
+  // screen (if the bot lands the first light before 2.0 s, the window could hold none).
+  await expect.poll(() => page.evaluate(() => window.__game!.boss?.throws.length ?? 0), { intervals: [16], timeout: 5000 }).toBeGreaterThan(0);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
   let sample: { fps: number; stepsPerSec: number; throws: number };
   try {
