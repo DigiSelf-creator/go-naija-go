@@ -107,7 +107,7 @@ describe('view safety net', () => {
     expect(v.height).toBeGreaterThanOrEqual(WORLD_H);
     expect(v.pixelW).toBe(1536);
   });
-  it('a sideways phone is unchanged: 360 u tall', () => {
+  it('a sideways phone is unchanged: 420 u tall (S2.1)', () => {
     const v = fitView(851, 393, 2);
     expect(v.height).toBe(WORLD_H);
     expect(v.width).toBeGreaterThan(MIN_WORLD_W);

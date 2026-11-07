@@ -1,8 +1,12 @@
 /**
- * The game world is always 360 units tall; its width follows the screen shape.
+ * The game world is always 420 units tall (docs/design.md S2.1): the road top is at y = 300,
+ * the road front and a pavement strip fill y 300 to 420, and the phone buttons sit in that
+ * bottom strip so a thumb never covers play. The width follows the screen shape.
  * The canvas backing store uses device pixels (capped at 2x to keep cheap phones fast).
  */
-export const WORLD_H = 360;
+export const WORLD_H = 420;
+/** Top of the pavement strip under the road front (S2.1). */
+export const STRIP_Y = 360;
 export const MAX_DPR = 2;
 /** The view always shows at least this much world across (a safety net for upright screens). */
 export const MIN_WORLD_W = 480;
@@ -31,7 +35,7 @@ export function fitView(cssW: number, cssH: number, dpr: number, safeCss: Insets
   const ratio = Math.min(Math.max(dpr || 1, 1), MAX_DPR);
   const pixelW = Math.max(1, Math.round(cssW * ratio));
   const pixelH = Math.max(1, Math.round(cssH * ratio));
-  // Normally 360 units tall; on a narrow (upright) screen, shrink so 480 units still fit across.
+  // Normally 420 units tall; on a narrow (upright) screen, shrink so 480 units still fit across.
   const narrow = pixelW / MIN_WORLD_W < pixelH / WORLD_H;
   const scale = narrow ? pixelW / MIN_WORLD_W : pixelH / WORLD_H;
   const cssToWorld = ratio / scale;
