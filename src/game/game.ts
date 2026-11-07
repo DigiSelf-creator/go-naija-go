@@ -4,14 +4,15 @@
  * road, stalls, pickups, hazards and hero draw in world space (art "space rule").
  */
 import { drawBoss, drawDustPop, drawGoLight, drawHitCounter, drawHonkCloud, type GoLightState } from '../art/boss';
-import { drawHero, type HeroLook } from '../art/hero';
+import { drawHero, WALK_STRIDE, type HeroLook } from '../art/hero';
 import { drawGoat, drawTyre } from '../art/hazards';
 import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
+import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence, END_BUS_BACK, END_BUS_FRONT } from '../art/roadside';
 import { drawBusStop, drawPassingBus, drawRoad, drawShopRow, drawSky, drawSkyline, drawStall } from '../art/street';
 import { STRIP_Y, type View } from '../engine/view';
 import { Camera, heroScreenX } from './camera';
 import type { CrateData, Level } from './level';
-import { RULES, Run, type RunEvent } from './run';
+import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from './run';
 import { DEFAULT_LOOK } from './save';
 
 export { heroScreenX };
@@ -29,6 +30,21 @@ const STRIDE_AMALA = STRIDE * 1.13;
 /** Landing squash after a fall: lasts this long (s), only after landing faster than LAND_VY. */
 export const LAND_TIME = 0.12;
 export const LAND_VY = 200;
+/** Start-of-run dust puff (S2.2): lasts this long, s. */
+export const DUST_TIME = 0.4;
+/** Skid on a turn (S2.2): the pose shows this long, s, though the physics turn is quicker. */
+export const SKID_TIME = 0.22;
+/** A turn from slower than this (u/s) is just a turn: no skid. */
+const SKID_MIN = 20;
+/** A walk turn skids this much (a turn from a run skids fully). */
+const SKID_WALK = 0.6;
+
+/**
+ * What a step can tell the screen: the rules' events, plus the hero's own moves that only the
+ * drawing and sound care about (the start of a run, a skid on a turn from a run).
+ */
+export type GameEvent = RunEvent | { type: 'runStart' } | { type: 'skid' };
+
 /** A jump in x bigger than this in one step is a respawn or a reset, not running. */
 const TELEPORT = 50;
 /** Anything this far outside the screen is not drawn. */
@@ -51,7 +67,7 @@ export class Game {
   /** Standing on the menu screens, before the run starts. */
   idle = true;
   /** Called for everything that happens in a step (sounds, words, HUD). */
-  onEvent: (e: RunEvent) => void = () => {};
+  onEvent: (e: GameEvent) => void = () => {};
   /** Seconds, for animation. Moves only while the run is being played. */
   clock = 0;
   private effects: Effect[] = [];
@@ -61,6 +77,14 @@ export class Game {
   stridePhase = 0;
   /** Seconds of landing squash left. */
   landLeft = 0;
+  /** Seconds since the start-of-run dust puff began; at DUST_TIME or more there is none. */
+  dustAge = DUST_TIME;
+  /** Seconds of skid pose left, how hard (0 to 1), and the way the hero slides (faces) meanwhile. */
+  skidLeft = 0;
+  skidAmount = 0;
+  skidFacing: 1 | -1 = 1;
+  /** Ground move this frame: a walk or a run (player-moved streets; auto-run is always a run). */
+  gait: 'walk' | 'run' = 'run';
 
   /** The street camera for player-moved levels (S2.2); slice 1 levels follow the old way. */
   private cam: Camera | null = null;
@@ -136,7 +160,7 @@ export class Game {
     this.paused = false;
     this.effects = [];
     this.stridePhase = 0;
-    this.landLeft = 0;
+    this.clearMoves();
   }
 
   /** Back to the menus: a fresh, standing hero at the start. */
@@ -148,7 +172,15 @@ export class Game {
     this.paused = false;
     this.effects = [];
     this.stridePhase = 0;
+    this.clearMoves();
+  }
+
+  /** No landing squash, dust or skid (a fresh run, or back after a fall). */
+  private clearMoves(): void {
     this.landLeft = 0;
+    this.dustAge = DUST_TIME;
+    this.skidLeft = 0;
+    this.skidAmount = 0;
   }
 
   press(by?: Parameters<Run['press']>[0]): ReturnType<Run['press']> {
@@ -169,9 +201,14 @@ export class Game {
     const h0 = this.hero;
     const x0 = h0.x;
     const vy0 = h0.vy;
+    const vx0 = h0.vx;
+    const speed0 = h0.speed;
     const air0 = !h0.grounded;
-    const events = this.run.step(dt);
+    const events: GameEvent[] = this.run.step(dt);
+    if (h0.manual) events.push(...this.animateMoves(vx0, speed0, air0, dt));
+    else this.gait = 'run';
     this.animateStride(x0, vy0, air0, dt);
+    if (events.some((e) => e.type === 'fall')) this.clearMoves();
     if (this.cam) {
       if (events.some((e) => e.type === 'fall')) this.snapCamera(); // back at the bus stop
       else this.cam.step(this.hero.x, this.viewW, dt);
@@ -193,12 +230,52 @@ export class Game {
     this.effects = this.effects.filter((f) => this.clock - f.t0 < f.len);
   }
 
+  /**
+   * Player-moved streets (S2.2): walk or run, the dust puff when a walk breaks into a run, and
+   * the skid when the hero turns round on the ground. Returns the sounds these start.
+   */
+  private animateMoves(vx0: number, speed0: number, air0: boolean, dt: number): GameEvent[] {
+    const h = this.hero;
+    const out: GameEvent[] = [];
+    const walkTop = h.gait.walk + 1;
+    this.gait = h.speed > walkTop ? 'run' : 'walk';
+    this.dustAge = Math.min(DUST_TIME, this.dustAge + dt);
+    if (!air0 && h.grounded && h.move !== 0 && speed0 <= walkTop && h.speed > walkTop) {
+      this.dustAge = 0;
+      out.push({ type: 'runStart' });
+    }
+    // A turn on the ground: the step began moving against the direction now held.
+    const turning = !air0 && h.move !== 0 && vx0 * h.move < 0 && Math.abs(vx0) >= SKID_MIN;
+    if (turning && this.skidLeft === 0) {
+      const fromRun = Math.abs(vx0) > walkTop;
+      this.skidLeft = SKID_TIME;
+      this.skidAmount = fromRun ? 1 : SKID_WALK;
+      this.skidFacing = vx0 > 0 ? 1 : -1;
+      this.dustAge = DUST_TIME;
+      if (fromRun) out.push({ type: 'skid' });
+    } else if (this.skidLeft > 0) {
+      this.skidLeft = Math.max(0, this.skidLeft - dt);
+      // Jumped, or pressed the old way again: the skid ends at once.
+      if (!h.grounded || h.move === this.skidFacing) this.skidLeft = 0;
+    }
+    return out;
+  }
+
+  /** How much skid to draw now, 0 to 1: full, then easing off over the last 40 percent. */
+  get skid(): number {
+    if (this.skidLeft <= 0) return 0;
+    return this.skidAmount * Math.min(1, this.skidLeft / (SKID_TIME * 0.4));
+  }
+
   /** Moves the run cycle on by ground covered, and starts or eases the landing squash. */
   private animateStride(x0: number, vy0: number, air0: boolean, dt: number): void {
     const h = this.hero;
     const dx = Math.abs(h.x - x0);
-    if (dx < TELEPORT) {
-      const stride = this.run.power.amala > 0 ? STRIDE_AMALA : STRIDE;
+    // Feet don't slide: one cycle per stride of ground; a walk's stride is shorter. A skid
+    // holds the braced foot still.
+    if (dx < TELEPORT && this.skidLeft === 0) {
+      const run = this.run.power.amala > 0 ? STRIDE_AMALA : STRIDE;
+      const stride = this.gait === 'walk' && h.manual ? run * WALK_STRIDE : run;
       this.stridePhase = (this.stridePhase + dx / stride) % 1;
     }
     this.landLeft = Math.max(0, this.landLeft - dt);
@@ -252,11 +329,19 @@ export class Game {
     // World space.
     g.translate(-camX, 0);
     drawRoad(g, camX, W, level.ground, gy, H);
-    if (level.manual) drawStreetBits(g, level, L, R, H);
+    if (level.manual) drawStreetBits(g, level, camX, W, L, R, H);
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawStall(g, p.x, p.y, p.w, gy);
     for (const c of level.crates) if (c.x + 20 > L && c.x - 20 < R) drawCratePlaceholder(g, c);
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
+
+    // S2.6 street end: the bus park behind; the bus where the hero is drawn (below).
+    const end = level.end;
+    const atBus = run.phase === 'bus' || run.phase === 'cleared';
+    const bus = end ? busEndAt(atBus ? run.endSteps / STEPS_PER_SECOND : 0) : null;
+    if (bus && !atBus) bus.time = t;
+    const busSeen = end !== null && bus !== null && end.x + END_BUS_BACK - 160 < R && end.x + END_BUS_FRONT + (bus.dx ?? 0) + 200 > L;
+    if (end && busSeen) drawBusPark(g, end.x, end.wall, gy);
 
     const boss = run.boss;
     const bossData = level.boss;
@@ -295,9 +380,17 @@ export class Game {
     }
 
     const h = run.hero;
+    // Getting on: the inside of the open door, then the hero hopping through it, then the bus
+    // body around the door. Before that the bus is drawn first, so a hero jumping over it shows.
+    if (end && bus && busSeen) {
+      if (atBus) drawEndBusInside(g, end.x, bus, gy);
+      else drawEndBus(g, end.x, bus, gy);
+    }
     // Blinking while safe after a hit: hidden every other 0.1 s.
     const blinkOff = (run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1) || run.boarded;
     if (!blinkOff) {
+      const skid = this.skid;
+      const walking = h.manual && h.grounded && this.gait === 'walk';
       g.save();
       g.translate(h.x, h.y);
       drawHero(g, this.look, {
@@ -305,17 +398,19 @@ export class Game {
         inAir: !h.grounded,
         vy: h.vy,
         land: this.landLeft / LAND_TIME,
-        facing: h.dir,
+        facing: skid > 0 ? this.skidFacing : h.dir,
         glow: run.power.amala > 0,
         fast: run.power.corn > 0,
-        standing: this.idle || ((boss?.defeated ?? false) && h.grounded) || (h.manual && h.grounded && h.vx === 0),
+        standing: this.idle || ((boss?.defeated ?? false) && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
+        gait: walking ? 'walk' : 'run',
+        skid,
+        ...(this.dustAge < DUST_TIME ? { dust: this.dustAge / DUST_TIME } : {}),
         time: t,
       });
       g.restore();
     }
     if (run.power.shield) drawShield(g, h.x, h.y, t);
-
-    if (level.end && level.end.x - 60 < R + 200) drawBusEndPlaceholder(g, level.end.x + run.busGone, gy, level.end.wall);
+    if (end && bus && busSeen && atBus) drawEndBus(g, end.x, bus, gy);
 
     for (const f of this.effects) {
       const k = (t - f.t0) / f.len;
@@ -330,38 +425,20 @@ export class Game {
 }
 
 /**
- * Placeholder drawings for slice 2 street things that art makes for real in H5, J1 and L1:
- * the pavement strip, start fence, big pit cones, bus park wall and bus, crates and wells.
- * Plain shapes, our own, nothing copied.
+ * Slice 2 street pieces behind the hero (art H5, src/art/roadside.ts): the pavement strip under
+ * the road, the start fence with its parked bus, and cones on both lips of every big pit. Wells
+ * stay placeholders until piece L, crates until piece J.
  */
-function drawStreetBits(g: CanvasRenderingContext2D, level: Level, L: number, R: number, H: number): void {
+function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number, viewW: number, L: number, R: number, H: number): void {
   const gy = level.groundY;
-  // Pavement strip under the road front (y 360 to the bottom), only where there is road.
-  for (const [a0, b0] of level.ground) {
-    const a = Math.max(a0, L);
-    const b = Math.min(b0, R);
-    if (b <= a) continue;
-    g.fillStyle = '#8f8a80';
-    g.fillRect(a, STRIP_Y, b - a, H - STRIP_Y);
-    g.fillStyle = '#5f5a52'; // kerb and gutter line
-    g.fillRect(a, STRIP_Y, b - a, 4);
-    g.fillStyle = '#7d786e';
-    for (let x = Math.ceil(a / 40) * 40; x < b; x += 40) g.fillRect(x, STRIP_Y + 4, 2, H - STRIP_Y - 4);
-  }
-  // Start fence.
+  drawPavement(g, camX, viewW, level.ground, STRIP_Y, H);
   const fx = level.startWall;
-  if (fx > L - 40 && fx < R) {
-    g.fillStyle = '#6b4f2e';
-    for (let i = 0; i < 3; i++) g.fillRect(fx - 30 + i * 14, gy - 46, 5, 46);
-    g.fillRect(fx - 32, gy - 38, 40, 4);
-    g.fillRect(fx - 32, gy - 20, 40, 4);
-  }
-  // Big pit cones: two on each lip.
+  if (fx + 100 > L && fx - 90 < R) drawStartFence(g, fx, gy);
   for (let i = 1; i < level.ground.length; i++) {
     const a = level.ground[i - 1]![1];
     const b = level.ground[i]![0];
-    if (b - a < BIG_PIT || b < L || a > R) continue;
-    for (const x of [a - 22, a - 8, b + 8, b + 22]) drawConePlaceholder(g, x, gy);
+    if (b - a < BIG_PIT || b + 30 < L || a - 30 > R) continue;
+    drawBigPitCones(g, a, b, gy);
   }
   // Wells (scenery only until piece L).
   for (const w of level.wells) {
@@ -373,18 +450,6 @@ function drawStreetBits(g: CanvasRenderingContext2D, level: Level, L: number, R:
       g.fillRect(x - 18, gy - 30, 36, 5);
     }
   }
-}
-
-function drawConePlaceholder(g: CanvasRenderingContext2D, x: number, gy: number): void {
-  g.fillStyle = '#e8641b';
-  g.beginPath();
-  g.moveTo(x - 7, gy);
-  g.lineTo(x, gy - 22);
-  g.lineTo(x + 7, gy);
-  g.closePath();
-  g.fill();
-  g.fillStyle = '#ffffff';
-  g.fillRect(x - 4, gy - 13, 8, 4);
 }
 
 function drawCratePlaceholder(g: CanvasRenderingContext2D, c: CrateData): void {
@@ -410,28 +475,4 @@ function drawDrumPlaceholder(g: CanvasRenderingContext2D, x: number, y: number, 
   g.fillStyle = '#34505e';
   const k = ((rot % 1) + 1) % 1;
   for (let i = 0; i < 3; i++) g.fillRect(x - 13, y - 26 + ((i * 10 + k * 10) % 30), 26, 3);
-}
-
-/** The bus park wall and the yellow bus (from end.x - 40 to end.x + 160, door at end.x). */
-function drawBusEndPlaceholder(g: CanvasRenderingContext2D, busDoorX: number, gy: number, wall: number): void {
-  g.fillStyle = '#a89a86';
-  g.fillRect(wall, gy - 120, 60, 120);
-  g.fillStyle = '#8a7c68';
-  for (let y = gy - 120; y < gy; y += 20) g.fillRect(wall, y, 60, 2);
-  const x0 = busDoorX - 40;
-  g.fillStyle = '#f2c230';
-  g.beginPath();
-  g.roundRect(x0, gy - 82, 200, 70, 10);
-  g.fill();
-  g.fillStyle = '#1d1a14';
-  g.fillRect(x0, gy - 48, 200, 4);
-  g.fillStyle = '#9fd3e6';
-  for (let i = 0; i < 5; i++) g.fillRect(x0 + 62 + i * 26, gy - 74, 20, 18);
-  g.fillStyle = '#3a3a3a'; // the open door
-  g.fillRect(busDoorX - 10, gy - 76, 22, 64);
-  g.fillStyle = '#1d1a14';
-  g.beginPath();
-  g.arc(x0 + 34, gy - 10, 10, 0, Math.PI * 2);
-  g.arc(x0 + 166, gy - 10, 10, 0, Math.PI * 2);
-  g.fill();
 }

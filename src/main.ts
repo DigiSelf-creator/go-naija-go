@@ -207,6 +207,16 @@ function startGame(): void {
         break;
       case 'busBoard':
         break;
+      case 'busGo':
+        // The hero is in: the door hisses shut and our horn sounds as the bus pulls away.
+        sound.play('busBoard');
+        break;
+      case 'runStart':
+        sound.play('runStart');
+        break;
+      case 'skid':
+        sound.play('skid');
+        break;
       case 'streetCleared':
         // Until Go-Slow Hall (piece M): on to the slice 1 boss fight, lives and kobo carried.
         game.toBoss(bossLevel);
