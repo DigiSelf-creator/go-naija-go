@@ -108,9 +108,9 @@ Goal: build a hero (saved on the phone), play World 1 level 1 by touch, take all
 
 ## Status
 
-Done: plan written.
-Next: A1, A2, A4 (can run side by side), then A3, A5.
-Blocked: G2 (waiting on Tp).
+Done: A to F (first slice, qa passed, po accepted 6 Nov 2026) and G1.
+Next: G2 to G4 (push, test the live URL, accept it).
+Blocked: G2 to G4, waiting on Tp's GitHub repo. Q5 to Q15 wait for Tp to confirm (docs/questions.md).
 
 ## Waiting on Tp
 

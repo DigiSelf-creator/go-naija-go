@@ -1,5 +1,29 @@
 # Open questions for the product owner
 
+## po acceptance note, 6 Nov 2026 (first slice: A7, B5, C8, D5, E6, F5)
+
+Accepted: pieces A to F, the whole first slice, against the brief's "Done when" 1 to 8 and the CLAUDE.md rules. G1 (deploy workflow) is in the repo. qa passed every piece.
+
+How I checked:
+- Verified by po: 140 unit tests pass and the build is clean (run today). First load 137.6 KB of the 3 MB budget. Every word in src/screens/words.ts matches docs/design.md. The win and credits screens both show "Remember: a wrong premise often leads to a misleading conclusion." No fetch, XMLHttpRequest, sendBeacon, getUserMedia, file input, analytics or outside address in src/; the only fetch is the service worker, same site only. Saves are localStorage only. 17 qa screenshots looked at: builder (5 skins, 5 hair, 5 outfits), street, goat, tyre, bus stop, all three foods with their words, pause, game over, boss, defeat, win, upright warning, tiny screen. No real people, no party marks, nothing mocks anyone, nothing looks like Mario or any other game. General Go-Slow is a grumpy traffic light on a heap of cars and ends smiling.
+- Reported by qa, not rerun by po: 56 phone end-to-end tests and 3 slowed-CPU tests pass; 46 to 52 fps at 4x slowed CPU; offline second visit works; no network after load; full slice won by touch in 78.8 s; sloppy bots beat the boss 93 to 98% of the time; every sound checked against well-known game sounds.
+- Small things for later, not blocking: the bus stop sign sits over a shop sign; a debug art view (?gallery, 2 KB) ships in the build.
+
+Waiting for Tp. Each is built with my recommended option as a provisional default. Please confirm or change:
+- Q5 hero looks: confirm 5 skin tones, 5 hair (adds Headscarf), 5 outfits (adds Kaftan).
+- Q6 amala in the boss fight: confirm it smashes what the boss throws, but only green lights beat him.
+- Q7 play again: confirm it starts the level from the start with full lives.
+- Q8 gentle mode: confirm one switch, 5 lives instead of 3, in version 1.
+- Q9 sound: confirm code-made beeps and a sound switch now, our own short tunes before a public launch.
+- Q10 title on the test build: confirm "Gidi Dash" (one setting), and do not share the link widely until Q1 is settled.
+- Q11 credits: confirm the credits screen, and tell us how you want to be named (it says "Made by Tp and team.").
+- Q12 phone: confirm play sideways only; title and menus work either way.
+- Q13 World 1: confirm one level plus the boss in version 1, more levels after you play it.
+- Q14 after a fall: confirm food effects end, foods and hazards come back, kobo already picked up stay counted.
+- Q15 gentle mode switch: confirm it sits on the title and game over screens only.
+
+Deploy (G2 to G4) waits for Tp: please create the GitHub repo (or give push access) and turn on Pages with source "GitHub Actions". Q1 (the game name) should be settled before the link goes out widely.
+
 ## po session note, 6 Nov 2026 (design review)
 
 Accepted: nothing yet. docs/design.md wording is approved by po, but no task has passed qa.
