@@ -29,6 +29,27 @@ describe('phone buttons', () => {
     }
   });
 
+  it('the SVG shrinks about the button centre, so the drawing stays inside its box', () => {
+    for (const k of KINDS) {
+      const W = CONTROL_ASPECT[k] * 100;
+      for (const pressed of [false, true]) {
+        const m = /translate\(([-\d.]+) ([-\d.]+)\) scale\(([\d.]+)\) translate\(([-\d.]+) ([-\d.]+)\)/.exec(controlSvg(k, pressed));
+        expect(m).not.toBeNull();
+        const [ax, ay, sc, bx, by] = m!.slice(1).map(Number) as [number, number, number, number, number];
+        // Where the box corners land: (0,0) and (W,100) map inside the view box.
+        const map = (x: number, y: number): [number, number] => [ax + sc * (x + bx), ay + sc * (y + by)];
+        const [x0, y0] = map(0, 0);
+        const [x1, y1] = map(W, 100);
+        expect(x0).toBeGreaterThanOrEqual(0);
+        expect(y0).toBeGreaterThanOrEqual(0);
+        expect(x1).toBeLessThanOrEqual(W + 1e-9);
+        expect(y1).toBeLessThanOrEqual(100 + 1e-9);
+        expect((x0 + x1) / 2).toBeCloseTo(W / 2, 6);
+        expect((y0 + y1) / 2).toBeCloseTo(50, 6);
+      }
+    }
+  });
+
   it('words are escaped and fit: long computer words get a smaller font', () => {
     const svg = controlSvg('down', false, 'Go down (<↓>)');
     expect(svg).toContain('&lt;↓&gt;');

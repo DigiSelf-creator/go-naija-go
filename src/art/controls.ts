@@ -189,8 +189,9 @@ export function controlSvg(kind: ControlKind, pressed = false, label?: string): 
         break;
     }
   }
-  const c = `${W / 2} 50`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 100" width="100%" height="100%" aria-hidden="true" focusable="false"><g transform="translate(${c}) scale(${s}) translate(-${c})">${out.join('')}</g></svg>`;
+  // Shrink about the centre: both numbers of the second translate are negative.
+  const cx = W / 2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 100" width="100%" height="100%" aria-hidden="true" focusable="false"><g transform="translate(${cx} 50) scale(${s}) translate(${-cx} -50)">${out.join('')}</g></svg>`;
 }
 
 /**
