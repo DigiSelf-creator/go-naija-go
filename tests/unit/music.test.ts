@@ -107,9 +107,11 @@ describe('note data', () => {
 
 /**
  * Openings of well-known game tunes, hymns, anthems and songs sung across Nigeria
- * (first notes only, as a fingerprint) and our sound-effect motifs. A melody copies one if any run of 5 of its notes moves by
- * the same steps (within half a semitone) as a run of 5 in the fingerprint, or
- * if its first 4 notes move like the fingerprint's first 4.
+ * (first notes only, as a fingerprint) and our sound-effect motifs. A melody copies one if any run of 5 of its notes,
+ * anywhere in the tune, moves by the same steps (within half a semitone) as any run of 5
+ * in the fingerprint, or if its first 4 notes move like the fingerprint's first 4.
+ * A plain scale run (every step 1 or 2 semitones, all the same way) is not a copy:
+ * any tune in the key has those.
  */
 const KNOWN: Record<string, string[]> = {
   'platformer overworld theme': ['E5', 'E5', 'E5', 'C5', 'E5', 'G5', 'G4'],
@@ -140,10 +142,14 @@ const KNOWN: Record<string, string[]> = {
   'Ode to Joy': ['E4', 'E4', 'F4', 'G4', 'G4', 'F4', 'E4', 'D4', 'C4', 'C4', 'D4', 'E4', 'E4', 'D4', 'D4'],
   'Auld Lang Syne': ['C4', 'F4', 'F4', 'F4', 'A4', 'G4', 'F4', 'G4', 'A4', 'F4'],
   'Jingle Bells (chorus)': ['E4', 'E4', 'E4', 'E4', 'E4', 'E4', 'E4', 'G4', 'C4', 'D4', 'E4'],
+  'What a Friend We Have in Jesus': ['G4', 'G4', 'A4', 'G4', 'E4', 'C4', 'C4'],
 };
 
 const iv = (xs: number[]): number[] => xs.slice(1).map((x, i) => x - xs[i]!);
 const same = (a: number[], b: number[]): boolean => a.length === b.length && a.every((x, i) => Math.abs(x - b[i]!) <= 0.5);
+/** Steps that only walk up (or only down) the scale, 1 or 2 semitones each. */
+const scaleRun = (steps: number[]): boolean =>
+  steps.every((d) => d >= 1 && d <= 2) || steps.every((d) => d <= -1 && d >= -2);
 
 function copies(mel: number[], known: number[]): boolean {
   const n = Math.min(4, known.length);
@@ -151,6 +157,7 @@ function copies(mel: number[], known: number[]): boolean {
   if (known.length < 5) return false;
   for (let k = 0; k + 5 <= known.length; k++) {
     const want = iv(known.slice(k, k + 5));
+    if (scaleRun(want)) continue;
     for (let i = 0; i + 5 <= mel.length; i++) if (same(iv(mel.slice(i, i + 5)), want)) return true;
   }
   return false;
@@ -170,6 +177,9 @@ describe('every tune is our own', () => {
     expect(copies(mario.map((n) => n - 5), mario)).toBe(true); // moved to another key
     const blocks = KNOWN['falling blocks theme']!.map((n) => noteNumber(n)!);
     expect(copies([60, 62, ...blocks.slice(3, 9)], blocks)).toBe(true); // hidden in the middle
+    const friend = KNOWN['What a Friend We Have in Jesus']!.map((n) => noteNumber(n)!);
+    expect(copies([71, 74, 79, 78, 74, 76, 74, 71, 67], friend)).toBe(true); // the old street bar 1-2, from its 5th note
+    expect(copies([64, 60, 67, 69, 71, 72, 74, 76], KNOWN['Joy to the World']!.map((n) => noteNumber(n)!).reverse())).toBe(false); // a plain scale run
   });
 
   for (const p of PLACES) {
