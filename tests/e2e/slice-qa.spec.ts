@@ -154,8 +154,11 @@ test('E5 break it: boss in every state, pause and turn the phone mid-fight, tiny
 
   // Win screen: words, then a storm of fast taps.
   const won = page.getByRole('dialog', { name: 'Road cleared!' });
-  await expect(won).toBeVisible({ timeout: 10_000 });
+  // Poll every frame so shownAt is within a frame of the real show time (toBeVisible backs
+  // off up to 1 s between checks, which can eat the whole 0.4 s lock).
+  await expect.poll(async () => (await snap(page)).screen, { timeout: 10_000, intervals: [16] }).toBe('win');
   const shownAt = await page.evaluate(() => performance.now());
+  await expect(won).toBeVisible();
   const btn = await won.getByRole('button', { name: 'Play again' }).boundingBox();
   // One tap inside the 0.4 s lock does nothing.
   await page.touchscreen.tap(btn!.x + btn!.width / 2, btn!.y + btn!.height / 2);
