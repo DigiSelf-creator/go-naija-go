@@ -1,15 +1,17 @@
 import './screens/screens.css';
-import { attachInput } from './engine/input';
+import { Controls, attachControls, type Source } from './engine/input';
 import { FixedLoop } from './engine/loop';
 import { fitView, readSafeArea, type View } from './engine/view';
-import levelData from './data/levels/w1-l1.json';
+import street1Data from './data/levels/lagos-1.json';
+import bossLevelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
 import { Game, heroScreenX } from './game/game';
 import { parseLevel } from './game/level';
 import type { RunPhase } from './game/run';
 import { loadLook } from './game/save';
+import { TouchButtons } from './screens/controls';
 import { Hud, Toast } from './screens/hud';
-import { WORDS } from './screens/words';
+import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type MenuScreen, type TapPoint } from './screens/menus';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
@@ -22,10 +24,12 @@ if (!ctx) throw new Error('Canvas 2D is not available');
 const g: CanvasRenderingContext2D = ctx;
 
 let view: View = fitView(1, 1, 1);
+const onResize: (() => void)[] = [];
 function resize(): void {
   view = fitView(window.innerWidth, window.innerHeight, window.devicePixelRatio, readSafeArea());
   canvas.width = view.pixelW;
   canvas.height = view.pixelH;
+  for (const f of onResize) f();
 }
 window.addEventListener('resize', resize);
 resize();
@@ -49,8 +53,18 @@ if (new URLSearchParams(location.search).has('gallery')) {
 
 function startGame(): void {
   const store = createStore();
-  const level = parseLevel(levelData);
-  const game = new Game(level);
+  // Street 1 by hand (slice 2). The slice 1 boss fight comes after its bus until Go-Slow Hall
+  // (piece M). ?level=w1-l1 still plays the whole slice 1 level the old way, running by itself.
+  const bossLevel = parseLevel(bossLevelData);
+  const oldWay = new URLSearchParams(location.search).get('level') === 'w1-l1';
+  const startLevel = oldWay ? bossLevel : parseLevel(street1Data);
+  const game = new Game(startLevel);
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const buttons = new TouchButtons(document.body, coarse);
+  const placeButtons = (): void => buttons.place(window.innerWidth, window.innerHeight, readSafeArea());
+  onResize.push(placeButtons, () => game.setView(view));
+  placeButtons();
+  game.setView(view);
   game.look = loadLook(store);
   const sound = new Sound();
 
@@ -58,7 +72,10 @@ function startGame(): void {
     update: (dt) => game.update(dt),
     render: () => {
       game.render(g, view);
-      if (playing) hud.update(game.run, menus.sound);
+      if (playing) {
+        hud.update(game.run, menus.sound);
+        buttons.pressed(controls.dir, controls.jumpHeld > 0);
+      }
     },
   });
 
@@ -78,7 +95,9 @@ function startGame(): void {
     if (!playing || game.paused || !inPlay()) return;
     loop.pause();
     game.paused = true;
+    controls.releaseAll();
     game.release();
+    game.steer(0);
     menus.show('pause', by);
   }
   function resume(): void {
@@ -93,8 +112,10 @@ function startGame(): void {
     toast.hide();
     playing = true;
     document.body.classList.add('playing');
-    game.begin(menus.gentle);
+    controls.releaseAll();
+    game.begin(menus.gentle, startLevel);
     hud.show(true);
+    buttons.show(true, game.level.manual);
     loop.resume();
     if (portrait.matches || document.hidden) pause();
   }
@@ -102,9 +123,11 @@ function startGame(): void {
     playing = false;
     document.body.classList.remove('playing');
     hud.show(false);
+    buttons.show(false);
     toast.hide();
     loop.pause();
-    game.reset();
+    controls.releaseAll();
+    game.reset(startLevel);
     menus.show('title');
   }
 
@@ -126,6 +149,7 @@ function startGame(): void {
   });
   const toast = new Toast(document.body);
   sound.enabled = menus.sound;
+  menus.touchWords = () => buttons.touch;
 
   const W = WORDS.toast;
   game.onEvent = (e) => {
@@ -138,7 +162,7 @@ function startGame(): void {
         toast.show(W[e.kind], 3200);
         break;
       case 'hint':
-        toast.show(e.words, 2600);
+        toast.show(hintWords(e.words, controls.lastKind), 2600);
         break;
       case 'bounce':
         sound.play(e.kind === 'goat' ? 'meeh' : 'bounce');
@@ -169,11 +193,21 @@ function startGame(): void {
         break;
       case 'gameOver':
         sound.play('gameOver');
+        controls.releaseAll();
         loop.pause();
         toast.hide();
         menus.showGameOver({ kobo: game.run.kobo, lives: 0 });
         break;
       case 'arena':
+        sound.play('arena');
+        toast.show(W.bossArrives, 3000);
+        break;
+      case 'busBoard':
+        break;
+      case 'streetCleared':
+        // Until Go-Slow Hall (piece M): on to the slice 1 boss fight, lives and kobo carried.
+        game.toBoss(bossLevel);
+        buttons.show(true, false);
         sound.play('arena');
         toast.show(W.bossArrives, 3000);
         break;
@@ -192,6 +226,7 @@ function startGame(): void {
         toast.show(W.roadFree, 2000);
         break;
       case 'win':
+        controls.releaseAll();
         loop.pause();
         toast.hide();
         menus.showWin({ kobo: game.run.kobo, lives: game.run.lives });
@@ -214,16 +249,31 @@ function startGame(): void {
   window.addEventListener('pointerdown', unlock, true);
   window.addEventListener('keydown', unlock, true);
 
-  attachInput(window, {
-    onPress: (at) => {
-      if (!playing || game.paused || !inPlay()) return;
-      if (isSecondTap(startTap, at)) return;
-      const jump = game.press();
-      if (jump === 'ground') sound.play('jump');
-      else if (jump === 'air') sound.play('airJump');
+  const controls = new Controls(
+    {
+      onJumpPress: (by: Source, at) => {
+        if (!playing || game.paused || !inPlay()) return;
+        if (isSecondTap(startTap, at)) return;
+        const jump = game.press(by);
+        if (jump === 'ground') sound.play('jump');
+        else if (jump === 'air') sound.play('airJump');
+      },
+      onJumpRelease: (by) => game.release(by),
+      onMove: (dir) => {
+        if (playing && !game.paused) game.steer(dir);
+        else game.steer(0);
+      },
     },
-    onRelease: () => game.release(),
-  });
+    () => ({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      midX: buttons.layout.midX,
+      // Area rules only with the buttons on screen on a player-moved street; else a press anywhere jumps.
+      buttons: buttons.touch && game.level.manual,
+    }),
+    coarse ? 'touch' : 'keys',
+  );
+  attachControls(window, controls, () => buttons.sawTouch());
 
   // Menus first; the street stands still behind them.
   loop.start();
@@ -239,8 +289,18 @@ function startGame(): void {
       return loop.stepCount;
     },
     get hero() {
-      const { x, y, vy, grounded, dir, speed, airJump } = game.hero;
-      return { x, y, vy, grounded, dir, speed, airJump };
+      const { x, y, vy, vx, grounded, dir, speed, airJump, move, runTime, manual } = game.hero;
+      return { x, y, vy, vx, grounded, dir, speed, airJump, move, runTime, manual };
+    },
+    get input() {
+      return {
+        dir: controls.dir,
+        jumpHeld: controls.jumpHeld,
+        fingers: controls.fingerCount,
+        lastKind: controls.lastKind,
+        buttons: buttons.shown,
+        layout: buttons.layout,
+      };
     },
     get look() {
       return { ...game.look };
@@ -263,12 +323,18 @@ function startGame(): void {
       };
     },
     get level() {
+      const level = game.level;
       return {
+        id: level.id,
+        manual: level.manual,
         gaps: level.ground.slice(1).map((s, i) => [level.ground[i]![1], s[0]] as const),
         checkpoint: level.checkpoint,
-        arenaX: level.arena.x,
-        turnLeftX: level.arena.turnLeftX,
-        turnRightX: level.arena.turnRightX,
+        spawnX: level.spawnX,
+        startWall: level.startWall,
+        end: level.end ? { ...level.end } : null,
+        arenaX: level.arena?.x ?? Infinity,
+        turnLeftX: level.arena?.turnLeftX ?? Infinity,
+        turnRightX: level.arena?.turnRightX ?? Infinity,
         groundY: level.groundY,
         lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
       };
@@ -290,10 +356,18 @@ function startGame(): void {
         : null;
     },
     get heroScreenX() {
-      return heroScreenX(view.width);
+      // Where the hero is drawn across the screen right now (the street camera may lag or
+      // stop at the start fence; slice 1 levels keep heroScreenX).
+      return game.level.manual ? (game.hero.x - game.camera) / view.width : heroScreenX(view.width);
     },
     get camX() {
       return game.camera;
+    },
+    get camLook() {
+      return game.cameraLook;
+    },
+    get viewW() {
+      return view.width;
     },
     get sound() {
       return { enabled: sound.enabled, started: sound.started };
@@ -308,14 +382,38 @@ declare global {
       readonly steps: number;
       /** Camera left edge (world x) as last drawn. */
       readonly camX: number;
+      /** Which way the street camera looks. */
+      readonly camLook: 1 | -1;
+      /** World width shown. */
+      readonly viewW: number;
       readonly hero: {
         readonly x: number;
         readonly y: number;
         readonly vy: number;
+        /** Speed across (player-moved), u/s. */
+        readonly vx: number;
         readonly grounded: boolean;
         readonly dir: 1 | -1;
         readonly speed: number;
         readonly airJump: boolean;
+        /** Direction held (player-moved). */
+        readonly move: -1 | 0 | 1;
+        readonly runTime: number;
+        readonly manual: boolean;
+      };
+      readonly input: {
+        readonly dir: -1 | 0 | 1;
+        readonly jumpHeld: number;
+        readonly fingers: { readonly dir: number; readonly jump: number };
+        readonly lastKind: 'touch' | 'keys';
+        readonly buttons: boolean;
+        readonly layout: {
+          readonly d: number;
+          readonly midX: number;
+          readonly back: { x: number; y: number; w: number; h: number };
+          readonly forward: { x: number; y: number; w: number; h: number };
+          readonly jump: { x: number; y: number; w: number; h: number };
+        };
       };
       readonly look: { readonly skin: number; readonly hair: number; readonly outfit: number };
       readonly screen: MenuScreen | 'play';
@@ -331,6 +429,11 @@ declare global {
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
       };
       readonly level: {
+        readonly id: string;
+        readonly manual: boolean;
+        readonly spawnX: number;
+        readonly startWall: number;
+        readonly end: { readonly x: number; readonly wall: number } | null;
         readonly gaps: readonly (readonly [number, number])[];
         readonly checkpoint: number;
         readonly arenaX: number;

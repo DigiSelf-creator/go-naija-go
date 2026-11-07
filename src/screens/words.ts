@@ -15,7 +15,9 @@ export const WORDS = {
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
     gentle: 'Gentle mode: 5 lives instead of 3',
-    howTo: 'Tap to jump. Tap again in the air to jump again. Hold to jump higher. You run by yourself.',
+    /** S2.2 How to play: touch words when the phone buttons show, else the key words. */
+    howTo: 'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
+    howToKeys: 'Left and right arrows walk. Keep holding to run. Space jumps. Press it again in the air to jump again. Hold it to jump higher.',
   },
   builder: {
     heading: 'Make your hero',
@@ -61,6 +63,11 @@ export const WORDS = {
     playAgain: 'Play again',
     home: 'Home',
   },
+  /** S2.2 Words in hints: what {forward}, {back}, {jump} and {down} become. */
+  hintMarks: {
+    touch: { forward: 'the forward arrow', back: 'the back arrow', jump: 'Jump', down: 'Go down' },
+    keys: { forward: 'the right arrow', back: 'the left arrow', jump: 'Space', down: 'the down arrow' },
+  },
   /** Toasts in the run: docs/design.md Power-ups, Level 1. */
   toast: {
     corn: 'Roasted corn! You run faster for 6 seconds.',
@@ -74,3 +81,9 @@ export const WORDS = {
     roadFree: 'Green light! The road is free!',
   },
 } as const;
+
+/** Fills the {forward} {back} {jump} {down} markers in a hint for touch or keys. */
+export function hintWords(words: string, kind: 'touch' | 'keys'): string {
+  const marks: Record<string, string> = WORDS.hintMarks[kind];
+  return words.replace(/\{(forward|back|jump|down)\}/g, (_, k: string) => marks[k] ?? k);
+}
