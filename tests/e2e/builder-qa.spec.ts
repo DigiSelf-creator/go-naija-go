@@ -29,7 +29,7 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
   expect(await lines(page, '.screen .card')).toEqual([
     'Gbese!',
     'Run your street. Clear the jam.',
-    'Tap to jump. Tap again in the air to jump again. Hold to jump higher. You run by yourself.',
+    'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
     'Make your hero',
     'Credits',
     'Sound: on',
@@ -71,7 +71,7 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
   expect(await lines(page, '.screen .card')).toEqual([
     'Gbese!',
     'Run your street. Clear the jam.',
-    'Tap to jump. Tap again in the air to jump again. Hold to jump higher. You run by yourself.',
+    'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
     'Start running',
     'Change hero',
     'Credits',

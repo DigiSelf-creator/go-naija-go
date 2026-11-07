@@ -3,11 +3,13 @@
  * Words are checked exactly against docs/design.md (Power-ups, Screens).
  *
  * Screenshots for the originality check go to $QA_SHOTS (default test-results/qa-shots).
+ * Slice 2: these check the slice 1 level, played the old way (OLD_WAY) until piece M retires it;
+ * street 1 by hand is in hands.spec.ts.
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS, openAndRun, startRun } from './helpers';
+import { OLD_WAY, PAST_DOUBLE_TAP_MS, openAndRun, startRun } from './helpers';
 
 const SHOTS = process.env['QA_SHOTS'] ?? 'test-results/qa-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -167,7 +169,7 @@ test('C7/D4: a sloppy player (+/- 80 ms) plays level 1 by touch, gets all three 
   context.on('request', (r) => {
     if (loaded) late.push(`${r.method()} ${r.url()}`);
   });
-  await page.goto('./');
+  await page.goto(OLD_WAY);
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
@@ -269,7 +271,7 @@ test('C7/D4: a sloppy player (+/- 80 ms) plays level 1 by touch, gets all three 
 
 test('C7 Q14: a fall after the bus stop: back at the bus stop, garri comes back, kobo stay counted', async ({ page }) => {
   test.setTimeout(120_000);
-  await openAndRun(page);
+  await openAndRun(page, OLD_WAY);
   await watchWords(page);
   // Jump everything; leave the 50 pothole at 6700 alone.
   await playByTouch(page, { jitterMs: 0, skipGap: (a) => a === 6700, until: (s) => s.r.lives < 3 });
@@ -314,7 +316,7 @@ test('C7 Q14: a fall after the bus stop: back at the bus stop, garri comes back,
 
 test('C7 slowed CPU: 4x through the whole level by touch, at least 30 fps in every part', async ({ page }) => {
   test.setTimeout(180_000);
-  await page.goto('./');
+  await page.goto(OLD_WAY);
   // Gentle mode, so a missed jump on a slow machine does not end the measurement early.
   await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
   await startRun(page);
@@ -353,7 +355,7 @@ test('C7 slowed CPU: 4x through the whole level by touch, at least 30 fps in eve
 
 test('C7 break it: last life lost in the pothole just past the bus stop, shield or not: game over, then Play again from the start', async ({ page }) => {
   test.setTimeout(120_000);
-  await openAndRun(page);
+  await openAndRun(page, OLD_WAY);
   // Let the goat at 4950 and the tyre at 5450 hit (2 lives gone), pick up garri, jump the
   // goat at 6400, then miss the 50 pothole at 6700 on the last life.
   await playByTouch(page, { jitterMs: 0, letHit: (x0) => x0 === 4950 || x0 === 5450, skipGap: (a) => a === 6700 });
@@ -386,7 +388,7 @@ test('C7 break it: last life lost in the pothole just past the bus stop, shield 
 
 test('C7 gentle mode: switched on from the game over screen, the next run has 5 lives and loses all 5', async ({ page }) => {
   test.setTimeout(150_000);
-  await openAndRun(page);
+  await openAndRun(page, OLD_WAY);
   // Never tap: three falls at the first pothole.
   const over = page.getByRole('dialog', { name: 'Out of lives' });
   await expect(over).toBeVisible({ timeout: 60_000 });
@@ -414,7 +416,7 @@ test('C7 gentle mode: switched on from the game over screen, the next run has 5 
 
 test('C7 bounce: landing on the goat and on the tyre by touch bounces, costs nothing, the goat runs off', async ({ page }) => {
   test.setTimeout(90_000);
-  await openAndRun(page);
+  await openAndRun(page, OLD_WAY);
   const f = finger(await page.context().newCDPSession(page));
   const level = await page.evaluate(() => window.__game!.level);
   const bounced: string[] = [];
