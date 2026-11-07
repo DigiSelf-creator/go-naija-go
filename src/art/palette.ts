@@ -60,6 +60,8 @@ export const GREEN_GO_DARK = '#13703a';
 export const LIGHT_RED = '#e74c3c';
 export const LIGHT_AMBER = '#f1c40f';
 export const LIGHT_OFF = '#4a4a4a';
+/** The small tick on a used (dark) go light. */
+export const TICK_GREY = '#8a9099';
 export const LIGHT_BOX = '#2b2f36';
 
 export const GLOW = '#ffd84d';

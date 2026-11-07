@@ -343,7 +343,8 @@ export type GoLightState = 'off' | 'lit' | 'done';
 /**
  * A light platform in the arena. [x, topY, w] as in the level data (x is the left
  * edge). Lit = green lamps PLUS a bouncing down arrow with the word GO, so the
- * meaning never rests on colour alone. Done = dimmed, with a tick.
+ * meaning never rests on colour alone. Done = the light goes dark (lamps off, the same as
+ * an unlit light) with a small grey tick, so only the next lit light reads as the target.
  */
 export function drawGoLight(g: CanvasRenderingContext2D, x: number, topY: number, w: number, state: GoLightState, time: number, groundY = 300): void {
   const mid = x + w / 2;
@@ -358,7 +359,7 @@ export function drawGoLight(g: CanvasRenderingContext2D, x: number, topY: number
   g.roundRect(x, topY, w, 14, 5);
   g.fill();
   g.stroke();
-  const lampCol = state === 'lit' ? P.GREEN_GO : state === 'done' ? P.GREEN_GO_DARK : P.LIGHT_OFF;
+  const lampCol = state === 'lit' ? P.GREEN_GO : P.LIGHT_OFF;
   for (let i = 0; i < 3; i++) {
     const lx = x + w * (0.22 + i * 0.28);
     g.fillStyle = lampCol;
@@ -367,13 +368,14 @@ export function drawGoLight(g: CanvasRenderingContext2D, x: number, topY: number
     g.fill();
   }
   if (state === 'done') {
-    g.strokeStyle = P.WHITE;
-    g.lineWidth = 2.5;
+    // A small grey tick: used up, not a target.
+    g.strokeStyle = P.TICK_GREY;
+    g.lineWidth = 2;
     g.lineCap = 'round';
     g.beginPath();
-    g.moveTo(mid - 5, topY - 8);
+    g.moveTo(mid - 4, topY - 7);
     g.lineTo(mid - 1, topY - 4);
-    g.lineTo(mid + 6, topY - 12);
+    g.lineTo(mid + 4, topY - 10);
     g.stroke();
   }
   if (state === 'lit') {
