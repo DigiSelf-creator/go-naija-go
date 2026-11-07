@@ -30,7 +30,7 @@ type Plan = 'tap' | 'hold' | 'holdAir';
 /** Where a jump pressed after `delay` steps lands, with the arena turn-around. */
 function landing(run: Run, plan: Plan, delay: number): Platform | null {
   const h = run.hero;
-  const { turnLeftX, turnRightX } = run.level.arena;
+  const { turnLeftX, turnRightX } = run.level.arena!;
   const terrain: Terrain = run.terrain;
   const b: Body = createBody(h.x, terrain);
   Object.assign(b, { y: h.y, prevY: h.y, vy: h.vy, dir: h.dir, speed: h.speed, grounded: h.grounded, airJump: h.airJump, coyote: h.grounded ? 5 : 0 });
