@@ -247,8 +247,23 @@ test('buttons: sizes and places per screen, see-through, spoken names; pressed s
   // Fully below the road line (y 300 of 420).
   expect(l.back.y).toBeGreaterThanOrEqual((vp.height * 300) / 420);
   for (const name of ['Back', 'Forward', 'Jump']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
+  // Art's drawing (H5) fills its button: the round face of the shown look sits inside the box.
+  const face = () =>
+    page.evaluate(() => {
+      const pad = document.querySelector('.pad-forward')!;
+      const shown = [...pad.querySelectorAll('svg')].find((s) => s.getBoundingClientRect().width > 0)!;
+      const c = shown.querySelector('circle')!.getBoundingClientRect();
+      const b = pad.getBoundingClientRect();
+      return { w: c.width, inside: c.left >= b.left - 1 && c.right <= b.right + 1 && c.top >= b.top - 1 && c.bottom <= b.bottom + 1 };
+    });
+  const up = await face();
+  expect(up.inside).toBe(true);
+  expect(up.w).toBeGreaterThan(l.d * 0.8);
   await h.down(LEFT, btn.forward.x, btn.forward.y);
   await expect(page.locator('.pad-forward')).toHaveClass(/down/);
+  const pressed = await face();
+  expect(pressed.inside).toBe(true);
+  expect(pressed.w).toBeCloseTo(up.w * 0.94, 0);
   await h.up(LEFT);
   await expect(page.locator('.pad-forward')).not.toHaveClass(/down/);
   // 320 x 240: D is 56.
