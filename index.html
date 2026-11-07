@@ -58,8 +58,8 @@
         text-align: center;
         z-index: 20;
       }
-      /* Only during a run: the menus work upright too. */
-      @media (orientation: portrait) and (max-width: 700px) {
+      /* Only during a run: the menus work upright too. Play is sideways only, on any screen size. */
+      @media (orientation: portrait) {
         body.playing #rotate {
           display: grid;
         }

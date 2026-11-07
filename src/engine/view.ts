@@ -4,6 +4,8 @@
  */
 export const WORLD_H = 360;
 export const MAX_DPR = 2;
+/** The view always shows at least this much world across (a safety net for upright screens). */
+export const MIN_WORLD_W = 480;
 
 export interface Insets {
   top: number;
@@ -29,14 +31,16 @@ export function fitView(cssW: number, cssH: number, dpr: number, safeCss: Insets
   const ratio = Math.min(Math.max(dpr || 1, 1), MAX_DPR);
   const pixelW = Math.max(1, Math.round(cssW * ratio));
   const pixelH = Math.max(1, Math.round(cssH * ratio));
-  const scale = pixelH / WORLD_H;
+  // Normally 360 units tall; on a narrow (upright) screen, shrink so 480 units still fit across.
+  const narrow = pixelW / MIN_WORLD_W < pixelH / WORLD_H;
+  const scale = narrow ? pixelW / MIN_WORLD_W : pixelH / WORLD_H;
   const cssToWorld = ratio / scale;
   return {
     pixelW,
     pixelH,
     scale,
     width: pixelW / scale,
-    height: WORLD_H,
+    height: narrow ? pixelH / scale : WORLD_H,
     safe: {
       top: safeCss.top * cssToWorld,
       right: safeCss.right * cssToWorld,

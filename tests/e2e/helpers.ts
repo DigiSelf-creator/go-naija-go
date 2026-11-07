@@ -2,10 +2,11 @@ import { expect, type Page } from '@playwright/test';
 
 /**
  * A tap within 300 ms and 48 px of the tap that opened a screen counts as the second
- * half of a double tap and is ignored (B4). Playwright taps far faster than a person,
- * so wait this long before a tap that may land where the last one did.
+ * half of a double tap and is ignored (B4), and screens that open during play (Pause,
+ * Game over, Win) ignore all taps for 0.4 s. Playwright taps far faster than a person,
+ * so wait this long before such a tap.
  */
-export const PAST_DOUBLE_TAP_MS = 350;
+export const PAST_DOUBLE_TAP_MS = 450;
 
 /**
  * From the title screen into a run, by touch: "Make your hero" then "Start running" on a

@@ -1,0 +1,234 @@
+/**
+ * Short sounds made in code with WebAudio: no sound files, nothing downloaded.
+ * The audio starts only after the player's first tap or key (browsers require it),
+ * and nothing plays while sound is off.
+ */
+export type SoundName =
+  | 'jump'
+  | 'airJump'
+  | 'kobo'
+  | 'food'
+  | 'bounce'
+  | 'meeh'
+  | 'smash'
+  | 'hit'
+  | 'shieldPop'
+  | 'fall'
+  | 'checkpoint'
+  | 'tick'
+  | 'gameOver'
+  | 'arena'
+  // Boss (General Go-Slow)
+  | 'honk'
+  | 'greenHit'
+  | 'bossWin';
+
+/**
+ * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
+ * style bend); to = Hz at the end; at = start delay in s; vol = loudness.
+ */
+interface Tone {
+  f: number;
+  len: number;
+  wave?: OscillatorType;
+  peak?: number;
+  to?: number;
+  at?: number;
+  vol?: number;
+}
+
+/** A short burst of hiss (shekere shake, splash). hp/lp = filter Hz. */
+interface Hiss {
+  len: number;
+  at?: number;
+  vol?: number;
+  hp?: number;
+  lp?: number;
+}
+
+interface Recipe {
+  tones: readonly Tone[];
+  hiss?: readonly Hiss[];
+}
+
+/** A two-tone horn chord (like a bus horn, not any real one). */
+const horn = (lo: number, hi: number, len: number, at: number, sag = 0.97): Tone[] => [
+  { f: lo, len, wave: 'sawtooth', to: lo * sag, at, vol: 0.025 },
+  { f: hi, len, wave: 'sawtooth', to: hi * sag, at, vol: 0.025 },
+];
+
+/**
+ * All our own. Soft sine and triangle waves, short. Avoided on purpose: the
+ * square-wave B5-to-E6 coin, rising square power-up runs, descending "lose" runs,
+ * and pipe or warp slides.
+ */
+const SOUNDS: Record<SoundName, Recipe> = {
+  // Talking-drum bend: up, then settles a little lower.
+  jump: { tones: [{ f: 330, len: 0.14, wave: 'triangle', peak: 520, to: 440, vol: 0.07 }] },
+  airJump: { tones: [{ f: 470, len: 0.12, wave: 'triangle', peak: 720, to: 620, vol: 0.06 }] },
+  // Shekere shake plus one soft high pling that dips.
+  kobo: { tones: [{ f: 1175, len: 0.09, wave: 'sine', to: 1110, vol: 0.045 }], hiss: [{ len: 0.045, hp: 5000, vol: 0.05 }] },
+  // "Yum": a drum bend up-down, then a small sparkle.
+  food: {
+    tones: [
+      { f: 520, len: 0.16, wave: 'triangle', peak: 760, to: 600 },
+      { f: 990, len: 0.12, wave: 'sine', to: 1040, at: 0.15, vol: 0.04 },
+    ],
+    hiss: [{ len: 0.06, hp: 5000, at: 0.15, vol: 0.03 }],
+  },
+  // Springy boing.
+  bounce: { tones: [{ f: 300, len: 0.13, wave: 'sine', peak: 640, to: 520, vol: 0.08 }] },
+  // Friendly goat bleat, wobbly.
+  meeh: {
+    tones: [
+      { f: 540, len: 0.09, wave: 'triangle', peak: 580, to: 500 },
+      { f: 530, len: 0.17, wave: 'triangle', peak: 570, to: 470, at: 0.1 },
+    ],
+  },
+  // Soft thump, a puff of dust, a tiny ping.
+  smash: {
+    tones: [
+      { f: 200, len: 0.1, wave: 'triangle', to: 100, vol: 0.09 },
+      { f: 1047, len: 0.06, wave: 'sine', at: 0.07, vol: 0.035 },
+    ],
+    hiss: [{ len: 0.09, lp: 1200, vol: 0.05 }],
+  },
+  // "Oof": one sagging bend, not a run of falling notes.
+  hit: { tones: [{ f: 300, len: 0.24, wave: 'triangle', peak: 340, to: 190, vol: 0.07 }] },
+  // Bubble pop: quick rise plus a tiny tick.
+  shieldPop: { tones: [{ f: 600, len: 0.05, wave: 'sine', to: 1300, vol: 0.06 }], hiss: [{ len: 0.03, hp: 3000, at: 0.04, vol: 0.04 }] },
+  // Plop into the puddle: a short drip then a splash.
+  fall: {
+    tones: [{ f: 900, len: 0.07, wave: 'sine', to: 300, vol: 0.06 }],
+    hiss: [{ len: 0.22, lp: 1800, at: 0.07, vol: 0.06 }],
+  },
+  // Short bright bell ding (with a quiet bell overtone).
+  checkpoint: {
+    tones: [
+      { f: 1397, len: 0.35, wave: 'sine', vol: 0.06 },
+      { f: 3856, len: 0.15, wave: 'sine', vol: 0.015 },
+    ],
+  },
+  // Woodblock tick for the last seconds of a food.
+  tick: { tones: [{ f: 1500, len: 0.03, wave: 'sine', to: 1250 }] },
+  // "Aw, try again": a dip, then a hopeful lift.
+  gameOver: {
+    tones: [
+      { f: 523, len: 0.22, wave: 'triangle', to: 494 },
+      { f: 494, len: 0.32, wave: 'triangle', peak: 560, to: 587, at: 0.24 },
+    ],
+  },
+  // Boss arrives: a low two-tone horn, "pa-paaam".
+  arena: { tones: [...horn(311, 392, 0.1, 0), ...horn(311, 392, 0.3, 0.14, 0.94)] },
+  // Honk-cloud throw: one sagging "POOO".
+  honk: { tones: horn(370, 466, 0.28, 0, 0.9) },
+  // Landing on the green light: a drum knock and a bright ding.
+  greenHit: {
+    tones: [
+      { f: 330, len: 0.1, wave: 'triangle', peak: 500, to: 420 },
+      { f: 1568, len: 0.25, wave: 'sine', at: 0.08, vol: 0.05 },
+    ],
+    hiss: [{ len: 0.04, hp: 5000, at: 0.08, vol: 0.03 }],
+  },
+  // Defeat: happy "pom pom" from the cars, then our own little highlife-style tune.
+  bossWin: {
+    tones: [
+      ...horn(523, 659, 0.09, 0, 1),
+      ...horn(523, 659, 0.16, 0.14, 1),
+      ...(
+        [
+          [659, 0.1, 0.45],
+          [784, 0.1, 0.57],
+          [880, 0.18, 0.69],
+          [784, 0.08, 0.9],
+          [659, 0.08, 1.0],
+          [880, 0.1, 1.1],
+          [1047, 0.3, 1.22],
+        ] as const
+      ).map(([f, len, at]): Tone => ({ f, len, at, wave: 'triangle', vol: 0.05 })),
+    ],
+    hiss: [
+      { len: 0.04, hp: 5000, at: 0.45, vol: 0.03 },
+      { len: 0.04, hp: 5000, at: 0.69, vol: 0.03 },
+      { len: 0.04, hp: 5000, at: 1.0, vol: 0.03 },
+      { len: 0.04, hp: 5000, at: 1.22, vol: 0.03 },
+    ],
+  },
+};
+
+export class Sound {
+  private ac: AudioContext | null = null;
+  enabled = true;
+
+  /** Call from a tap or key handler. Creates or wakes the audio the first time. */
+  unlock(): void {
+    try {
+      if (!this.ac) {
+        const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctor) return;
+        this.ac = new Ctor();
+      }
+      if (this.ac.state === 'suspended') void this.ac.resume().catch(() => {});
+    } catch {
+      this.ac = null; // no sound, the game still runs
+    }
+  }
+
+  get started(): boolean {
+    return this.ac !== null;
+  }
+
+  private noise: AudioBuffer | null = null;
+
+  play(name: SoundName): void {
+    const ac = this.ac;
+    if (!this.enabled || !ac || ac.state !== 'running') return;
+    const recipe = SOUNDS[name];
+    const now = ac.currentTime;
+    try {
+      for (const tone of recipe.tones) {
+        const t = now + (tone.at ?? 0);
+        const end = t + tone.len;
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = tone.wave ?? 'triangle';
+        osc.frequency.setValueAtTime(tone.f, t);
+        if (tone.peak) osc.frequency.linearRampToValueAtTime(tone.peak, t + tone.len * 0.35);
+        if (tone.to) osc.frequency.linearRampToValueAtTime(tone.to, end);
+        gain.gain.setValueAtTime(tone.vol ?? 0.06, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        osc.connect(gain).connect(ac.destination);
+        osc.start(t);
+        osc.stop(end + 0.02);
+      }
+    } catch {
+      /* a sound that fails is never worth a crash */
+    }
+    // Hiss is extra: if this browser cannot make it, the tones above still played.
+    try {
+      for (const h of recipe.hiss ?? []) {
+        const t = now + (h.at ?? 0);
+        if (!this.noise) {
+          const len = Math.ceil(ac.sampleRate * 0.3);
+          const buf = ac.createBuffer(1, len, ac.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+          this.noise = buf;
+        }
+        const src = ac.createBufferSource();
+        src.buffer = this.noise;
+        const filter = ac.createBiquadFilter();
+        filter.type = h.lp ? 'lowpass' : 'highpass';
+        filter.frequency.setValueAtTime(h.lp ?? h.hp ?? 4000, t);
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(h.vol ?? 0.04, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + h.len);
+        src.connect(filter).connect(gain).connect(ac.destination);
+        src.start(t);
+        src.stop(t + h.len + 0.02);
+      }
+    } catch {
+      /* no hiss, still fine */
+    }
+  }
+}

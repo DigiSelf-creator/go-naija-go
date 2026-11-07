@@ -4,7 +4,7 @@
  * no network after load, a real offline second visit, and installability.
  */
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun } from './helpers';
 
 const hero = (page: Page) => page.evaluate(() => window.__game!.hero);
 const paused = (page: Page) => page.evaluate(() => window.__game!.paused);
@@ -25,11 +25,23 @@ async function touch(cdp: CDPSession, type: 'touchStart' | 'touchEnd', x = 500, 
   });
 }
 
-/** Taps, and reads the hero the instant the game has handled the tap (before any frame can step). */
-async function tapAndRead(page: Page, x = 500, y = 150): Promise<{ vy: number; paused: boolean }> {
+/**
+ * C: the pause screen (design.md Screens: Pause). First proves a tap outside its buttons does
+ * nothing (still paused, hero frozen), then taps "Keep running" and reads the hero the instant
+ * the game has handled that tap (before any frame can step).
+ */
+async function keepRunningAndRead(page: Page): Promise<{ vy: number; paused: boolean }> {
+  const pauseCard = page.getByRole('dialog', { name: 'Paused' });
+  await expect(pauseCard).toBeVisible();
+  const frozen = await hero(page);
+  await page.touchscreen.tap(20, (page.viewportSize()?.height ?? 300) - 20); // outside the card
+  await page.waitForTimeout(150);
+  expect(await paused(page)).toBe(true);
+  expect(await hero(page)).toEqual(frozen);
   await page.evaluate(() => {
+    // Bubble phase on window: runs after the button's own click handler.
     window.addEventListener(
-      'pointerdown',
+      'click',
       () => {
         (window as unknown as { __afterTap: unknown }).__afterTap = {
           vy: window.__game!.hero.vy,
@@ -39,7 +51,8 @@ async function tapAndRead(page: Page, x = 500, y = 150): Promise<{ vy: number; p
       { once: true },
     );
   });
-  await page.touchscreen.tap(x, y);
+  await pauseCard.getByRole('button', { name: 'Keep running' }).tap();
+  await expect(pauseCard).toBeHidden();
   return page.evaluate(() => (window as unknown as { __afterTap: { vy: number; paused: boolean } }).__afterTap);
 }
 
@@ -155,15 +168,15 @@ test('switching apps mid-jump: pauses in the air, comes back to the same spot', 
   expect(back.grounded).toBe(false);
   expect(back.y).toBeLessThan(300);
   expect(back.x).toBeGreaterThanOrEqual(before.x);
-  // The tap that ends the pause does not jump; the hero carries on the same arc.
-  const resumed = await tapAndRead(page);
+  // C: only "Keep running" ends the pause, and it does not jump; the hero carries on the same arc.
+  const resumed = await keepRunningAndRead(page);
   expect(resumed.paused).toBe(false);
   expect(resumed.vy).toBe(frozen.vy);
   await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { timeout: 3000 }).toBe(true);
   expect((await hero(page)).y).toBe(300);
 });
 
-test('turning the phone upright mid-jump pauses; turning back and tapping carries on', async ({ page }) => {
+test('turning the phone upright mid-jump pauses; turning back and Keep running carries on', async ({ page }) => {
   await ready(page);
   const vp = page.viewportSize()!;
   await midJump(page);
@@ -190,7 +203,8 @@ test('turning the phone upright mid-jump pauses; turning back and tapping carrie
   expect(canvas.cw).toBe(vp.width);
   expect(canvas.ch).toBe(vp.height);
   expect(canvas.w).toBe(Math.round(vp.width * 2));
-  const resumed = await tapAndRead(page);
+  // C: once sideways the pause screen shows; "Keep running" carries on without a jump.
+  const resumed = await keepRunningAndRead(page);
   expect(resumed.paused).toBe(false);
   expect(resumed.vy).toBe(frozen.vy);
   await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { timeout: 3000 }).toBe(true);
@@ -225,13 +239,14 @@ for (const size of [
     // Pixel ratio capped at 2.
     expect(c.w).toBe(size.width * 2);
     expect(c.h).toBe(size.height * 2);
-    // The hero is drawn where it should be: 30 percent across, standing on the road.
+    // The hero is drawn where it should be: 30 percent across (C, qa: further left on narrow
+    // screens, so the hook says where), standing on the road.
     // B3: the drawn hero (default look: green jersey) replaced the capsule, and arms swing
     // across the body, so look for jersey green anywhere in a short column through the chest.
     const px = await page.evaluate(() => {
       const el = document.querySelector('canvas')!;
       const g = el.getContext('2d')!;
-      const x = Math.round(el.width * 0.3);
+      const x = Math.round(el.width * window.__game!.heroScreenX);
       const out: number[][] = [];
       for (let wy = 266; wy <= 290; wy++) {
         out.push(Array.from(g.getImageData(x, Math.round(el.height * (wy / 360)), 1, 1).data.slice(0, 3)));
@@ -282,8 +297,11 @@ test('no network requests after the first load', async ({ page, context }) => {
     document.dispatchEvent(new Event('visibilitychange'));
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
   });
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS); // design: Pause ignores taps for its first 0.4 s
+  await page.getByRole('button', { name: 'Keep running' }).tap();
   await page.touchscreen.tap(500, 150);
   await page.waitForTimeout(1000);
+  expect(await paused(page)).toBe(false);
   expect(late).toEqual([]);
 });
 
