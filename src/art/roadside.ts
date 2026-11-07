@@ -210,6 +210,8 @@ export const END_BUS_FRONT = 160;
 const BUS_TOP = 74;
 const DOOR_W = 26;
 const DOOR_TOP = 64;
+/** The "BUS PARK" board, relative to (endX, groundY), in u. */
+export const BUS_BOARD = { dx: -146, dy: -123, w: 72, h: 26 } as const;
 
 /**
  * Behind the bus: the bus park shelter, a "BUS PARK" board and the bus park wall
@@ -234,18 +236,19 @@ export function drawBusPark(g: CanvasRenderingContext2D, endX: number, wallX: nu
   g.fillRect(sx0 + 66, groundY - 18, 3, 18);
   // Board on its own pole, fixed to the front of the shelter roof: everyday words,
   // no brand. Kept low (centre at groundY - 110) so the hint banner never covers it.
-  const by = groundY - 123;
+  const by = groundY + BUS_BOARD.dy;
+  const bx = endX + BUS_BOARD.dx;
   g.fillStyle = P.STOP_POLE;
-  g.fillRect(endX - 112, by + 26, 4, groundY - by - 26);
-  rr(g, endX - 146, by, 72, 26, 5, '#1f6f4a');
+  g.fillRect(bx + 34, by + BUS_BOARD.h, 4, groundY - by - BUS_BOARD.h);
+  rr(g, bx, by, BUS_BOARD.w, BUS_BOARD.h, 5, '#1f6f4a');
   g.beginPath();
-  g.roundRect(endX - 146, by, 72, 26, 5);
+  g.roundRect(bx, by, BUS_BOARD.w, BUS_BOARD.h, 5);
   outline(g, 1.4);
   g.fillStyle = P.WHITE;
   g.font = 'bold 11px sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.fillText('BUS PARK', endX - 110, by + 13);
+  g.fillText('BUS PARK', bx + BUS_BOARD.w / 2, by + BUS_BOARD.h / 2);
 
   // The wall: plastered block wall with a painted band and a cap
   const ww = 60;

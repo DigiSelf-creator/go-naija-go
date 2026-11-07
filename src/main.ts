@@ -5,6 +5,7 @@ import { fitView, readSafeArea, type View } from './engine/view';
 import street1Data from './data/levels/lagos-1.json';
 import bossLevelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
+import { BUS_BOARD } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel } from './game/level';
 import { STEPS_PER_SECOND, type RunPhase } from './game/run';
@@ -393,6 +394,19 @@ function startGame(): void {
     get sound() {
       return { enabled: sound.enabled, started: sound.started };
     },
+    get busBoard() {
+      // The "BUS PARK" board as drawn on screen right now, CSS px (null on a level with no bus park).
+      const end = game.level.end;
+      if (!end) return null;
+      const k = canvas.getBoundingClientRect().width / view.width;
+      const gy = game.level.groundY;
+      return {
+        x: (end.x + BUS_BOARD.dx - game.camera) * k,
+        y: (gy + BUS_BOARD.dy - game.lift) * k,
+        w: BUS_BOARD.w * k,
+        h: BUS_BOARD.h * k,
+      };
+    },
   };
 }
 
@@ -481,6 +495,8 @@ declare global {
       /** Where the hero stands across the screen, 0 to 1. */
       readonly heroScreenX: number;
       readonly sound: { readonly enabled: boolean; readonly started: boolean };
+      /** The "BUS PARK" board's drawn box on screen, CSS px; null when the level has no bus park. */
+      readonly busBoard: { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
     };
   }
 }

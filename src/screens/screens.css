@@ -326,6 +326,19 @@
 .toast.show {
   opacity: 1;
 }
+/* Short screens (320 x 240, 568 x 230, 640 x 200): 24% down lands the banner on the street
+   picture (the BUS PARK board). Pin it to the very top over the HUD numbers, between the
+   sound and pause buttons so they stay in sight, with small padding and 14 px words. */
+@media (max-height: 300px) {
+  .toast {
+    top: max(4px, var(--safe-top));
+    max-width: calc(100vw - 2 * (max(10px, var(--safe-left), var(--safe-right)) + 52px));
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+}
 .go.secondary {
   background: #5d574b;
 }
