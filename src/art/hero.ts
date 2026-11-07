@@ -76,7 +76,7 @@ export const SKINS: readonly SkinOption[] = [
   { id: 'skin2', label: 'Skin tone 2', base: '#d9a172', shade: '#c0875a', face: FACE_LIGHT },
   { id: 'skin3', label: 'Skin tone 3', base: '#a8693f', shade: '#8d5530', face: FACE_LIGHT },
   { id: 'skin4', label: 'Skin tone 4', base: '#7a4a2a', shade: '#653b20', face: { line: INK, brow: 0.95, rim: '#d29a72', lip: LIP_SOFT, lipLine: '#3a2113' } },
-  { id: 'skin5', label: 'Skin tone 5', base: '#4b2c1a', shade: '#3a2113', face: { line: INK, brow: 0.95, rim: '#a87656', lip: LIP, lipLine: '#7a4a2a' } },
+  { id: 'skin5', label: 'Skin tone 5', base: '#4b2c1a', shade: '#3a2113', face: { line: INK, brow: 0.95, rim: '#a87656', lip: LIP, lipLine: '#2a170d' } },
 ];
 
 export const HAIRS: readonly HairOption[] = [
