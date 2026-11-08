@@ -3,11 +3,13 @@ import { Controls, attachControls, type Source } from './engine/input';
 import { FixedLoop } from './engine/loop';
 import { fitView, readSafeArea, type View } from './engine/view';
 import street1Data from './data/levels/lagos-1.json';
+import street2Data from './data/levels/lagos-2.json';
+import street3Data from './data/levels/lagos-3.json';
 import bossLevelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
-import { parseLevel } from './game/level';
+import { parseLevel, type Level } from './game/level';
 import { STEPS_PER_SECOND, type RunPhase } from './game/run';
 import { loadLook } from './game/save';
 import { TouchButtons, hintBarBox, type HintBarBox } from './screens/controls';
@@ -57,11 +59,19 @@ if (query.has('gallery')) {
 
 function startGame(): void {
   const store = createStore();
-  // Street 1 by hand (slice 2). The slice 1 boss fight comes after its bus until Go-Slow Hall
-  // (piece M). ?level=w1-l1 still plays the whole slice 1 level the old way, running by itself.
+  // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
+  // `theme`. After street 3 the slice 1 boss fight stands in for Go-Slow Hall (piece M).
+  // ?level=w1-l1 still plays the whole slice 1 level the old way, running by itself;
+  // ?level=lagos-2 or lagos-3 starts at that street (for testing).
   const bossLevel = parseLevel(bossLevelData);
-  const oldWay = new URLSearchParams(location.search).get('level') === 'w1-l1';
-  const startLevel = oldWay ? bossLevel : parseLevel(street1Data);
+  const streets: readonly Level[] = [street1Data, street2Data, street3Data].map((d) => parseLevel(d));
+  const asked = new URLSearchParams(location.search).get('level');
+  const oldWay = asked === 'w1-l1';
+  const firstStreet = Math.max(0, streets.findIndex((l) => l.id === asked));
+  /** The street being played (index into streets), or 'hall' for the boss fight after street 3. */
+  let where: number | 'hall' = firstStreet;
+  const levelOf = (w: number | 'hall'): Level => (oldWay ? bossLevel : w === 'hall' ? bossLevel : streets[w]!);
+  const startLevel = levelOf(firstStreet);
   const game = new Game(startLevel);
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const buttons = new TouchButtons(document.body, coarse);
@@ -123,14 +133,20 @@ function startGame(): void {
     game.paused = false;
     loop.resume();
   }
-  function startRun(at: TapPoint | null): void {
+  /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
+  function startRun(at: TapPoint | null, to: number | 'hall' = where): void {
+    where = to;
     startTap = at ? { ...at, t: performance.now() } : null;
     menus.show(null);
     toast.hide();
     playing = true;
     document.body.classList.add('playing');
     controls.releaseAll();
-    game.begin(menus.gentle, startLevel);
+    if (where === 'hall' && !oldWay) {
+      game.beginBoss(menus.gentle, bossLevel);
+      sound.play('arena');
+      toast.show(W.bossArrives, 3000);
+    } else game.begin(menus.gentle, levelOf(where));
     hud.show(true);
     buttons.show(true, game.level.manual);
     loop.resume();
@@ -144,13 +160,16 @@ function startGame(): void {
     toast.hide();
     loop.pause();
     controls.releaseAll();
+    where = firstStreet;
     game.reset(startLevel);
     menus.show('title');
   }
 
   const menus = new Menus(document.body, store, game.look, {
-    start: startRun,
-    restart: startRun,
+    // The title always starts at street 1 for now (saved progress comes in piece N2).
+    start: (at) => startRun(at, firstStreet),
+    restart: (at) => startRun(at),
+    next: (at) => startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall'),
     resume,
     home: goHome,
     lookChanged: (look) => {
@@ -200,8 +219,11 @@ function startGame(): void {
       case 'hint':
         toast.show(hintWords(e.words, controls.lastKind), HINT_MS);
         break;
+      case 'wake':
+        if (e.kind === 'drum') sound.play('drumWake');
+        break;
       case 'bounce':
-        sound.play(e.kind === 'goat' ? 'meeh' : 'bounce');
+        sound.play(e.kind === 'goat' ? 'meeh' : e.kind === 'drum' ? 'drumBounce' : 'bounce');
         break;
       case 'smash':
         sound.play(e.kind === 'goat' ? 'meeh' : 'smash');
@@ -253,11 +275,11 @@ function startGame(): void {
         sound.play('skid');
         break;
       case 'streetCleared':
-        // Until Go-Slow Hall (piece M): on to the slice 1 boss fight, lives and kobo carried.
-        game.toBoss(bossLevel);
-        buttons.show(true, false);
-        sound.play('arena');
-        toast.show(W.bossArrives, 3000);
+        // S2.10 Street cleared: "Next street", or after street 3 "Go to Go-Slow Hall".
+        controls.releaseAll();
+        loop.pause();
+        toast.hide();
+        menus.showCleared({ name: game.level.name, kobo: game.run.kobo, last: typeof where === 'number' && where + 1 >= streets.length });
         break;
       case 'bossThrow':
         if (e.kind === 'honk') sound.play('honk');
