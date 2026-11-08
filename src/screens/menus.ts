@@ -112,6 +112,8 @@ export class Menus {
   private previewFrame = 0;
   /** The tap that opened the current screen, if it was a tap. */
   private opener: (TapPoint & { t: number }) | null = null;
+  /** The tap on a menu button just now: a screen it opens ignores that double tap's second half. */
+  private lastTap: (TapPoint & { t: number }) | null = null;
   private shownAt = 0;
   private summary: RunSummary = { kobo: 0, lives: 0 };
   private cleared: ClearedSummary = { name: '', kobo: 0, last: false, parcel: false };
@@ -202,7 +204,8 @@ export class Menus {
     this.screen = screen;
     this.shownAt = performance.now();
     const at = by ? tapPoint(by) : null;
-    this.opener = at ? { ...at, t: performance.now() } : null;
+    this.opener = at ? { ...at, t: performance.now() } : this.lastTap;
+    this.lastTap = null;
     this.layer.replaceChildren();
     this.layer.hidden = screen === null;
     this.layer.classList.toggle('full', screen === 'wheel');
@@ -234,7 +237,11 @@ export class Menus {
   /** A button whose taps go through ignoreTap first. */
   private guarded(label: string, cls: string, onTap: (e: MouseEvent) => void, attrs: Record<string, string> = {}): HTMLButtonElement {
     return button(label, cls, (e) => {
-      if (!this.ignoreTap(e)) onTap(e);
+      if (this.ignoreTap(e)) return;
+      const at = tapPoint(e);
+      this.lastTap = at ? { ...at, t: performance.now() } : null;
+      onTap(e);
+      this.lastTap = null;
     }, attrs);
   }
 
@@ -304,7 +311,7 @@ export class Menus {
     const w = WORDS.gameOver;
     return h(
       'div',
-      { class: 'card narrow event', role: 'dialog', 'aria-label': w.heading },
+      { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       h('p', {}, this.summary.hall ? w.hallText : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).

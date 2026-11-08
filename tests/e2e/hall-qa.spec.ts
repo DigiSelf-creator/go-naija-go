@@ -51,7 +51,7 @@ async function keepPlaying(page: Page): Promise<void> {
   const dlg = page.getByRole('dialog', { name: 'Paused' });
   await expect(dlg).toBeVisible();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await dlg.getByRole('button', { name: 'Keep running' }).tap();
+  await dlg.getByRole('button', { name: 'Keep playing' }).tap();
   await expect(dlg).toBeHidden();
   const s0 = (await hallSnap(page)).steps;
   await expect.poll(async () => (await hallSnap(page)).steps).toBeGreaterThan(s0 + 10);
@@ -212,7 +212,7 @@ test('E5 break it: the last life lost in the hall, by touch: hall game over word
   const end = await hallSnap(page);
   expect(end.r).toMatchObject({ phase: 'over', lives: 0, power: { corn: 0, amala: 0, shield: false } });
   await expect(over.getByText('General Go-Slow is still jamming the hall. Try again!')).toBeVisible();
-  await expect(over.getByText(/The road is still here/)).toHaveCount(0);
+  await expect(over.getByText(/The street is still here/)).toHaveCount(0);
   await expectFrozen(page, 1000);
   // The hall stays in view behind the game over screen.
   expect(await wholeHall(page)).toBe(true);

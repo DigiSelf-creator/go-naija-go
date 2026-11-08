@@ -11,9 +11,12 @@ import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand, snap } from './hands';
 import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock } from './helpers';
 import { wellBot } from './well-bot';
+import { checkCardFits } from './card-fit';
 
 const SHOTS = process.env['L2_SHOTS'] ?? 'test-results/l2-shots';
 mkdirSync(SHOTS, { recursive: true });
+const N2_SHOTS = process.env['N2_SHOTS'] ?? 'test-results/n2-shots';
+mkdirSync(N2_SHOTS, { recursive: true });
 const shoot = async (page: Page, name: string): Promise<void> => {
   await page.screenshot({ path: join(SHOTS, `${name}.png`) });
 };
@@ -150,7 +153,26 @@ test('street 2 by touch: to the well, Go down, every gift in the room, Go up at 
   expect(stats.lostAt.length).toBeGreaterThanOrEqual(1);
   expect(last.r.parcel).toBe(true);
   expect(last.r.phase).toBe('bus');
-  await expect(page.getByRole('dialog', { name: 'Street cleared!' })).toBeVisible({ timeout: 6000 });
+  const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
+  await expect(cleared).toBeVisible({ timeout: 6000 });
+  // N2: the parcel is saved on the bus, and the cleared card says so (S2.10).
+  await expect(cleared.getByText(`Computer Village is moving again, thanks to you! You got ${last.r.kobo} kobo.`)).toBeVisible();
+  await expect(cleared.getByText('Your garri parcel is saved for Go-Slow Hall.')).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress')!))).toEqual({
+    v: 1,
+    states: { lagos: { streets: { 2: { done: true, best: last.r.kobo } }, parcel: true, hall: { done: false, best: 0 } } },
+  });
+  // The longest case (Computer Village, the parcel line) fits the short screens (po M4 bug 1).
+  await checkCardFits(page, 'Next street', async (at) => {
+    await page.screenshot({ path: join(N2_SHOTS, `${at}-cleared-parcel.png`) });
+  });
+  for (const vp of [{ width: 932, height: 430 }]) {
+    const before = page.viewportSize()!;
+    await page.setViewportSize(vp);
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await page.screenshot({ path: join(N2_SHOTS, `${vp.width}x${vp.height}-cleared-parcel.png`) });
+    await page.setViewportSize(before);
+  }
 
   const bar = await barLog(page);
   console.log(`hint bar: ${bar.frames} frames, words ${bar.words.join(' | ')}; covered: ${bar.hits.join('; ') || 'nothing'}`);
@@ -226,7 +248,7 @@ test.describe('by keys on a computer', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('./?level=lagos-3');
-    await page.getByRole('button', { name: /^(Make your hero|Start running)$/ }).click();
+    await page.getByRole('button', { name: /^(Make your hero|Play)$/ }).click();
     const builder = page.getByRole('dialog', { name: 'Make your hero' });
     if (await builder.isVisible()) await builder.getByRole('button', { name: 'Start running' }).click();
     await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
@@ -266,7 +288,7 @@ test.describe('by keys on a computer', () => {
   test('street 2 by keys: the well hint says ↓, Enter goes down, Enter comes up', async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto('./?level=lagos-2');
-    await page.getByRole('button', { name: /^(Make your hero|Start running)$/ }).click();
+    await page.getByRole('button', { name: /^(Make your hero|Play)$/ }).click();
     const builder = page.getByRole('dialog', { name: 'Make your hero' });
     if (await builder.isVisible()) await builder.getByRole('button', { name: 'Start running' }).click();
     await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');

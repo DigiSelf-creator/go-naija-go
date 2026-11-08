@@ -1,5 +1,5 @@
 /**
- * K2 on the phone profile, by touch: Lagos streets 2 (Market road) and 3 (Bus park road) played
+ * K2 on the phone profile, by touch: Lagos streets 2 (Computer Village) and 3 (Ikeja) played
  * by hand with two thumbs from the start to the bus, knocking every crate, with the Street
  * cleared screen and "Next street" between them (docs/design.md S2.6, S2.10). Street 3 first
  * walks back to its secret well. On every drawn frame the hint bar covers nothing playable.
@@ -72,8 +72,12 @@ async function playToBus(page: Page, street: string, parts: readonly (readonly [
 async function clearedScreen(page: Page, name: string, kobo: number, big: string) {
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 6000 });
-  await expect(dialog.getByText(`${name} is fixed. You got ${kobo} kobo.`)).toBeVisible();
-  for (const b of [big, 'Play again', 'Home']) await expect(dialog.getByRole('button', { name: b })).toBeVisible();
+  // Tp's line (8 Nov 2026), and "Streets" in place of "Home" (S2.10).
+  await expect(dialog.getByText(`${name} is moving again, thanks to you! You got ${kobo} kobo.`)).toBeVisible();
+  for (const b of [big, 'Play again', 'Streets']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Home' })).toHaveCount(0);
+  // po M4 bug 4: focus on the big button.
+  await expect(dialog.getByRole('button', { name: big })).toBeFocused();
   expect(await page.evaluate(() => window.__game!.screen)).toBe('cleared');
   return dialog;
 }
@@ -85,7 +89,7 @@ async function openStreet(page: Page, id: string) {
   expect(await page.evaluate(() => window.__game!.level.id)).toBe(id);
 }
 
-test('street 2, Market road, by hand: start to bus, every crate, the cleared screen, then Next street opens street 3', async ({ page }) => {
+test('street 2, Computer Village, by hand: start to bus, every crate, the cleared screen, then Next street opens street 3', async ({ page }) => {
   test.setTimeout(240_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -120,7 +124,7 @@ test('street 2, Market road, by hand: start to bus, every crate, the cleared scr
   expect(bar.words).toContain('Big pit! Run, then jump twice.');
 
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
-  const dialog = await clearedScreen(page, 'Market road', kobo, 'Next street');
+  const dialog = await clearedScreen(page, 'Computer Village', kobo, 'Next street');
   await page.screenshot({ path: join(SHOTS, 'street2-cleared.png') });
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Next street' }).tap();
@@ -133,7 +137,7 @@ test('street 2, Market road, by hand: start to bus, every crate, the cleared scr
   expect(errors).toEqual([]);
 });
 
-test('street 3, Bus park road, by hand: back to the secret well, then start to bus with drums, two big pits, Go to Go-Slow Hall and the hall fight by touch', async ({ page }) => {
+test('street 3, Ikeja, by hand: back to the secret well, then start to bus with drums, two big pits, Go to Go-Slow Hall and the hall fight by touch', async ({ page }) => {
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -202,7 +206,7 @@ test('street 3, Bus park road, by hand: back to the secret well, then start to b
   expect(bar.words).toContain('Fast rolling drum! Jump over it.');
 
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
-  const dialog = await clearedScreen(page, 'Bus park road', kobo, 'Go to Go-Slow Hall');
+  const dialog = await clearedScreen(page, 'Ikeja', kobo, 'Go to Go-Slow Hall');
   await page.screenshot({ path: join(SHOTS, 'street3-cleared.png') });
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Go to Go-Slow Hall' }).tap();
@@ -234,7 +238,7 @@ test('Street cleared: Play again replays the same street from its start; Home go
   const { last } = await playStreetByHand(page, h);
   await h.upAll();
   expect(last.r.phase).toBe('bus');
-  const dialog = await clearedScreen(page, 'Market road', await page.evaluate(() => window.__game!.run.kobo), 'Next street');
+  const dialog = await clearedScreen(page, 'Computer Village', await page.evaluate(() => window.__game!.run.kobo), 'Next street');
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Play again' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');

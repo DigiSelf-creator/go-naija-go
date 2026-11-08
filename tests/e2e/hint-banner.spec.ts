@@ -237,7 +237,7 @@ test('the bar hides when pause opens and does not come back for a hint whose tim
   await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
   expect(await page.evaluate(() => window.__game!.hintBar.words)).toBe('');
   await page.waitForTimeout(3600); // longer than the 3.5 s a hint shows
-  await page.getByRole('button', { name: 'Keep running' }).tap();
+  await page.getByRole('button', { name: 'Keep playing' }).tap();
   await expect(page.getByRole('dialog', { name: 'Paused' })).toBeHidden();
   expect(await page.evaluate(() => window.__game!.hintBar.words)).toBe('');
 });

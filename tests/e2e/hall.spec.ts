@@ -91,12 +91,18 @@ async function checkWin(page: Page): Promise<void> {
   const r = await page.evaluate(() => window.__game!.run);
   expect(r.phase).toBe('won');
   await expect(won.getByRole('heading', { name: WIN })).toBeVisible();
-  await expect(won.getByText(`You cleared General Go-Slow with ${r.kobo} kobo and ${r.lives} ${r.lives === 1 ? 'life' : 'lives'} left.`)).toBeVisible();
+  // S2.10 (po M4 note): lives left, no kobo; the cog line.
+  await expect(won.getByText(`You cleared General Go-Slow with ${r.lives} ${r.lives === 1 ? 'life' : 'lives'} left.`)).toBeVisible();
+  await expect(won.getByText(/kobo/)).toHaveCount(0);
+  await expect(won.getByText("Lagos's cog is turning: 1 of 37.")).toBeVisible();
   await expect(won.getByText('More of Nigeria is coming soon.')).toBeVisible();
   await expect(won.getByText('Road cleared!')).toHaveCount(0);
   await expect(won.getByText(/wrong premise/)).toHaveCount(0);
+  await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeVisible();
+  await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeFocused();
   await expect(won.getByRole('button', { name: 'Play again' })).toBeVisible();
-  await expect(won.getByRole('button', { name: 'Home' })).toBeVisible();
+  await expect(won.getByRole('button', { name: 'Streets' })).toBeVisible();
+  await expect(won.getByRole('button', { name: 'Home' })).toHaveCount(0);
 }
 
 test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switched on, no network, offline', async ({ page, context }) => {
@@ -161,9 +167,9 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
   // Offline: reload, the saved hero comes back and the game plays.
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Start running' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.__game!.look)).toEqual(look);
-  await page.getByRole('button', { name: 'Start running' }).tap();
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(30);
   expect(await page.evaluate(() => window.__game!.run.phase)).toBe('arena');
   expect(errors).toEqual([]);

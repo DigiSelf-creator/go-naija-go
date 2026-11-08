@@ -828,6 +828,34 @@
     min-height: 44px;
   }
 }
+/* Short screens, game over: the gentle offer beside its switch, and "Play again", "Streets" and
+   "Home" in one row (short words, so this fits 320 x 240 too). */
+@media (max-height: 300px) and (orientation: landscape) {
+  .event.over .gentle-row {
+    flex-wrap: nowrap;
+  }
+  .event.over .gentle-row .minor {
+    flex: 0 1 50%;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    line-height: 1.15;
+  }
+  .event.over .actions {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-top: 6px;
+  }
+  .event.over .actions .go {
+    flex: 1 1 auto;
+    width: auto;
+    margin: 0;
+  }
+  .event.over .actions .minor-row {
+    flex: none;
+    margin: 0;
+  }
+}
 /* Short and wide enough (480 x 200, 640 x 200): the big button and the small ones share a row;
    the four Pause buttons share a row too. */
 @media (max-height: 260px) and (min-width: 440px) and (orientation: landscape) {

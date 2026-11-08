@@ -36,7 +36,7 @@ test('game loads on a phone held sideways', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('pauses when the tab is hidden; Keep running carries on', async ({ page }) => {
+test('pauses when the tab is hidden; Keep playing carries on', async ({ page }) => {
   await openAndRun(page);
   await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
 
@@ -55,13 +55,13 @@ test('pauses when the tab is hidden; Keep running carries on', async ({ page }) 
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  // C: the pause screen stays until "Keep running"; a tap elsewhere does nothing.
+  // C: the pause screen stays until "Keep playing"; a tap elsewhere does nothing.
   await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
   await page.touchscreen.tap(20, 370);
   expect(await page.evaluate(() => window.__game?.paused)).toBe(true);
   // The pause screen ignores taps for its first 0.4 s; this test used to beat it by ~10 ms only.
   await waitOutTapLock(page);
-  await page.getByRole('button', { name: 'Keep running' }).tap();
+  await page.getByRole('button', { name: 'Keep playing' }).tap();
   expect(await page.evaluate(() => window.__game?.paused)).toBe(false);
 });
 
