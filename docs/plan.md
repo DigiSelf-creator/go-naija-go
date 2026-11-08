@@ -176,7 +176,7 @@ Status: done. Merged cc8e594 (qa L3 passed, po L4 accepted 8 Nov).
 
 ### M. Go-Slow Hall (S2.7; R6, Q21)
 
-Status: M1 doing (art, started 8 Nov). M2 todo, next for gamedev, needs M1.
+Status: done. Merged ae69d29 (qa M3 passed, po M4 accepted 8 Nov). qa's four small M3 bugs and the new Win line moved to N2; difficulty tuning moved to P2.
 
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
@@ -187,13 +187,15 @@ Status: M1 doing (art, started 8 Nov). M2 todo, next for gamedev, needs M1.
 
 ### N. Progress, Streets screen, Nigeria's wheel, saves (S2.8, S2.10, S2.11; R0, Q17)
 
-Status: todo. N1 (art) can start after M1's sound work merges.
+Status: N1 next (art), then N2 (gamedev). Street names and the cleared line decided by Tp, 8 Nov.
+
+N1 scope (art, one branch): (1) Streets card look: card frame, padlock, tick, with room for three lines of words (small "Street 2", bold name, one status line; S2.6 "Fit at 320 px", S2.10); the words themselves are gamedev's. (2) Nigeria's wheel: hub, 37 cogs, grey and working looks, state names A to Z clockwise (S2.8). (3) The fixed look of each street after Lagos switches on: lamps lit, signs lit, bunting, fresh road paint (S2.12 picture 10). (4) Music and music-off icons. (5) Sounds: cog ratchet and bell, locked "tuk" (src/engine/sound.ts). Guards: no party colours; no government building, crest, flag or office on any street (Alausa); no real shop or brand on the Computer Village stalls; drawings stay our own. Files: new src/art/wheel.ts, src/art/street.ts, src/engine/sound.ts, docs/assets.md.
 
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
-| N1 | art | Street cards, padlock, tick, Nigeria's wheel (hub, 37 cogs, grey and working looks, names), fixed look for each street (lamps, signs lit, bunting, road paint), music and music-off icons; sounds: cog ratchet and bell, locked "tuk" (new src/art/wheel.ts, src/art/street.ts) | K1 merged | No party colours; names A to Z clockwise as S2.8; docs/assets.md updated |
-| N2 | gamedev | `gidi-progress` (merge, never overwrite; broken copy rule), unlocking, parcel saved per state, Streets and wheel screens, all S2.10 screen words, fixed street look, reduced motion (src/game/save.ts, src/storage.ts, src/screens/*). Added from po K4, L4 and the c4e538d ruling (docs/questions.md): (a) Parcel toast: switch to "Garri parcel! Shield for the hall." now the parcel is saved. (b) Parcel saving: save `run.parcel` when the street is cleared; pass `parcelSaved` into `Run`; cleared screen shows "Your garri parcel is saved for Go-Slow Hall." (c) HUD second-finger bug: while one thumb holds Forward or Jump, a second-finger tap on Pause or Sound does nothing (Chrome sends no click). Make Pause and Sound act on pointerup or pointerdown, as the well button does. One press does one thing; Sound never switches twice. A press that opens Pause never also presses what appears under it. Keys and screen readers still work. (d) Slice 1 words still in place (qa K3, po K4): Pause reads "Keep playing / Start again / Streets / Home" with the Sound and Music switches; game over says "street", not "road" ("The street is still here."); the Street cleared screen shows "Streets" instead of "Home"; the title says "Start running". (e) "Lagos is switched on!" on the win screen if M2 has not done it | M2, N1 | Unit tests for the save shape, merge and broken-save rules; e2e: finish a street, reload, next street open; win shows 1 of 37; e2e: hold Forward and tap Pause, the game pauses once and nothing under Pause is pressed; a Sound tap switches once; parcel saved on clear and shown on the cleared screen; qa N3 checks the new parcel toast and every word in (d) |
-| N3 | qa | Test N, accessibility list S2.11, slow phone | N2 | Report |
+| N1 | art | Street cards (room for three lines), padlock, tick, Nigeria's wheel (hub, 37 cogs, grey and working looks, names), fixed look for each street (lamps, signs lit, bunting, road paint), music and music-off icons; sounds: cog ratchet and bell, locked "tuk" (new src/art/wheel.ts, src/art/street.ts, src/engine/sound.ts). See N1 scope above | K1 merged (done) | No party colours; names A to Z clockwise as S2.8; no government look on any street, no brand on any stall; docs/assets.md updated; R8 originality list checked |
+| N2 | gamedev | `gidi-progress` (merge, never overwrite; broken copy rule), unlocking, parcel saved per state, Streets and wheel screens, all S2.10 screen words, fixed street look, reduced motion (src/game/save.ts, src/storage.ts, src/screens/*). Added from po K4, L4 and the c4e538d ruling (docs/questions.md): (a) Parcel toast: switch to "Garri parcel! Shield for the hall." now the parcel is saved. (b) Parcel saving: save `run.parcel` when the street is cleared; pass `parcelSaved` into `Run`; cleared screen shows "Your garri parcel is saved for Go-Slow Hall." (c) HUD second-finger bug: while one thumb holds Forward or Jump, a second-finger tap on Pause or Sound does nothing (Chrome sends no click). Make Pause and Sound act on pointerup or pointerdown, as the well button does. One press does one thing; Sound never switches twice. A press that opens Pause never also presses what appears under it. Keys and screen readers still work. (d) Slice 1 words still in place (qa K3, po K4): Pause reads "Keep playing / Start again / Streets / Home" with the Sound and Music switches; game over says "street", not "road" ("The street is still here."); the Street cleared screen shows "Streets" instead of "Home"; the title says "Start running". (e) "Lagos is switched on!" on the win screen: done in M2. Added from Tp's 8 Nov answers and po M4: (f) **Street names (Tp's choice, 8 Nov):** street 1 is "Alausa", street 2 is "Computer Village", street 3 is "Ikeja". Change only the `name` field in src/data/levels/lagos-1.json, lagos-2.json and lagos-3.json. (g) **Cleared line (Tp's choice):** "{street name} is moving again, thanks to you! You got {kobo} kobo." It replaces "{name} is fixed." (src/screens/words.ts). It is a card line, never a toast. (h) **Streets cards:** three lines per card, as in design S2.6 "Fit at 320 px" and S2.10: small "Street 2", the name in bold, one status line. A name is never cut with "…" and never runs off the card. (i) **The four M3 bugs, each with po's done-when:** 1. Win and both game-over cards fit on short screens (320 x 240, 480 x 200, 640 x 200) without scrolling, with the small buttons in one row and at least 44 px tall. 2. The shield chip no longer covers the hit counter at 320 px, and the hall HUD has no Kobo chip. 3. P and Escape pause the game in play and in the hall, and resume from Pause; they do nothing in the finish or on a card. 4. Every card that opens (Win, both game overs, Street cleared, Pause) puts focus on its big button, so Space or Enter presses it. (j) **Win line:** "You cleared General Go-Slow with {lives} lives left." Use "1 life left" when there is one. No kobo on the Win card. (k) **Saved parcel:** replace `parcelForHall` in src/main.ts with the saved parcel. | M2 (done), N1 | Unit tests for the save shape, merge and broken-save rules; e2e: finish a street, reload, next street open; win shows 1 of 37; e2e: hold Forward and tap Pause, the game pauses once and nothing under Pause is pressed; a Sound tap switches once; parcel saved on clear and shown on the cleared screen; the three level files carry Tp's names; unit tests for the cleared line, the Win line (1 life / 2 lives), P and Escape; e2e: each M3 bug's done-when in (i) holds; qa N3 checks the new parcel toast and every word in (d) |
+| N3 | qa | Test N, accessibility list S2.11, slow phone. Also: (a) every street name at 320 px, on the Streets cards and the Street cleared card; (b) the cleared line wraps to two lines, never three, with "Computer Village", 3-digit kobo and the parcel line on; (c) the focus fix on every card, and the Win, game over and Street cleared cards at 320 x 240, 480 x 200 and 640 x 200 with no scrolling; (d) "Computer Village" fits its card in one piece, never cut with "…" | N2 | Report |
 | N4 | po | Accept N (every word players see) | N3 | Note |
 
 ### O. Music (S2.9; R1)
@@ -210,8 +212,8 @@ Status: todo. N1 (art) can start after M1's sound work merges.
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
 | P1 | gamedev | Offline cache lists every new file; size budget; nothing loads from the network after the first visit | O2 | Build under 3 MB; second visit plays in airplane mode |
-| P2 | designer | Play the whole slice against the S2 notes; list any feel or tuning fixes for gamedev | P1 | Short list in docs/design.md, or "none" |
-| P3 | qa | Full e2e of "slice 2 done" on the phone profile by touch and at 4x CPU; offline second visit; R8 originality and no-real-people review of every new picture, sound and tune; break tests. Added from po K4: (a) real first-timers (Tp first) clear each street in 3 tries or fewer; if not, designer tunes in this order: big pits 170 to 160, then one hazard fewer in street 3's group at 3700 to 4250; (b) listen to the drum and well sounds for originality; (c) offline on the second visit checked by hand; (d) turn the phone and switch apps on streets 2 and 3; keyboard play on streets 2 and 3 | P2 fixes merged | All pass; three-line report |
+| P2 | designer | Play the whole slice against the S2 notes; list any feel or tuning fixes for gamedev. Hall difficulty goal (po M4; the hall is too easy now, bots win in 6 to 7 s): a first-timer meets at least 2 throws in each phase and sees a high honk before the third hit; a first win takes about 30 to 60 s; the hall can still be cleared in 3 tries. First lever to try: after a hit, the next light comes on later (not faster throws). S2.7's tuning order for "too hard" stays | P1 | Short list in docs/design.md, or "none"; hall goal met in designer's play |
+| P3 | qa | Full e2e of "slice 2 done" on the phone profile by touch and at 4x CPU; offline second visit; R8 originality and no-real-people review of every new picture, sound and tune; break tests. Added from po K4: (a) real first-timers (Tp first) clear each street in 3 tries or fewer, and in the hall meet at least 2 throws in each phase, see a high honk before the third hit, win the first time in about 30 to 60 s, and clear it in 3 tries or fewer; if not, designer tunes in this order: big pits 170 to 160, then one hazard fewer in street 3's group at 3700 to 4250; (b) listen to the drum and well sounds for originality; (c) offline on the second visit checked by hand; (d) turn the phone and switch apps on streets 2 and 3; keyboard play on streets 2 and 3 | P2 fixes merged | All pass; three-line report |
 | P4 | po | Accept slice 2 against "slice 2 done" | P3 | Acceptance note in docs/questions.md |
 
 ### Order and what runs at the same time
@@ -230,22 +232,22 @@ Status: todo. N1 (art) can start after M1's sound work merges.
 
 Art sound effects all go into src/engine/sound.ts: art merges one sound task before starting the next.
 
-### Open Tp questions and what each would change
+### Tp questions Q16 to Q25 (all answered by Tp, 8 Nov 2026)
 
-| Question | Stand-in now | Pieces hit if Tp changes it |
+All confirmed as recommended except Q22 (street names). Kept as history.
+
+| Question | Answer | Pieces hit |
 |----------|--------------|-----------------------------|
-| Q16 how regions, states and streets fit; World 1 = Lagos, 3 streets plus hall | option a | K (streets), M (where the hall sits), N (save shape, Streets screen, wheel count), P |
-| Q17 progress picture | Nigeria's wheel now, map later | N1, N2, Win screen words (M2, N2) |
-| Q18 auto-run as a choice | none anywhere; gentle mode 5 lives | H2, H3, every street layout (H4, K2), L2 (well behind you), S2.11 check (N3) |
-| Q19 the well gift | garri parcel, shield on at the hall start | L1, L2, M2 (hall start), N2 (parcel save, card and cleared words) |
-| Q20 hair and outfits open to all | all open to all | I1, I2 |
-| Q21 the building's name | "Go-Slow Hall" | M1 (sign), M2 and N2 (words) |
-| Designer: street names ("Your street", "Market road", "Bus park road") | as in S2.6 | K2 (level files), N1 (cards), N2 (Streets and cleared words) |
-| Designer: parcel strength (one free hit at the hall start) | one shield, never stacks | L2, M2, M3 (tuning) |
-| Designer: a left-handed swap (Jump on the left, arrows on the right) | not in slice 2 | H3, H5 (button layout), N2 (a switch on title or pause, a new save key) |
-| Designer: the elder look (walking stick carried or not; R2 allows one, S2.3 says none in slice 2) | no stick | I1, I2 |
-
-The designer's four are not yet written in docs/questions.md. po to add them there with recommended answers.
+| Q16 how regions, states and streets fit; World 1 = Lagos, 3 streets plus hall | answered: option a | K (streets), M (where the hall sits), N (save shape, Streets screen, wheel count), P |
+| Q17 progress picture | answered: Nigeria's wheel now, map later | N1, N2, Win screen words (M2, N2) |
+| Q18 auto-run as a choice | answered: none anywhere; gentle mode 5 lives | H2, H3, every street layout (H4, K2), L2 (well behind you), S2.11 check (N3) |
+| Q19 the well gift | answered: garri parcel, shield on at the hall start | L1, L2, M2 (hall start), N2 (parcel save, card and cleared words) |
+| Q20 hair and outfits open to all | answered: all open to all | I1, I2 |
+| Q21 the building's name | answered: "Go-Slow Hall" | M1 (sign), M2 and N2 (words) |
+| Q22 street names | answered differently: real names "Alausa", "Computer Village", "Ikeja"; cleared line "{street name} is moving again, thanks to you!" | K2 (level files), N1 (cards), N2 (Streets and cleared words) |
+| Q23 parcel strength | answered: one shield on every hall try, never stacks | L2, M2, M3 (tuning) |
+| Q24 left-handed "Swap sides" | answered: slice 3 | H3, H5 (button layout), N2 (a switch on title or pause, a new save key) |
+| Q25 the elder look | answered: no stick, short neat grey beard | I1, I2 |
 
 ## Known facts
 
@@ -255,22 +257,21 @@ The designer's four are not yet written in docs/questions.md. po to add them the
 
 ## Status
 
-Done: slice 1 A to F and G1. Slice 2 H (85741b9), I (53a659d), J (8636479), K (5ee5f06), L (cc8e594): each qa passed and po accepted.
-Doing: M1, art (hall art and sounds).
-Next: gamedev M2 once M1 merges; then N1 (art), N2, O2, P. N2 now carries the parcel save, the parcel toast switch, the HUD second-finger fix and the leftover slice 1 words.
-Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked; Q16 to Q25 run on po's recommended answers.
-Note for Tp: the garri parcel does nothing in a fight until M2 and N2 are both in.
+Done: slice 1 A to F and G1. Slice 2 H (85741b9), I (53a659d), J (8636479), K (5ee5f06), L (cc8e594), M (ae69d29): each qa passed and po accepted. Tp answered Q16 to Q25 on 8 Nov.
+Next: N1 (art: Streets cards, wheel, fixed street look, music icons, wheel sounds), then N2 (gamedev: saves, screens, Tp's street names and cleared line, the four M3 bugs, the new Win line, the saved parcel). Then O2, P.
+Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked.
+Note for Tp: until N2, the Win card says "with 0 kobo" and the parcel is lost when the page closes.
 
 ## Waiting on Tp
 
 1. Create the GitHub repo (name, public or private) and push access, or push it yourself. Turn on Pages with source "GitHub Actions". Blocks G2 to G4.
 2. Copy the game name (Gbese!) and credits lines into docs/decisions.md (questions.md, first slice note).
-3. Q16 to Q25 in docs/questions.md, and the lines to copy into docs/decisions.md.
+3. Paste lines 7 to 21 from docs/questions.md ("Lines for Tp to copy") into docs/decisions.md. Q16 to Q25 are answered.
 4. Remove the "wrong premise" line from docs/brief.md Done when 8.
-5. Play streets 2 and 3 on your phone and say if any took more than 3 tries (feeds P3).
+5. Play streets 2 and 3 and Go-Slow Hall on your phone (with and without the parcel); say if any took more than 3 tries, or if the hall felt too easy (feeds P2, P3).
 
 ## Questions for po
 
-None open. (The designer's four are now Q22 to Q25 in docs/questions.md.)
+None open.
 
 Slice 1 questions for po (answered, kept as history): hero options, power-up lengths, lives and checkpoints, gentle mode, sound, title name, credits, orientation, kobo, World 1 length. po answered them in docs/questions.md; Q5 to Q15 there still wait for Tp to confirm.
