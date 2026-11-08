@@ -911,6 +911,61 @@ A big round wheel with a hub in the middle and 37 small cogs around its rim: one
 - Colours are the game's own warm colours, never a party's. Green and white together for Nigeria is fine.
 - The cogs are a picture, not buttons. A list for screen readers says each name and "working" or "not working yet".
 
+### The wheel screen on every size (fit rule, N2)
+
+The problem (art N1, docs/assets.md): the names point out like spokes, so their size is fixed by the wheel's size. Name height in px = wheel side in px / 25.75 (16 units in a 412-unit picture). In the N1 mock, with the words beside it in a card, the wheel is 190 px at 320 x 240 (names 7.4 px).
+
+**Chosen: the wheel fills the screen's height, the words go in a rail beside it, and one button, "All names", opens a big readable list of every name.** The same layout on every landscape size, so gamedev builds one screen and qa tests one screen.
+
+Why this one:
+- Full height is the biggest the wheel can be on a short screen. Every name stays on it, all the same size.
+- On the tiniest screens the names on the wheel are small (8.5 px at 320 x 240), so they count as part of the picture there. The readable copy of every name is the list, one tap away, 14 px, A to Z, the working ones ticked. Every name is in the list, none first except by A to Z. So yes, about 8 px is fine on the wheel because the list is always one tap away. The "All names" button is never hidden, at any size.
+- Not chosen: a line of words above or below the wheel (takes height from the wheel, names drop to about 7.6 px); an info button for the words only (the names stay hard to read); pinch to zoom (a hidden two-finger move many 10 year olds will not find, fights the browser's own zoom, and needs gesture code; one tap to a list does the same job); a list only when names are too small (two layouts to build and test, and the screen changes shape between phones).
+
+**Sizes.** SW and SH are the screen's width and height inside the safe area (notches), in CSS px.
+
+1. Wheel side W = the smallest of (SH - 8), (SW - 100) and 560, rounded down to a whole px. The wheel box is square (wheelSvg needs that), 4 px from the left edge, centred top to bottom.
+2. Rail: starts 8 px right of the wheel, ends 8 px from the right edge, at most 360 px wide (R = the smaller of SW - W - 20 and 360). When R hits 360, the wheel and rail sit together in the middle of the screen. Rail contents are centred top to bottom.
+3. Phone upright (SH more than SW; only on menus, play shows "Turn phone"): wheel on top, W = the smallest of (SW - 16), (SH - 200) and 560, centred; the rail goes under it at full width, wide-rail words.
+4. No card border or padding around the wheel; the cream card fills the screen. The page never scrolls.
+
+| Screen | W | Names on the wheel | R | Rail |
+|---|---|---|---|---|
+| 320 x 240 | 220 | 8.5 px | 80 | narrow |
+| 640 x 200 | 192 | 7.5 px | 360 (wheel and rail centred) | wide |
+| 568 x 320 | 312 | 12.1 px | 236 | wide |
+| 932 x 430 | 422 | 16.4 px | 360 (centred) | wide |
+| 1280 x 720 | 560 | 21.7 px | 360 (centred) | wide |
+
+**Wide rail (R 200 px or more).** Top to bottom, 12 px apart (8 px if it would not fit otherwise):
+- "Nigeria's wheel", bold 20 px.
+- "Every state is a part of Nigeria Company. Fix a state's problems and its cog starts turning." 15 px, line height 1.3.
+- "{n} of 37 cogs turning." in bold, then on the same line "Fix Lagos to turn the first cog." (n is 0) or "More states are coming soon." (n is 1 or more). 15 px.
+- One row of two buttons, 8 px apart, each at least 44 px tall: "All names" and "Back".
+- Checked: at 568 x 320 this is about 202 px tall in a 312 px rail; at 640 x 200 about 157 px in 192 px. Text never shrinks below 15 px. If a big system font still makes it too tall, the rail (only the rail) scrolls.
+
+**Narrow rail (R under 200 px, so 320 x 240 and similar).** R is 80 px. Top to bottom, 8 px apart, centred:
+- "Nigeria's wheel", bold 14 px, wraps to two lines ("Nigeria's" / "wheel").
+- "{n} of 37", bold 16 px, one line.
+- "cogs turning", 12 px, may wrap to two lines.
+- Button "All names", the full rail width (80) x 44 px, bold 13 px, one line.
+- Button "Back", 80 x 44 px.
+- About 196 px tall in a 232 px rail. The long sentence and the "Fix Lagos" / "More states" line move into the list (below); they are still on this screen for screen readers.
+
+**The "All names" list.** Tapping "All names", or tapping the wheel picture itself, opens the list over the whole screen (same cream card).
+- Top row, 8 px from the top: heading "All 36 states and the FCT" (bold 16 px; 14 px if it does not fit one line) on the left, button "Close" (at least 72 x 44) on the right.
+- Under it, from 60 px down to 8 px above the bottom, one box that scrolls up and down if it has to. Only this box scrolls, never the page, with a visible scroll bar and a soft fade at the bottom edge while there is more below. In it:
+  1. "Every state is a part of Nigeria Company. Fix a state's problems and its cog starts turning." (14 px)
+  2. "{n} of 37 cogs turning." and the "Fix Lagos to turn the first cog." / "More states are coming soon." line (14 px).
+  3. "✓ means its cog is turning." (14 px)
+  4. The 37 names, A to Z, 14 px, rows 20 px tall, in columns at least 100 px wide with 8 px between them, read top to bottom then the next column. A working name has a ✓ before it and is bold in dark ink. A name not working yet has no tick, is indented by the tick's width so all names line up, and is in the wheel's name grey (#5d574b on cream, about 7 to 1). Never colour alone: tick plus bold.
+- Fits with no scrolling at 568 x 320 (5 columns of 8 rows) and 932 x 430. Scrolls inside the box at 320 x 240 (2 columns) and 640 x 200.
+- "Close" or the Esc key goes back to the wheel and puts focus back on "All names". Opening puts focus on the heading. "Back" on the wheel still goes to Streets (S2.10 flow).
+
+**Screen readers.** The wheel picture stays hidden from them (aria-hidden). There is one list in the page, used both ways: on the wheel view it is visually hidden but read after the count line, and in the "All names" view it is shown. Each item reads "Lagos, working" or "Abia, not working yet" (the ✓ is hidden from them, the words ", working" and ", not working yet" are hidden from sight). The long sentence and the "Fix Lagos" / "More states" line are always in the page for screen readers, also at 320 x 240.
+
+**qa checks (N3):** at 320 x 240, 640 x 200, 568 x 320 and 932 x 430, with 0, 1 and 37 cogs working: all 37 names drawn on the wheel, all the same size, none clipped by the screen edge; the page never scrolls; every button at least 44 x 44 and 8 px apart; "All names" in sight; the list shows all 37 names and only its box scrolls; screen readers hear all 37 with their state.
+
 ## S2.9 Music (R1)
 
 All tunes are made in code with WebAudio, like the sound effects: no music files, a few KB of notes. Our own tunes only. Nothing from any game, advert, anthem, hymn, chant, party song or known Nigerian song. qa checks each one against well-known game music first (Mario and other Nintendo music) and then well-known Nigerian songs.
@@ -946,7 +1001,7 @@ Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that
 | Title | Everyone who opens the game | Start playing | "Gbese!" "Fix the streets. Get Nigeria working." Big button "Make your hero" (no hero saved) or "Play" (hero saved). Smaller: "Change hero", "Nigeria's wheel", "Credits", "Sound: on" / "Sound: off", "Music: on" / "Music: off", "Gentle mode: 5 lives instead of 3". How to play: the touch or key words in S2.2 |
 | Hero builder | First-time players, and anyone changing their look | Pick a look | See S2.3 |
 | Streets | A player who pressed "Play" with at least one street done, or "Streets" anywhere | Pick where to play | Heading "Lagos". Line "Fix 3 streets, then clear Go-Slow Hall." Four cards: "Street 1: Alausa", "Street 2: Computer Village", "Street 3: Ikeja", "Go-Slow Hall" (names decided by Tp, 8 Nov 2026, S2.6 "Street names"; they replace "Your street", "Market road" and "Bus park road"; on the 320 x 240 grid "Street 2" sits small above the bold name, S2.6 "Fit at 320 px"). Under each name one line: done: "Done ✓ Best: {best} kobo"; open, not done: "Ready to play"; locked: a padlock and "Finish street {n} first" (hall: "Finish street 3 first"). On the hall card, if a parcel is saved: "You have a garri parcel." Buttons "Nigeria's wheel", "Home" |
-| Nigeria's wheel | Anyone who taps "Nigeria's wheel" | Show how much of Nigeria is working | Heading "Nigeria's wheel". "Every state is a part of Nigeria Company. Fix a state's problems and its cog starts turning." Then "{n} of 37 cogs turning." When n is 0: "Fix Lagos to turn the first cog." When n is 1 or more: "More states are coming soon." Button "Back" |
+| Nigeria's wheel | Anyone who taps "Nigeria's wheel" | Show how much of Nigeria is working | Heading "Nigeria's wheel". "Every state is a part of Nigeria Company. Fix a state's problems and its cog starts turning." Then "{n} of 37 cogs turning." When n is 0: "Fix Lagos to turn the first cog." When n is 1 or more: "More states are coming soon." Buttons "All names", "Back". The "All names" list: heading "All 36 states and the FCT", "✓ means its cog is turning.", the 37 names, button "Close". On narrow screens the rail says "Nigeria's wheel", "{n} of 37", "cogs turning" and the long lines move into the list. Layout and sizes: S2.8 "The wheel screen on every size" |
 | HUD (in play) | The player | Show lives, kobo, food, parcel | "♥ 3", "Kobo 12", food slot (part 1), parcel icon and "Parcel" when carried. In the hall, the three hit circles, and no Kobo chip (nothing to collect there; po M4 note), so the hall row is lives, shield and the hit circles. Top right: sound, pause (spoken "Sound", "Pause"). Bottom: Back, Forward, Jump (S2.2). One row always: see "The HUD row" below |
 | Well button | A player standing at a well, or under the room's rope | Go down or up | "Go down" / "Go up". On a computer: "Go down (↓)" / "Go up (Enter)" |
 | Pause | A player who pressed pause, left the app, or turned the phone upright | Get back to playing | "Paused". Buttons "Keep playing", "Start again", "Streets", "Home". Switches "Sound: on" / "Sound: off", "Music: on" / "Music: off". Tapping outside the buttons does nothing |
