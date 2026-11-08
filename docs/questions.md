@@ -2,6 +2,26 @@
 
 ## Slice 2 requests from Tp, 7 Nov 2026
 
+### po acceptance note, 7 Nov 2026: slice 2 piece H (H7)
+
+**Accepted** at dc7c108 (branch s2-h-integrate): the hero you move yourself, the taller view, phone buttons and keys, the schema 2 loader, Street 1 (lagos-1) played by hand, art H5, and Tp's iPhone fix (the hint bar, so hints never hide coins).
+
+Why:
+1. qa passed H6 in full (reported): the music tick is gone with a guard test; 4x slow phone worst part 57.7 fps; the hint bar clean at 6 sizes plus 1024 x 768, keys only and the boss fight; tsc, 367/367 unit, 80/80 phone e2e; offline on the second visit; first load 204.9 KB (limit 3 MB).
+2. Tp's requests (verified by reading the code and design): R3 is met. No auto-run, hold to walk then run, back and forward, Jump on the right, arrows and Space on a computer (design S2.2). The view is 420 u tall with the buttons in the pavement strip (S2.1). Tp's iPhone note is met: every hint and toast sits in the bar between Forward and Jump, never over the road, kobo or hero.
+3. Plain words (verified): src/screens/words.ts and all 15 lagos-1 hints match design S2.2 word for word, each 35 characters or fewer for touch and keys. How to play is clear for a 10 year old.
+4. Originality (verified): no Nintendo or Mario names, shapes or sounds in the code; tunes carry the hymn and game-music checks. The street ends by boarding a yellow bus.
+5. Respect (verified test, reported pictures): every skin, hair and outfit draws every new pose (walk, run, skid, dust) with no broken drawing (tests/unit/street-art-s2.test.ts).
+6. Privacy (verified): no network call in the game code; the service worker only fetches our own files. No accounts, photos, trackers or ads.
+
+Knowingly left for later (not part of H): crates (J), the well (L), Go-Slow Hall (M), music wiring (O), and the old boss on the road after the bus, which stays until M.
+
+qa's small notes, logged for later, not blocking:
+1. w1-l1 hints over 35 characters (and still in old one-tap words, "Tap to jump"). No menu leads there; only ?level=w1-l1 does. Fix in M: retire w1-l1 when the hall replaces the road boss.
+2. Boss lights and throws are missing from the drawn-boxes list in the hint bar test. Today the boss stays above the road line, and qa saw the bar clean in the boss fight. Add them to the list in M, where the boss fight is rebuilt.
+
+For Tp (no change to po's earlier recommendations): Q16 to Q25 still wait, built with the recommended answers. Also, CLAUDE.md rule 8 still asks for the "wrong premise" line, but Tp said on 7 Nov it is not in the game, and the game does not show it. Recommend Tp updates rule 8 and brief Done when 8 to match.
+
 ### po note, 7 Nov 2026 (read this first)
 
 Accepted: nothing new today. Nothing for slice 2 has been built or passed by qa yet.
