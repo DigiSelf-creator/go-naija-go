@@ -20,6 +20,12 @@ export interface BossState {
   hits: number;
   /** Running clock in seconds, for idle wobble. */
   time: number;
+  /**
+   * What the attack pose is about to throw (Go-Slow Hall, S2.7). 'high' (the high "PEEP!"
+   * honk): the honk marks pop out round the light at the top, so the player sees a high throw
+   * is coming. Anything else, or missing: the marks low round the heap, as in slice 1.
+   */
+  aim?: 'low' | 'high' | undefined;
 }
 
 /** About how wide and tall the boss is, for camera and layout. */
@@ -276,8 +282,13 @@ export function drawBoss(g: CanvasRenderingContext2D, x: number, groundY: number
     }
   }
 
-  // Cross honking after a hit, and while attacking
-  if ((mode === 'hit' && t < 0.8) || (mode === 'attack' && t < 0.4)) {
+  // Cross honking after a hit, and while attacking (a high honk: marks up round the light)
+  if (mode === 'attack' && t < 0.4 && s.aim === 'high') {
+    honkMarks(g, -30, -150);
+    honkMarks(g, 30, -156);
+    honkMarks(g, -26, -128);
+    honkMarks(g, 26, -134);
+  } else if ((mode === 'hit' && t < 0.8) || (mode === 'attack' && t < 0.4)) {
     honkMarks(g, -50, -30);
     honkMarks(g, 40, -32);
     honkMarks(g, 10, -72);
@@ -319,6 +330,63 @@ export function drawHonkCloud(g: CanvasRenderingContext2D, x: number, y: number,
   g.stroke();
   g.beginPath();
   g.arc(-17, 0, 14, Math.PI * 0.8, Math.PI * 1.2);
+  g.stroke();
+  g.restore();
+}
+
+/** About how big the high honk drawing is (its hurt box in S2.7 is 36 x 20). */
+export const HIGH_HONK_W = 48;
+export const HIGH_HONK_H = 22;
+
+/**
+ * The high honk (Go-Slow Hall, phase 3): a long, thin, pale blue cloud with "PEEP!" in it,
+ * thrown at head height of a hero on a light. Told apart from the round cream "POOO!" cloud by
+ * shape (long and flat, pointed ends), word and colour. Centred on (x, y); moves left. A
+ * still drawing for reduced motion: pass time 0.
+ */
+export function drawHighHonk(g: CanvasRenderingContext2D, x: number, y: number, time: number): void {
+  const t = Number.isFinite(time) ? time : 0;
+  const quiver = Math.sin(t * 30) * 0.6;
+  g.save();
+  g.translate(x, y + quiver);
+  // A long flat cloud: pointed ends, small bumps along the top and bottom
+  const path = (grow: number): void => {
+    g.beginPath();
+    g.moveTo(-24 - grow, 0);
+    for (let i = 0; i < 4; i++) {
+      const x0 = -16 + i * 10;
+      g.quadraticCurveTo(x0 - 5, -10 - grow, x0, -8 - grow);
+      g.quadraticCurveTo(x0 + 5, -12 - grow, x0 + 6, -7 - grow);
+    }
+    g.lineTo(24 + grow, 0);
+    for (let i = 3; i >= 0; i--) {
+      const x0 = -14 + i * 10;
+      g.quadraticCurveTo(x0 + 5, 11 + grow, x0, 8 + grow);
+      g.quadraticCurveTo(x0 - 5, 11 + grow, x0 - 6, 7 + grow);
+    }
+    g.closePath();
+  };
+  path(1.4);
+  g.fillStyle = P.INK;
+  g.fill();
+  path(0);
+  g.fillStyle = '#dcefff';
+  g.fill();
+  g.fillStyle = '#2d2a8c';
+  g.font = 'bold 10px sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('PEEP!', 0, 0.5, 40);
+  // Thin, sharp sound lines on the leading (left) side: little chevrons, not round arcs
+  g.strokeStyle = P.INK;
+  g.lineWidth = 1.4;
+  g.lineCap = 'round';
+  g.beginPath();
+  for (const dx of [0, 5]) {
+    g.moveTo(-26 - dx + 4, -6);
+    g.lineTo(-26 - dx, 0);
+    g.lineTo(-26 - dx + 4, 6);
+  }
   g.stroke();
   g.restore();
 }
