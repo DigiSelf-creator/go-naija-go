@@ -1,11 +1,13 @@
 /**
  * Frame rate through the whole of street 1 (lagos-1), played by hand with two thumbs, at 4x
  * CPU slowdown on the phone profile. Pass: at least 45 fps in every 1000 u part of the street,
- * and the game keeps full speed (about 60 physics steps a second).
+ * and the game keeps full speed (about 60 physics steps a second). The hero knocks every crate
+ * on the way (J2), so swings, kobo fans and the food pop are measured too.
  *
  * The slice 1 whole-level test (C7 in level-qa.spec.ts, the old w1-l1) stays until piece M.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { crateActor, type CrateLog } from './crate-bot';
 import { hands, playStreetByHand } from './hands';
 import { PAST_DOUBLE_TAP_MS, startRun } from './helpers';
 
@@ -57,9 +59,11 @@ test('slowed 4x CPU: street 1 by hand, start to bus, at least 45 fps in every pa
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
   let work4 = 0;
   let last;
+  const crates: CrateLog = { opened: [], foods: [] };
+  const act = await crateActor(page, crates);
   try {
     work4 = await busy(page);
-    ({ last } = await playStreetByHand(page, h));
+    ({ last } = await playStreetByHand(page, h, { act }));
   } finally {
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     await h.upAll().catch(() => {});
@@ -89,7 +93,7 @@ test('slowed 4x CPU: street 1 by hand, start to bus, at least 45 fps in every pa
   console.log(
     `4x CPU, street 1 by hand (dpr ${dpr}, canvas ${canvas}), fps by part (bar ${BAR}): ${report}. ` +
       `Worst ${worst.toFixed(1)}, overall ${total.toFixed(1)}. Steps/s worst part ${Math.min(...parts.map((p) => p.steps)).toFixed(1)}. ` +
-      `Reached ${last?.r.phase} at x ${last?.h.x.toFixed(0)}, ${last?.r.lives} lives. Fixed work 1x ${work1.toFixed(0)} ms, 4x ${work4.toFixed(0)} ms`,
+      `Crates opened ${crates.opened.join(', ') || 'none'}. Reached ${last?.r.phase} at x ${last?.h.x.toFixed(0)}, ${last?.r.lives} lives. Fixed work 1x ${work1.toFixed(0)} ms, 4x ${work4.toFixed(0)} ms`,
   );
   test.info().annotations.push({ type: 'street 1 fps 4x', description: `worst ${worst.toFixed(1)} | ${report}` });
 
