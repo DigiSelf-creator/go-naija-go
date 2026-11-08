@@ -175,3 +175,33 @@ describe('hero motion on a player-moved street (S2.2, art H5)', () => {
     expect(g.skid).toBe(0);
   });
 });
+
+describe('every body and age plays the same (design.md S2.3)', () => {
+  it('Male, Female, Teen, Adult and Elder: the same steps, jumps and 14 x 44 hitbox, step for step', () => {
+    // Street 1 by hand: walk, run, a held jump and a second jump, the same inputs for every look.
+    const trace = (look: { skin: number; hair: number; outfit: number; body: number; age: number }): string => {
+      const g = new Game(parseLevel(structuredClone(lagos1)));
+      g.look = look;
+      g.begin(false);
+      const out: string[] = [];
+      for (let i = 0; i < 360; i++) {
+        if (i === 10) g.steer(1);
+        if (i === 90 || i === 200) g.press();
+        if (i === 110 || i === 215) g.release();
+        if (i === 120) g.press();
+        if (i === 126) g.release();
+        g.update(DT);
+        out.push(`${g.hero.x.toFixed(4)},${g.hero.y.toFixed(4)},${g.hero.vy.toFixed(4)}`);
+      }
+      return out.join(';');
+    };
+    const base = trace({ skin: 2, hair: 0, outfit: 0, body: 0, age: 1 });
+    for (let body = 0; body < 2; body++) {
+      for (let age = 0; age < 3; age++) {
+        expect(trace({ skin: 4, hair: 3, outfit: 3, body, age }), `body ${body} age ${age}`).toBe(base);
+      }
+    }
+    expect(RULES.heroHalfW * 2).toBe(14);
+    expect(RULES.heroH).toBe(44);
+  });
+});

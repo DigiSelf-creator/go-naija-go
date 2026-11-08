@@ -4,6 +4,7 @@
  * that fails in different ways, and no network.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { PAST_DOUBLE_TAP_MS } from './helpers';
 
 const look = (page: Page) => page.evaluate(() => window.__game!.look);
 const builderDialog = (page: Page) => page.getByRole('dialog', { name: 'Make your hero' });
@@ -40,6 +41,13 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
   expect(words).toBe(
     [
       'Make your hero',
+      'Male or female',
+      'Male',
+      'Female',
+      'Age',
+      'Teen',
+      'Adult',
+      'Elder',
       'Skin',
       'Hair',
       'Low cut',
@@ -53,14 +61,14 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
       'School uniform',
       'Agbada',
       'Kaftan',
-      'Start running',
       'Your hero is saved on this phone only.',
+      'Start running',
     ].join(' | '),
   );
   // Spoken names: swatches have no visible words, so each has its own label.
   const d = builderDialog(page);
   for (let i = 1; i <= 5; i++) await expect(d.getByRole('button', { name: `Skin tone ${i}`, exact: true })).toHaveCount(1);
-  for (const row of ['Skin', 'Hair', 'Outfit']) await expect(d.getByRole('group', { name: row, exact: true })).toBeVisible();
+  for (const row of ['Male or female', 'Age', 'Skin', 'Hair', 'Outfit']) await expect(d.getByRole('group', { name: row, exact: true })).toBeVisible();
   // Swatch colours are the design.md colours, in order.
   const colours = await page.$$eval('[data-part="skin"]', (els) => els.map((e) => getComputedStyle(e).backgroundColor));
   expect(colours).toEqual(['rgb(241, 201, 165)', 'rgb(217, 161, 114)', 'rgb(168, 105, 63)', 'rgb(122, 74, 42)', 'rgb(75, 44, 26)']);
@@ -113,7 +121,7 @@ test('all 125 looks show in the preview by touch, each one different, no errors'
       await d.locator(`[data-part="hair"][data-index="${hr}"]`).tap();
       for (let o = 0; o < 5; o++) {
         await d.locator(`[data-part="outfit"][data-index="${o}"]`).tap();
-        expect(await look(page)).toEqual({ skin: s, hair: hr, outfit: o });
+        expect(await look(page)).toEqual({ skin: s, hair: hr, outfit: o, body: 0, age: 1 });
         // (A blink frame only changes the hash of this combo; it cannot make two combos match.)
         const a = await previewHash();
         const ink = Number(a.split(':')[1]);
@@ -126,30 +134,42 @@ test('all 125 looks show in the preview by touch, each one different, no errors'
     }
   }
   expect(seen.size).toBe(125);
-  expect(await page.evaluate(() => localStorage.getItem('gidi-look'))).toBe('{"skin":4,"hair":4,"outfit":4}');
+  expect(await page.evaluate(() => localStorage.getItem('gidi-look'))).toBe('{"skin":4,"hair":4,"outfit":4,"body":0,"age":1}');
   expect(errors).toEqual([]);
 });
 
 test('very fast taps on the options: one choice per row, the last tap wins, saved', async ({ page }) => {
+  // A screen tall enough that every option shows without scrolling (the rows scroll on short ones).
+  await page.setViewportSize({ width: 900, height: 600 });
   const errors = watchErrors(page);
   await page.goto('./');
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS); // so no tap is the second half of a double tap
   const centres = await page.$$eval('[data-part]', (els) =>
     els.map((e) => {
       const r = e.getBoundingClientRect();
       return { part: (e as HTMLElement).dataset['part']!, index: Number((e as HTMLElement).dataset['index']), x: r.x + r.width / 2, y: r.y + r.height / 2 };
     }),
   );
+  expect(centres.every((c) => c.y > 0 && c.y < 600)).toBe(true);
+  // design.md S2.3 first looks, FIRST_LOOKS[body][age]: until Hair or Outfit is tapped they follow.
+  const first = [
+    [{ hair: 0, outfit: 2 }, { hair: 0, outfit: 0 }, { hair: 0, outfit: 3 }],
+    [{ hair: 2, outfit: 2 }, { hair: 2, outfit: 1 }, { hair: 3, outfit: 1 }],
+  ];
   // A fixed, mixed order (no randomness, so a failure repeats).
-  const expected: Record<string, number> = { skin: 2, hair: 0, outfit: 0 };
+  const expected: Record<string, number> = { skin: 2, hair: 0, outfit: 0, body: 0, age: 1 };
+  let styled = false;
   for (let i = 0; i < 60; i++) {
     const t = centres[(i * 7 + 3) % centres.length]!;
     await page.touchscreen.tap(t.x, t.y); // no waits in between
     expected[t.part] = t.index;
+    if (t.part === 'hair' || t.part === 'outfit') styled = true;
+    if ((t.part === 'body' || t.part === 'age') && !styled) Object.assign(expected, first[expected['body']!]![expected['age']!]);
   }
   await expect.poll(() => look(page)).toEqual(expected);
-  for (const part of ['skin', 'hair', 'outfit']) {
+  for (const part of ['body', 'age', 'skin', 'hair', 'outfit']) {
     await expect(d.locator(`[data-part="${part}"][aria-pressed="true"]`)).toHaveCount(1);
     await expect(d.locator(`[data-part="${part}"][aria-pressed="true"]`)).toHaveAttribute('data-index', String(expected[part]));
   }
@@ -175,7 +195,7 @@ test('tap targets: swatches 48 px, chips 44 px tall, all on screen; the pick has
         return { name: e.getAttribute('aria-label') ?? e.textContent ?? '', part: (e as HTMLElement).dataset['part'] ?? '', x: r.x, y: r.y, w: r.width, h: r.height };
       }),
     );
-    expect(boxes).toHaveLength(16);
+    expect(boxes).toHaveLength(21);
     for (const b of boxes) {
       expect(b.w, `${b.name} width at ${vp.width}x${vp.height}`).toBeGreaterThanOrEqual(44);
       expect(b.h, `${b.name} height at ${vp.width}x${vp.height}`).toBeGreaterThanOrEqual(44);
@@ -290,6 +310,8 @@ test('the builder keeps the look when the phone turns, both ways', async ({ page
   await page.goto('./');
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
+  // gamedev (I2): Skin tone 5 now sits where "Make your hero" was; a person's next tap is later than 300 ms.
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await d.getByRole('button', { name: 'Gele' }).tap();
   await d.getByRole('button', { name: 'Skin tone 5' }).tap();
   await page.setViewportSize({ width: 393, height: 851 });
@@ -305,7 +327,7 @@ test('the builder keeps the look when the phone turns, both ways', async ({ page
   const p2 = (await page.locator('canvas.preview').boundingBox())!;
   const r2 = (await d.getByRole('group', { name: 'Skin' }).boundingBox())!;
   expect(p2.x + p2.width).toBeLessThanOrEqual(r2.x);
-  expect(await look(page)).toEqual({ skin: 4, hair: 3, outfit: 3 });
+  expect(await look(page)).toEqual({ skin: 4, hair: 3, outfit: 3, body: 0, age: 1 });
   for (const name of ['Gele', 'Skin tone 5', 'Agbada']) await expect(d.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   await d.getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
@@ -354,7 +376,7 @@ test('storage that fails on write (phone full): the look lasts this visit and th
   await d.getByRole('button', { name: 'Braids' }).tap();
   await d.getByRole('button', { name: 'School uniform' }).tap();
   await expect(d.getByRole('button', { name: 'Braids' })).toHaveAttribute('aria-pressed', 'true');
-  expect(await look(page)).toEqual({ skin: 2, hair: 2, outfit: 2 });
+  expect(await look(page)).toEqual({ skin: 2, hair: 2, outfit: 2, body: 0, age: 1 });
   await d.getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(10);
   await page.touchscreen.tap(600, 150);
@@ -362,7 +384,7 @@ test('storage that fails on write (phone full): the look lasts this visit and th
   // Next visit: nothing was saved, so the game opens fresh and still works.
   await page.reload();
   await expect(page.getByRole('button', { name: 'Make your hero' })).toBeVisible();
-  expect(await look(page)).toEqual({ skin: 2, hair: 0, outfit: 0 });
+  expect(await look(page)).toEqual({ skin: 2, hair: 0, outfit: 0, body: 0, age: 1 });
   expect(errors).toEqual([]);
 });
 
@@ -386,7 +408,7 @@ test('storage blocked: every visit opens on "Make your hero" and nothing breaks'
     await builderDialog(page).getByRole('button', { name: 'Afro' }).tap();
     await builderDialog(page).getByRole('button', { name: 'Start running' }).tap();
     await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
-    expect(await look(page)).toEqual({ skin: 2, hair: 1, outfit: 0 });
+    expect(await look(page)).toEqual({ skin: 2, hair: 1, outfit: 0, body: 0, age: 1 });
   }
   expect(errors).toEqual([]);
 });
@@ -412,7 +434,10 @@ test('broken saves on the phone never break the game', async ({ page }) => {
     expect(l.outfit).toBeGreaterThanOrEqual(0);
     expect(l.outfit).toBeLessThan(5);
     await page.locator('.screen .go').tap();
-    if (title === 'Make your hero') await builderDialog(page).getByRole('button', { name: 'Start running' }).tap();
+    // "Make your hero", or a slice 1 shaped save (S2.3: the builder opens once with "New!").
+    await expect(builderDialog(page)).toBeVisible();
+    await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+    await builderDialog(page).getByRole('button', { name: 'Start running' }).tap();
     await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
     await page.evaluate(() => localStorage.clear());
   }

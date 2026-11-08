@@ -21,11 +21,17 @@ export const WORDS = {
   },
   builder: {
     heading: 'Make your hero',
+    /** S2.3: shown at the top of the right column, once, for a slice 1 hero. */
+    newNote: 'New! Pick male or female, and your age.',
+    body: 'Male or female',
+    age: 'Age',
     skin: 'Skin',
     hair: 'Hair',
     outfit: 'Outfit',
     start: 'Start running',
     savedNote: 'Your hero is saved on this phone only.',
+    /** Spoken name of the live preview picture. */
+    preview: 'Your hero',
   },
   credits: {
     heading: 'Credits',

@@ -35,7 +35,7 @@ test('the first slice from a fresh visit: hero, level 1, all foods, General Go-S
   await builder.getByRole('button', { name: 'Skin tone 5' }).tap();
   await builder.getByRole('button', { name: 'Gele' }).tap();
   await builder.getByRole('button', { name: 'Ankara' }).tap();
-  const look = { skin: 4, hair: 3, outfit: 1 };
+  const look = { skin: 4, hair: 3, outfit: 1, body: 0, age: 1 };
   expect(await page.evaluate(() => window.__game!.look)).toEqual(look);
   await builder.getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');

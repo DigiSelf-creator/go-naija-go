@@ -25,7 +25,12 @@ test('slowed 4x CPU: street 1 by hand, start to bus, at least 45 fps in every pa
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  // PERF_LOOK (optional): a saved look to run with, e.g. '{"skin":4,"hair":1,"outfit":3,"body":0,"age":2}'
+  // for an Elder, so each body and age can be measured. Unset: the default hero.
+  const perfLook = process.env['PERF_LOOK'];
+  if (perfLook) await page.addInitScript((v) => localStorage.setItem('gidi-look', v), perfLook);
   await page.goto('./');
+  if (perfLook) expect(await page.evaluate(() => window.__game!.look)).toEqual(JSON.parse(perfLook));
   // Gentle mode, so a missed jump on a slow machine does not end the measurement early.
   await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);

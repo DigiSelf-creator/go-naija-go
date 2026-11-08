@@ -19,6 +19,8 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | Hanging market crates: pale slatted wood, rope handles, one rope to a line on two wooden poles; stamps (coin stack, corn cob, cup, bowl); swing, open lid hanging down, kobo fan, food pop | src/art/crate.ts | Drawn in code, original | No outside licence |
 | Village well: round plastered wall with chips showing brick, wooden frame with a small roof board, log roller, turning crank, rope and metal bucket; entrance (bucket, bobbing arrow) and exit (no bucket); back and front layers with a mouth clip; going down and up timelines; screen fade | src/art/well.ts | Drawn in code, original | No outside licence |
 | Well store room: earth walls with layers and stones, beam, side posts, ceiling light holes, three hanging clay oil lamps with a soft flicker, clay pots, woven baskets, plank shelves, rope and bucket back up; garri parcel (leaf wrap, string, bow, glint) and its HUD icon; hero rope pose | src/art/wellRoom.ts, src/art/hero.ts | Drawn in code, original | No outside licence |
+| Hero bodies (I1): Male and Female as Teen, Adult and Elder. Teen shorter and slimmer with rounder cheeks and slightly bigger eyes; Elder slight, standing tall, grey hair on Low cut, Afro and Braids (a grey lock under Gele and Headscarf), two short smile lines, and a short neat grey beard on elder men; Female slightly narrower shoulders and wider hips, one lash stroke per eye, gold studs. Every hair and outfit on every body; same rig, face, poses and hitbox | src/art/hero.ts | Drawn in code, original | No outside licence |
+| I1 gallery pages (?gallery=6 line-up, 7 run cycles and moves, 8 elder and teen faces, 9 every body x hair x outfit) | src/art/galleryHeroes.ts | Drawn in code, original | No outside licence |
 | Pavement and gutter strip, big pit cones, start fence (zinc sheets, posts, arrow board) with a parked bus, bus park (shelter, "BUS PARK" board, wall), big yellow market bus with roof rack and sliding door, bus end timeline | src/art/roadside.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
@@ -36,6 +38,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - Every skin tone gets the same face: white eyes with a dark pupil and a white smile, so features read on the darkest tone too. No tone is used for a "baddie".
 - Gele was reshaped to a wide, swept, pleated wrap so it does not look like a crown or a church hat. The agbada chest embroidery is loops, not a cross, so it carries no faith sign.
 - Headscarf is a soft wrap shown as a normal, proud choice, never a costume.
+- Heroes (I1): no age, gender or skin is drawn as a joke. Elders stand tall, run and jump like everyone, and carry no stick; in the short landing squash an elder's back stays straighter, so they never look bent over. Elder grey is a calm silver, not white or wild, and the beard is short and neat. Teens are teen-sized (46 of 50 u, head 96 percent), not small children. Female differs only in everyday ways (shoulders, hips, one lash, studs), with no lipstick, no body exaggeration and the same face, smile and moves. Every hair and outfit is open to every hero.
 - The goat is never hurt: it smiles and trots off. The boss is a problem, not a tribe, job or official, and its defeat is a happy green light.
 
 ## Sound

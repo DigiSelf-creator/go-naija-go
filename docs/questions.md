@@ -2,6 +2,23 @@
 
 ## Slice 2 requests from Tp, 7 Nov 2026
 
+### po acceptance note, 7 Nov 2026: slice 2 piece I (I4)
+
+**Accepted** on branch gamedev/s2-i2-builder (at c70791a): Male and Female heroes at Teen, Adult and Elder, the two new builder rows, defaults that follow the picks, the saved look with body and age, old slice 1 looks loading as Adult, and the once-only "New!" line.
+
+Why:
+1. qa passed I3 (reported): respect and looks on all 30 body x age x skin; same physics and the same 14 x 44 hitbox for every hero; builder words exact; layouts down to 320 x 240; saves and old-save loading; tsc, 388/388 unit; first load 216 KB (limit 3 MB); offline; 4x slow phone worst 57.7 fps. The full e2e run is flaky only under heavy machine load; the timing tests pass alone and a config fix is coming. Not blocking.
+2. Tp's R2 is met (verified in code and design S2.3): "Male or female" and "Age" rows with Male, Female and Teen, Adult, Elder. Every hero has the same moves and size. Elders have grey hair and stand straight; elder men have a short neat grey beard; no walking stick (Q25 stand-in). Every hair and outfit is open to every hero (Q20 stand-in).
+3. Plain words (verified): src/screens/words.ts matches S2.3 word for word: "Make your hero", "Male or female", "Age", "Start running", "Your hero is saved on this phone only.", "New! Pick male or female, and your age." Warm and clear for a 10 year old.
+4. Respect and privacy (reported by qa, spot-checked in src/art/hero.ts): no age, gender or skin is a joke; teens are not small children. Saves stay on the phone, no photo, no network.
+
+qa's notes, decided:
+- (a) Upright builder, "Start running" reached by scrolling: **keep.** It is what S2.3 says ("as part 1, scrolling if needed"), and the game is played sideways. Small follow-up for P (designer note, then gamedev): give the upright rows the same scroll cue as short landscape (bottom fade and a scroll bar while more is below), so a player knows there is a button further down. No sticky button: it would cover rows on small phones. Reasoned, not blocking.
+- (b) Gele and Headscarf hide the brow ends: **fine.** Headwear sits over the forehead in real life too; the eyes and smile, which carry the face, stay the same on every skin. qa judged it fine at game size. No change.
+- (c) Label wrap at 932 x 430: **accept now, polish in P.** Cosmetic only; every word still shows and every chip can be tapped.
+
+For Tp: Q20 and Q25 are built with the recommended answers (all hair and outfits open to all; elder with no stick, elder men with a short grey beard). Row word "Elder" stands in for Tp's "Old"; po recommends keeping "Elder" for respect. Q16 to Q25 still wait; my recommendations are unchanged.
+
 ### po acceptance note, 7 Nov 2026: slice 2 piece H (H7)
 
 **Accepted** at dc7c108 (branch s2-h-integrate): the hero you move yourself, the taller view, phone buttons and keys, the schema 2 loader, Street 1 (lagos-1) played by hand, art H5, and Tp's iPhone fix (the hint bar, so hints never hide coins).

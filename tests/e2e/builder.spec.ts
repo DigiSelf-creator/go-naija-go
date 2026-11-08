@@ -23,7 +23,7 @@ async function pickLook(page: Page): Promise<void> {
   await expect(builder.getByRole('button', { name: 'Skin tone 4' })).toHaveAttribute('aria-pressed', 'true');
   await expect(builder.getByRole('button', { name: 'Afro' })).toHaveAttribute('aria-pressed', 'true');
   await expect(builder.getByRole('button', { name: 'Low cut' })).toHaveAttribute('aria-pressed', 'false');
-  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4 });
+  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4, body: 0, age: 1 });
 }
 
 test('pick a look, reload: the same look comes back', async ({ page }) => {
@@ -31,7 +31,7 @@ test('pick a look, reload: the same look comes back', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByText('Run your street. Clear the jam.')).toBeVisible();
   await pickLook(page);
-  expect(await page.evaluate(() => localStorage.getItem('gidi-look'))).toBe('{"skin":3,"hair":1,"outfit":4}');
+  expect(await page.evaluate(() => localStorage.getItem('gidi-look'))).toBe('{"skin":3,"hair":1,"outfit":4,"body":0,"age":1}');
   await page.getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
 
@@ -39,15 +39,15 @@ test('pick a look, reload: the same look comes back', async ({ page }) => {
   // A saved hero: the title goes straight to Start running, with Change hero beside it.
   await expect(page.getByRole('button', { name: 'Start running' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Make your hero' })).toHaveCount(0);
-  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4 });
+  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4, body: 0, age: 1 });
   await page.getByRole('button', { name: 'Change hero' }).tap();
   const builder = page.getByRole('dialog', { name: 'Make your hero' });
-  for (const name of ['Skin tone 4', 'Afro', 'Kaftan']) {
-    await expect(builder.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+  for (const name of ['Male', 'Adult', 'Skin tone 4', 'Afro', 'Kaftan']) {
+    await expect(builder.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true');
   }
-  await expect(builder.locator('[aria-pressed="true"]')).toHaveCount(3);
+  await expect(builder.locator('[aria-pressed="true"]')).toHaveCount(5);
   await builder.getByRole('button', { name: 'Start running' }).tap();
-  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4 });
+  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4, body: 0, age: 1 });
   expect(errors).toEqual([]);
 });
 
@@ -62,12 +62,12 @@ test('storage blocked: the builder still works and the game starts', async ({ pa
   });
   const errors = watchErrors(page);
   await page.goto('./');
-  expect(await look(page)).toEqual({ skin: 2, hair: 0, outfit: 0 }); // default look
+  expect(await look(page)).toEqual({ skin: 2, hair: 0, outfit: 0, body: 0, age: 1 }); // default look
   await pickLook(page);
   await page.getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(10);
-  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4 });
+  expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4, body: 0, age: 1 });
   // And it plays: a tap jumps.
   await page.touchscreen.tap(600, 150);
   await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { intervals: [16] }).toBe(false);
@@ -90,7 +90,7 @@ test('every menu button is at least 44 x 44 px', async ({ page }) => {
     expect(s.w, `${s.name} width`).toBeGreaterThanOrEqual(44);
     expect(s.h, `${s.name} height`).toBeGreaterThanOrEqual(44);
   }
-  expect(builder.length).toBe(5 + 5 + 5 + 1);
+  expect(builder.length).toBe(2 + 3 + 5 + 5 + 5 + 1);
 });
 
 test('credits, sound and gentle mode on the title screen', async ({ page }) => {
@@ -134,7 +134,7 @@ test('the builder works with the phone upright', async ({ page }) => {
 
 test('a fast double tap on "Start running" does not jump; a tap elsewhere right away does', async ({ page }) => {
   await page.goto('./');
-  await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":1,"hair":1,"outfit":1}'));
+  await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":1,"hair":1,"outfit":1,"body":0,"age":1}'));
   await page.reload();
   const box = (await page.getByRole('button', { name: 'Start running' }).boundingBox())!;
   const x = box.x + box.width / 2;
