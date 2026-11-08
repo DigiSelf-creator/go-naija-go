@@ -11,7 +11,7 @@ import { ROOM, ROOM_ROPE_BUCKET_Y, drawGarriParcel, drawParcelIcon, drawRoomRope
 import { HAIRS, OUTFITS, SKINS, drawHero, type HeroPose } from './hero';
 import { HERO_PAGES } from './galleryHeroes';
 import { HALL_PAGES } from './galleryHall';
-import { STREET_PAGES } from './galleryStreets';
+import { FIXED_PAGES, STREET_PAGES } from './galleryStreets';
 import { INK } from './palette';
 import { BUS_END, busEndAt, drawBigPitCones, drawBusPark, drawCone, drawEndBus, drawEndBusInside, drawPavement, drawStartFence } from './roadside';
 import { GROUND_Y, drawRoad, drawShopRow, drawSky, drawSkyline } from './street';
@@ -332,4 +332,4 @@ const roomPage: Page = (g, time) => {
 };
 
 /** Slice 2 pages in order. Later pieces of work push their pages onto this list. */
-export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses, crates, wellPage, roomPage, ...HERO_PAGES, ...STREET_PAGES, ...HALL_PAGES];
+export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses, crates, wellPage, roomPage, ...HERO_PAGES, ...STREET_PAGES, ...HALL_PAGES, ...FIXED_PAGES];

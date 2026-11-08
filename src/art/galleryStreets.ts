@@ -30,7 +30,7 @@ function title(g: CanvasRenderingContext2D, text: string): void {
   g.fillText(text, 12, 6);
 }
 
-const NAMES: Record<string, string> = { morning: 'Street 1, Your street (morning)', market: 'Street 2, Market road (midday)', evening: 'Street 3, Bus park road (evening)' };
+const NAMES: Record<string, string> = { morning: 'Street 1, Alausa (morning)', market: 'Street 2, Computer Village (midday)', evening: 'Street 3, Ikeja (evening)' };
 
 /** Page 10 (K1): each street look at half size, scrolling, with a stall roof, a hazard and a hero. */
 const streets: Page = (g, time) => {
@@ -112,4 +112,39 @@ const drumPage: Page = (g, time) => {
   label(g, 'landed on: squash, then sparkle', 800, 520, 10);
 };
 
+/**
+ * Page 14 (N1): each street plain (left) and in its fixed look after Lagos is switched on (right):
+ * lamps lit, signs lit, bunting, fresh road paint. Same layout. Scrolling, half size.
+ */
+const fixedPage: Page = (g, time) => {
+  title(g, 'N1: the fixed look. Left: as now. Right: Lagos switched on (lamps and signs lit, bunting, fresh road paint)');
+  const camX = 400 + time * 60;
+  const w = 940;
+  THEMES.forEach((theme, i) => {
+    for (const fixed of [false, true]) {
+      g.save();
+      g.translate(fixed ? 484 : 4, 26 + i * 232);
+      g.beginPath();
+      g.rect(0, 0, 472, 210);
+      g.clip();
+      g.scale(0.5, 0.5);
+      drawBackdrop(g, theme, camX, w, time, 420, GROUND_Y, fixed);
+      g.translate(-camX, 0);
+      const ground: [number, number][] = [[camX - 100, camX + 600], [camX + 660, camX + 1100]];
+      drawRoad(g, camX, w, ground, GROUND_Y, 420, fixed);
+      drawPavement(g, camX, w, ground);
+      drawThemeStall(g, theme, camX + 260, 230, 130);
+      g.save();
+      g.translate(camX + 160, GROUND_Y);
+      drawHero(g, { skin: i * 2, hair: i + 1, outfit: i + 2 }, { phase: (time * 1.6) % 1, inAir: false, facing: 1, glow: false, time });
+      g.restore();
+      drawTyre(g, camX + 470, GROUND_Y, -time * 6);
+      g.restore();
+    }
+    label(g, `${NAMES[theme] ?? theme}: as now, and fixed`, 480, 26 + i * 232 + 212, 10);
+  });
+};
+
 export const STREET_PAGES: Page[] = [streets, drumPage];
+/** N1 pages, after the hall pages so the older page numbers stay the same. */
+export const FIXED_PAGES: Page[] = [fixedPage];
