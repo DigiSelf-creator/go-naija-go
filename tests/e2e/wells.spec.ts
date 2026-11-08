@@ -157,7 +157,7 @@ test('street 2 by touch: to the well, Go down, every gift in the room, Go up at 
   expect(bar.hits, 'nothing playable under the hint bar, street or room').toEqual([]);
   expect(bar.button, 'the hint bar never over Go down or Go up').toEqual([]);
   expect(bar.words).toContain('A secret room! Grab the kobo. Stand under the rope to go back up.');
-  expect(bar.words).toContain('Garri parcel! Keep it safe.');
+  expect(bar.words).toContain('Garri parcel! Shield for the hall.');
   expect(errors).toEqual([]);
 });
 

@@ -301,10 +301,10 @@ describe('the room (S2.5 The room, The gift)', () => {
     expect(evs.filter((e) => e.type === 'parcel')).toHaveLength(1);
     expect(run.parcel).toBe(true);
     expect(run.power.shield).toBe(false); // it does nothing on the street (gift rule 2)
-    expect(WORDS.toast.parcel).toBe('Garri parcel! Keep it safe.');
+    expect(WORDS.toast.parcel).toBe('Garri parcel! Shield for the hall.');
     // Short enough for every bar (po ruling, 8 Nov 2026): no short-words row, the full words show.
     expect(WORDS.toast.parcel.length).toBeLessThanOrEqual(SHORT_AT);
-    expect(barWords(WORDS.toast.parcel, 78)).toBe('Garri parcel! Keep it safe.');
+    expect(barWords(WORDS.toast.parcel, 78)).toBe('Garri parcel! Shield for the hall.');
     expect(WORDS.hud.parcel).toBe('Parcel');
   });
 

@@ -111,6 +111,11 @@ export class Game {
   lift = 0;
   /** prefers-reduced-motion: crates hang still and kobo out of a crate do not fly (set by main). */
   still = false;
+  /**
+   * The street's fixed look (S2.8): once its state is switched on, lamps and signs lit, bunting
+   * and fresh road paint. Same layout, same play. Set by main.
+   */
+  fixed = false;
   /** Where the HUD kobo counter is on screen, world units from the top left (set by main). */
   koboTarget = { x: 70, y: 22 };
   /** Well rooms by file id (S2.5), set by main before a run starts. */
@@ -166,9 +171,10 @@ export class Game {
 
   /**
    * Start the level (a street or a hall) from the beginning: full lives, 0 kobo. parcel: a hall
-   * try that starts with the garri shield on (S2.7).
+   * try that starts with the garri shield on (S2.7). parcelSaved: the state already has a saved
+   * parcel, so well rooms show 5 kobo instead (S2.5 gift rule 6).
    */
-  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel'> = {}): void {
+  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved'> = {}): void {
     this.level = level;
     this.run = new Run(this.level, { gentle, rooms: this.rooms, ...opts });
     this.newCamera();
@@ -388,11 +394,11 @@ export class Game {
 
     g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
     // Screen space, parallax: the street's own look (its `theme`, art K1 backdrop.ts).
-    drawBackdrop(g, level.theme, camX, W, t, H, gy);
+    drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed);
 
     // World space.
     g.translate(-camX, 0);
-    drawRoad(g, camX, W, level.ground, gy, H);
+    drawRoad(g, camX, W, level.ground, gy, H, this.fixed);
     // The well in use is drawn with the hero (going down); no arrow while Go down shows.
     if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still });
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);

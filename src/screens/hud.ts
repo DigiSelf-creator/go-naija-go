@@ -7,14 +7,14 @@ import { drawFoodIcon, drawKobo } from '../art/items';
 import { drawParcelIcon } from '../art/wellRoom';
 import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
-import { button, h } from './dom';
-import type { HintBarBox } from './controls';
+import { h } from './dom';
+import { pressOnDown, type HintBarBox } from './controls';
 import { WORDS, barWords } from './words';
 
 type Slot = 'corn' | 'garri' | 'amala';
 
 export interface HudHooks {
-  pause(e: MouseEvent): void;
+  pause(): void;
   toggleSound(): void;
 }
 
@@ -36,6 +36,13 @@ export class Hud {
   private fitFor = '';
   private level = 0;
   private lastKobo = 0;
+  /** Go-Slow Hall: no Kobo chip (po M4 note), and the chips keep clear of the hit circles. */
+  private hall = false;
+  /**
+   * The left chips' right edge must stay left of this (CSS px), or the HUD steps tighter. In the
+   * hall it is the hit counter's left edge (po M4 bug 2); elsewhere there is no limit.
+   */
+  limit: () => number = () => Infinity;
 
   constructor(parent: HTMLElement, hooks: HudHooks) {
     this.lives = h('span', { class: 'hud-lives' });
@@ -69,9 +76,12 @@ export class Hud {
       drawParcelIcon(pg, 16, 16, 26);
     }
     this.parcel = h('span', { class: 'hud-food hud-parcel', hidden: true }, parcelIcon, h('span', { class: 'hud-word' }, WORDS.hud.parcel));
-    this.sound = button('', 'hud-btn hud-sound', () => hooks.toggleSound(), { 'data-ui': true });
+    // Both act on the press, so a second finger works while a thumb holds Forward or Jump.
+    this.sound = h('button', { type: 'button', class: 'hud-btn hud-sound', 'data-ui': true });
     this.sound.innerHTML = SPEAKER;
-    const pause = button('II', 'hud-btn hud-pause', (e) => hooks.pause(e), { 'aria-label': WORDS.hud.pause, 'data-ui': true });
+    pressOnDown(this.sound, () => hooks.toggleSound());
+    const pause = h('button', { type: 'button', class: 'hud-btn hud-pause', 'aria-label': WORDS.hud.pause, 'data-ui': true }, 'II');
+    pressOnDown(pause, () => hooks.pause());
     this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el);
     this.root = h('div', { class: 'hud', hidden: true }, this.left, h('div', { class: 'hud-right' }, this.sound, pause));
     parent.append(this.root);
@@ -93,9 +103,11 @@ export class Hud {
     const p = run.power;
     const secs = (steps: number): number => Math.ceil(steps / STEPS_PER_SECOND);
     const warn = (steps: number): boolean => steps > 0 && steps <= RULES.warnSteps;
-    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn].join('|');
+    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn, run.inHall].join('|');
     if (key === this.last) return;
     this.last = key;
+    this.hall = run.inHall;
+    this.kobo.hidden = this.hall;
 
     this.lives.textContent = WORDS.hud.lives(run.lives);
     this.lives.setAttribute('aria-label', `Lives: ${run.lives}`);
@@ -121,12 +133,13 @@ export class Hud {
   private fit(force: boolean): void {
     if (this.root.hidden) return;
     const shown = [...this.left.children].map((c) => ((c as HTMLElement).hidden ? 0 : 1)).join('');
-    const key = `${shown}|${String(this.lastKobo).length}|${window.innerWidth}`;
+    const key = `${shown}|${String(this.lastKobo).length}|${window.innerWidth}|${window.innerHeight}|${this.hall}`;
     if (!force && key === this.fitFor) return;
     this.fitFor = key;
+    const limit = this.limit();
     for (let lvl = 0; lvl < HUD_TIGHT.length; lvl++) {
       this.setLevel(lvl);
-      if (oneRow(this.left)) return;
+      if (oneRow(this.left) && rightEdge(this.left) <= limit) return;
     }
   }
 
@@ -157,6 +170,16 @@ export class Hud {
  * no chip boxes, a coin for the word "Kobo", small icons.
  */
 export const HUD_TIGHT = ['', 'hud-tight', 'hud-tighter', 'hud-tightest'] as const;
+
+/** The right edge of the last chip showing, CSS px from the screen's left. */
+function rightEdge(left: HTMLElement): number {
+  let right = 0;
+  for (const c of left.children) {
+    const el = c as HTMLElement;
+    if (!el.hidden) right = Math.max(right, el.getBoundingClientRect().right);
+  }
+  return right;
+}
 
 /** True when every chip showing sits on one row (none wrapped under another). */
 function oneRow(left: HTMLElement): boolean {

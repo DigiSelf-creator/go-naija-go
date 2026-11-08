@@ -7,13 +7,17 @@ export const GAME_NAME = 'Gbese!';
 
 export const WORDS = {
   title: {
-    tagline: 'Run your street. Clear the jam.',
+    tagline: 'Fix the streets. Get Nigeria working.',
     makeHero: 'Make your hero',
-    start: 'Start running',
+    /** S2.10: "Play" once a hero is saved (the builder's own button stays "Start running"). */
+    start: 'Play',
     changeHero: 'Change hero',
+    wheel: "Nigeria's wheel",
     credits: 'Credits',
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
+    musicOn: 'Music: on',
+    musicOff: 'Music: off',
     gentle: 'Gentle mode: 5 lives instead of 3',
     /** S2.2 How to play: touch words when the phone buttons show, else the key words. */
     howTo: 'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
@@ -35,7 +39,7 @@ export const WORDS = {
   },
   credits: {
     heading: 'Credits',
-    lines: ['Made by CoachNaz.', 'Every picture and sound is our own.'],
+    lines: ['Made by CoachNaz.', 'Every picture, sound and tune is our own.'],
     back: 'Back',
   },
   hud: {
@@ -50,41 +54,79 @@ export const WORDS = {
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
   },
+  /** S2.10 Pause: four buttons and the Sound and Music switches. */
   pause: {
     heading: 'Paused',
-    keepRunning: 'Keep running',
-    restart: 'Start the level again',
+    keepPlaying: 'Keep playing',
+    restart: 'Start again',
+    streets: 'Streets',
     home: 'Home',
   },
   gameOver: {
     heading: 'Out of lives',
-    text: (kobo: number) => `You got ${kobo} kobo. The road is still here. Try again!`,
+    text: (kobo: number) => `You got ${kobo} kobo. The street is still here. Try again!`,
     /** S2.10 Game over (hall). */
     hallText: 'General Go-Slow is still jamming the hall. Try again!',
     playAgain: 'Play again',
     gentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
+    streets: 'Streets',
     home: 'Home',
   },
-  /** S2.10 Street cleared (the parcel line comes with N2; "Streets" until N2 is "Home"). */
+  /** S2.10 Street cleared, with Tp's line (8 Nov 2026, "Cleared words for real places"). A card line, never a toast. */
   cleared: {
     heading: 'Street cleared!',
-    text: (name: string, kobo: number) => `${name} is fixed. You got ${kobo} kobo.`,
+    text: (name: string, kobo: number) => `${name} is moving again, thanks to you! You got ${kobo} kobo.`,
+    /** Shown when the player got on the bus carrying the garri parcel. */
+    parcel: 'Your garri parcel is saved for Go-Slow Hall.',
     next: 'Next street',
     toHall: 'Go to Go-Slow Hall',
     playAgain: 'Play again',
-    home: 'Home',
+    streets: 'Streets',
   },
-  /**
-   * S2.10 Win, after Go-Slow Hall (po K4 note: never slice 1's "Road cleared!" here). The cog line
-   * ("Lagos's cog is turning: {n} of 37.") and "See Nigeria's wheel" come with the wheel in N2.
-   */
+  /** S2.10 Win, after Go-Slow Hall. No kobo here (po M4 note). */
   win: {
     heading: 'Lagos is switched on!',
-    text: (kobo: number, lives: number) =>
-      `You cleared General Go-Slow with ${kobo} kobo and ${lives} ${lives === 1 ? 'life' : 'lives'} left.`,
+    text: (lives: number) => `You cleared General Go-Slow with ${lives} ${lives === 1 ? 'life' : 'lives'} left.`,
+    cog: (n: number) => `Lagos's cog is turning: ${n} of 37.`,
     more: 'More of Nigeria is coming soon.',
+    wheel: "See Nigeria's wheel",
     playAgain: 'Play again',
+    streets: 'Streets',
+  },
+  /** S2.10 Streets: one state's streets and its hall, as cards. */
+  streets: {
+    heading: 'Lagos',
+    line: 'Fix 3 streets, then clear Go-Slow Hall.',
+    /** The small first line of a street card. */
+    num: (n: number) => `Street ${n}`,
+    /** The whole name on one line, for screen readers and wide cards. */
+    full: (n: number, name: string) => `Street ${n}: ${name}`,
+    done: (best: number) => `Done \u2713 Best: ${best} kobo`,
+    /** The hall has no kobo to collect (po M4 note), so its done line has no "Best". */
+    hallDone: 'Done \u2713',
+    open: 'Ready to play',
+    locked: (n: number) => `Finish street ${n} first`,
+    parcel: 'You have a garri parcel.',
+    wheel: "Nigeria's wheel",
     home: 'Home',
+  },
+  /** S2.8, S2.10 Nigeria's wheel and its "All names" list. */
+  wheel: {
+    heading: "Nigeria's wheel",
+    about: 'Every state is a part of Nigeria Company. Fix a state\'s problems and its cog starts turning.',
+    count: (n: number) => `${n} of 37 cogs turning.`,
+    /** Narrow rail: the count on its own, then "cogs turning". */
+    countShort: (n: number) => `${n} of 37`,
+    cogsTurning: 'cogs turning',
+    none: 'Fix Lagos to turn the first cog.',
+    more: 'More states are coming soon.',
+    allNames: 'All names',
+    back: 'Back',
+    listHeading: 'All 36 states and the FCT',
+    tickNote: '\u2713 means its cog is turning.',
+    working: ', working',
+    notWorking: ', not working yet',
+    close: 'Close',
   },
   /**
    * S2.2 Words in hints: what {forward}, {back}, {jump} and {down} become. The arrows are plain
@@ -111,8 +153,8 @@ export const WORDS = {
     switchedOn: 'Lagos is switched on!',
     /** S2.5 the well and its room. */
     roomArrive: 'A secret room! Grab the kobo. Stand under the rope to go back up.',
-    /** po ruling 8 Nov 2026: these words until N2; N2 makes it "Garri parcel! Shield for the hall." */
-    parcel: 'Garri parcel! Keep it safe.',
+    /** po ruling 8 Nov 2026: from N2 on, now the parcel is saved for the hall. */
+    parcel: 'Garri parcel! Shield for the hall.',
     backOnStreet: 'Back on the street!',
   },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
