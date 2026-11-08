@@ -6,13 +6,18 @@ import street1Data from './data/levels/lagos-1.json';
 import street2Data from './data/levels/lagos-2.json';
 import street3Data from './data/levels/lagos-3.json';
 import bossLevelData from './data/levels/w1-l1.json';
+import wellRoomData from './data/levels/lagos-well.json';
 import { Sound } from './engine/sound';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel, type Level } from './game/level';
 import { STEPS_PER_SECOND, type RunPhase } from './game/run';
+import { parseRoom } from './game/well';
+import { WELL } from './art/well';
+import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
+import { WELL_UP_KEYS } from './engine/input';
 import { loadLook } from './game/save';
-import { TouchButtons, hintBarBox, type HintBarBox } from './screens/controls';
+import { TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
 import { Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type MenuScreen, type TapPoint } from './screens/menus';
@@ -73,6 +78,9 @@ function startGame(): void {
   const levelOf = (w: number | 'hall'): Level => (oldWay ? bossLevel : w === 'hall' ? bossLevel : streets[w]!);
   const startLevel = levelOf(firstStreet);
   const game = new Game(startLevel);
+  // Well rooms by file id (S2.5); both Lagos wells use lagos-well.
+  const room = parseRoom(wellRoomData);
+  game.rooms = new Map([[room.id, room]]);
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const buttons = new TouchButtons(document.body, coarse);
   const placeButtons = (): void => {
@@ -102,6 +110,7 @@ function startGame(): void {
         hud.update(game.run, menus.sound);
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
       }
+      placeWellButton();
     },
   });
 
@@ -113,8 +122,9 @@ function startGame(): void {
   // Pause when the tab is hidden or the phone turns upright (the "turn sideways" note shows).
   const portrait = window.matchMedia('(orientation: portrait)');
 
-  /** The street or the boss fight is being played (not game over or won). */
-  const inPlay = (): boolean => game.run.phase === 'run' || game.run.phase === 'arena';
+  /** The street, the well and its room, or the boss fight is being played (not game over or won). */
+  const PLAY_PHASES: ReadonlySet<RunPhase> = new Set(['run', 'arena', 'wellDown', 'roomIn', 'room', 'wellUp']);
+  const inPlay = (): boolean => PLAY_PHASES.has(game.run.phase);
 
   /** Pause the run and show the pause screen (button, app switch, or phone upright). */
   function pause(by?: MouseEvent): void {
@@ -184,6 +194,31 @@ function startGame(): void {
     },
   });
   const toast = new Toast(document.body);
+
+  /** Go down at an entrance well, or Go up the room's rope (S2.5): the controls lock. */
+  function useWell(kind: WellButtonKind): void {
+    if (!playing || game.paused) return;
+    const done = kind === 'down' ? game.goDown() : game.goUp();
+    if (done) controls.releaseAll();
+  }
+  const wellButton = new WellButton(document.body, useWell);
+  /** The Go down / Go up button over the well or the room's rope, where it is on screen now. */
+  function placeWellButton(): void {
+    const run = game.run;
+    const kind: WellButtonKind | null = !playing || game.paused || menus.current ? null : run.wellHere ? 'down' : run.underRope ? 'up' : null;
+    if (kind === null) {
+      wellButton.update(null, '', null);
+      return;
+    }
+    // World place: the crank top over the well, or the room's bucket handle.
+    const wx = kind === 'down' ? run.wellHere!.x : run.room!.room.exitX;
+    const wy = kind === 'down' ? game.level.groundY - WELL.frameH : ROOM_ROPE_BUCKET_Y - 6;
+    const k = canvas.getBoundingClientRect().width / view.width;
+    const box = wellButtonBox({ x: (wx - game.camera) * k, y: (wy - game.lift) * k }, window.innerWidth, buttons.layout, readSafeArea());
+    const touch = buttons.touch;
+    const label = kind === 'down' ? (touch ? WORDS.well.down : WORDS.well.downKeys) : touch ? WORDS.well.up : WORDS.well.upKeys;
+    wellButton.update(kind, label, box);
+  }
   const placeBar = (): void => toast.place(barBox(), window.innerHeight);
   buttons.onChange = placeBar;
   placeBar();
@@ -274,6 +309,23 @@ function startGame(): void {
       case 'skid':
         sound.play('skid');
         break;
+      case 'wellDown':
+        sound.play('wellDown');
+        break;
+      case 'room':
+        sound.play('roomThump');
+        toast.show(W.roomArrive, HINT_MS);
+        break;
+      case 'parcel':
+        sound.play('parcel');
+        toast.show(W.parcel, HINT_MS);
+        break;
+      case 'wellUp':
+        sound.play('wellUp');
+        break;
+      case 'wellBack':
+        toast.show(W.backOnStreet);
+        break;
       case 'streetCleared':
         // S2.10 Street cleared: "Next street", or after street 3 "Go to Go-Slow Hall".
         controls.releaseAll();
@@ -332,6 +384,12 @@ function startGame(): void {
       onMove: (dir) => {
         if (playing && !game.paused) game.steer(dir);
         else game.steer(0);
+      },
+      // S2.2 Keys: at a well Down, S, Enter or E go down; under the room's rope Enter or E go up.
+      onWellKey: (code) => {
+        if (!playing || game.paused || menus.current) return;
+        if (game.run.wellHere) useWell('down');
+        else if (game.run.underRope && WELL_UP_KEYS.has(code)) useWell('up');
       },
     },
     () => ({
@@ -396,6 +454,24 @@ function startGame(): void {
         hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, mode: z.mode })),
         /** Kobo picked up one by one (not from crates or smashes). */
         coinsTaken: r.coins.reduce((n, c) => n + (c.taken ? 1 : 0), 0),
+        /** S2.5: carrying the garri parcel; below the street; how dark the screen is. */
+        parcel: r.parcel,
+        below: r.below,
+        fade: r.fade,
+        atWell: r.wellHere ? r.wellHere.x : null,
+        underRope: r.underRope,
+        /** The room being visited (null on the street). */
+        room: r.room
+          ? {
+              id: r.room.room.id,
+              exitX: r.room.room.exitX,
+              entryX: r.room.room.entryX,
+              coins: r.room.coins.map((c) => ({ x: c.x, y: c.y, taken: c.taken })),
+              crates: r.room.crates.map((c) => ({ x: c.x, bottomY: c.bottomY, contents: c.contents, open: c.open })),
+              gift: r.room.gift ? { x: r.room.gift.x, y: r.room.gift.y, taken: r.room.gift.taken } : null,
+              platforms: r.room.room.terrain.platforms.map((p) => ({ ...p })),
+            }
+          : null,
         crates: r.crates.map((c) => ({
           x: c.x,
           bottomY: c.bottomY,
@@ -422,7 +498,19 @@ function startGame(): void {
         groundY: level.groundY,
         lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
         platforms: level.terrain.platforms.map((p) => ({ ...p })),
+        wells: level.wells.map((w) => ({ ...w })),
       };
+    },
+    get below() {
+      // Cheap: below the street (the well room shows), for per-frame logs.
+      return game.run.below;
+    },
+    get wellButton() {
+      // The Go down / Go up button (S2.5) on screen now: which, its words, its box (CSS px).
+      const s = wellButton.shown;
+      if (!s) return null;
+      const r = wellButton.el.getBoundingClientRect();
+      return { kind: s.kind, label: s.label, x: r.x, y: r.y, w: r.width, h: r.height };
     },
     get toast() {
       return toast.text;
@@ -488,6 +576,17 @@ function startGame(): void {
       const r = game.run;
       const level = game.level;
       const gy = level.groundY;
+      if (r.room) {
+        // Below the street: the room's kobo, crate, gift, the rope's bucket and the hero.
+        const play = r.room;
+        for (const c of play.coins) if (!c.taken) add('kobo', c.x - 11, c.y - 11, c.x + 11, c.y + 11);
+        for (const c of play.crates) add('crate', c.x - 20, c.bottomY - 90, c.x + 20, c.bottomY + 1);
+        if (play.gift && !play.gift.taken) add('parcel', play.gift.x - 15, play.gift.y - 15, play.gift.x + 15, play.gift.y + 15);
+        add('rope bucket', play.room.exitX - 9, ROOM_ROPE_BUCKET_Y - 8, play.room.exitX + 9, ROOM_ROPE_BUCKET_Y + 12);
+        const hh = game.hero;
+        add('hero', hh.x - 20, hh.y - 58, hh.x + 20, hh.y + 2);
+        return out;
+      }
       for (const c of r.coins) if (!c.taken) add('kobo', c.x - 11, c.y - 11, c.x + 11, c.y + 11);
       for (const f of r.foods) if (!f.taken) add('food', f.x - 20, f.y - 22, f.x + 20, f.y + 22);
       if (r.hazardFade < 1) {
@@ -599,6 +698,21 @@ declare global {
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
         readonly coinsTaken: number;
+        readonly parcel: boolean;
+        readonly below: boolean;
+        readonly fade: number;
+        /** The entrance well x the hero stands at (Go down shows), or null. */
+        readonly atWell: number | null;
+        readonly underRope: boolean;
+        readonly room: {
+          readonly id: string;
+          readonly exitX: number;
+          readonly entryX: number;
+          readonly coins: readonly { readonly x: number; readonly y: number; readonly taken: boolean }[];
+          readonly crates: readonly { readonly x: number; readonly bottomY: number; readonly contents: string; readonly open: boolean }[];
+          readonly gift: { readonly x: number; readonly y: number; readonly taken: boolean } | null;
+          readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
+        } | null;
         /** Hanging crates (S2.4): open or full, swing in radians, the food popped out of a food crate. */
         readonly crates: readonly {
           readonly x: number;
@@ -624,7 +738,12 @@ declare global {
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
         /** Roofs and other one-way platforms: top y, from x to x + w. */
         readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
+        readonly wells: readonly { readonly x: number; readonly exitX: number; readonly room: string }[];
       };
+      /** Below the street: the well room shows (cheap, for per-frame logs). */
+      readonly below: boolean;
+      /** The Go down / Go up button on screen now (CSS px), or null. */
+      readonly wellButton: { readonly kind: 'down' | 'up'; readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       readonly toast: string;
       /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
       readonly hintBar: {

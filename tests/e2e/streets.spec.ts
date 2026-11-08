@@ -114,8 +114,8 @@ test('street 2, Market road, by hand: start to bus, every crate, the cleared scr
   const bar = await barLog(page);
   console.log(`street 2 hint bar: ${bar.frames} frames, words ${bar.words.join(' | ')}; covered: ${bar.hits.join('; ') || 'nothing'}`);
   expect(bar.hits, 'nothing playable under the hint bar').toEqual([]);
-  // The well hint waits for L2 (going down is not built yet).
-  expect(bar.words.some((w) => /well/i.test(w))).toBe(false);
+  // The well hint shows since L2 (the bot walks past without going down; tests/e2e/wells.spec.ts goes down).
+  expect(bar.words).toContain('A well! Stand by it. Press Go down.');
   expect(bar.words).toContain('Big pit! Run, then jump twice.');
 
   const kobo = await page.evaluate(() => window.__game!.run.kobo);

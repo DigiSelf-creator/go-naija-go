@@ -9,7 +9,9 @@ import { bounce, createBody, createWalker, groundAt, halt, press, release, steer
 import { BOSS_RULES, BossFight, type BossEvent } from './boss';
 import { freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
-import type { FoodKind, HazardKind, Level } from './level';
+import type { FoodKind, HazardKind, Level, WellData } from './level';
+import { freshRoom, roomWalls, WELL_RULES, type RoomData, type RoomPlay } from './well';
+import { wellDownAt, wellUpAt } from '../art/well';
 
 export const STEPS_PER_SECOND = 60;
 const secs = (s: number): number => Math.round(s * STEPS_PER_SECOND);
@@ -111,14 +113,25 @@ export type RunEvent =
   | { type: 'busBoard' }
   | { type: 'busGo' }
   | { type: 'streetCleared' }
+  /** S2.5: going down a well (crank clicks), arriving in its room, the parcel, going up, back on the street. */
+  | { type: 'wellDown'; x: number }
+  | { type: 'room' }
+  | { type: 'parcel'; x: number; y: number }
+  | { type: 'wellUp' }
+  | { type: 'wellBack'; x: number }
   | CrateEvent
   | BossEvent;
 
 /**
  * run: the street. bus: the street end (controls locked, getting on the bus). cleared: the
  * bus has gone. arena: the boss fight. won: General Go-Slow beaten. over: out of lives.
+ * S2.5 well: wellDown (going down, controls locked, the street frozen), roomIn (the bucket
+ * lands in the room), room (playing in the room), wellUp (going up the rope).
  */
-export type RunPhase = 'run' | 'bus' | 'cleared' | 'arena' | 'won' | 'over';
+export type RunPhase = 'run' | 'bus' | 'cleared' | 'arena' | 'won' | 'over' | 'wellDown' | 'roomIn' | 'room' | 'wellUp';
+
+/** Phases spent below the street (the room shows). */
+const BELOW: ReadonlySet<RunPhase> = new Set(['roomIn', 'room', 'wellUp']);
 
 /** Who pressed jump: a finger id, or a key. The hold for higher belongs to the last presser. */
 export type PressSource = string | number;
@@ -174,11 +187,36 @@ export class Run {
   private hopFrom = 0;
   /** Who started the jump that is held now. */
   private holdBy: PressSource | null = null;
+  /**
+   * S2.5: carrying the garri parcel. A lost life keeps it; game over, "Start again" or leaving
+   * the street loses it (they make a new Run). Saving it for the state is piece N2's.
+   */
+  parcel = false;
+  /** The well in use (going down, below, going up), or null on the street. */
+  well: WellData | null = null;
+  /** The room being visited (roomIn, room, wellUp), or null. */
+  room: RoomPlay | null = null;
+  /** Steps into the current well move (wellDown, roomIn, wellUp), or since arriving (room). */
+  wellSteps = 0;
+  /** Steps since the hero came back up (the fade from dark); large when not just up. */
+  surfaceSteps = Infinity;
+  /** Where the hero stood when going down started. */
+  private wellFromX = 0;
+  /** Rooms by file id (from the game); a well whose room is missing cannot be used. */
+  private readonly rooms: ReadonlyMap<string, RoomData>;
+  /** What each well's room holds in this play (by well index). */
+  private readonly roomPlays = new Map<number, RoomPlay>();
+  /** The state already has a saved parcel: rooms show kobo instead (N2 fills this from the save). */
+  private readonly parcelSaved: boolean;
+  /** Events from Go down and Go up presses, sent with the next step. */
+  private pending: RunEvent[] = [];
 
   constructor(
     readonly level: Level,
-    opts: { gentle: boolean } = { gentle: false },
+    opts: { gentle?: boolean; rooms?: ReadonlyMap<string, RoomData>; parcelSaved?: boolean } = {},
   ) {
+    this.rooms = opts.rooms ?? new Map();
+    this.parcelSaved = opts.parcelSaved ?? false;
     this.maxLives = opts.gentle ? RULES.gentleLives : RULES.lives;
     this.lives = this.maxLives;
     this.spawnX = level.spawnX;
@@ -190,6 +228,11 @@ export class Run {
     this.crates = featureOn('crates') ? freshCrates(level.crates) : [];
   }
 
+  /** What well `i`'s room holds in this play (null before the first visit). For tests and drawing. */
+  roomPlay(i: number): RoomPlay | null {
+    return this.roomPlays.get(i) ?? null;
+  }
+
   /** Seconds of play so far. */
   get time(): number {
     return this.steps / STEPS_PER_SECOND;
@@ -197,7 +240,7 @@ export class Run {
 
   press(by: PressSource = 'tap'): ReturnType<typeof press> {
     if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches
-    if (this.phase !== 'run' && this.phase !== 'arena') return null;
+    if (this.phase !== 'run' && this.phase !== 'arena' && this.phase !== 'room') return null;
     const out = press(this.hero);
     if (out) this.holdBy = by;
     return out;
@@ -213,7 +256,7 @@ export class Run {
   /** The direction held on a player-moved street: -1 back, 0 none, 1 forward. */
   steer(move: -1 | 0 | 1): void {
     if (!this.hero.manual) return;
-    steer(this.hero, this.phase === 'run' ? move : 0);
+    steer(this.hero, this.phase === 'run' || this.phase === 'room' ? move : 0);
   }
 
   /** The direction held (player-moved streets). */
@@ -243,11 +286,15 @@ export class Run {
 
   /** One fixed step (dt is always 1/60 s). Returns what happened, for sounds and words. */
   step(dt: number): RunEvent[] {
-    const ev: RunEvent[] = [];
+    const ev: RunEvent[] = this.pending;
+    this.pending = [];
     if (this.phase === 'arena') return this.arenaStep(dt);
     if (this.phase === 'bus') return this.busStep(ev);
+    if (this.phase === 'wellDown' || this.phase === 'roomIn' || this.phase === 'wellUp') return this.wellStep(ev);
+    if (this.phase === 'room') return this.roomStep(dt, ev);
     if (this.phase !== 'run') return ev;
     this.steps++;
+    if (this.surfaceSteps < WELL_RULES.surfaceFadeSteps) this.surfaceSteps++;
     this.tickPower(ev);
     const h = this.hero;
     if (h.manual) h.gait = this.gait();
@@ -305,6 +352,201 @@ export class Run {
     this.touchHazards(ev);
     if (this.safe > 0) this.safe--;
     return ev;
+  }
+
+  // ---------- The well and its room (S2.5) ----------
+
+  /** The entrance well the hero stands at now (Go down shows), or null. */
+  get wellHere(): WellData | null {
+    if (this.phase !== 'run' || !featureOn('wells') || !this.hero.manual || !this.hero.grounded) return null;
+    for (const w of this.level.wells) {
+      if (Math.abs(this.hero.x - w.x) <= WELL_RULES.reach && this.rooms.has(w.room)) return w;
+    }
+    return null;
+  }
+
+  /** On the room's floor under the rope (Go up shows). */
+  get underRope(): boolean {
+    const r = this.room;
+    const h = this.hero;
+    return this.phase === 'room' && r !== null && h.grounded && h.on === null && Math.abs(h.x - r.room.exitX) <= WELL_RULES.reach;
+  }
+
+  /** Below the street: the room shows (arriving, playing, going up). */
+  get below(): boolean {
+    return BELOW.has(this.phase);
+  }
+
+  /**
+   * Go down (button, or Down, S, Enter, E). The controls lock, the street freezes as it is.
+   * Returns false (and does nothing) when the hero is not standing at an entrance well.
+   */
+  goDown(): boolean {
+    const w = this.wellHere;
+    if (!w) return false;
+    const h = this.hero;
+    this.well = w;
+    this.wellFromX = h.x;
+    this.wellSteps = 0;
+    this.phase = 'wellDown';
+    this.lockHero(h);
+    this.pending.push({ type: 'wellDown', x: w.x });
+    return true;
+  }
+
+  /** Go up (button, or Enter, E). Returns false when the hero is not on the floor under the rope. */
+  goUp(): boolean {
+    if (!this.underRope) return false;
+    this.wellSteps = 0;
+    this.phase = 'wellUp';
+    this.wellFromX = this.hero.x;
+    this.lockHero(this.hero);
+    this.pending.push({ type: 'wellUp' });
+    return true;
+  }
+
+  /** Controls lock: no direction, the jump hold ends, standing still. */
+  private lockHero(h: Body): void {
+    steer(h, 0);
+    release(h);
+    this.holdBy = null;
+    halt(h);
+  }
+
+  /** 0 to 1: how dark the screen is (going down or up, arriving, back on the street). */
+  get fade(): number {
+    const t = this.wellSteps / STEPS_PER_SECOND;
+    switch (this.phase) {
+      case 'wellDown':
+        return wellDownAt(t).fade;
+      case 'roomIn':
+        return Math.max(0, 1 - this.wellSteps / WELL_RULES.arriveFadeSteps);
+      case 'wellUp':
+        return wellUpAt(t).fade;
+      case 'run':
+        return this.surfaceSteps < WELL_RULES.surfaceFadeSteps ? 1 - this.surfaceSteps / WELL_RULES.surfaceFadeSteps : 0;
+      default:
+        return 0;
+    }
+  }
+
+  /** Going down, arriving, or going up: the hero is moved along the timeline, nothing else moves. */
+  private wellStep(ev: RunEvent[]): RunEvent[] {
+    this.wellSteps++;
+    const h = this.hero;
+    const t = this.wellSteps / STEPS_PER_SECOND;
+    if (this.phase === 'wellDown') {
+      const w = this.well!;
+      const m = wellDownAt(t);
+      h.x = this.wellFromX + (w.x - this.wellFromX) * m.toRope;
+      h.y = this.level.groundY + m.heroDy;
+      h.grounded = true;
+      if (this.wellSteps >= WELL_RULES.downSteps) this.enterRoom(ev);
+    } else if (this.phase === 'roomIn') {
+      const room = this.room!.room;
+      const k = Math.min(1, this.wellSteps / WELL_RULES.arriveSteps);
+      h.x = room.entryX;
+      h.y = room.groundY - WELL_RULES.arriveDrop * (1 - k);
+      if (this.wellSteps >= WELL_RULES.arriveSteps) {
+        // The hero steps off the bucket, facing right, standing still.
+        h.y = room.groundY;
+        h.prevY = h.y;
+        h.dir = 1;
+        this.phase = 'room';
+        this.wellSteps = 0;
+      }
+    } else {
+      const room = this.room!.room;
+      const m = wellUpAt(t);
+      h.x = this.wellFromX + (room.exitX - this.wellFromX) * Math.min(1, t / 0.2);
+      h.y = room.groundY + m.heroDy;
+      if (this.wellSteps >= WELL_RULES.upSteps) this.surface(ev);
+    }
+    return ev;
+  }
+
+  /** At the bottom: into the well's room (fresh, or as this play left it). */
+  private enterRoom(ev: RunEvent[]): void {
+    const w = this.well!;
+    const i = this.level.wells.indexOf(w);
+    let play = this.roomPlays.get(i);
+    if (!play) {
+      play = freshRoom(this.rooms.get(w.room)!, this.parcelSaved);
+      this.roomPlays.set(i, play);
+    }
+    this.room = play;
+    const room = play.room;
+    const h = createWalker(room.entryX, room.terrain, this.gait());
+    h.down = false;
+    h.y = room.groundY - WELL_RULES.arriveDrop;
+    h.prevY = h.y;
+    this.hero = h;
+    this.phase = 'roomIn';
+    this.wellSteps = 0;
+    ev.push({ type: 'room' });
+  }
+
+  /** One step in the room: walk, jump, shelves, kobo, the crate, the gift. No hazards, no timers. */
+  private roomStep(dt: number, ev: RunEvent[]): RunEvent[] {
+    this.steps++;
+    this.wellSteps++;
+    const play = this.room!;
+    const room = play.room;
+    const h = this.hero;
+    h.gait = this.gait(); // corn still makes the hero quicker; its timer is paused below
+    step(h, room.terrain, dt);
+    if (h.fallen) {
+      // The floor runs wall to wall, so this cannot happen; if it ever did, stand at the bucket.
+      this.hero = createWalker(room.entryX, room.terrain, this.gait());
+      return ev;
+    }
+    const { lo, hi } = roomWalls(room);
+    if (h.x < lo || h.x > hi) {
+      h.x = Math.min(Math.max(h.x, lo), hi);
+      halt(h);
+    }
+    if (play.crates.length > 0) {
+      const out = stepCrates(play.crates, { hero: h, heroBox: this.heroBox(), heroH: RULES.heroH, amala: this.power.amala > 0, steps: this.steps, dt });
+      this.kobo += out.kobo;
+      ev.push(...out.events);
+    }
+    const box = this.heroBox();
+    for (const c of play.coins) {
+      if (c.taken || c.x + 8 < box.l || c.x - 8 > box.r || c.y + 10 < box.t || c.y - 10 > box.b) continue;
+      c.taken = true;
+      this.kobo++;
+      ev.push({ type: 'kobo', x: c.x, y: c.y });
+    }
+    const g = play.gift;
+    if (g && !g.taken && g.x + 14 >= box.l && g.x - 14 <= box.r && g.y + 14 >= box.t && g.y - 14 <= box.b) {
+      g.taken = true;
+      this.parcel = true; // never more than one: a second parcel adds nothing
+      ev.push({ type: 'parcel', x: g.x, y: g.y });
+    }
+    if (this.safe > 0) this.safe--;
+    return ev;
+  }
+
+  /** At the top of the rope: out at the exit well, safe for a moment, the hazards near it gone. */
+  private surface(ev: RunEvent[]): void {
+    const w = this.well!;
+    const x = w.exitX + WELL_RULES.exitStep;
+    this.hero = this.newHero(x); // standing, facing right
+    this.room = null;
+    this.well = null;
+    this.phase = 'run';
+    this.wellSteps = 0;
+    this.surfaceSteps = 0;
+    this.safe = WELL_RULES.surfaceSafeSteps;
+    for (const z of this.hazards) {
+      const woken = z.mode === 'move' || z.mode === 'runAway' || z.mode === 'falling';
+      if (woken && Math.abs(z.x - w.exitX) <= WELL_RULES.clearRadius) z.mode = 'gone';
+    }
+    // Hints about the street the hero went under stay quiet (they would hide "Back on the street!").
+    this.level.hints.forEach((hint, i) => {
+      if (hint.x > w.x && hint.x <= x) this.hintsShown.add(i);
+    });
+    ev.push({ type: 'wellBack', x: w.exitX });
   }
 
   /** The hero stays inside the start fence and the end wall; bumping one stops dead. */
