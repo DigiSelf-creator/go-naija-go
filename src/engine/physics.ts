@@ -295,6 +295,16 @@ export function bounce(b: Body, cfg: PhysicsConfig = PHYSICS): void {
   b.holding = false;
 }
 
+/**
+ * The head met something from below (a crate, S2.4): the feet go to `feetY`, vy becomes a small
+ * push down, and the hold for higher ends. The second jump stays as it was.
+ */
+export function headStop(b: Body, feetY: number, vy: number): void {
+  b.y = feetY;
+  b.vy = vy;
+  b.holding = false;
+}
+
 function land(b: Body, y: number, on: Platform | null, cfg: PhysicsConfig): void {
   b.y = y;
   b.vy = 0;

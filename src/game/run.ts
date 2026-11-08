@@ -7,6 +7,7 @@
  */
 import { bounce, createBody, createWalker, groundAt, halt, press, release, steer, step, type Body, type Gait, type Terrain } from '../engine/physics';
 import { BOSS_RULES, BossFight, type BossEvent } from './boss';
+import { freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import type { FoodKind, HazardKind, Level } from './level';
 
@@ -109,6 +110,7 @@ export type RunEvent =
   | { type: 'busBoard' }
   | { type: 'busGo' }
   | { type: 'streetCleared' }
+  | CrateEvent
   | BossEvent;
 
 /**
@@ -144,6 +146,8 @@ export class Run {
   readonly coins: CoinState[];
   readonly foods: FoodState[];
   readonly hazards: HazardState[];
+  /** Hanging crates (S2.4); none while the crates switch is off (features.ts). */
+  readonly crates: CrateState[];
   /** The fight, once the hero reaches the arena. */
   boss: BossFight | null = null;
   /** The level's road and roofs, plus the boss's light platforms (solid all fight long). */
@@ -182,6 +186,7 @@ export class Run {
     this.coins = level.coins.map((c) => ({ ...c, taken: false }));
     this.foods = level.foods.map((f) => ({ ...f, taken: false }));
     this.hazards = level.hazards.map((h) => freshHazard(h.kind, h.x, level.groundY));
+    this.crates = featureOn('crates') ? freshCrates(level.crates) : [];
   }
 
   /** Seconds of play so far. */
@@ -253,6 +258,11 @@ export class Run {
       return ev;
     }
     if (h.manual) this.walls();
+    if (this.crates.length > 0) {
+      const out = stepCrates(this.crates, { hero: h, heroBox: this.heroBox(), heroH: RULES.heroH, amala: this.power.amala > 0, steps: this.steps, dt });
+      this.kobo += out.kobo;
+      ev.push(...out.events);
+    }
 
     const arena = this.level.arena;
     if (arena && h.x >= arena.x) {
@@ -448,7 +458,8 @@ export class Run {
         ev.push({ type: 'kobo', x: c.x, y: c.y });
       }
     }
-    for (const f of this.foods) {
+    const crateFoods = this.crates.flatMap((c) => (c.food ? [c.food] : []));
+    for (const f of [...this.foods, ...crateFoods]) {
       if (f.taken || f.x + 14 < box.l || f.x - 14 > box.r) continue;
       if (f.y + 14 >= box.t && f.y - 14 <= box.b) {
         f.taken = true;
@@ -576,6 +587,7 @@ export class Run {
     // Facing right, standing still; a direction still held walks on from here (run timer at 0).
     this.hero.move = move;
     for (const f of this.foods) if (f.x >= this.spawnX) f.taken = false;
+    refillCrates(this.crates, this.spawnX);
     this.hazards.forEach((z, i) => {
       if (z.x0 >= this.spawnX) this.hazards[i] = freshHazard(z.kind, z.x0, this.level.groundY);
     });

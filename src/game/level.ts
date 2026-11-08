@@ -250,7 +250,7 @@ export function parseLevel(raw: unknown): Level {
     cornSpeed,
     startWall: schema === 2 ? num(r['startWall'], 'startWall') : -Infinity,
     end,
-    crates,
+    crates: crates.sort((p, q) => p.x - q.x),
     wells,
     spawnX: num(r['spawnX'], 'spawnX'),
     koboSpacing,

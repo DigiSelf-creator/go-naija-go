@@ -4,6 +4,7 @@
  * road, stalls, pickups, hazards and hero draw in world space (art "space rule").
  */
 import { drawBoss, drawDustPop, drawGoLight, drawHitCounter, drawHonkCloud, type GoLightState } from '../art/boss';
+import { crateAngle, crateLineY, drawCrate, drawCrateLine, koboFanAt, koboFlyAt } from '../art/crate';
 import { drawHero, WALK_STRIDE, type HeroLook } from '../art/hero';
 import { drawGoat, drawTyre } from '../art/hazards';
 import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
@@ -11,8 +12,8 @@ import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, d
 import { drawBusStop, drawPassingBus, drawRoad, drawShopRow, drawSky, drawSkyline, drawStall } from '../art/street';
 import { STRIP_Y, type View } from '../engine/view';
 import { Camera, heroScreenX } from './camera';
-import { FEATURES } from './features';
-import type { CrateData, Level } from './level';
+import { CRATE_RULES, type CrateState } from './crates';
+import type { Level } from './level';
 import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from './run';
 import { DEFAULT_LOOK } from './save';
 
@@ -96,6 +97,10 @@ export class Game {
    * short screen (screens/controls.ts, ButtonLayout.lift). 0 on almost every screen.
    */
   lift = 0;
+  /** prefers-reduced-motion: crates hang still and kobo out of a crate do not fly (set by main). */
+  still = false;
+  /** Where the HUD kobo counter is on screen, world units from the top left (set by main). */
+  koboTarget = { x: 70, y: 22 };
 
   constructor(public level: Level) {
     this.run = new Run(level);
@@ -339,7 +344,7 @@ export class Game {
     drawRoad(g, camX, W, level.ground, gy, H);
     if (level.manual) drawStreetBits(g, level, camX, W, L, R, H);
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawStall(g, p.x, p.y, p.w, gy);
-    if (FEATURES.crates) for (const c of level.crates) if (c.x + 20 > L && c.x - 20 < R) drawCratePlaceholder(g, c);
+    if (run.crates.length > 0) this.drawCrates(g, camX, L, R, lift);
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
 
@@ -430,12 +435,73 @@ export class Game {
     // Boss hit counter, below the HUD.
     if (boss) drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
   }
+  /** Seconds since a step count of this run (crate swings, lids, kobo fans). */
+  private since(step: number | null): number | undefined {
+    return step === null ? undefined : (this.run.steps - step) / STEPS_PER_SECOND;
+  }
+
+  /** The swing of a crate now, radians (art crateAngle; still under reduced motion). */
+  crateAngle(c: CrateState): number {
+    return crateAngle({ sinceKnock: this.since(c.knockStep), knock: c.knock, dir: c.dir, time: this.clock + c.x * 0.0037, still: this.still });
+  }
+
+  /**
+   * S2.4: the lines and poles, each crate on its rope (swinging, the lid opening), a food popped
+   * out of a crate, and the three kobo fanning out of a kobo crate and flying to the HUD counter.
+   */
+  private drawCrates(g: CanvasRenderingContext2D, camX: number, L: number, R: number, lift: number): void {
+    const crates = this.run.crates;
+    const t = this.clock;
+    // Crates at one height less than 160 u apart share a line; poles 36 u outside the end ones.
+    for (let i = 0; i < crates.length; ) {
+      let j = i;
+      while (j + 1 < crates.length && crates[j + 1]!.bottomY === crates[i]!.bottomY && crates[j + 1]!.x - crates[j]!.x < 160) j++;
+      const x0 = crates[i]!.x - 36;
+      const x1 = crates[j]!.x + 36;
+      if (x1 > L && x0 < R) drawCrateLine(g, x0, x1, crateLineY(crates[i]!.bottomY), crates[i]!.bottomY + CRATE_RULES.surfaceBelow);
+      i = j + 1;
+    }
+    for (const c of crates) {
+      if (c.x + 40 < L || c.x - 40 > R) continue;
+      const opened = this.since(c.openStep);
+      const lid = !c.open ? 0 : this.still || opened === undefined ? 1 : Math.min(1, opened / 0.15);
+      drawCrate(g, c.x, c.bottomY, { stamp: STAMP[c.contents], open: c.open, angle: this.crateAngle(c), lid });
+    }
+    for (const c of crates) {
+      const f = c.food;
+      if (f && !f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, f.landed ? t : 0);
+    }
+    // The kobo: fan out of the top (0.35 s), then fly to the HUD counter (0.4 s).
+    for (const c of crates) {
+      const s = c.contents === 'kobo' ? this.since(c.openStep) : undefined;
+      if (s === undefined || s > 0.75) continue;
+      const top = { x: c.x, y: c.bottomY - CRATE_RULES.h };
+      const ends = koboFanAt(0.35);
+      if (this.still) {
+        // Reduced motion: the three kobo show above the crate for a moment, then are counted.
+        if (s <= 0.35) for (const e of ends) drawKobo(g, top.x + e.x, top.y + e.y, 0);
+        continue;
+      }
+      if (s <= 0.35) {
+        for (const e of koboFanAt(s)) drawKobo(g, top.x + e.x, top.y + e.y, t);
+      } else {
+        const to = { x: camX + this.koboTarget.x, y: lift + this.koboTarget.y };
+        for (const e of ends) {
+          const p = koboFlyAt(s - 0.35, { x: top.x + e.x, y: top.y + e.y }, to);
+          if (!p.done) drawKobo(g, p.x, p.y, t);
+        }
+      }
+    }
+  }
 }
+
+/** The stamp on a crate's front shows what is inside (S2.4): corn cob, cup (garri), bowl (amala). */
+const STAMP = { kobo: 'kobo', corn: 'corn', garri: 'cup', amala: 'bowl' } as const;
 
 /**
  * Slice 2 street pieces behind the hero (art H5, src/art/roadside.ts): the pavement strip under
  * the road, the start fence with its parked bus, and cones on both lips of every big pit. Wells
- * stay placeholders until piece L. Crates are not drawn at all until J2 (features.ts).
+ * stay placeholders until piece L. Crates draw in Game.drawCrates (S2.4).
  */
 function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number, viewW: number, L: number, R: number, H: number): void {
   const gy = level.groundY;
@@ -458,23 +524,6 @@ function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number,
       g.fillRect(x - 18, gy - 30, 36, 5);
     }
   }
-}
-
-function drawCratePlaceholder(g: CanvasRenderingContext2D, c: CrateData): void {
-  const top = c.bottomY - 28;
-  g.fillStyle = '#5c4a32'; // rope up to the line
-  g.fillRect(c.x - 1, top - 60, 2, 60);
-  g.fillStyle = '#c9a77c';
-  g.fillRect(c.x - 16, top, 32, 28);
-  g.strokeStyle = '#7a5a35';
-  g.lineWidth = 2;
-  g.strokeRect(c.x - 15, top + 1, 30, 26);
-  g.beginPath();
-  g.moveTo(c.x - 15, top + 10);
-  g.lineTo(c.x + 15, top + 10);
-  g.moveTo(c.x - 15, top + 19);
-  g.lineTo(c.x + 15, top + 19);
-  g.stroke();
 }
 
 function drawDrumPlaceholder(g: CanvasRenderingContext2D, x: number, y: number, rot: number): void {

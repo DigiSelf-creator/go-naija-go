@@ -11,10 +11,18 @@ const phone = {
 };
 /** Tests that measure frames per second: their titles say "slowed". */
 const PERF = /slowed/i;
+/**
+ * Tests that drive the game in real time (bots, held jumps, taps per second, speeds). They pass
+ * alone but can fail when four browsers share a loaded computer, so they run one at a time.
+ * Playwright matches grep against "project file describe title", so file names work here.
+ */
+const TIMING = /(^|\s)(level|level-qa|slice|slice-qa|hands|break|hint-banner|crates)\.spec\.ts\s|then street 1 plays|the pick is announced/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
+  // Room for a busy computer: a test that is only slow is not broken.
+  timeout: 60_000,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 1 : 0,
   reporter: 'list',
@@ -27,15 +35,25 @@ export default defineConfig({
       // A phone held sideways: Pixel 5 in landscape, touch on.
       name: 'phone-landscape',
       use: phone,
-      grepInvert: PERF,
+      grepInvert: [PERF, TIMING],
     },
     {
-      // Frame-rate tests, after everything else, one at a time (npm run e2e passes --workers=1),
+      // Real-time play tests, after the parallel ones, one at a time.
+      name: 'timing',
+      use: phone,
+      grep: TIMING,
+      grepInvert: PERF,
+      workers: 1,
+      dependencies: ['phone-landscape'],
+    },
+    {
+      // Frame-rate tests, after everything else, one at a time,
       // so their fps is not measured while other tests share the computer.
       name: 'perf',
       use: phone,
       grep: PERF,
-      dependencies: ['phone-landscape'],
+      workers: 1,
+      dependencies: ['timing'],
     },
   ],
   webServer: {

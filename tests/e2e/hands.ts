@@ -68,6 +68,12 @@ export interface HandBotOpts {
   onPoll?: (s: Snap, h: Hands) => Promise<void>;
   /** Stop when this is true. */
   until?: (s: Snap) => boolean;
+  /**
+   * Called when the hero is on the ground and no jump is held, before the bot looks for pits and
+   * hazards. Return true when it moved the hero itself (it must put Forward back down if it
+   * lifted it); the bot then looks again.
+   */
+  act?: (s: Snap, h: Hands) => Promise<boolean>;
 }
 
 /**
@@ -110,6 +116,7 @@ export async function playStreetByHand(page: Page, h: Hands, opts: HandBotOpts =
       continue;
     }
     if (!hero.grounded) continue;
+    if (opts.act && (await opts.act(s, h))) continue;
     const big = level.gaps.find(([a, b]) => b - a >= 160 && a - hero.x > -4 && a - hero.x < 10 + hero.speed * 0.03);
     if (big && opts.fallIntoOnce?.(big[0]) && !fellOnce.has(big[0])) {
       fellOnce.add(big[0]);

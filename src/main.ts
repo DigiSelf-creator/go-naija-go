@@ -6,7 +6,6 @@ import street1Data from './data/levels/lagos-1.json';
 import bossLevelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
-import { FEATURES } from './game/features';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel } from './game/level';
 import { STEPS_PER_SECOND, type RunPhase } from './game/run';
@@ -77,6 +76,12 @@ function startGame(): void {
   placeButtons();
   game.setView(view);
   game.look = loadLook(store);
+  // Reduced motion: crates hang still and crate kobo do not fly (S2.4).
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  game.still = reduceMotion.matches;
+  reduceMotion.addEventListener('change', () => {
+    game.still = reduceMotion.matches;
+  });
   const sound = new Sound();
 
   const loop = new FixedLoop({
@@ -173,6 +178,20 @@ function startGame(): void {
     switch (e.type) {
       case 'kobo':
         sound.play('kobo');
+        break;
+      case 'crate': {
+        sound.play('crateHit');
+        if (e.contents === 'kobo') {
+          sound.play('crateKobo');
+          // The three kobo fly to the counter: where it is on screen now, in world units.
+          const r = document.querySelector('.hud-kobo')?.getBoundingClientRect();
+          const k = canvas.getBoundingClientRect().width / view.width;
+          if (r && r.width > 0 && k > 0) game.koboTarget = { x: (r.x + r.width / 2) / k, y: (r.y + r.height / 2) / k };
+        } else sound.play('cratePop');
+        break;
+      }
+      case 'crateEmpty':
+        sound.play('crateEmpty');
         break;
       case 'food':
         sound.play('food');
@@ -353,6 +372,16 @@ function startGame(): void {
         safe: r.safe,
         power: { ...r.power },
         hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, mode: z.mode })),
+        /** Kobo picked up one by one (not from crates or smashes). */
+        coinsTaken: r.coins.reduce((n, c) => n + (c.taken ? 1 : 0), 0),
+        crates: r.crates.map((c) => ({
+          x: c.x,
+          bottomY: c.bottomY,
+          contents: c.contents,
+          open: c.open,
+          angle: game.crateAngle(c),
+          food: c.food ? { kind: c.food.kind, y: c.food.y, landed: c.food.landed, taken: c.food.taken } : null,
+        })),
       };
     },
     get level() {
@@ -370,6 +399,7 @@ function startGame(): void {
         turnRightX: level.arena?.turnRightX ?? Infinity,
         groundY: level.groundY,
         lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
+        platforms: level.terrain.platforms.map((p) => ({ ...p })),
       };
     },
     get toast() {
@@ -445,7 +475,14 @@ function startGame(): void {
           else add(z.kind, z.x - 18, z.y - 40, z.x + 18, z.y + 4);
         }
       }
-      if (FEATURES.crates) for (const c of level.crates) add('crate', c.x - 17, c.bottomY - 90, c.x + 17, c.bottomY + 1);
+      for (const c of r.crates) {
+        // The crate swings about the point where its rope meets the line, 88 u above its bottom.
+        const a = game.crateAngle(c);
+        const dx = Math.sin(a) * 88;
+        add('crate', c.x - 17 + Math.min(0, dx), c.bottomY - 90, c.x + 17 + Math.max(0, dx), c.bottomY + 1);
+        const f = c.food;
+        if (f && !f.taken) add('food', c.x - 20, f.y - 22, c.x + 20, f.y + 22);
+      }
       for (const w of level.wells) for (const x of [w.x, w.exitX]) add('well', x - 19, gy - 31, x + 19, gy + 1);
       for (let i = 1; i < level.ground.length; i++) {
         const a = level.ground[i - 1]![1];
@@ -539,6 +576,16 @@ declare global {
         readonly safe: number;
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
+        readonly coinsTaken: number;
+        /** Hanging crates (S2.4): open or full, swing in radians, the food popped out of a food crate. */
+        readonly crates: readonly {
+          readonly x: number;
+          readonly bottomY: number;
+          readonly contents: string;
+          readonly open: boolean;
+          readonly angle: number;
+          readonly food: { readonly kind: string; readonly y: number; readonly landed: boolean; readonly taken: boolean } | null;
+        }[];
       };
       readonly level: {
         readonly id: string;
@@ -553,6 +600,8 @@ declare global {
         readonly turnRightX: number;
         readonly groundY: number;
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
+        /** Roofs and other one-way platforms: top y, from x to x + w. */
+        readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
       };
       readonly toast: string;
       /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
