@@ -2,13 +2,18 @@
  * Safe saves. Everything stays on the phone (localStorage). If storage is blocked
  * (private mode, settings, full disk) the game keeps working with an in-memory copy.
  */
-/** Keys on the phone: gidi-look (skin, hair, outfit, body, age), gidi-sound, gidi-gentle (see docs/design.md). */
+/**
+ * Keys on the phone (docs/design.md S2.8 "Save shape"): gidi-look (skin, hair, outfit, body, age),
+ * gidi-sound, gidi-music, gidi-gentle, gidi-progress.
+ */
 const PREFIX = 'gidi-';
 
 export interface Store {
   load<T>(key: string, isValid?: (v: unknown) => v is T): T | undefined;
   save(key: string, value: unknown): boolean;
   remove(key: string): void;
+  /** True when something is saved under the key, readable or not (S2.8 broken copy rule). */
+  has(key: string): boolean;
   /** True when saves will survive a reload. */
   readonly persistent: boolean;
 }
@@ -71,6 +76,9 @@ export function createStore(get: () => Storage | null | undefined = () => global
       } catch {
         return false;
       }
+    },
+    has(key: string): boolean {
+      return read(key) !== null;
     },
     remove(key: string): void {
       memory.delete(key);
