@@ -74,6 +74,12 @@ interface BotOpts {
   /** Timing error, ms: every press lands up to this early or late. */
   jitterMs?: number;
   seed?: number;
+  /**
+   * Decide from game state after every physics step: the page clock (installed before the page
+   * opened) stands still and moves one 16 ms frame at a time, so a busy computer cannot make a
+   * press late. The clock runs freely again when the bot stops.
+   */
+  stepped?: boolean;
 }
 
 /**
@@ -95,10 +101,17 @@ async function playByTouch(page: Page, opts: BotOpts = {}): Promise<{ presses: n
   let presses = 0;
   const handled = new Set<string>();
   let lastLives = 99;
+  let lastStep = -1;
+  if (opts.stepped) await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 50);
   let s = await state(page);
   for (;;) {
+    if (opts.stepped) await page.clock.runFor(16);
     s = await state(page);
     if (s.r.phase !== 'run' || s.screen !== 'play' || opts.until?.(s)) break;
+    if (opts.stepped) {
+      if (s.steps === lastStep) continue; // no physics step this frame: nothing new to decide
+      lastStep = s.steps;
+    }
     if (opts.onPoll) {
       await opts.onPoll(s);
       s = await state(page);
@@ -154,6 +167,7 @@ async function playByTouch(page: Page, opts: BotOpts = {}): Promise<{ presses: n
     }
   }
   if (holding) await f.up();
+  if (opts.stepped) await page.clock.resume();
   return { presses, last: s };
 }
 /** Hazard start x in level order (src/data/levels/w1-l1.json). */
@@ -271,10 +285,11 @@ test('C7/D4: a sloppy player (+/- 80 ms) plays level 1 by touch, gets all three 
 
 test('C7 Q14: a fall after the bus stop: back at the bus stop, garri comes back, kobo stay counted', async ({ page }) => {
   test.setTimeout(120_000);
+  await page.clock.install();
   await openAndRun(page, OLD_WAY);
   await watchWords(page);
   // Jump everything; leave the 50 pothole at 6700 alone.
-  await playByTouch(page, { jitterMs: 0, skipGap: (a) => a === 6700, until: (s) => s.r.lives < 3 });
+  await playByTouch(page, { jitterMs: 0, stepped: true, skipGap: (a) => a === 6700, until: (s) => s.r.lives < 3 });
   await expect.poll(() => page.evaluate(() => window.__game!.run.lives)).toBe(2);
   const after = await state(page);
   expect(after.h.x).toBeLessThan(5700);
@@ -355,10 +370,11 @@ test('C7 slowed CPU: 4x through the whole level by touch, at least 30 fps in eve
 
 test('C7 break it: last life lost in the pothole just past the bus stop, shield or not: game over, then Play again from the start', async ({ page }) => {
   test.setTimeout(120_000);
+  await page.clock.install();
   await openAndRun(page, OLD_WAY);
   // Let the goat at 4950 and the tyre at 5450 hit (2 lives gone), pick up garri, jump the
   // goat at 6400, then miss the 50 pothole at 6700 on the last life.
-  await playByTouch(page, { jitterMs: 0, letHit: (x0) => x0 === 4950 || x0 === 5450, skipGap: (a) => a === 6700 });
+  await playByTouch(page, { jitterMs: 0, stepped: true, letHit: (x0) => x0 === 4950 || x0 === 5450, skipGap: (a) => a === 6700 });
   const over = page.getByRole('dialog', { name: 'Out of lives' });
   await expect(over).toBeVisible({ timeout: 30_000 });
   const r = (await state(page)).r;
