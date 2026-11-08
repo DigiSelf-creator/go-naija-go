@@ -85,9 +85,10 @@ describe('S2.2 street rules', () => {
     const before = steps(run, RULES.firstHintSteps - 1);
     expect(before.filter((e) => e.type === 'hint')).toEqual([]);
     const ev = steps(run, 1).filter((e) => e.type === 'hint');
-    expect(ev).toEqual([{ type: 'hint', words: 'Hold {forward} to walk. Keep holding to run.' }]);
-    expect(hintWords('Hold {forward} to walk. Keep holding to run.', 'touch')).toBe('Hold the forward arrow to walk. Keep holding to run.');
-    expect(hintWords('Press {jump} again, {back}, {down}', 'keys')).toBe('Press Space again, the left arrow, the down arrow');
+    expect(ev).toEqual([{ type: 'hint', words: 'Hold {forward} to walk. Hold on to run.' }]);
+    expect(hintWords('Hold {forward} to walk. Hold on to run.', 'touch')).toBe('Hold \u2192 to walk. Hold on to run.');
+    expect(hintWords('Press {jump} again, {back}, {down}', 'keys')).toBe('Press Space again, \u2190, \u2193');
+    expect(hintWords('Press {jump}, {back}, {down}', 'touch')).toBe('Press Jump, \u2190, Go down');
   });
 
   it('hazards wake at the larger of wakeDistance and the road shown ahead + 40', () => {

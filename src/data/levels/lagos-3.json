@@ -69,8 +69,8 @@
     { "x": 160, "exitX": 1300, "room": "lagos-well" }
   ],
   "hints": [
-    [1350, "Rolling drum! It rolls fast. Jump over it, or land on it to bounce."],
-    [4600, "Bus stop! If you fall, you start again here."]
+    [1350, "Fast rolling drum! Jump over it."],
+    [4600, "Bus stop! Now you start here."]
   ],
   "checkpoint": 4600,
   "end": { "x": 11500, "wall": 11700 }

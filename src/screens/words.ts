@@ -63,10 +63,13 @@ export const WORDS = {
     playAgain: 'Play again',
     home: 'Home',
   },
-  /** S2.2 Words in hints: what {forward}, {back}, {jump} and {down} become. */
+  /**
+   * S2.2 Words in hints: what {forward}, {back}, {jump} and {down} become. The arrows are plain
+   * characters (U+2192, U+2190, U+2193) in the hint's own font, never emoji.
+   */
   hintMarks: {
-    touch: { forward: 'the forward arrow', back: 'the back arrow', jump: 'Jump', down: 'Go down' },
-    keys: { forward: 'the right arrow', back: 'the left arrow', jump: 'Space', down: 'the down arrow' },
+    touch: { forward: '\u2192', back: '\u2190', jump: 'Jump', down: 'Go down' },
+    keys: { forward: '\u2192', back: '\u2190', jump: 'Space', down: '\u2193' },
   },
   /** Toasts in the run: docs/design.md Power-ups, Level 1. */
   toast: {
@@ -81,6 +84,30 @@ export const WORDS = {
     roadFree: 'Green light! The road is free!',
   },
 } as const;
+
+/** S2.2 hint bar: a toast longer than this shows its short words on a narrow bar. */
+export const SHORT_AT = 35;
+/** S2.2 hint bar: a bar narrower than this (CSS px) takes the short words. */
+export const NARROW_BAR = 160;
+
+/** S2.2 "Short words for narrow bars": full toast words, then the short words. */
+export const SHORT_TOAST: Readonly<Record<string, string>> = {
+  'Roasted corn! You run faster for 6 seconds.': 'Roasted corn! You run faster!',
+  'Garri, sugar and epa (groundnut)! A shield takes one hit for you.': 'Garri, sugar and epa! Shield on!',
+  'Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
+  'General Go-Slow blocks the road! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
+  'A secret room! Grab the kobo. Stand under the rope to go back up.': 'Secret room! Use the rope to go up.',
+  'Garri parcel! Your shield will be on when the Go-Slow Hall fight starts.': 'Garri parcel! Shield for the hall.',
+  'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
+  'General Go-Slow is jamming the hall! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
+  'PEEP! High honks fly high. Stay low on the floor.': 'PEEP! High honks: stay low.',
+};
+
+/** The words a toast shows in a bar this wide (CSS px): the short words on a narrow bar. */
+export function barWords(words: string, barWidth: number): string {
+  if (barWidth >= NARROW_BAR || words.length <= SHORT_AT) return words;
+  return SHORT_TOAST[words] ?? words;
+}
 
 /** Fills the {forward} {back} {jump} {down} markers in a hint for touch or keys. */
 export function hintWords(words: string, kind: 'touch' | 'keys'): string {

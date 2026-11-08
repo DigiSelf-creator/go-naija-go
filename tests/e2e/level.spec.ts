@@ -134,7 +134,7 @@ test('HUD: lives, kobo going up, a spoken pause button and the sound button', as
   await expect(page.locator('.hud-lives')).toHaveText('♥ 3');
   await expect(page.locator('.hud-lives')).toHaveAttribute('aria-label', 'Lives: 3');
   // The first hint shows 0.5 s after the start, in touch words.
-  await expect(page.getByText('Hold the forward arrow to walk. Keep holding to run.')).toBeVisible();
+  await expect(page.getByText('Hold \u2192 to walk. Hold on to run.')).toBeVisible();
   // Kobo on the road at x 300: picked up by walking there.
   const h = await holdForward(page);
   await expect(page.locator('.hud-kobo')).toHaveText('Kobo 5', { timeout: 5000 });
