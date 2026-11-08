@@ -18,7 +18,7 @@ import { parseLevel, type Level } from '../../src/game/level';
 import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
 import { WELL_RULES, freshRoom, parseRoom, roomWalls } from '../../src/game/well';
 import { buttonLayout, wellButtonBox } from '../../src/screens/controls';
-import { WORDS, barWords, hintWords } from '../../src/screens/words';
+import { SHORT_AT, WORDS, barWords, hintWords } from '../../src/screens/words';
 import { recorder } from './recorder';
 
 const DT = 1 / 60;
@@ -301,8 +301,10 @@ describe('the room (S2.5 The room, The gift)', () => {
     expect(evs.filter((e) => e.type === 'parcel')).toHaveLength(1);
     expect(run.parcel).toBe(true);
     expect(run.power.shield).toBe(false); // it does nothing on the street (gift rule 2)
-    expect(WORDS.toast.parcel).toBe('Garri parcel! Your shield will be on when the Go-Slow Hall fight starts.');
-    expect(barWords(WORDS.toast.parcel, 100)).toBe('Garri parcel! Shield for the hall.');
+    expect(WORDS.toast.parcel).toBe('Garri parcel! Keep it safe.');
+    // Short enough for every bar (po ruling, 8 Nov 2026): no short-words row, the full words show.
+    expect(WORDS.toast.parcel.length).toBeLessThanOrEqual(SHORT_AT);
+    expect(barWords(WORDS.toast.parcel, 78)).toBe('Garri parcel! Keep it safe.');
     expect(WORDS.hud.parcel).toBe('Parcel');
   });
 

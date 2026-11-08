@@ -63,7 +63,7 @@ export const WORDS = {
     gentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
     home: 'Home',
   },
-  /** S2.10 Street cleared (no parcel line until L2; "Streets" until N2 is "Home"). */
+  /** S2.10 Street cleared (the parcel line comes with N2; "Streets" until N2 is "Home"). */
   cleared: {
     heading: 'Street cleared!',
     text: (name: string, kobo: number) => `${name} is fixed. You got ${kobo} kobo.`,
@@ -101,7 +101,8 @@ export const WORDS = {
     roadFree: 'Green light! The road is free!',
     /** S2.5 the well and its room. */
     roomArrive: 'A secret room! Grab the kobo. Stand under the rope to go back up.',
-    parcel: 'Garri parcel! Your shield will be on when the Go-Slow Hall fight starts.',
+    /** po ruling 8 Nov 2026: these words until N2; N2 makes it "Garri parcel! Shield for the hall." */
+    parcel: 'Garri parcel! Keep it safe.',
     backOnStreet: 'Back on the street!',
   },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
@@ -125,7 +126,6 @@ export const SHORT_TOAST: Readonly<Record<string, string>> = {
   'Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
   'General Go-Slow blocks the road! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
   'A secret room! Grab the kobo. Stand under the rope to go back up.': 'Secret room! Use the rope to go up.',
-  'Garri parcel! Your shield will be on when the Go-Slow Hall fight starts.': 'Garri parcel! Shield for the hall.',
   'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
   'General Go-Slow is jamming the hall! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
   'PEEP! High honks fly high. Stay low on the floor.': 'PEEP! High honks: stay low.',
