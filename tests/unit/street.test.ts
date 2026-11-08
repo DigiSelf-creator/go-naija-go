@@ -33,7 +33,7 @@ describe('schema 2 loader', () => {
   it('reads lagos-1 with every new field', () => {
     expect(L1).toMatchObject({ id: 'lagos-1', schema: 2, manual: true, theme: 'morning', walkSpeed: 90, runSpeed: 156, cornWalkSpeed: 120, cornSpeed: 228, startWall: 20 });
     expect(L1.end).toEqual({ x: 10600, wall: 10800 });
-    expect(L1.arena).toBeNull();
+    expect(L1.hall).toBeNull();
     expect(L1.boss).toBeNull();
     expect(L1.crates).toHaveLength(4);
     expect(L1.crates[2]).toEqual({ x: 6500, bottomY: 204, contents: 'garri' });
@@ -48,9 +48,10 @@ describe('schema 2 loader', () => {
     expect(l3.hazards.some((z) => z.kind === 'drum')).toBe(true);
   });
 
-  it('says clearly that rooms and halls are not played yet', () => {
+  it('says clearly that a room is not a level; a hall is one (piece M2)', () => {
     expect(() => parseLevel(structuredClone(lagosWell))).toThrow(LevelError);
-    expect(() => parseLevel(structuredClone(lagosHall))).toThrow(/not played yet/);
+    expect(() => parseLevel(structuredClone(lagosWell))).toThrow(/read as well rooms/);
+    expect(parseLevel(structuredClone(lagosHall)).hall).not.toBeNull();
   });
 
   it('gives a clear message for a broken street', () => {
