@@ -372,6 +372,8 @@ function startGame(): void {
         safe: r.safe,
         power: { ...r.power },
         hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, mode: z.mode })),
+        /** Kobo picked up one by one (not from crates or smashes). */
+        coinsTaken: r.coins.reduce((n, c) => n + (c.taken ? 1 : 0), 0),
         crates: r.crates.map((c) => ({
           x: c.x,
           bottomY: c.bottomY,
@@ -397,6 +399,7 @@ function startGame(): void {
         turnRightX: level.arena?.turnRightX ?? Infinity,
         groundY: level.groundY,
         lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
+        platforms: level.terrain.platforms.map((p) => ({ ...p })),
       };
     },
     get toast() {
@@ -573,6 +576,7 @@ declare global {
         readonly safe: number;
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
+        readonly coinsTaken: number;
         /** Hanging crates (S2.4): open or full, swing in radians, the food popped out of a food crate. */
         readonly crates: readonly {
           readonly x: number;
@@ -596,6 +600,8 @@ declare global {
         readonly turnRightX: number;
         readonly groundY: number;
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
+        /** Roofs and other one-way platforms: top y, from x to x + w. */
+        readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
       };
       readonly toast: string;
       /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
