@@ -96,11 +96,82 @@ export const OUTFITS: readonly OutfitOption[] = [
   { id: 'kaftan', label: 'Kaftan', a: '#2f5d8a', b: '#e9e1cf', legs: '#e9e1cf', shoes: '#5b3a22' },
 ];
 
-/** Indices into SKINS, HAIRS, OUTFITS (the shape saved under `gidi-look`). */
+export interface BodyOption {
+  id: 'male' | 'female';
+  label: string;
+}
+
+export interface AgeOption {
+  id: 'teen' | 'adult' | 'elder';
+  label: string;
+}
+
+/** "Male or female" row (design.md S2.3). Saved as `body`: 0 Male, 1 Female. */
+export const BODIES: readonly BodyOption[] = [
+  { id: 'male', label: 'Male' },
+  { id: 'female', label: 'Female' },
+];
+
+/** "Age" row (design.md S2.3). Saved as `age`: 0 Teen, 1 Adult, 2 Elder. */
+export const AGES: readonly AgeOption[] = [
+  { id: 'teen', label: 'Teen' },
+  { id: 'adult', label: 'Adult' },
+  { id: 'elder', label: 'Elder' },
+];
+
+/**
+ * Indices into SKINS, HAIRS, OUTFITS, BODIES, AGES (the shape saved under `gidi-look`).
+ * `body` and `age` came in slice 2; a look without them draws as an Adult, Female
+ * if the hair is Gele or Headscarf, else Male (see bodyOf, ageOf).
+ */
 export interface HeroLook {
   skin: number;
   hair: number;
   outfit: number;
+  body?: number;
+  age?: number;
+}
+
+/** The age a look without one draws as (Adult). */
+export const DEFAULT_AGE = 1;
+
+/** Body for a look saved before slice 2: Female if the hair is Gele or Headscarf, else Male. */
+export function defaultBody(hair: number): number {
+  const id = HAIRS[hair]?.id;
+  return id === 'gele' || id === 'headscarf' ? 1 : 0;
+}
+
+/**
+ * First looks (design.md S2.3 Defaults), as FIRST_LOOKS[body][age] = hair and outfit
+ * indices. Male: Low cut with School uniform / Green jersey / Agbada. Female: Braids
+ * with School uniform, Braids with Ankara, Gele with Ankara. Every hair and outfit
+ * stays open to every hero (Q20).
+ */
+export const FIRST_LOOKS: readonly (readonly { hair: number; outfit: number }[])[] = [
+  [
+    { hair: 0, outfit: 2 },
+    { hair: 0, outfit: 0 },
+    { hair: 0, outfit: 3 },
+  ],
+  [
+    { hair: 2, outfit: 2 },
+    { hair: 2, outfit: 1 },
+    { hair: 3, outfit: 1 },
+  ],
+];
+
+function isIndex(n: unknown, len: number): n is number {
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < len;
+}
+
+/** The look's body (0 Male, 1 Female). A missing or broken one follows the hair, as for a slice 1 save. */
+export function bodyOf(look: HeroLook): number {
+  return isIndex(look.body, BODIES.length) ? look.body : defaultBody(isIndex(look.hair, HAIRS.length) ? look.hair : 0);
+}
+
+/** The look's age (0 Teen, 1 Adult, 2 Elder). A missing or broken one is Adult. */
+export function ageOf(look: HeroLook): number {
+  return isIndex(look.age, AGES.length) ? look.age : DEFAULT_AGE;
 }
 
 export interface HeroPose {
@@ -146,11 +217,90 @@ export const WALK_STRIDE = 0.62;
 
 export const HERO_HEIGHT = 50;
 
-/** Keeps a saved look inside the lists (old or broken saves still draw). */
+/**
+ * The art box every hero drawing stays inside (u; feet centre at 0, 0; facing
+ * right), whatever the body, age, hair, outfit or pose. Effects round the hero
+ * (amala glow, corn speed lines, dust) are not counted. The gele is the top.
+ */
+export const HERO_ART_BOX = { left: -21, right: 20, top: -56.5, bottom: 3 } as const;
+
+/**
+ * Keeps a saved look inside the lists (old or broken saves still draw). `body` and
+ * `age` are kept (fixed if broken) only when the look has them, so a slice 1 look
+ * keeps its slice 1 shape.
+ */
 export function clampLook(look: HeroLook): HeroLook {
   const fix = (n: number, len: number): number => (Number.isInteger(n) && n >= 0 && n < len ? n : 0);
-  return { skin: fix(look.skin, SKINS.length), hair: fix(look.hair, HAIRS.length), outfit: fix(look.outfit, OUTFITS.length) };
+  const out: HeroLook = { skin: fix(look.skin, SKINS.length), hair: fix(look.hair, HAIRS.length), outfit: fix(look.outfit, OUTFITS.length) };
+  if (look.body !== undefined) out.body = isIndex(look.body, BODIES.length) ? look.body : defaultBody(out.hair);
+  if (look.age !== undefined) out.age = ageOf(look);
+  return out;
 }
+
+/**
+ * How a body is drawn (design.md S2.3). Every body has the same hitbox, moves and
+ * timings; only these drawing measures change. Worked out once, never per frame.
+ */
+interface Build {
+  /** Bone lengths: legs, arms, torso and neck (Teen 46 u tall, Elder 49, Adult 50). */
+  len: number;
+  /** Head size. */
+  head: number;
+  /** Torso width at the shoulders and at the hips (side view: chest to back). */
+  sw: number;
+  hw: number;
+  /** A gentle narrowing at the waist (Female), as a share of the width. */
+  waist: number;
+  /** Arm and leg thickness. */
+  limb: number;
+  /** Eye size. */
+  eye: number;
+  /** Rounder cheeks (Teen), 0 to 1. */
+  round: number;
+  /** Grey hair (Elder). */
+  grey: boolean;
+  /** Short, neat grey beard along the jaw and chin (Elder male). */
+  beard: boolean;
+  /** Two short smile lines at the outer eye corner (Elder). */
+  lines: boolean;
+  /** One small lash stroke at the outer corner of each eye (Female). */
+  lash: boolean;
+  /** Small round gold stud earrings (Female). */
+  studs: boolean;
+}
+
+const AGE_BUILDS = [
+  { len: 0.905, head: 0.96, w: 0.9, limb: 0.85, eye: 1.05, round: 1 },
+  { len: 1, head: 1, w: 1, limb: 1, eye: 1, round: 0 },
+  { len: 0.98, head: 1, w: 0.95, limb: 0.9, eye: 1, round: 0 },
+] as const;
+
+/** BUILDS[body * 3 + age]. */
+const BUILDS: readonly Build[] = [0, 1].flatMap((body) =>
+  AGE_BUILDS.map((a, age): Build => {
+    const female = body === 1;
+    const elder = age === 2;
+    return {
+      len: a.len,
+      head: a.head,
+      sw: a.w * (female ? 0.94 : 1),
+      hw: a.w * (female ? 1.06 : 1),
+      waist: female ? 0.06 : 0,
+      limb: a.limb,
+      eye: a.eye,
+      round: a.round,
+      grey: elder,
+      beard: elder && !female,
+      lines: elder,
+      lash: female,
+      studs: female,
+    };
+  }),
+);
+
+/** Grey hair for elders (design.md S2.3): base and shade. */
+const GREY = '#b9b4ac';
+const GREY_SHADE = '#8d877e';
 
 const TAU = Math.PI * 2;
 const HALF_PI = Math.PI / 2;
@@ -273,10 +423,10 @@ function loop8(keys: readonly number[], q: number): number {
   return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
 }
 
-function runRig(phase: number, big: boolean): Rig {
+function runRig(phase: number, big: boolean, reach: number): Rig {
   const s = big ? 1.15 : 1;
   const legs = [phase + 0.5, phase];
-  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * s) as [number, number];
+  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * s * reach) as [number, number];
   const knee = legs.map((q) => loop8(RUN_KNEE, q)) as [number, number];
   const foot = legs.map((q) => loop8(RUN_FOOT, q)) as [number, number];
   // Each arm swings against the leg on its own side, elbows bent, more when forward.
@@ -286,9 +436,9 @@ function runRig(phase: number, big: boolean): Rig {
 }
 
 /** Walk: the run's keys made smaller and calmer, back nearly straight, small arm swing. */
-function walkRig(phase: number): Rig {
+function walkRig(phase: number, reach: number): Rig {
   const legs = [phase + 0.5, phase];
-  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * 0.62) as [number, number];
+  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * 0.62 * reach) as [number, number];
   const knee = legs.map((q) => loop8(RUN_KNEE, q) * 0.42) as [number, number];
   const foot = legs.map((q) => loop8(RUN_FOOT, q) * 0.35) as [number, number];
   const arm = thigh.map((a) => -a * 0.8 + 0.04) as [number, number];
@@ -305,6 +455,8 @@ const ROPE: Rig = { thigh: [0.12, 0.3], knee: [0.3, 0.5], foot: [0.35, 0.45], ar
 const JUMP: Rig = { thigh: [0.55, 1.3], knee: [1.9, 2.1], foot: [0.8, 0.7], arm: [2.75, 1.7], elbow: [0.4, 0.8], lean: 0.06, lift: 0, tilt: -0.12 };
 const FALL: Rig = { thigh: [-0.3, 0.42], knee: [0.95, 0.3], foot: [0.7, 0.2], arm: [-1.95, 1.75], elbow: [-0.45, 0.3], lean: -0.02, lift: 0, tilt: 0.05 };
 const CROUCH: Rig = { thigh: [0.5, 0.95], knee: [1.25, 1.6], foot: [0, -0.05], arm: [-0.5, 0.9], elbow: [0.7, 0.9], lean: 0.34, lift: 0, tilt: 0.12 };
+/** The same landing squash with the back straighter and the head up, for elders (never bent over). */
+const CROUCH_TALL: Rig = { ...CROUCH, lean: 0.14, tilt: 0 };
 
 function standRig(t: number): Rig {
   const sway = Math.sin(t * 1.3) * 0.04;
@@ -330,7 +482,7 @@ function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
-function rigFor(pose: HeroPose, t: number): Rig {
+function rigFor(pose: HeroPose, t: number, reach: number, upright: boolean): Rig {
   let r: Rig;
   if (pose.rope) return ROPE;
   if (pose.inAir) {
@@ -340,12 +492,12 @@ function rigFor(pose: HeroPose, t: number): Rig {
     r = standRig(t);
   } else {
     const ph = Number.isFinite(pose.phase) ? pose.phase : 0;
-    r = pose.gait === 'walk' ? walkRig(ph) : runRig(ph, pose.glow);
+    r = pose.gait === 'walk' ? walkRig(ph, reach) : runRig(ph, pose.glow, reach);
     const skid = typeof pose.skid === 'number' && Number.isFinite(pose.skid) ? clamp01(pose.skid) : 0;
     if (skid > 0) r = mix(r, SKID, skid);
   }
   const land = !pose.inAir && typeof pose.land === 'number' && Number.isFinite(pose.land) ? clamp01(pose.land) : 0;
-  if (land > 0) r = mix(r, CROUCH, land * 0.85);
+  if (land > 0) r = mix(r, upright ? CROUCH_TALL : CROUCH, land * 0.85);
   return r;
 }
 
@@ -358,19 +510,20 @@ interface LegPts {
 }
 
 /** Knee and ankle positions relative to the hip joint. */
-function legPts(thigh: number, knee: number, foot: number): LegPts {
-  const kx = Math.sin(thigh) * THIGH;
-  const ky = Math.cos(thigh) * THIGH;
+function legPts(thigh: number, knee: number, foot: number, len: number): LegPts {
+  const kx = Math.sin(thigh) * THIGH * len;
+  const ky = Math.cos(thigh) * THIGH * len;
   const s = thigh - knee;
-  return { kx, ky, ax: kx + Math.sin(s) * SHIN, ay: ky + Math.cos(s) * SHIN, footA: foot };
+  return { kx, ky, ax: kx + Math.sin(s) * SHIN * len, ay: ky + Math.cos(s) * SHIN * len, footA: foot };
 }
 
 /* --------------------------------------------------------------------- parts */
 
-function drawShoe(g: CanvasRenderingContext2D, x: number, y: number, a: number, colour: string, sole: string): void {
+function drawShoe(g: CanvasRenderingContext2D, x: number, y: number, a: number, colour: string, sole: string, s: number): void {
   g.save();
   g.translate(x, y);
   g.rotate(a);
+  if (s !== 1) g.scale(s, s);
   g.beginPath();
   g.moveTo(-1.8, -1.6);
   g.quadraticCurveTo(0.6, -2, 1.6, -0.9);
@@ -391,22 +544,23 @@ function drawShoe(g: CanvasRenderingContext2D, x: number, y: number, a: number, 
   g.restore();
 }
 
-function drawLeg(g: CanvasRenderingContext2D, hx: number, hy: number, p: LegPts, o: OutfitOption, skin: string, isFar: boolean): void {
+function drawLeg(g: CanvasRenderingContext2D, hx: number, hy: number, p: LegPts, o: OutfitOption, skin: string, isFar: boolean, b: Build): void {
   const c = (col: string): string => (isFar ? far(col) : col);
   const kx = hx + p.kx;
   const ky = hy + p.ky;
   const ax = hx + p.ax;
   const ay = hy + p.ay;
   const bare = o.id === 'jersey' || o.id === 'school';
-  limb(g, hx, hy, 2.75, kx, ky, 2.1, ax, ay, 1.6, c(bare ? skin : o.legs));
+  const w = b.limb;
+  limb(g, hx, hy, 2.75 * w, kx, ky, 2.1 * w, ax, ay, 1.6 * w, c(bare ? skin : o.legs));
   if (bare) {
-    // Shorts over the thigh, then a sock up the shin
+    // Shorts over the thigh (as wide as the hips at the top), then a sock up the shin
     const sx = hx + p.kx * 0.62;
     const sy = hy + p.ky * 0.62;
-    patch(g, hx, hy, 3.1, sx, sy, 2.75, c(o.legs));
+    patch(g, hx, hy, 3.1 * b.hw, sx, sy, 2.75 * w, c(o.legs));
     const ox = kx + (ax - kx) * 0.4;
     const oy = ky + (ay - ky) * 0.4;
-    patch(g, ox, oy, 1.85, ax, ay, 1.75, c(WHITE));
+    patch(g, ox, oy, 1.85 * w, ax, ay, 1.75 * w, c(WHITE));
     if (o.id === 'jersey') {
       // Green band round the top of the sock
       g.strokeStyle = c(o.a);
@@ -417,39 +571,55 @@ function drawLeg(g: CanvasRenderingContext2D, hx: number, hy: number, p: LegPts,
       g.stroke();
     }
   }
-  drawShoe(g, ax, ay, p.footA, c(o.shoes), o.shoes === '#1d1a14' || o.shoes === '#3b2a20' ? '#5c5048' : '#d8d2c4');
+  drawShoe(g, ax, ay, p.footA, c(o.shoes), o.shoes === '#1d1a14' || o.shoes === '#3b2a20' ? '#5c5048' : '#d8d2c4', b.len);
 }
 
-/** The torso, in the torso frame (origin at the hips, up is -y). */
-function drawTorso(g: CanvasRenderingContext2D, o: OutfitOption, sway: number, run: number): void {
+/**
+ * The torso, in the torso frame (origin at the hips, up is -y). Points are written
+ * for the Adult build and placed through the body's widths and length: the width
+ * blends from the shoulders (top) to the hips (bottom), with a gentle waist if any.
+ */
+function drawTorso(g: CanvasRenderingContext2D, o: OutfitOption, sway: number, run: number, b: Build): void {
+  const ts = b.len;
+  const waist = o.id === 'agbada' || o.id === 'kaftan' ? 0 : b.waist;
+  const wAt = (y: number): number => {
+    const k = clamp01((y + 13) / 14);
+    const w = b.sw + (b.hw - b.sw) * k;
+    return waist === 0 ? w : w * (1 - waist * Math.max(0, 1 - Math.abs(y + 5) / 5));
+  };
+  const M = (x: number, y: number): void => g.moveTo(x * wAt(y), y * ts);
+  const L = (x: number, y: number): void => g.lineTo(x * wAt(y), y * ts);
+  const Q = (cx: number, cy: number, x: number, y: number): void => g.quadraticCurveTo(cx * wAt(cy), cy * ts, x * wAt(y), y * ts);
+  const D = (x: number, y: number, r: number, c: string): void => dot(g, x * wAt(y), y * ts, r, c);
+
   g.beginPath();
   if (o.id === 'agbada') {
     // Wide flowing robe from the shoulders to below the knees; the hem trails when running.
     const trail = -run * 2.2 + sway;
-    g.moveTo(-3.2, -13.8);
-    g.quadraticCurveTo(-7.2, -10, -7.6 + trail, 2);
-    g.quadraticCurveTo(-8.6 + trail, 8, -8.4 + trail * 1.4, 14.6);
-    g.quadraticCurveTo(0 + trail, 15.8, 8.2 + trail * 0.8, 13.8);
-    g.quadraticCurveTo(8.4, 6, 6.2, -2);
-    g.quadraticCurveTo(5.6, -11, 1.8, -14.2);
+    M(-3.2, -13.8);
+    Q(-7.2, -10, -7.6 + trail, 2);
+    Q(-8.6 + trail, 8, -8.4 + trail * 1.4, 14.6);
+    Q(0 + trail, 15.8, 8.2 + trail * 0.8, 13.8);
+    Q(8.4, 6, 6.2, -2);
+    Q(5.6, -11, 1.8, -14.2);
     g.closePath();
   } else {
     const long = o.id === 'kaftan';
     const trail = long ? -run * 1.2 + sway * 0.6 : 0;
-    g.moveTo(-3.6, -13.4);
-    g.quadraticCurveTo(-1.4, -14.6, 1.4, -14.3);
-    g.quadraticCurveTo(4.8, -13.6, 4.8, -9.6);
-    g.quadraticCurveTo(4.7, -6.4, 3.7, -4.6);
+    M(-3.6, -13.4);
+    Q(-1.4, -14.6, 1.4, -14.3);
+    Q(4.8, -13.6, 4.8, -9.6);
+    Q(4.7, -6.4, 3.7, -4.6);
     if (long) {
-      g.quadraticCurveTo(5.4, 2, 5.6 + trail, 11.6);
-      g.quadraticCurveTo(0 + trail, 12.6, -5.4 + trail, 11.4);
-      g.quadraticCurveTo(-5.2, 2, -3.8, -6);
+      Q(5.4, 2, 5.6 + trail, 11.6);
+      Q(0 + trail, 12.6, -5.4 + trail, 11.4);
+      Q(-5.2, 2, -3.8, -6);
     } else {
-      g.quadraticCurveTo(4.4, -1.5, 4.1, 1.2);
-      g.quadraticCurveTo(0, 2.2, -4.1, 1);
-      g.quadraticCurveTo(-4, -2.5, -3.6, -6);
+      Q(4.4, -1.5, 4.1, 1.2);
+      Q(0, 2.2, -4.1, 1);
+      Q(-4, -2.5, -3.6, -6);
     }
-    g.quadraticCurveTo(-4.9, -10, -3.6, -13.4);
+    Q(-4.9, -10, -3.6, -13.4);
     g.closePath();
   }
   g.fillStyle = o.a;
@@ -464,24 +634,24 @@ function drawTorso(g: CanvasRenderingContext2D, o: OutfitOption, sway: number, r
       g.strokeStyle = o.b;
       g.lineWidth = 1.1;
       g.beginPath();
-      g.moveTo(0.4, -14.2);
-      g.lineTo(2.4, -11.6);
-      g.lineTo(3.9, -13.7);
-      g.moveTo(-1.4, -11.5);
-      g.lineTo(-1.6, 0.6);
+      M(0.4, -14.2);
+      L(2.4, -11.6);
+      L(3.9, -13.7);
+      M(-1.4, -11.5);
+      L(-1.6, 0.6);
       g.stroke();
       break;
     case 'ankara':
       // Bold wax-print circles with a gold centre, and a blue hem band
       for (const [x, y] of [[1.6, -11], [-1.6, -7.4], [2.2, -4.6], [-2.2, -1.6], [2.6, -0.4], [-1.4, -12.2]] as const) {
-        dot(g, x, y, 1.45, o.b);
-        dot(g, x, y, 0.6, '#f2b300');
+        D(x, y, 1.45, o.b);
+        D(x, y, 0.6, '#f2b300');
       }
       g.strokeStyle = o.b;
       g.lineWidth = 1.2;
       g.beginPath();
-      g.moveTo(-3.8, 0.4);
-      g.quadraticCurveTo(0, 1.5, 3.9, 0.6);
+      M(-3.8, 0.4);
+      Q(0, 1.5, 3.9, 0.6);
       g.stroke();
       break;
     case 'school':
@@ -490,40 +660,40 @@ function drawTorso(g: CanvasRenderingContext2D, o: OutfitOption, sway: number, r
       g.strokeStyle = INK;
       g.lineWidth = 0.7;
       g.beginPath();
-      g.moveTo(0.6, -14.3);
-      g.lineTo(3.6, -11.8);
-      g.lineTo(4.2, -13.9);
+      M(0.6, -14.3);
+      L(3.6, -11.8);
+      L(4.2, -13.9);
       g.closePath();
       g.fill();
       g.stroke();
       g.fillStyle = o.b;
       g.beginPath();
-      g.moveTo(3.3, -13.2);
-      g.lineTo(4.3, -12.8);
-      g.lineTo(4.6, -6.2);
-      g.lineTo(3.8, -5.2);
-      g.lineTo(3.2, -6.4);
+      M(3.3, -13.2);
+      L(4.3, -12.8);
+      L(4.6, -6.2);
+      L(3.8, -5.2);
+      L(3.2, -6.4);
       g.closePath();
       g.fill();
       g.stroke();
       g.fillStyle = o.b;
-      g.fillRect(-4, -0.6, 8.1, 1.3);
+      g.fillRect(-4 * wAt(0), -0.6 * ts, 8.1 * wAt(0), 1.3 * ts);
       break;
     case 'agbada':
       // Gold embroidery: round the neck, down the chest, and along the hem
       g.strokeStyle = o.b;
       g.lineWidth = 1.2;
       g.beginPath();
-      g.moveTo(-2.6, -13.4);
-      g.quadraticCurveTo(0.8, -10.6, 3.2, -13.6);
-      g.moveTo(1.2, -11.4);
-      g.lineTo(2.4, -3);
+      M(-2.6, -13.4);
+      Q(0.8, -10.6, 3.2, -13.6);
+      M(1.2, -11.4);
+      L(2.4, -3);
       g.stroke();
       // Hem band
       g.lineWidth = 1;
       g.beginPath();
-      g.moveTo(-7.8 - run * 2.6 + sway, 12.2);
-      g.quadraticCurveTo(0 - run * 2.2 + sway, 13.4, 7.8 - run * 1.8 + sway * 0.8, 11.4);
+      M(-7.8 - run * 2.6 + sway, 12.2);
+      Q(0 - run * 2.2 + sway, 13.4, 7.8 - run * 1.8 + sway * 0.8, 11.4);
       g.stroke();
       break;
     case 'kaftan':
@@ -531,52 +701,53 @@ function drawTorso(g: CanvasRenderingContext2D, o: OutfitOption, sway: number, r
       g.strokeStyle = o.b;
       g.lineWidth = 1.1;
       g.beginPath();
-      g.moveTo(-2.4, -13.6);
-      g.quadraticCurveTo(1, -11.6, 3.4, -13.6);
-      g.moveTo(2.8, -12.6);
-      g.lineTo(3.4, -4.4);
+      M(-2.4, -13.6);
+      Q(1, -11.6, 3.4, -13.6);
+      M(2.8, -12.6);
+      L(3.4, -4.4);
       g.stroke();
-      for (let y = -11; y <= -5; y += 2) dot(g, 4, y, 0.45, o.b);
+      for (let y = -11; y <= -5; y += 2) D(4, y, 0.45, o.b);
       break;
   }
 }
 
 /** One arm in the torso frame. Returns nothing; draws sleeve, hand and any drape. */
-function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: string, arm: number, elbow: number, isFar: boolean): void {
+function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: string, arm: number, elbow: number, isFar: boolean, b: Build): void {
   const c = (col: string): string => (isFar ? far(col) : col);
+  const w = b.limb;
   const sx = isFar ? -0.6 : 0.6;
-  const sy = SHOULDER_Y;
-  const ex = sx + Math.sin(arm) * UPPER_ARM;
-  const ey = sy + Math.cos(arm) * UPPER_ARM;
+  const sy = SHOULDER_Y * b.len;
+  const ex = sx + Math.sin(arm) * UPPER_ARM * b.len;
+  const ey = sy + Math.cos(arm) * UPPER_ARM * b.len;
   const f = arm + elbow;
-  const wx = ex + Math.sin(f) * FOREARM;
-  const wy = ey + Math.cos(f) * FOREARM;
+  const wx = ex + Math.sin(f) * FOREARM * b.len;
+  const wy = ey + Math.cos(f) * FOREARM * b.len;
   const shortSleeve = o.id === 'jersey' || o.id === 'school';
-  limb(g, sx, sy, 2.1, ex, ey, 1.65, wx, wy, 1.35, c(shortSleeve ? skin : o.a));
+  limb(g, sx, sy, 2.1 * w, ex, ey, 1.65 * w, wx, wy, 1.35 * w, c(shortSleeve ? skin : o.a));
   if (shortSleeve) {
-    patch(g, sx, sy, 2.5, sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5, 2.15, c(o.a));
+    patch(g, sx, sy, 2.5 * w, sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5, 2.15 * w, c(o.a));
     if (o.id === 'jersey') {
       g.strokeStyle = c(o.b);
       g.lineWidth = 0.9;
       g.beginPath();
       const bx = sx + (ex - sx) * 0.44;
       const by = sy + (ey - sy) * 0.44;
-      const nx = Math.cos(arm) * 1.9;
-      const ny = -Math.sin(arm) * 1.9;
+      const nx = Math.cos(arm) * 1.9 * w;
+      const ny = -Math.sin(arm) * 1.9 * w;
       g.moveTo(bx - nx, by - ny);
       g.lineTo(bx + nx, by + ny);
       g.stroke();
     }
   } else if (o.id === 'ankara') {
-    patch(g, ex + (wx - ex) * 0.72, ey + (wy - ey) * 0.72, 1.55, wx, wy, 1.5, c(o.b));
+    patch(g, ex + (wx - ex) * 0.72, ey + (wy - ey) * 0.72, 1.55 * w, wx, wy, 1.5 * w, c(o.b));
   } else if (o.id === 'kaftan') {
-    patch(g, ex + (wx - ex) * 0.75, ey + (wy - ey) * 0.75, 1.5, wx, wy, 1.45, c(o.b));
+    patch(g, ex + (wx - ex) * 0.75, ey + (wy - ey) * 0.75, 1.5 * w, wx, wy, 1.45 * w, c(o.b));
   }
   if (o.id === 'agbada') {
     // The wide agbada sleeve: a big panel hanging from the whole arm.
     const mx = ex + (wx - ex) * 0.55;
     const my = ey + (wy - ey) * 0.55;
-    const low = Math.max(my, sy + 4) + 6;
+    const low = Math.max(my, sy + 4 * b.len) + 6 * b.len;
     g.beginPath();
     g.moveTo(sx - 2.2, sy - 1.8);
     g.quadraticCurveTo(ex + Math.cos(arm) * 2.6, ey - Math.sin(arm) * 2.6, mx + Math.cos(f) * 1.8, my - Math.sin(f) * 1.8);
@@ -598,9 +769,10 @@ function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: string, arm
     g.quadraticCurveTo(mx - 0.4, low - 0.8, (sx + mx) / 2 - 1.5, low);
     g.stroke();
   }
-  // Hand: a small rounded fist
+  // Hand: a small rounded fist (shrinks half as much as the arm, so it still reads)
+  const hand = 0.5 + 0.5 * w;
   g.beginPath();
-  g.arc(wx + Math.sin(f) * 0.9, wy + Math.cos(f) * 0.9, 1.6, 0, TAU);
+  g.arc(wx + Math.sin(f) * 0.9 * hand, wy + Math.cos(f) * 0.9 * hand, 1.6 * hand, 0, TAU);
   g.fillStyle = c(skin);
   g.fill();
   g.strokeStyle = INK;
@@ -616,7 +788,8 @@ const CY = -0.6;
 const RX = 5.3;
 const RY = 5.6;
 
-function headPath(g: CanvasRenderingContext2D): void {
+/** The head outline. `round` (0 to 1) gives the softer, fuller cheek and jaw of a teen. */
+function headPath(g: CanvasRenderingContext2D, round: number): void {
   g.beginPath();
   g.moveTo(-2.6, 4.2);
   g.ellipse(CX, CY, RX, RY, 0, 2.3, -0.55);
@@ -625,10 +798,87 @@ function headPath(g: CanvasRenderingContext2D): void {
   g.quadraticCurveTo(5.4, 0.1, 6.3, 1.3);
   g.quadraticCurveTo(6.2, 1.9, 5.2, 2);
   g.quadraticCurveTo(5.5, 2.6, 5.2, 3.2);
-  g.quadraticCurveTo(5.4, 4.4, 4.5, 5);
-  g.quadraticCurveTo(3.4, 5.8, 1.9, 5.5);
-  g.quadraticCurveTo(0, 5.1, -1, 3.6);
+  g.quadraticCurveTo(5.4 + round * 0.1, 4.4 + round * 0.25, 4.5 + round * 0.1, 5 + round * 0.1);
+  g.quadraticCurveTo(3.4 + round * 0.3, 5.8 + round * 0.35, 1.9, 5.5 + round * 0.25);
+  g.quadraticCurveTo(0 - round * 0.5, 5.1 + round * 0.45, -1, 3.6);
   g.closePath();
+}
+
+/**
+ * Elder male: a short, neat grey beard along the jaw and chin, joining the
+ * sideburn in front of the ear. It stays clear of the lips and the smile line.
+ */
+function drawBeard(g: CanvasRenderingContext2D): void {
+  g.beginPath();
+  g.moveTo(0.5, -0.1);
+  g.quadraticCurveTo(-0.55, 2.4, -0.55, 3.9);
+  g.quadraticCurveTo(0.3, 5.75, 2, 5.95);
+  g.quadraticCurveTo(3.7, 6.25, 4.75, 5.3);
+  g.quadraticCurveTo(5.6, 4.6, 5.35, 3.7);
+  g.quadraticCurveTo(4.7, 4.5, 3.7, 4.45);
+  g.quadraticCurveTo(2, 4.6, 1.15, 3.4);
+  g.quadraticCurveTo(0.85, 1.6, 1.15, 0);
+  g.closePath();
+  g.fillStyle = GREY;
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.5;
+  g.stroke();
+  // A few short strokes of texture
+  g.strokeStyle = GREY_SHADE;
+  g.lineWidth = 0.35;
+  g.beginPath();
+  g.moveTo(0.2, 3.3);
+  g.lineTo(0.55, 4.3);
+  g.moveTo(2.2, 5.1);
+  g.lineTo(2.5, 5.6);
+  g.moveTo(3.8, 5);
+  g.lineTo(4, 5.5);
+  g.stroke();
+}
+
+/**
+ * Elder under a gele or headscarf: a little grey shows at the temple, in front of
+ * the ear. Under a gele it is drawn before the face and the gele, which covers its
+ * top. A headscarf comes further forward, so there a small lock is drawn after the
+ * scarf, peeping out below its front edge (and below the lash).
+ */
+function drawGreyTemple(g: CanvasRenderingContext2D, scarf: boolean): void {
+  g.beginPath();
+  if (scarf) {
+    g.moveTo(1.8, -0.75);
+    g.quadraticCurveTo(2.05, 0.6, 1.6, 1.7);
+    g.quadraticCurveTo(0.9, 0.6, 0.85, -0.5);
+  } else {
+    g.moveTo(1.9, -3.2);
+    g.quadraticCurveTo(1.75, -0.9, 1.1, 0.55);
+    g.quadraticCurveTo(0.5, -0.5, 0.3, -3.2);
+  }
+  g.closePath();
+  g.fillStyle = GREY;
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.4;
+  g.stroke();
+  if (!scarf) {
+    g.strokeStyle = GREY_SHADE;
+    g.lineWidth = 0.3;
+    g.beginPath();
+    g.moveTo(1.3, -1.6);
+    g.quadraticCurveTo(1.2, -0.6, 1, 0);
+    g.stroke();
+  }
+}
+
+/** Small round gold stud on the ear lobe. */
+function drawStud(g: CanvasRenderingContext2D): void {
+  g.beginPath();
+  g.arc(-0.75, 2.45, 0.6, 0, TAU);
+  g.fillStyle = '#f2b300';
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.35;
+  g.stroke();
 }
 
 function drawEar(g: CanvasRenderingContext2D, skin: string, shade: string): void {
@@ -682,34 +932,66 @@ function blinkPath(g: CanvasRenderingContext2D): void {
   g.quadraticCurveTo(4.65, 0.25, 5, -0.2);
 }
 
-function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean): void {
+function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean, b: Build): void {
   const f = skin.face;
+  const e = b.eye;
   g.lineCap = 'round';
   // Eyes: the near eye is a little bigger than the far one (three-quarter view).
   if (blink) {
     g.beginPath();
     blinkPath(g);
+    if (b.lash) {
+      // One small lash at the outer end of each closed eye
+      g.moveTo(2.1, -0.2);
+      g.lineTo(1.6, -0.45);
+      g.moveTo(5, -0.2);
+      g.lineTo(5.45, -0.45);
+    }
     g.strokeStyle = f.line;
     g.lineWidth = 0.7;
     g.stroke();
   } else {
     g.fillStyle = WHITE;
     g.beginPath();
-    g.ellipse(2.85, -0.45, 0.8, 1.05, 0, 0, TAU);
-    g.moveTo(5.05, -0.45);
-    g.ellipse(4.65, -0.45, 0.4, 0.95, 0, 0, TAU);
+    g.ellipse(2.85, -0.45, 0.8 * e, 1.05 * e, 0, 0, TAU);
+    g.moveTo(4.65 + 0.4 * e, -0.45);
+    g.ellipse(4.65, -0.45, 0.4 * e, 0.95 * e, 0, 0, TAU);
     g.fill();
     g.strokeStyle = INK;
     g.lineWidth = 0.45;
     g.stroke();
     g.fillStyle = INK;
     g.beginPath();
-    g.arc(3.15, -0.35, 0.55, 0, TAU);
-    g.moveTo(5.15, -0.35);
-    g.arc(4.8, -0.35, 0.35, 0, TAU);
+    g.arc(3.15, -0.35, 0.55 * e, 0, TAU);
+    g.moveTo(4.8 + 0.35 * e, -0.35);
+    g.arc(4.8, -0.35, 0.35 * e, 0, TAU);
     g.fill();
     // Tiny catch-light
     dot(g, 3.3, -0.55, 0.18, WHITE);
+    if (b.lash) {
+      // One small lash stroke at the outer corner of each eye
+      g.beginPath();
+      // Near eye: out from the upper back corner, below the brow's end.
+      g.moveTo(2.85 - 0.7 * e, -0.45 - 0.45 * e);
+      g.quadraticCurveTo(1.85 - 0.3 * e, -0.45 - 0.45 * e, 1.45 - 0.3 * e, -0.45 - 0.75 * e);
+      // Far eye: a small flick past the face outline at the brow ridge.
+      g.moveTo(5.05, -0.45 - 0.75 * e);
+      g.quadraticCurveTo(5.55, -0.45 - 0.8 * e, 5.85, -0.45 - 1.2 * e);
+      g.strokeStyle = INK;
+      g.lineWidth = 0.5;
+      g.stroke();
+    }
+  }
+  if (b.lines) {
+    // Elder: two short smile lines fanning from the outer corner of the near eye
+    g.beginPath();
+    g.moveTo(1.75, -0.75);
+    g.lineTo(1.25, -1.05);
+    g.moveTo(1.75, -0.15);
+    g.lineTo(1.25, 0);
+    g.strokeStyle = tone(skin.shade, 0.72);
+    g.lineWidth = 0.4;
+    g.stroke();
   }
   drawBrows(g, f);
   // Nostril and a soft shade under the nose
@@ -898,7 +1180,7 @@ function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): vo
       if (h.id !== 'afro') g.stroke();
       if (h.id === 'braids') {
         // Cornrows running from the hairline to the back of the head
-        g.strokeStyle = '#6b5242';
+        g.strokeStyle = h.colour === GREY ? GREY_SHADE : '#6b5242';
         g.lineWidth = 0.55;
         g.beginPath();
         for (const k of [0.82, 0.62, 0.42]) {
@@ -987,15 +1269,22 @@ function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): vo
   }
 }
 
+/** Elder hair: Low cut, Afro and Braids turn grey (braid beads keep their colours). Gele and Headscarf keep theirs. */
+const GREY_HAIRS: readonly HairOption[] = HAIRS.map((h) =>
+  h.id === 'lowcut' || h.id === 'afro' ? { ...h, colour: GREY, accent: GREY_SHADE } : h.id === 'braids' ? { ...h, colour: GREY } : h,
+);
+
 /**
  * Draws the hero with feet centred on (0, 0). Translate first:
  *   g.save(); g.translate(x, y); drawHero(g, look, pose); g.restore();
- * No gradients or shadowBlur, so it is cheap every frame.
+ * No gradients or shadowBlur, so it is cheap every frame. Every body and age has
+ * the same hitbox and moves; only the drawing measures change (Build).
  */
 export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose): void {
   const l = clampLook(look);
   const skin = SKINS[l.skin] ?? SKINS[0]!;
-  const hair = HAIRS[l.hair] ?? HAIRS[0]!;
+  const b = BUILDS[bodyOf(look) * AGES.length + ageOf(look)] ?? BUILDS[DEFAULT_AGE]!;
+  const hair = (b.grey ? GREY_HAIRS : HAIRS)[l.hair] ?? HAIRS[0]!;
   const outfit = OUTFITS[l.outfit] ?? OUTFITS[0]!;
   const t = typeof pose.time === 'number' && Number.isFinite(pose.time) ? pose.time : 0;
   const running = !pose.inAir && !pose.standing;
@@ -1041,18 +1330,19 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   const land = !pose.inAir && typeof pose.land === 'number' && Number.isFinite(pose.land) ? clamp01(pose.land) : 0;
   if (land > 0) g.scale(1 + land * 0.08, 1 - land * 0.1);
 
-  const r = rigFor(pose, t);
-  const legs = [legPts(r.thigh[0], r.knee[0], r.foot[0]), legPts(r.thigh[1], r.knee[1], r.foot[1])] as const;
+  // Shorter legs take slightly bigger swings, so the feet still keep pace with the ground.
+  const r = rigFor(pose, t, 1 / b.len, b.grey);
+  const legs = [legPts(r.thigh[0], r.knee[0], r.foot[0], b.len), legPts(r.thigh[1], r.knee[1], r.foot[1], b.len)] as const;
   // Plant the lower foot on the ground, then add flight or jump height.
   const reach = Math.max(legs[0].ay, legs[1].ay);
-  const hipY = -(reach + ANKLE) - r.lift;
+  const hipY = -(reach + ANKLE * b.len) - r.lift * b.len;
   const breathe = pose.standing ? Math.sin(t * 2.2) * 0.35 : 0;
   // Cloth and braid swing: follows the stride, lifts in the air.
   const swing = running ? Math.sin(phase * TAU * 2) * 0.8 + 1.2 : pose.inAir ? 2 : Math.sin(t * 1.3) * 0.3;
   const sway = running ? Math.sin(phase * TAU * 2 + 1) * 0.8 : pose.inAir ? -1.2 : Math.sin(t * 1.3) * 0.3;
 
-  const headX = 1.2;
-  const headY = -TORSO - 6.2 + breathe;
+  const headX = 1.2 * b.sw;
+  const headY = (-TORSO - 6.2) * b.len + breathe;
 
   const torsoFrame = (): void => {
     g.translate(0, hipY);
@@ -1062,6 +1352,7 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
     torsoFrame();
     g.translate(headX, headY);
     g.rotate(r.tilt - r.lean * 0.5);
+    if (b.head !== 1) g.scale(b.head, b.head);
   };
 
   // 1. Hair behind (afro mass, braids, scarf tails)
@@ -1074,23 +1365,24 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.save();
   torsoFrame();
   g.translate(0, breathe);
-  drawArm(g, outfit, skin.base, r.arm[0], r.elbow[0], true);
+  drawArm(g, outfit, skin.base, r.arm[0], r.elbow[0], true, b);
   g.restore();
 
   // 3. Legs, far then near
-  drawLeg(g, -0.7, hipY, legs[0], outfit, skin.base, true);
-  drawLeg(g, 0.7, hipY, legs[1], outfit, skin.base, false);
+  drawLeg(g, -0.7, hipY, legs[0], outfit, skin.base, true, b);
+  drawLeg(g, 0.7, hipY, legs[1], outfit, skin.base, false, b);
 
   // 4. Torso, neck, head
   g.save();
   torsoFrame();
   g.save();
   g.translate(0, breathe * 0.5);
-  drawTorso(g, outfit, sway, running ? 1 : 0);
+  drawTorso(g, outfit, sway, running ? 1 : 0, b);
   g.restore();
   // Neck
+  const neckY = SHOULDER_Y * b.len + breathe;
   g.beginPath();
-  capsule(g, 0.2, -12.6 + breathe, 1.9, headX - 0.6, headY + 3.6, 1.7);
+  capsule(g, 0.2, neckY, 1.9 * b.limb, headX - 0.6, headY + 3.6 * b.head, 1.7 * b.limb);
   g.fillStyle = skin.shade;
   g.fill();
   g.strokeStyle = INK;
@@ -1100,28 +1392,35 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
     // Collar sits over the neck base
     g.fillStyle = outfit.id === 'jersey' ? outfit.a : WHITE;
     g.beginPath();
-    g.ellipse(0.6, -13.4 + breathe, 3.2, 1.2, -0.1, 0, TAU);
+    g.ellipse(0.6 * b.sw, neckY - 0.8 * b.len, 3.2 * b.sw, 1.2, -0.1, 0, TAU);
     g.fill();
     g.stroke();
   }
   g.translate(headX, headY);
   g.rotate(r.tilt - r.lean * 0.5);
-  headPath(g);
+  if (b.head !== 1) g.scale(b.head, b.head);
+  headPath(g, b.round);
   g.fillStyle = skin.base;
   g.fill();
   g.strokeStyle = INK;
   g.lineWidth = OUTLINE * 0.55;
   g.stroke();
-  drawFace(g, skin, pose.blink === true);
+  if (b.grey && hair.id === 'gele') drawGreyTemple(g, false);
+  drawFace(g, skin, pose.blink === true, b);
   hairFront(g, hair, skin.base);
-  if (hair.id !== 'headscarf') drawEar(g, skin.base, skin.shade);
+  if (b.grey && hair.id === 'headscarf') drawGreyTemple(g, true);
+  if (b.beard) drawBeard(g);
+  if (hair.id !== 'headscarf') {
+    drawEar(g, skin.base, skin.shade);
+    if (b.studs) drawStud(g);
+  }
   g.restore();
 
   // 5. Near arm, in front of everything
   g.save();
   torsoFrame();
   g.translate(0, breathe);
-  drawArm(g, outfit, skin.base, r.arm[1], r.elbow[1], false);
+  drawArm(g, outfit, skin.base, r.arm[1], r.elbow[1], false, b);
   g.restore();
 
   g.restore();
