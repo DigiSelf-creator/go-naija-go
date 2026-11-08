@@ -1,6 +1,6 @@
 # Plan
 
-Owner: pm. Updated 7 Nov 2026. Source: docs/brief.md. Product calls come from po and Tp, never from pm.
+Owner: pm. Updated 8 Nov 2026. Source: docs/brief.md. Product calls come from po and Tp, never from pm.
 
 ## How a task moves
 
@@ -118,6 +118,8 @@ Rules for every slice 2 piece:
 
 ### H. Taller view and player controls (S2.1, S2.2; R3, Q18). Street 1 playable by hand
 
+Status: done. Merged 85741b9 (qa H6 passed, po H7 accepted 7 Nov).
+
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
 | H1 | gamedev | 420 u view, pavement strip, fall line at the screen bottom, camera look-ahead, 8 to 92 percent rule, start and end limits (src/engine/view.ts, src/game/run.ts) | none | Unit tests for the view widths in the S2.1 table and the camera rules; slice 1 street still plays |
@@ -130,6 +132,8 @@ Rules for every slice 2 piece:
 
 ### I. Hero choices (S2.3; R2, Q20)
 
+Status: done. Merged 53a659d (qa I3 passed, po I4 accepted 7 Nov).
+
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
 | I1 | art | Male and Female bodies as Teen, Adult, Elder: grey hair on every style, elder male beard, female lashes and studs; all poses; same 50 u box and feet spot (src/art/hero.ts) | H5 merged | Every combo renders in the gallery; same hitbox; respect check (elder never bent or shaky, teen not a child); docs/assets.md updated |
@@ -138,6 +142,8 @@ Rules for every slice 2 piece:
 | I4 | po | Accept I (words players see) | I3 | Note in docs/questions.md |
 
 ### J. Crates hit from below (S2.4; R5)
+
+Status: done. Merged 8636479 (qa J3 passed, po J4 accepted 8 Nov).
 
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
@@ -148,6 +154,8 @@ Rules for every slice 2 piece:
 
 ### K. Streets 2 and 3, the rolling drum (S2.6; R7, Q16)
 
+Status: done. Merged 5ee5f06 (qa K3 passed, po K4 accepted 8 Nov).
+
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
 | K1 | art | Market road (midday) and Bus park road (evening) backdrops with the made-up signs; rolling drum (plain, ridged), bounce sparkle, smash; sounds: drum wake, drum bounce (src/art/street.ts, hazards.ts) | H5 merged | No brands, no real places; drum and tyre tell apart by shape; docs/assets.md updated |
@@ -156,6 +164,8 @@ Rules for every slice 2 piece:
 | K4 | po | Accept K | K3 | Note |
 
 ### L. The well and its room (S2.5; R4, Q19)
+
+Status: done. Merged cc8e594 (qa L3 passed, po L4 accepted 8 Nov).
 
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
@@ -166,19 +176,23 @@ Rules for every slice 2 piece:
 
 ### M. Go-Slow Hall (S2.7; R6, Q21)
 
+Status: M1 doing (art, started 8 Nov). M2 todo, next for gamedev, needs M1.
+
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
 | M1 | art | Hall inside (beams, 8 roof lamps off and on, lanes, doors, cone line, drain, "GO-SLOW HALL" sign), slice 1 heap and lights moved inside, high honk "PEEP!" cloud, cones slide aside; sounds: high honk, lamp click and hum (new src/art/hall.ts, src/art/boss.ts) | none (can start now; sounds after other sound.ts work merges) | No faith signs, no real building; docs/assets.md updated |
-| M2 | gamedev | Hall from lagos-hall.json, boss rules with a player-moved hero, three phases, high honk, kind finish, parcel shield at the start, hall game over, Win screen words; retire w1-l1.json and move its tests (src/game/boss.ts, level.ts) | L2, M1 | Unit tests: 3 lit-light hits win, phase table, high honk safe places, parcel gives one shield and never stacks, hall beatable without it |
+| M2 | gamedev | Hall from lagos-hall.json, boss rules with a player-moved hero, three phases, high honk, kind finish, parcel shield at the start, hall game over, Win screen words; retire w1-l1.json and move its tests (src/game/boss.ts, level.ts). Added from po K4 and L4: (a) the win screen after the hall says "Lagos is switched on!", not slice 1's "Road cleared!" (M2 or N2, whichever lands first); (b) at the hall start, if the parcel is held, turn on one shield; it never stacks | L2, M1 | Unit tests: 3 lit-light hits win, phase table, high honk safe places, parcel gives one shield and never stacks, hall beatable without it; win screen reads "Lagos is switched on!" |
 | M3 | qa | Test M: beatable in 3 tries after street 3 (if not, designer tunes in S2.7 order), slow phone | M2 | Report |
 | M4 | po | Accept M | M3 | Note |
 
 ### N. Progress, Streets screen, Nigeria's wheel, saves (S2.8, S2.10, S2.11; R0, Q17)
 
+Status: todo. N1 (art) can start after M1's sound work merges.
+
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
 | N1 | art | Street cards, padlock, tick, Nigeria's wheel (hub, 37 cogs, grey and working looks, names), fixed look for each street (lamps, signs lit, bunting, road paint), music and music-off icons; sounds: cog ratchet and bell, locked "tuk" (new src/art/wheel.ts, src/art/street.ts) | K1 merged | No party colours; names A to Z clockwise as S2.8; docs/assets.md updated |
-| N2 | gamedev | `gidi-progress` (merge, never overwrite; broken copy rule), unlocking, parcel saved per state, Streets and wheel screens, all S2.10 screen words, fixed street look, reduced motion (src/game/save.ts, src/storage.ts, src/screens/*) | M2, N1 | Unit tests for the save shape, merge and broken-save rules; e2e: finish a street, reload, next street open; win shows 1 of 37 |
+| N2 | gamedev | `gidi-progress` (merge, never overwrite; broken copy rule), unlocking, parcel saved per state, Streets and wheel screens, all S2.10 screen words, fixed street look, reduced motion (src/game/save.ts, src/storage.ts, src/screens/*). Added from po K4, L4 and the c4e538d ruling (docs/questions.md): (a) Parcel toast: switch to "Garri parcel! Shield for the hall." now the parcel is saved. (b) Parcel saving: save `run.parcel` when the street is cleared; pass `parcelSaved` into `Run`; cleared screen shows "Your garri parcel is saved for Go-Slow Hall." (c) HUD second-finger bug: while one thumb holds Forward or Jump, a second-finger tap on Pause or Sound does nothing (Chrome sends no click). Make Pause and Sound act on pointerup or pointerdown, as the well button does. One press does one thing; Sound never switches twice. A press that opens Pause never also presses what appears under it. Keys and screen readers still work. (d) Slice 1 words still in place (qa K3, po K4): Pause reads "Keep playing / Start again / Streets / Home" with the Sound and Music switches; game over says "street", not "road" ("The street is still here."); the Street cleared screen shows "Streets" instead of "Home"; the title says "Start running". (e) "Lagos is switched on!" on the win screen if M2 has not done it | M2, N1 | Unit tests for the save shape, merge and broken-save rules; e2e: finish a street, reload, next street open; win shows 1 of 37; e2e: hold Forward and tap Pause, the game pauses once and nothing under Pause is pressed; a Sound tap switches once; parcel saved on clear and shown on the cleared screen; qa N3 checks the new parcel toast and every word in (d) |
 | N3 | qa | Test N, accessibility list S2.11, slow phone | N2 | Report |
 | N4 | po | Accept N (every word players see) | N3 | Note |
 
@@ -197,7 +211,7 @@ Rules for every slice 2 piece:
 |----|-------|------|------------|-----------|
 | P1 | gamedev | Offline cache lists every new file; size budget; nothing loads from the network after the first visit | O2 | Build under 3 MB; second visit plays in airplane mode |
 | P2 | designer | Play the whole slice against the S2 notes; list any feel or tuning fixes for gamedev | P1 | Short list in docs/design.md, or "none" |
-| P3 | qa | Full e2e of "slice 2 done" on the phone profile by touch and at 4x CPU; offline second visit; R8 originality and no-real-people review of every new picture, sound and tune; break tests | P2 fixes merged | All pass; three-line report |
+| P3 | qa | Full e2e of "slice 2 done" on the phone profile by touch and at 4x CPU; offline second visit; R8 originality and no-real-people review of every new picture, sound and tune; break tests. Added from po K4: (a) real first-timers (Tp first) clear each street in 3 tries or fewer; if not, designer tunes in this order: big pits 170 to 160, then one hazard fewer in street 3's group at 3700 to 4250; (b) listen to the drum and well sounds for originality; (c) offline on the second visit checked by hand; (d) turn the phone and switch apps on streets 2 and 3; keyboard play on streets 2 and 3 | P2 fixes merged | All pass; three-line report |
 | P4 | po | Accept slice 2 against "slice 2 done" | P3 | Acceptance note in docs/questions.md |
 
 ### Order and what runs at the same time
@@ -241,19 +255,22 @@ The designer's four are not yet written in docs/questions.md. po to add them the
 
 ## Status
 
-Done: slice 1 A to F (qa passed, po accepted 6 Nov 2026) and G1. Slice 2 design and level data (designer, 7 Nov). Slice 2 plan (this file).
-Next: slice 2 step 1: gamedev H1 to H4; art H5, then J1, L1, O1.
-Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked; Q16 to Q21 and the designer's four run on stand-ins.
+Done: slice 1 A to F and G1. Slice 2 H (85741b9), I (53a659d), J (8636479), K (5ee5f06), L (cc8e594): each qa passed and po accepted.
+Doing: M1, art (hall art and sounds).
+Next: gamedev M2 once M1 merges; then N1 (art), N2, O2, P. N2 now carries the parcel save, the parcel toast switch, the HUD second-finger fix and the leftover slice 1 words.
+Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked; Q16 to Q25 run on po's recommended answers.
+Note for Tp: the garri parcel does nothing in a fight until M2 and N2 are both in.
 
 ## Waiting on Tp
 
 1. Create the GitHub repo (name, public or private) and push access, or push it yourself. Turn on Pages with source "GitHub Actions". Blocks G2 to G4.
-2. Game name before a public URL goes out (questions.md Q1).
-3. Q16 to Q21 in docs/questions.md, and the lines to copy into docs/decisions.md.
+2. Copy the game name (Gbese!) and credits lines into docs/decisions.md (questions.md, first slice note).
+3. Q16 to Q25 in docs/questions.md, and the lines to copy into docs/decisions.md.
 4. Remove the "wrong premise" line from docs/brief.md Done when 8.
+5. Play streets 2 and 3 on your phone and say if any took more than 3 tries (feeds P3).
 
 ## Questions for po
 
-1. Please add the designer's four open questions (street names, parcel strength, a left-handed swap, the elder look) to docs/questions.md with recommended answers. Blocks nothing now.
+None open. (The designer's four are now Q22 to Q25 in docs/questions.md.)
 
 Slice 1 questions for po (answered, kept as history): hero options, power-up lengths, lives and checkpoints, gentle mode, sound, title name, credits, orientation, kobo, World 1 length. po answered them in docs/questions.md; Q5 to Q15 there still wait for Tp to confirm.
