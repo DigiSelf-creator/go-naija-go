@@ -184,9 +184,20 @@ export function drawSkyline(g: CanvasRenderingContext2D, camX: number, viewW: nu
 // ---------- Shop row (cached) ----------
 
 const SHOP_W = 124;
-const SHOP_TILE_W = SHOP_W * SHOP_SIGNS.length;
+export const SHOP_TILE_W = SHOP_W * SHOP_SIGNS.length;
 const SHOP_TOP = 120; // tallest shop height above the shop base line
 const SHOP_BASE = 264; // y where shops meet the pavement
+
+/** A sign board in a cached row tile: x from the tile's left edge, y up from the row's base (negative). */
+export interface SignBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Where each shop's sign board sits in the shop row tile (paintShops below), for the fixed look. */
+export const SHOP_SIGN_BOXES: readonly SignBox[] = SHOP_SIGNS.map((_, k) => ({ x: k * SHOP_W + 10, y: -(96 + (k % 3) * 10) + 12, w: SHOP_W - 20, h: 22 }));
 
 function drawShopIcon(g: CanvasRenderingContext2D, k: number, x: number, y: number): void {
   // A small picture next to each sign so non-readers know the shop too
@@ -381,11 +392,15 @@ export function drawPothole(g: CanvasRenderingContext2D, x0: number, x1: number,
   }
 }
 
+/** Fresh road paint for the fixed look (S2.12 picture 10): smooth dark tar, a bright kerb line, crisp lane marks. */
+export const FRESH_ROAD = { tar: '#36363b', edge: '#f5cf3a', edgeLine: '#ffffff', lane: '#ffffff' } as const;
+
 /**
  * World space. Road spans [startX, endX]; the gaps between them are potholes.
  * Only the part between camX and camX + viewW is drawn.
+ * fresh: the fixed look after the state is switched on (same spans, new paint).
  */
-export function drawRoad(g: CanvasRenderingContext2D, camX: number, viewW: number, ground: readonly (readonly [number, number])[], groundY = GROUND_Y, viewH = 360): void {
+export function drawRoad(g: CanvasRenderingContext2D, camX: number, viewW: number, ground: readonly (readonly [number, number])[], groundY = GROUND_Y, viewH = 360, fresh = false): void {
   const L = camX - 20;
   const R = camX + viewW + 20;
   for (let i = 0; i < ground.length; i++) {
@@ -393,7 +408,16 @@ export function drawRoad(g: CanvasRenderingContext2D, camX: number, viewW: numbe
     if (!span) continue;
     const a = Math.max(span[0], L);
     const b = Math.min(span[1], R);
-    if (b > a) {
+    if (b > a && fresh) {
+      g.fillStyle = FRESH_ROAD.tar;
+      g.fillRect(a, groundY, b - a, viewH - groundY);
+      g.fillStyle = FRESH_ROAD.edge;
+      g.fillRect(a, groundY, b - a, 5);
+      g.fillStyle = FRESH_ROAD.edgeLine;
+      g.fillRect(a, groundY + 8, b - a, 2);
+      // Longer, crisper lane marks, on the same 60 u beat as the old ones
+      for (let x = Math.ceil(a / 60) * 60; x < b - 40; x += 60) g.fillRect(x, groundY + 28, 40, 4);
+    } else if (b > a) {
       g.fillStyle = P.ROAD;
       g.fillRect(a, groundY, b - a, viewH - groundY);
       g.fillStyle = P.ROAD_EDGE;

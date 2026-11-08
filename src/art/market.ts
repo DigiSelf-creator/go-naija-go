@@ -16,7 +16,7 @@
  * Umbrella and cloth colours: no green, white and red together (party colours), no flags.
  */
 import * as P from './palette';
-import { GROUND_Y, blitLayer, type PixelLayer } from './street';
+import { GROUND_Y, blitLayer, type PixelLayer, type SignBox } from './street';
 
 const TAU = Math.PI * 2;
 
@@ -169,6 +169,11 @@ const STALL_W = 132;
 export const MARKET_TILE_W = UNIT_W * MARKET_SIGNS.length;
 const ROW_H = 134; // tile height; the stall bases sit on its bottom edge
 const ROW_BASE = 264; // where the stalls meet the market floor (as the street 1 shops)
+
+/** Where each stall's sign board sits in the row tile (paintMarketRow below): x from the tile's left, y up from the row's base. */
+export const MARKET_SIGN_BOXES: readonly SignBox[] = MARKET_SIGNS.map((_, k) => ({ x: k * UNIT_W + 10, y: -112 + (k % 2) * 6 - 6, w: STALL_W - 12, h: 20 }));
+/** The left post of each stall in the row tile (the fixed look hangs a street lamp on it). */
+export const MARKET_POSTS: readonly number[] = MARKET_SIGNS.map((_, k) => k * UNIT_W + 6.5);
 
 const WALLS = ['#e9b98a', '#f0d48a', '#a9cfa6', '#a9c0e8', '#e2a9c8'] as const;
 

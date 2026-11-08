@@ -15,7 +15,7 @@
  */
 import * as P from './palette';
 import { DRUM_BODY, DRUM_HOOP } from './drum';
-import { GROUND_Y, blitLayer, type PixelLayer } from './street';
+import { GROUND_Y, blitLayer, type PixelLayer, type SignBox } from './street';
 
 const TAU = Math.PI * 2;
 
@@ -174,6 +174,18 @@ const PART = {
   hall: [1130, 96],
 } as const;
 export const PARK_TILE_W = PART.hall[0] + PART.hall[1];
+/** Where each sign board sits in the row tile (as drawn below): x from the tile's left, y up from the row's base. */
+export const PARK_SIGN_BOXES: readonly SignBox[] = [
+  { x: PART.vulcanizer[0] + 22, y: -134, w: PART.vulcanizer[1] - 44, h: 20 },
+  { x: PART.suya[0] + 4, y: -128, w: 80, h: 20 },
+  { x: PART.park[0] + 24, y: -108, w: 58, h: 18 },
+  { x: PART.battery[0] + 10, y: -128, w: PART.battery[1] - 20, h: 20 },
+  { x: PART.buka[0] + 30, y: -124, w: PART.buka[1] - 60, h: 20 },
+  { x: PART.phone[0] + 8, y: -130, w: PART.phone[1] - 16, h: 18 },
+  { x: PART.hall[0] + 4, y: -112, w: PART.hall[1] - 8, h: 40 },
+];
+/** The street lamp poles in the row tile (drawn off here; the fixed look lights them). */
+export const PARK_LAMPS: readonly number[] = [PART.park[0] + 112, PART.park[0] + 420];
 /** The suya grill's middle, from the tile's left edge (smoke rises from here). */
 export const SUYA_GRILL_X = PART.suya[0] + 58;
 
@@ -426,8 +438,7 @@ function motorPark(g: CanvasRenderingContext2D, x0: number, base: number): void 
   g.fillRect(kx + 6, base - 40, 58, 4);
   sign(g, PARK_SIGNS[2], kx + 6, base - 108, 58, 18);
   // Lamp posts (off)
-  streetLamp(g, x0 + 112, base);
-  streetLamp(g, x0 + 420, base);
+  for (const lx of PARK_LAMPS) streetLamp(g, lx - PART.park[0] + x0, base);
 }
 
 function batteryKiosk(g: CanvasRenderingContext2D, x0: number, base: number): void {
