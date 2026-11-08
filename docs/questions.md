@@ -2,6 +2,24 @@
 
 ## Slice 2 requests from Tp, 7 Nov 2026
 
+### po acceptance note, 8 Nov 2026: slice 2 piece J (J4)
+
+**Accepted** on branch gamedev/s2-j2-crates (at fbc303d): hanging market crates you knock from below, with kobo and food inside, switched on for the Lagos streets, plus the test runner split (parallel, then timing one at a time, then frame rate).
+
+Why:
+1. qa passed J3 (reported): tsc clean, 429/429 unit, build OK, first load 248 KB (limit 3 MB); full e2e 96/96; 4x slow phone worst part 57.9 fps (bar 45). Hand play at 932 x 430 (4x CPU, and reduced motion) and 480 x 230: crates open only from below, kobo crates give 3, the garri crate gives the shield, empty crates stay empty, after a lost life food crates fill again and kobo crates stay open, app switch and turning the phone are fine.
+2. Tp's R5 is met (verified in src/game/crates.ts and design S2.4): coins and foods inside boxes you hit from below. The head-hit rule, the push down, amala opening from any side, 3 kobo per kobo crate, food that drops straight down and never into a pit, empty crates that stay open, all as S2.4 says.
+3. Originality (verified on qa's 932 x 430 shot, reported for the rest): pale wooden slat crates hanging on a rope line between wooden poles, a coin stamp on the front, lids hanging open when empty. No "?" or "!", no gold, no rivets, no bricks; our own "tok" and rope creak. It plays like other runners but looks like a Lagos street.
+4. Plain words (verified in the level files, matching design S2.2): "Crate! Jump up under it.", "Food in this crate! Knock it.", "High crate? Jump from the roof." Short and clear for a 10 year old.
+5. Brief Done when 3 and 5 (reported): all three foods still work, now also from crates; offline on the second visit still passes.
+
+qa's notes, decided:
+- (a) Hair overlaps the crate's bottom by a few pixels at the head stop: **keep.** The hit uses the head line (feet y - 44), and design S2.3 does not count hair or headwear in the hero's height, so tall hair, an afro or a gele will touch a little first. On a small screen it reads as the hero's head meeting the crate, which is what the player should feel. No change. Reasoned.
+- (b) The well-room crate is untested: **test in L**, where the room is built. Not part of J.
+- (c) Offline on the second visit covered only by the existing e2e: **enough for J.** Crates add no files to fetch and no network call. qa re-checks offline by hand at the slice end.
+
+For Tp: nothing new to decide. Q16 to Q25 still wait, built with my recommended answers. The crates line (number 11 in "Lines for Tp to copy into docs/decisions.md") still waits for Tp to paste; recommend pasting it as written, since the built crates match it.
+
 ### po acceptance note, 7 Nov 2026: slice 2 piece I (I4)
 
 **Accepted** on branch gamedev/s2-i2-builder (at c70791a): Male and Female heroes at Teen, Adult and Elder, the two new builder rows, defaults that follow the picks, the saved look with body and age, old slice 1 looks loading as Adult, and the once-only "New!" line.
