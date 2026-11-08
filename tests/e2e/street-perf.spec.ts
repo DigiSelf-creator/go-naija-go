@@ -5,7 +5,7 @@
  * and the game keeps full speed (about 60 physics steps a second). The hero knocks every crate
  * on the way (J2), so swings, kobo fans and the food pop are measured too.
  *
- * The slice 1 whole-level test (C7 in level-qa.spec.ts, the old w1-l1) stays until piece M.
+ * Go-Slow Hall's frame rate is in hall-perf.spec.ts (piece M2 retired the slice 1 level, w1-l1).
  */
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';

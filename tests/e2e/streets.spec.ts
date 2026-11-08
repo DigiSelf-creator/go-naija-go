@@ -11,6 +11,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
 import { LEFT, buttonCentres, hands, playStreetByHand, snap, type Snap } from './hands';
 import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock } from './helpers';
+import { playHall, touchPad, waitForWin } from './hall-play';
 
 const SHOTS = process.env['K2_SHOTS'] ?? 'test-results/k2-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -132,8 +133,8 @@ test('street 2, Market road, by hand: start to bus, every crate, the cleared scr
   expect(errors).toEqual([]);
 });
 
-test('street 3, Bus park road, by hand: back to the secret well, then start to bus with drums, two big pits, and Go to Go-Slow Hall', async ({ page }) => {
-  test.setTimeout(240_000);
+test('street 3, Bus park road, by hand: back to the secret well, then start to bus with drums, two big pits, Go to Go-Slow Hall and the hall fight by touch', async ({ page }) => {
+  test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -205,13 +206,22 @@ test('street 3, Bus park road, by hand: back to the secret well, then start to b
   await page.screenshot({ path: join(SHOTS, 'street3-cleared.png') });
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Go to Go-Slow Hall' }).tap();
-  // Until Go-Slow Hall (piece M): the slice 1 boss fight, full lives and 0 kobo.
-  await expect.poll(() => page.evaluate(() => window.__game!.run.phase)).toBe('arena');
-  await expect(page.getByText('General Go-Slow blocks the road! Jump onto the green light.')).toBeVisible();
+  // Piece M2: Go-Slow Hall (S2.7), full lives and 0 kobo, no parcel carried (none was picked up).
+  await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
+  expect(await page.evaluate(() => window.__game!.run.phase)).toBe('arena');
+  await expect(page.getByText('General Go-Slow is jamming the hall! Jump onto the green light.')).toBeVisible();
   const boss = await snap(page);
   expect(boss.r.kobo).toBe(0);
   expect(boss.r.lives).toBe(boss.r.maxLives);
+  expect(boss.r.power.shield).toBe(false);
   expect(boss.i.buttons).toBe(true);
+  await page.screenshot({ path: join(SHOTS, 'street3-to-hall.png') });
+  // The hall fight by touch, through to "Lagos is switched on!".
+  await playHall(page, await touchPad(page, cdp, h));
+  await waitForWin(page);
+  const won = page.getByRole('dialog', { name: 'Lagos is switched on!' });
+  await expect(won).toBeVisible();
+  await page.screenshot({ path: join(SHOTS, 'street3-hall-win.png') });
   expect(errors).toEqual([]);
 });
 

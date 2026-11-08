@@ -6,14 +6,16 @@
  *    crate, hazard, pit lip, the hero (unless falling into a pit), a well, the bus or the
  *    BUS PARK board (their drawn boxes come from window.__game.drawn);
  * 3. every hint fits the bar uncut (no scroll), at 11 px or more.
- * Streets 2 and 3 (K2) are played at 320 x 240, 568 x 320 and 667 x 375 the same way.
+ * Streets 2 and 3 (K2) and Go-Slow Hall (M2) are played at 320 x 240, 568 x 320 and 667 x 375
+ * the same way.
  * Screenshots of a hint beside high kobo go to $S2H_SHOTS.
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand } from './hands';
-import { openAndRun } from './helpers';
+import { HALL_URL, playHall, touchPad, waitForWin } from './hall-play';
+import { PAST_DOUBLE_TAP_MS, openAndRun, startRun } from './helpers';
 
 const SHOTS = process.env['S2H_SHOTS'] ?? 'test-results/s2h-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -171,6 +173,61 @@ for (const id of ['lagos-2', 'lagos-3'] as const) {
       for (const px of Object.values(log.words)) expect(px).toBeGreaterThanOrEqual(11);
     });
   }
+}
+
+/** S2.2 hint bar qa check 2 in Go-Slow Hall (M2): the hall's toasts never cover a light, a throw or the hero. */
+for (const [width, height] of [
+  [320, 240],
+  [568, 320],
+  [667, 375],
+] as const) {
+  test(`${width}x${height}: Go-Slow Hall by hand, no toast ever covers a light, a throw or the hero`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await page.setViewportSize({ width, height });
+    await page.goto(HALL_URL);
+    await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+    await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+    await startRun(page);
+    await page.evaluate(() => {
+      const log = { frames: 0, hits: [] as string[], words: {} as Record<string, number>, uncut: [] as string[], throwFrames: 0 };
+      (window as unknown as { __bar: typeof log }).__bar = log;
+      const hit = (a: { x: number; y: number; w: number; h: number }, b: typeof a) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+      const frame = (): void => {
+        const g = window.__game!;
+        const bar = g.hintBar;
+        if (bar.words && g.screen === 'play') {
+          log.frames++;
+          log.words[bar.words] = Math.min(log.words[bar.words] ?? 99, bar.font);
+          if (!bar.fits && !log.uncut.includes(bar.words)) log.uncut.push(bar.words);
+          const drawn = g.drawn;
+          if (drawn.some((d) => d.what === 'tyre' || d.what.includes('honk'))) log.throwFrames++;
+          for (const d of drawn) if (hit(bar, d) && log.hits.length < 20) log.hits.push(`${d.what} at step ${g.steps} under "${bar.words}"`);
+        }
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    });
+    // Wait under each light a little, so throws come while words show.
+    await playHall(page, await touchPad(page), { dwell: [2.5, 2.5, 4] });
+    await waitForWin(page);
+    const log = await page.evaluate(() => (window as unknown as { __bar: { frames: number; hits: string[]; words: Record<string, number>; uncut: string[]; throwFrames: number } }).__bar);
+    console.log(
+      `${width}x${height} hall: ${log.frames} frames with words (${log.throwFrames} with throws), ${Object.keys(log.words).join(' | ')}; ` +
+        `covered: ${log.hits.length ? log.hits.join('; ') : 'nothing'}; uncut: ${log.uncut.length ? log.uncut.join(' | ') : 'all fit'}`,
+    );
+    expect(log.throwFrames, 'throws showed while words did').toBeGreaterThan(30);
+    expect(Object.keys(log.words).length, 'the hall toasts showed').toBeGreaterThanOrEqual(5);
+    if (width === 320) {
+      expect(Object.keys(log.words)).toContain('Go-Slow! Jump on the green light.');
+      expect(Object.keys(log.words)).toContain('PEEP! High honks: stay low.');
+    } else {
+      expect(Object.keys(log.words)).toContain('PEEP! High honks fly high. Stay low on the floor.');
+    }
+    expect(Object.keys(log.words)).toContain('Lagos is switched on!');
+    expect(log.hits, 'nothing playable under the bar').toEqual([]);
+    expect(log.uncut, 'every toast fits the bar uncut').toEqual([]);
+    for (const px of Object.values(log.words)) expect(px).toBeGreaterThanOrEqual(11);
+  });
 }
 
 test('the bar hides when pause opens and does not come back for a hint whose time ran out', async ({ page }) => {
