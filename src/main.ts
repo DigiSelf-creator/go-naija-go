@@ -15,7 +15,7 @@ import { STEPS_PER_SECOND, type RunPhase } from './game/run';
 import { parseRoom } from './game/well';
 import { WELL } from './art/well';
 import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
-import { WELL_UP_KEYS } from './engine/input';
+import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
 import { LAGOS, Progress, anyDone, switchedOn } from './game/progress';
 import { TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
@@ -425,14 +425,11 @@ function startGame(): void {
   // from Pause. They do nothing in the finish or on any other card. On the wheel's list,
   // Escape closes the list (menus.ts).
   window.addEventListener('keydown', (e) => {
-    if (e.repeat || (e.code !== 'KeyP' && e.code !== 'Escape')) return;
-    if (menus.current === 'pause') {
-      e.preventDefault();
-      resume();
-    } else if (menus.current === null && playing && !game.paused && inPlay()) {
-      e.preventDefault();
-      pause();
-    }
+    const act = pauseKeyAction(e.code, e.repeat, menus.current, playing && !game.paused && inPlay());
+    if (!act) return;
+    e.preventDefault();
+    if (act === 'pause') pause();
+    else resume();
   });
 
   // Sound may start only after the player's first tap or key.

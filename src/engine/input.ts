@@ -47,6 +47,21 @@ export const WELL_KEYS: ReadonlySet<string> = new Set(['ArrowDown', 'KeyS', 'Ent
 /** The well keys that also go up the room's rope (Down and S do nothing there). */
 export const WELL_UP_KEYS: ReadonlySet<string> = new Set(['Enter', 'KeyE']);
 
+/** S2.2 Keys: P and Escape pause (M, music, comes with O2). */
+export const PAUSE_KEYS: ReadonlySet<string> = new Set(['KeyP', 'Escape']);
+
+/**
+ * What a P or Escape press does (po M4 bug 3): pause while playing (the street, the well room,
+ * the hall fight), resume from the Pause screen, and nothing anywhere else (the street end, the
+ * hall's finish, any other card). Key repeat does nothing.
+ */
+export function pauseKeyAction(code: string, repeat: boolean, screen: string | null, playing: boolean): 'pause' | 'resume' | null {
+  if (repeat || !PAUSE_KEYS.has(code)) return null;
+  if (screen === 'pause') return 'resume';
+  if (screen === null && playing) return 'pause';
+  return null;
+}
+
 interface Finger {
   area: 'dir' | 'jump' | 'none';
   x: number;
