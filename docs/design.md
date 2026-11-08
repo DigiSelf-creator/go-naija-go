@@ -633,18 +633,18 @@ Double taps: a Go down or Go up press never also presses a button under it. The 
 
 World 1 is Lagos: Street 1, Street 2, Street 3, then Go-Slow Hall. Each street is 60 to 120 seconds, has one bus stop checkpoint near the middle, three lives (five in gentle mode), and ends at a bus park where the hero gets on a yellow bus. Real, proud Lagos sights in our own drawings: shop signs, yellow buses, market stalls, vulcanizers, suya spots, buka signs. Made-up shop names only, no brands. The three streets carry real, well-known Lagos area names (Q22, see "Street names" below); nothing else names a real place.
 
-### Street names (Q22: proposed, waiting for Tp's OK)
+### Street names (Q22: decided by Tp, 8 Nov 2026)
 
-Tp answered Q22 twice: first "We should use popular ones", then, on the first proposal (Surulere, Yaba, Obalende), "We should pick close around Ikeja, Alausa". So all three names now come from in and around Ikeja and Alausa. These are the designer's proposals. Until Tp says OK, the game keeps "Your street", "Market road" and "Bus park road". gamedev changes only the `name` field in each level file, nothing else.
+Tp answered Q22 twice: first "We should use popular ones", then, on the first proposal (Surulere, Yaba, Obalende), "We should pick close around Ikeja, Alausa". So all three names come from in and around Ikeja and Alausa. Tp confirmed them in chat on 8 Nov 2026: street 1 Alausa, street 2 Computer Village, street 3 Ikeja (the first picks below). They replace the working names "Your street", "Market road" and "Bus park road". gamedev changes only the `name` field in each level file, nothing else. The guards stay: no government building, crest, flag or official on any street, and no real shop or brand anywhere, including the Computer Village stalls.
 
-| Street | Theme | First pick | Backup | Why | Flag for Tp and po |
+| Street | Theme | Name (decided) | Backup | Why | Flag for Tp and po |
 |---|---|---|---|---|---|
 | 1 (lagos-1.json) | home street, morning | **Alausa** | Ogba | Tp named Alausa. It is a home and office area of Ikeja where people set off to work in the morning, so it fits the morning home street. Ogba is a big home area next to Ikeja, full of family streets; "ogba" is a plain Yoruba word (a garden or fenced yard), not a person. | Alausa: see "Alausa, two checks" below. Ogba: none. |
 | 2 (lagos-2.json) | market at midday | **Computer Village** | Opebi | Computer Village in Ikeja is the best-known phone and computer market in Nigeria; every Lagos teen knows it. It matches the street's phone accessories stall, and a busy midday market street with fabric, tailor and pepper stalls beside the phone stalls is a real Lagos sight. The name describes what is sold there, not a person, a faith or a brand. Opebi is the busy shop and office road right next to it. | Computer Village: never a sign, hint or line about fake phones, cheats or "wahala" there; the stalls are honest stalls, shown with pride (Q22 rule 4). Opebi: I do not know where the name comes from; po, please check it before it is ever used. |
 | 3 (lagos-3.json) | bus park, evening | **Ikeja** | Ojota | Ikeja's bus stop and the motor park by Ikeja Under Bridge are among the busiest in Lagos: yellow buses, evening crowds, suya smoke, exactly street 3. Ikeja is the name of the old town and of the state capital, not a person. Its traditional ruler takes his title from the town, not the other way round, so the name is not a ruler's title. Ojota motor park, just north of Ikeja, is the mainland's big motor park. | Ojota: I know it only as a place name and do not know its origin; po, please check it before it is ever used. The park at Ojota named after a person is not part of our name. |
 
-**Alausa, two checks** (Tp decides):
-1. **Could it be a person or family name?** Alausa is also a Yoruba family name (a surname some people carry). I do not know whether the area was named after a person or a family, or whether the place and the surname just share a word. Under the Q22 rule ("if you are not sure, skip it") the designer would normally skip it. Tp named it, so it stays the first pick, but Tp should know this. If anyone confirms it honours a person or family, use Ogba.
+**Alausa, two checks** (Tp chose Alausa on 8 Nov 2026; the guards below stay):
+1. **Could it be a person or family name?** Alausa is also a Yoruba family name (a surname some people carry). I do not know whether the area was named after a person or a family, or whether the place and the surname just share a word. Under the Q22 rule ("if you are not sure, skip it") the designer would normally skip it. Tp named it and confirmed it, so it stays. If anyone confirms it honours a person or family, use Ogba.
 2. **The seat of the Lagos State Government.** "Alausa" is the place where the state government sits, and Lagos people sometimes say "Alausa" to mean the government, the way people say a capital's name. My view: it does not break CLAUDE.md rule 3. Rule 3 is about real people (politicians, officials, their names, faces, parties, colours and logos); a place name is not a person, and no official appears. The risk is a different one: a street of potholes called Alausa could be read as a dig at the government. We guard against that by drawing only an ordinary home street with made-up shop signs: no government building, secretariat, crest, flag, office sign, uniform or official, and no word about government anywhere on the street. The cleared line praises the player and the place and blames no one. With those guards, Alausa is fine to use.
 
 Names left out:
@@ -655,7 +655,7 @@ Names left out:
 5. **Faith:** CMS, Ojuelegba.
 
 How the names were checked:
-1. **No real people, no faith, no ruler's title.** As above, with the two Alausa checks for Tp.
+1. **No real people, no faith, no ruler's title.** As above, with the two Alausa checks.
 2. **Mock no one.** The name is only where the run happens. The street's problems stay everyday city problems (potholes, goats, rolling tyres and drums), never the people or the place. No area name appears in a hazard, a boss line or a game over line. The fixed look after Lagos is switched on (lamps, signs, bunting) is a party for the place, not proof it was broken.
 3. **Spread.** The Q22 rule asked for mainland and island; Tp chose one area instead, so all three are in and around Ikeja on the mainland. That is Tp's call and it is fine: Ikeja is the state capital and everyone in Lagos passes through it. Other Lagos areas (the island, Ikorodu, Badagry, Epe) can come in a later Lagos bonus street.
 4. **Length.** Longest name: "Computer Village" (16 characters). See "Fit at 320 px" below.
@@ -681,7 +681,7 @@ How difficulty rises:
 
 When the hero's centre reaches end.x on the ground (or lands past it): controls lock, all hazards fade out in 0.3 s (nothing can hurt now), the hero hops through the door (0.6 s), the bus gives our "pa-paam" horn and pulls away to the right (1.4 s), the street-cleared jingle plays, and at 2.2 s the Street cleared screen opens. Never a flagpole, never a castle.
 
-### Street 1: Your street (src/data/levels/lagos-1.json)
+### Street 1: Alausa, was "Your street" (src/data/levels/lagos-1.json)
 
 Idea: slice 1's morning street, reworked for walking. You stand still at the start and nothing happens until you move. Teaches one thing at a time: walk and run, jump, hold, crate, pothole, second jump, run-up long jump, goat, tyre, food.
 
@@ -704,7 +704,7 @@ Kobo: 165 (153 loose, 12 in crates). Well: none (taught in street 2).
 
 Three tries or fewer: before the bus stop only the five potholes can cost a life, each taught alone with a hint, and walking is enough for every one of them. The big pit comes right after the bus stop, so a fall there costs only about 5 s. If qa's first-timers need more than 3 tries, tune in this order: big pit 170 to 160; take out the goat at 6900; hold potholes 60 to 50.
 
-### Street 2: Market road (src/data/levels/lagos-2.json)
+### Street 2: Computer Village, was "Market road" (src/data/levels/lagos-2.json)
 
 Idea: a busy Lagos market road at midday: stalls under big umbrellas, baskets of pepper and tomatoes, cloth stalls, a phone accessories kiosk. Signs (made up): "FABRICS", "PEPPER AND TOMATOES", "PROVISIONS", "PHONE ACCESSORIES", "TAILOR". A well stands in a small yard between two stalls.
 
@@ -727,7 +727,7 @@ Length: spawn 80 to bus 11000 = 10920 u. 70 s at full run, about 91 s typical.
 
 Kobo: 144 (132 loose, 12 in crates), plus 17 in the well room.
 
-### Street 3: Bus park road (src/data/levels/lagos-3.json)
+### Street 3: Ikeja, was "Bus park road" (src/data/levels/lagos-3.json)
 
 Idea: the road into a big bus park in the evening: orange sky, parked yellow buses, a vulcanizer with tyre piles and old drums, a suya spot with smoke, a battery charging kiosk, a buka. Signs (made up): "VULCANIZER", "SUYA SPOT", "BATTERY CHARGING", "BUKA", "PHONE REPAIRS".
 
@@ -945,7 +945,7 @@ Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that
 |---|---|---|---|
 | Title | Everyone who opens the game | Start playing | "Gbese!" "Fix the streets. Get Nigeria working." Big button "Make your hero" (no hero saved) or "Play" (hero saved). Smaller: "Change hero", "Nigeria's wheel", "Credits", "Sound: on" / "Sound: off", "Music: on" / "Music: off", "Gentle mode: 5 lives instead of 3". How to play: the touch or key words in S2.2 |
 | Hero builder | First-time players, and anyone changing their look | Pick a look | See S2.3 |
-| Streets | A player who pressed "Play" with at least one street done, or "Streets" anywhere | Pick where to play | Heading "Lagos". Line "Fix 3 streets, then clear Go-Slow Hall." Four cards: "Street 1: Your street", "Street 2: Market road", "Street 3: Bus park road", "Go-Slow Hall" (proposed, waiting for Tp's OK: "Street 1: Alausa", "Street 2: Computer Village", "Street 3: Ikeja", S2.6 "Street names"; on the 320 x 240 grid "Street 2" sits small above the bold name, S2.6 "Fit at 320 px"). Under each name one line: done: "Done ✓ Best: {best} kobo"; open, not done: "Ready to play"; locked: a padlock and "Finish street {n} first" (hall: "Finish street 3 first"). On the hall card, if a parcel is saved: "You have a garri parcel." Buttons "Nigeria's wheel", "Home" |
+| Streets | A player who pressed "Play" with at least one street done, or "Streets" anywhere | Pick where to play | Heading "Lagos". Line "Fix 3 streets, then clear Go-Slow Hall." Four cards: "Street 1: Alausa", "Street 2: Computer Village", "Street 3: Ikeja", "Go-Slow Hall" (names decided by Tp, 8 Nov 2026, S2.6 "Street names"; they replace "Your street", "Market road" and "Bus park road"; on the 320 x 240 grid "Street 2" sits small above the bold name, S2.6 "Fit at 320 px"). Under each name one line: done: "Done ✓ Best: {best} kobo"; open, not done: "Ready to play"; locked: a padlock and "Finish street {n} first" (hall: "Finish street 3 first"). On the hall card, if a parcel is saved: "You have a garri parcel." Buttons "Nigeria's wheel", "Home" |
 | Nigeria's wheel | Anyone who taps "Nigeria's wheel" | Show how much of Nigeria is working | Heading "Nigeria's wheel". "Every state is a part of Nigeria Company. Fix a state's problems and its cog starts turning." Then "{n} of 37 cogs turning." When n is 0: "Fix Lagos to turn the first cog." When n is 1 or more: "More states are coming soon." Button "Back" |
 | HUD (in play) | The player | Show lives, kobo, food, parcel | "♥ 3", "Kobo 12", food slot (part 1), parcel icon and "Parcel" when carried. In the hall, the three hit circles, and no Kobo chip (nothing to collect there; po M4 note), so the hall row is lives, shield and the hit circles. Top right: sound, pause (spoken "Sound", "Pause"). Bottom: Back, Forward, Jump (S2.2). One row always: see "The HUD row" below |
 | Well button | A player standing at a well, or under the room's rope | Go down or up | "Go down" / "Go up". On a computer: "Go down (↓)" / "Go up (Enter)" |
@@ -961,7 +961,7 @@ Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that
 
 With real names, "Ikeja is fixed." reads as if the place itself was broken. The street cleared line must praise the place and the player, and blame no one.
 
-**Decided line: "{street name} is moving again, thanks to you! You got {kobo} kobo."** Tp chose it in chat on 8 Nov 2026 ("It is moving again"). Example: "Ikeja is moving again, thanks to you! You got 113 kobo." It praises the player and says the go-slow is gone, without saying the place was bad. It replaces "{street name} is fixed. You got {kobo} kobo." Until Tp OKs the street names, {street name} is the made-up name ("Your street is moving again, thanks to you!"), which also reads well.
+**Decided line: "{street name} is moving again, thanks to you! You got {kobo} kobo."** Tp chose it in chat on 8 Nov 2026 ("It is moving again"). Example: "Ikeja is moving again, thanks to you! You got 113 kobo." It praises the player and says the go-slow is gone, without saying the place was bad. It replaces "{street name} is fixed. You got {kobo} kobo."
 
 Not used: "You cleared the road in {street name}. Great run!" (the designer's first pick; Tp chose the line above). "{street name} is switched on!" is kept for a whole state ("Lagos is switched on!") so the win screen stays special. "is fixed", "is saved", "beaten", "won": each makes the place the problem or the enemy.
 
@@ -1017,7 +1017,7 @@ Pictures (all drawn in code, as now):
 6. Garri parcel (leaf wrap, string) and its small HUD icon.
 7. Rolling drum (plain, ridged, no writing): rolling, bounce sparkle, smash.
 8. Big pit cones (orange and white, two per lip).
-9. Street backdrops (names may change to Alausa, Computer Village and Ikeja if Tp agrees, S2.6; no government building, crest, flag or office on any street, and no real shop or brand on the Computer Village stalls; the drawings stay our own, with made-up signs, never a copy of a real building or landmark): Market road (midday, umbrellas, pepper and tomato baskets, cloth stalls, made-up signs as listed) and Bus park road (evening sky, parked yellow buses, vulcanizer with tyre piles and drums, suya smoke, made-up signs as listed). Your street stays as slice 1.
+9. Street backdrops (the streets are named Alausa, Computer Village and Ikeja, decided by Tp on 8 Nov 2026, S2.6; no government building, crest, flag or office on any street, and no real shop or brand on the Computer Village stalls; the drawings stay our own, with made-up signs, never a copy of a real building or landmark): Computer Village, was Market road (midday, umbrellas, pepper and tomato baskets, cloth stalls, made-up signs as listed) and Ikeja, was Bus park road (evening sky, parked yellow buses, vulcanizer with tyre piles and drums, suya smoke, made-up signs as listed). Alausa, was Your street, stays as slice 1.
 10. The fixed look for each street (lamps lit, signs lit, bunting, fresh road paint).
 11. Start of street: fence and a parked yellow bus. End of street: bus park with shelter, wall, and the yellow bus with an opening door; hero hop-in and bus pull-away.
 12. The 60 u pavement and gutter strip under every scene, plain and darker so buttons read on it.
