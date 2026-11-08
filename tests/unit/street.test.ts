@@ -240,73 +240,103 @@ describe('S2.2 the big pit in street 1 (5050 to 5220), from the bus stop', () =>
   });
 });
 
-describe('S2.6 level rules: lagos-1', () => {
-  const pits = L1.ground.slice(1).map((s, i) => ({ a: L1.ground[i]![1], b: s[0], w: s[0] - L1.ground[i]![1] }));
-  const onRoad = (x: number): boolean => L1.ground.some(([a, b]) => x >= a && x <= b);
+/** S2.6 How difficulty rises: big pits and hints on each street. */
+const STREETS = [
+  { L: L1, bigPits: 1, hints: 15 },
+  { L: parseLevel(structuredClone(lagos2)), bigPits: 1, hints: 4 },
+  { L: parseLevel(structuredClone(lagos3)), bigPits: 2, hints: 2 },
+] as const;
+
+describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, hints }) => {
+  const pits = L.ground.slice(1).map((s, i) => ({ a: L.ground[i]![1], b: s[0], w: s[0] - L.ground[i]![1] }));
+  const onRoad = (x: number): boolean => L.ground.some(([a, b]) => x >= a && x <= b);
   const nearestPit = (x: number): number => Math.min(...pits.map((p) => (x < p.a ? p.a - x : x > p.b ? x - p.b : 0)));
-  const corns = [...L1.foods.filter((f) => f.kind === 'corn').map((f) => f.x), ...L1.crates.filter((c) => c.contents === 'corn').map((c) => c.x)];
+  const corns = [...L.foods.filter((f) => f.kind === 'corn').map((f) => f.x), ...L.crates.filter((c) => c.contents === 'corn').map((c) => c.x)];
 
   it('every pit is one of the four kinds', () => {
     for (const p of pits) {
       const ok = (p.w >= 30 && p.w <= 40) || (p.w >= 50 && p.w <= 64) || (p.w >= 90 && p.w <= 110) || (p.w >= 160 && p.w <= 180);
       expect(ok, `pit at ${p.a} is ${p.w} wide`).toBe(true);
     }
-    expect(pits.filter((p) => p.w >= 160)).toHaveLength(1); // street 1: one big pit
+    expect(pits.filter((p) => p.w >= 160)).toHaveLength(bigPits);
   });
 
   it('at least 160 u of clear road before every big pit, and none within 1400 u after a corn', () => {
-    for (const p of pits.filter((q) => q.w >= 160)) {
+    const big = pits.filter((q) => q.w >= 160);
+    for (const p of big) {
       const from = p.a - 160;
       expect(pits.some((q) => q.b > from && q.a < p.a), 'no pit in the run-up').toBe(false);
-      expect(L1.hazards.some((z) => z.x > from && z.x <= p.a)).toBe(false);
-      expect(L1.crates.some((c) => c.x > from && c.x <= p.a)).toBe(false);
-      expect(L1.foods.some((f) => f.x > from && f.x <= p.a)).toBe(false);
-      for (const c of corns) expect(p.a - c < 0 || p.a - c > 1400).toBe(true);
-      // The first big pit comes right after the bus stop.
-      expect(p.a).toBeGreaterThan(L1.checkpoint);
+      expect(L.hazards.some((z) => z.x > from && z.x <= p.a)).toBe(false);
+      expect(L.crates.some((c) => c.x > from && c.x <= p.a)).toBe(false);
+      expect(L.foods.some((f) => f.x > from && f.x <= p.a)).toBe(false);
+      expect(L.coins.some((k) => k.y > 250 && k.x > from && k.x <= p.a), 'no road kobo in the run-up').toBe(false);
+      for (const c of corns) expect(p.a - c < 0 || p.a - c > 1400, `big pit at ${p.a}, corn at ${c}`).toBe(true);
     }
+    // The first big pit comes right after the bus stop.
+    expect(big[0]!.a).toBeGreaterThan(L.checkpoint);
   });
 
   it('no tyre or drum within 1370 u after a corn', () => {
     for (const c of corns) {
-      for (const z of L1.hazards.filter((q) => q.kind !== 'goat')) expect(z.x - c < 0 || z.x - c > 1370, `${z.kind} at ${z.x}`).toBe(true);
+      for (const z of L.hazards.filter((q) => q.kind !== 'goat')) expect(z.x - c < 0 || z.x - c > 1370, `${z.kind} at ${z.x}`).toBe(true);
     }
   });
 
   it('hazards start at least 200 u from a pit', () => {
-    for (const z of L1.hazards) expect(nearestPit(z.x), `${z.kind} at ${z.x}`).toBeGreaterThanOrEqual(200);
+    for (const z of L.hazards) expect(nearestPit(z.x), `${z.kind} at ${z.x}`).toBeGreaterThanOrEqual(200);
+  });
+
+  it('the first drum is alone and has a hint before it', () => {
+    const drums = L.hazards.filter((z) => z.kind === 'drum');
+    if (drums.length === 0) return;
+    const first = drums[0]!;
+    for (const z of L.hazards) if (z !== first) expect(Math.abs(z.x - first.x), `${z.kind} at ${z.x}`).toBeGreaterThan(600);
+    const hint = L.hints.filter((h) => h.x < first.x).at(-1);
+    expect(hint?.words).toMatch(/drum/i);
   });
 
   it('foods on the road and food crates: at least 300 u from a pit; food crates 200 u from a hazard start', () => {
-    for (const f of L1.foods) expect(nearestPit(f.x), `${f.kind} at ${f.x}`).toBeGreaterThanOrEqual(300);
-    for (const c of L1.crates.filter((q) => q.contents !== 'kobo')) {
+    for (const f of L.foods) expect(nearestPit(f.x), `${f.kind} at ${f.x}`).toBeGreaterThanOrEqual(300);
+    for (const c of L.crates.filter((q) => q.contents !== 'kobo')) {
       expect(nearestPit(c.x)).toBeGreaterThanOrEqual(300);
-      for (const z of L1.hazards) expect(Math.abs(z.x - c.x)).toBeGreaterThanOrEqual(200);
+      for (const z of L.hazards) expect(Math.abs(z.x - c.x)).toBeGreaterThanOrEqual(200);
     }
   });
 
   it('crates: 96 u above the surface under them, 60 u from pit edges, no other roof near, 64 u apart, no coin inside', () => {
-    const roofs = L1.terrain.platforms;
-    for (const c of L1.crates) {
+    const roofs = L.terrain.platforms;
+    for (const c of L.crates) {
       const roof = roofs.find((p) => c.x >= p.x && c.x <= p.x + p.w);
-      const surface = roof ? roof.y : L1.groundY;
+      const surface = roof ? roof.y : L.groundY;
       expect(surface - c.bottomY, `crate at ${c.x}`).toBe(96);
       expect(onRoad(c.x)).toBe(true);
       expect(nearestPit(c.x)).toBeGreaterThanOrEqual(60);
       for (const p of roofs) if (p !== roof) expect(p.x + p.w < c.x - 40 || p.x > c.x + 40).toBe(true);
-      for (const k of L1.coins) expect(k.x >= c.x - 16 && k.x <= c.x + 16 && k.y >= c.bottomY - 28 && k.y <= c.bottomY).toBe(false);
+      for (const k of L.coins) expect(k.x >= c.x - 16 && k.x <= c.x + 16 && k.y >= c.bottomY - 28 && k.y <= c.bottomY).toBe(false);
     }
-    const xs = L1.crates.map((c) => c.x).sort((a, b) => a - b);
+    const xs = L.crates.map((c) => c.x).sort((a, b) => a - b);
     for (let i = 1; i < xs.length; i++) expect(xs[i]! - xs[i - 1]!).toBeGreaterThanOrEqual(64);
   });
 
+  it('wells: on solid road, the exit before the bus stop, no hazard within 400 u of an exit well', () => {
+    for (const w of L.wells) {
+      for (const x of [w.x, w.exitX]) {
+        expect(onRoad(x - 24) && onRoad(x + 24), `well at ${x}`).toBe(true);
+        expect(nearestPit(x), `well at ${x}`).toBeGreaterThanOrEqual(60);
+      }
+      expect(w.exitX).toBeLessThan(L.checkpoint);
+      expect(w.room).toBe('lagos-well');
+      for (const z of L.hazards) expect(Math.abs(z.x - w.exitX), `${z.kind} at ${z.x}`).toBeGreaterThanOrEqual(400);
+    }
+  });
+
   it('hints at least 120 u apart; spawn, bus stop and bus door on solid road; walls in order', () => {
-    const hx = L1.hints.map((h) => h.x);
+    const hx = L.hints.map((h) => h.x);
     for (let i = 1; i < hx.length; i++) expect(hx[i]! - hx[i - 1]!).toBeGreaterThanOrEqual(120);
-    expect(L1.hints).toHaveLength(15);
-    for (const x of [L1.spawnX, L1.checkpoint, L1.end!.x]) expect(onRoad(x), `x ${x}`).toBe(true);
-    expect(L1.startWall + 7).toBeLessThan(L1.spawnX);
-    expect(L1.end!.wall).toBeGreaterThan(L1.end!.x);
-    for (const h of L1.hints) expect(h.words).not.toMatch(/\{(?!forward|back|jump|down)\w*\}/);
+    expect(L.hints).toHaveLength(hints);
+    for (const x of [L.spawnX, L.checkpoint, L.end!.x]) expect(onRoad(x), `x ${x}`).toBe(true);
+    expect(L.startWall + 7).toBeLessThan(L.spawnX);
+    expect(L.end!.wall).toBeGreaterThan(L.end!.x);
+    for (const h of L.hints) expect(h.words).not.toMatch(/\{(?!forward|back|jump|down)\w*\}/);
   });
 });

@@ -68,7 +68,7 @@
   ],
   "hints": [
     [1000, "High crate? Jump from the roof.", "crates"],
-    [2780, "A well! Stand by it. Press {down}."],
+    [2780, "A well! Stand by it. Press {down}.", "wells"],
     [5200, "Bus stop! Now you start here."],
     [5450, "Big pit! Run, then jump twice."]
   ],
