@@ -22,6 +22,11 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | Hero bodies (I1): Male and Female as Teen, Adult and Elder. Teen shorter and slimmer with rounder cheeks and slightly bigger eyes; Elder slight, standing tall, grey hair on Low cut, Afro and Braids (a grey lock under Gele and Headscarf), two short smile lines, and a short neat grey beard on elder men; Female slightly narrower shoulders and wider hips, one lash stroke per eye, gold studs. Every hair and outfit on every body; same rig, face, poses and hitbox | src/art/hero.ts | Drawn in code, original | No outside licence |
 | I1 gallery pages (?gallery=6 line-up, 7 run cycles and moves, 8 elder and teen faces, 9 every body x hair x outfit) | src/art/galleryHeroes.ts | Drawn in code, original | No outside licence |
 | Pavement and gutter strip, big pit cones, start fence (zinc sheets, posts, arrow board) with a parked bus, bus park (shelter, "BUS PARK" board, wall), big yellow market bus with roof rack and sliding door, bus end timeline | src/art/roadside.ts | Drawn in code, original | No outside licence |
+| Market road (Street 2, midday): high sun and clouds; far market sheds with zinc roofs and umbrella tops; stall row with made-up signs (FABRICS, PEPPER AND TOMATOES, PROVISIONS, PHONE ACCESSORIES, TAILOR) and sign pictures: printed cloth lengths, woven baskets of pepper and tomatoes, plain tins and sacks, phone cases and cables, finished robes and a sewing machine; umbrella stands with yams, onions, plantain, garden eggs and oranges; passing keke; market stall roof platform. Sky, far sheds and stall row are cached at screen pixels (blitLayer) | src/art/market.ts | Drawn in code, original | No outside licence |
+| Bus park road (Street 3, evening): purple to orange sky with a low sun; dusk skyline with a few lantern-lit windows and a plain lattice mast; park row with VULCANIZER (zinc lean-to, tyre piles, old drums, air compressor), SUYA SPOT (grill, coals, skewers, lantern, rising smoke), TICKETS kiosk, loading ramp, two parked market buses (plain, no writing), unlit street lamps, BATTERY CHARGING, BUKA (pots, curtain, benches), PHONE REPAIRS, and a blue road sign "GO-SLOW HALL" with an arrow pointing on; zinc shed roof platform. Cached at screen pixels | src/art/buspark.ts | Drawn in code, original | No outside licence |
+| One call per street look (morning, market, evening) for the backdrop and the platform | src/art/backdrop.ts | Drawn in code, original | No outside licence |
+| Rolling drum: plain blue metal drum on its side, seen a little from the side (round lid with two caps and a rim scuff that turn as it rolls, body with two raised hoops, a rust spot, speed lines); squash when landed on, bounce sparkle (clang ring, strike lines, sparkles), smash (dents flat, lid pops off, dust) | src/art/drum.ts | Drawn in code, original | No outside licence |
+| K1 gallery pages (?gallery=10 the three street looks, 11 the rolling drum next to the tyre) | src/art/galleryStreets.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
 
@@ -31,6 +36,8 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - Slice 2 (R8 list checked): no run button (buttons are plain arrows and "Jump"); the street ends at a bus park with a market bus (roof rack, sliding door), never a flagpole or castle; the start is a zinc compound fence. The end bus was reshaped from a long rounded body to a boxy van with a sloped nose and roof load, so it does not read as a school bus.
 - Crates (R5): orange-brown wood, never yellow or gold (a unit test checks every colour); no "?" or "!" or any writing; no rivets or brick row; always hung by a rope. The first kobo stamp (rings) looked like a target, so it became a small stack of coins. The open lid hangs down the side, so an empty crate reads as "opened", not as a new block.
 - Well (R4): rope, roller, crank and bucket on a short, wide plastered wall; never a pipe, tube or green cylinder, and no water anywhere (unit tests check for pipe green and water blue in the well and room colours). The going-down clicks step by a whole tone, never by the semitone or fourth steps of famous warp or item sounds. The first brick chips looked like beans, so they became ragged holes showing bricks.
+- Streets 2 and 3 (K1): no pipes, "?" blocks, flagpoles or castles; the bus park is a real-life motor park edge (kiosk, ramp, parked vans, lamp posts, a road sign), not a level from any game. Parked buses carry no writing, no company name and no logo, and are a softer yellow than the bus the hero boards, so nobody tries to board them. Shop signs are everyday words; "GO-SLOW HALL" is our own made-up place.
+- Drum (K1): plain, no writing, no brand, no hazard symbols. It tells apart from the tyre by shape: taller, a long body with ridges and a lid, where the tyre is round and black with tread (a unit test checks the box and that it draws no text).
 - Store room: lamp-lit earth, never blue bricks or any game's underground. A dry, plainly magic bonus place: nobody is stuck, nothing suggests climbing into a real well.
 
 ## Pride check (things we chose not to do)
@@ -39,6 +46,9 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - Gele was reshaped to a wide, swept, pleated wrap so it does not look like a crown or a church hat. The agbada chest embroidery is loops, not a cross, so it carries no faith sign.
 - Headscarf is a soft wrap shown as a normal, proud choice, never a costume.
 - Heroes (I1): no age, gender or skin is drawn as a joke. Elders stand tall, run and jump like everyone, and carry no stick; in the short landing squash an elder's back stays straighter, so they never look bent over. Elder grey is a calm silver, not white or wild, and the beard is short and neat. Teens are teen-sized (46 of 50 u, head 96 percent), not small children. Female differs only in everyday ways (shoulders, hips, one lash, studs), with no lipstick, no body exaggeration and the same face, smile and moves. Every hair and outfit is open to every hero.
+- Market road (K1): goods from across the country side by side (yams, onions, plantain, garden eggs, oranges, pepper and tomatoes, printed cloth, finished robes), stalls neat, bright and busy. No traders are drawn, so no job or person is a joke.
+- Umbrellas (K1, flag for po): market umbrellas are everyday, but a party logo is also an umbrella. Ours never use green, white and red together (no green at all; a unit test checks the colours), and carry no writing or symbol.
+- Bus park road (K1): the street lamps are drawn off, to be lit by the fixed look (N1). The bus park is busy and working (suya, buka, tickets, charging), not run-down or dirty.
 - The goat is never hurt: it smiles and trots off. The boss is a problem, not a tribe, job or official, and its defeat is a happy green light.
 
 ## Sound
@@ -74,6 +84,8 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | wellUp | The same clicks, a whole tone higher each time |
 | roomThump | Soft hollow thump with two quiet echoes |
 | parcel | Warm two-note "got it", up a fifth, over a low hum |
+| drumWake | The drum wakes: a low hollow "dum", then a soft rolling rumble (four low knocks getting quieter over a low hiss) |
+| drumBounce | Landed on: a deep metal "dong" (a low body note with two bright, out-of-tune metal partials) and a short strike click |
 
 Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.
 
