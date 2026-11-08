@@ -2,7 +2,7 @@
  * Safe saves. Everything stays on the phone (localStorage). If storage is blocked
  * (private mode, settings, full disk) the game keeps working with an in-memory copy.
  */
-/** Keys on the phone: gidi-look, gidi-sound, gidi-gentle (see docs/design.md). */
+/** Keys on the phone: gidi-look (skin, hair, outfit, body, age), gidi-sound, gidi-gentle (see docs/design.md). */
 const PREFIX = 'gidi-';
 
 export interface Store {
