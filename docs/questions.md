@@ -1,5 +1,49 @@
 # Open questions for the product owner
 
+## po note, 8 Nov 2026 (read this first): Tp answered Q16 to Q25
+
+Accepted: nothing new in this note (L was accepted earlier today, see L4 below).
+Answered: Q16 to Q21 and Q23 to Q25 confirmed as recommended. Q22 answered differently: real, popular Lagos names.
+Waiting for Tp: only pasting the lines into docs/decisions.md (lines 5, 6, the "wrong premise" line, 7 to 15, and new 16 to 21 below). Recommendation: paste them as written. Nothing else waits on Tp.
+Moving now: designer picks the three street names under the Q22 rule below; po checks them before gamedev puts them in.
+
+## Answered by Tp in chat, 8 Nov 2026
+
+Tp's exact words: "All answers are Ok. The only one is the street name. We should use popular ones,"
+
+- Q16 regions, states and streets: **confirmed, option a.** World 1 in version 1 is Lagos: 3 streets, then Go-Slow Hall. Already built that way (K).
+- Q17 progress picture: **confirmed, option c.** The Nigeria wheel now, a map when there is more than one region.
+- Q18 auto-run: **confirmed, option a.** No auto-run anywhere, gentle mode too. Gentle mode stays 5 lives.
+- Q19 the well gift: **confirmed, option a.** A garri parcel carried to Go-Slow Hall; the fight starts with the shield on. One parcel at a time, no stacking, and the boss stays beatable without it.
+- Q20 hair and outfits: **confirmed, option a.** All open to every hero; the first look picked for you fits the choice.
+- Q21 the building's name: **confirmed, option a.** "Go-Slow Hall". Never "temple" or any holy word in player words.
+- Q22 street names: **answered differently.** Tp wants popular, real Lagos names, not made-up ones. Designer is choosing the names now, under the rule below.
+- Q23 parcel strength: **confirmed.** The parcel starts every hall try with the shield on, until the hall is cleared.
+- Q24 left-handed players: **confirmed.** A "Swap sides" switch comes in slice 3, after testers try the layout.
+- Q25 elder look: **confirmed.** No walking stick; elder men have a short, neat grey beard. "Elder" stays the row word.
+
+Nothing already built has to change except the street names and the cleared-screen line (Q22). Everything else was built with these answers.
+
+### Q22 rule for choosing real street names (po, under CLAUDE.md rules 3 and 4)
+
+Designer picks the names; po checks each one against this list before gamedev puts it in.
+1. Popular: a name most Lagos teens would know at once (a busy market, area, road or bus stop). Spread them across Lagos, mainland and island, so no one part carries all the problems.
+2. No street named after a real person. Not Awolowo Road, Herbert Macaulay Way, Adeola Odeku or Allen Avenue. Many Lagos roads honour people, so check where every name comes from; if a name is a person, a family or a ruler's title, or if you are not sure, skip it.
+3. No name that is a faith body or a holy place. Reasoned example: CMS (it stands for a church mission). Check the meaning of each name.
+4. No area shown as broken or to blame. The go-slow, potholes and power cuts are the same everyday problems on every street. No sign, hint or line says the place itself is bad, dirty, dangerous or behind. No jokes about a place's name, its people or how they talk.
+5. The cleared-screen words must not say a real place "is fixed", "works now" or anything that mocks it. They praise the run and the place. po suggestion for designer: "Street cleared!" then "Great run through {street name}! You got {kobo} kobo." This replaces "{street name} is fixed." (design S2.10). "Lagos is switched on!" on the hall win stays: every state switches on the same way (R0).
+6. Names only. Drawings stay our own style: no real landmark, government building, church or mosque drawn to look real, no brands, no real shop names. The made-up shop signs (VULCANIZER, SUYA SPOT, BUKA) stay.
+7. Spelled the way Lagos people write it. Short enough to fit the Streets cards and the cleared screen at 320 x 240.
+
+Who does what:
+- designer: three names (street 1 may keep "Your street" only if designer gives a reason; po leans to a real name for all three, to match Tp's words), the new cleared line, and docs/design.md S2.6, S2.10 and the Streets card words.
+- po: check the names against the rule above, then pass them to gamedev.
+- gamedev: put the names and the cleared line in with N2, which already owns the S2.10 screen words (level files from K2, cards from N1).
+- pm: add this to N2's task line and update the Q22 row in docs/plan.md.
+- qa (N3): every street name and the cleared line, on the smallest screen.
+
+Blocks: nothing. The made-up names stay until designer's names pass po.
+
 ## Slice 2 requests from Tp, 7 Nov 2026
 
 ### po acceptance note, 8 Nov 2026: slice 2 piece M (M4)
@@ -301,7 +345,7 @@ Each idea alone is a common platform game idea and is allowed. Together (run but
 6. No red caps, overalls, moustache pairs, mushrooms, stars, fire flowers, turtles, princesses, or their sounds or fonts.
 qa checks every new picture, sound and tune against this list.
 
-### Open questions for Tp (Q16 to Q21)
+### Open questions for Tp (Q16 to Q21), all answered 8 Nov 2026
 
 16. How are regions, states and streets built, and what is World 1 in version 1?
    - Asked by po from R0 and R7. Tp said "many streets ... before fighting the final boss of the region" and "going through the states".
@@ -311,7 +355,7 @@ qa checks every new picture, sound and tune against this list.
      c. Version 1 World 1 is the whole South-West, one street per state. Best case: more states in version 1, but six new street sets is far more art and much more than 3 MB.
    - Recommended: a. It is the smallest build that shows the full idea: streets, a well, crates, the hall, and one cog switching on.
    - Blocks: designer's street notes for streets 2 and 3, the progress save. Not blocking: street 1 exists and can be reworked now.
-   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+   - Status: answered by Tp in chat, 8 Nov 2026: confirmed, recommended option.
 
 17. How does the player see Nigeria getting to work?
    - Asked by po from R0.
@@ -321,7 +365,7 @@ qa checks every new picture, sound and tune against this list.
      c. Both: wheel in version 1, map later. Best case: fast now, richer later.
    - Recommended: c. The wheel now; the map when more than one region exists.
    - Blocks: the win screen and a new progress screen. Not blocking.
-   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+   - Status: answered by Tp in chat, 8 Nov 2026: confirmed, recommended option.
 
 18. Should one-tap auto-run stay as a choice, for example in gentle mode?
    - Asked by po from R3. Tp said "It should not move by itself."
@@ -331,7 +375,7 @@ qa checks every new picture, sound and tune against this list.
      c. Decide after Tp plays slice 2. Best case: learn first.
    - Recommended: a now, c later if testers struggle.
    - Blocks: nothing.
-   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+   - Status: answered by Tp in chat, 8 Nov 2026: confirmed, recommended option.
 
 19. What is the gift in the well, and how does it help in the boss fight?
    - Asked by po from R4. Tp said "win some gifts that help me fight the boss". Decision 3 says power-ups are Nigerian food.
@@ -341,7 +385,7 @@ qa checks every new picture, sound and tune against this list.
      c. A choice of one stored food (corn, garri or amala), eaten with a button in the hall. Best case: most fun, but a new button and more words on a small screen.
    - Recommended: a. One well per street, one parcel each; carrying more than one does not stack. The boss must stay beatable without any gift.
    - Blocks: the well room's gift and the hall start. Not blocking the well itself.
-   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+   - Status: answered by Tp in chat, 8 Nov 2026: confirmed, recommended option.
 
 20. Are all hair and outfits open to every hero, male or female, any age?
    - Asked by po from R2. Gele and headscarf are mostly worn by women; agbada and kaftan mostly by men.
@@ -350,7 +394,7 @@ qa checks every new picture, sound and tune against this list.
      b. Some items only for one gender. Best case: closer to custom, but it limits players and means more rules.
    - Recommended: a.
    - Blocks: art B2 rework for the new bodies. Not blocking.
-   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+   - Status: answered by Tp in chat, 8 Nov 2026: confirmed, recommended option.
 
 21. What do we call the boss's building?
    - Asked by po from R6. Tp said "the bosses temple".
@@ -360,7 +404,7 @@ qa checks every new picture, sound and tune against this list.
      c. "The Big Junction". Best case: fun for a traffic boss, but does not work for later bosses.
    - Recommended: a. "Temple" is kept out of player words so no faith is touched (rule 4).
    - Blocks: one line of words. Not blocking.
-   - Status: waiting for Tp. provisional: built with recommended option, Tp can change.
+   - Status: answered by Tp in chat, 8 Nov 2026: confirmed, recommended option.
 
 ### Lines for Tp to copy into docs/decisions.md
 
@@ -376,12 +420,27 @@ qa checks every new picture, sound and tune against this list.
 14. A region is a group of states, each state has 3 streets, and the region ends in the boss hall. Version 1: World 1 is Lagos, 3 streets plus Go-Slow Hall.
 15. The game never ends: it grows region by region until all 36 states and the FCT work, then West Africa. After the big finish, a gentle offline "keep it working" mode gives fixed states new problems, never taking progress away.
 
-### Designer's questions for Tp (Q22 to Q25), from the slice 2 design
-Each is built with the recommendation until Tp answers.
+Added 8 Nov 2026, from Tp's answers in chat to Q16 to Q25. Q16 is covered by line 14, Q20 by line 9, Q21 by line 13. These cover the rest:
+
+16. Progress shows on the Nigeria wheel, one cog per state and the FCT. A map comes when there is more than one region. (Q17)
+17. No auto-run anywhere, gentle mode too. Gentle mode gives 5 lives instead of 3. (Q18)
+18. The well gift is a garri parcel. It starts every Go-Slow Hall try with the shield on, until the hall is cleared. One parcel at a time, no stacking, and the boss can be beaten without it. (Q19, Q23)
+19. Streets use popular, real Lagos names. No street named after a real person, no faith body or holy place, no area shown as broken or to blame, and the words praise the run and the place, never saying a real place "is fixed". Drawings stay our own. (Q22)
+20. Left-handed players get a "Swap sides" switch in slice 3, after testers try the layout. (Q24)
+21. Elders stand tall with no walking stick; elder men have a short, neat grey beard. The row word is "Elder". (Q25)
+
+Number note: the 7 Nov note also suggested a "7." (the "wrong premise" line is not in the game). The numbers are only a guide; Tp can renumber freely when pasting.
+
+### Designer's questions for Tp (Q22 to Q25), from the slice 2 design (all answered 8 Nov 2026)
+Each was built with the recommendation until Tp answered.
 - **Q22 Street names.** Made-up names ("Your street", "Market road", "Bus park road") or real Lagos areas (Oshodi, Balogun)? Recommended: made-up for now, so no area feels singled out. Affects K2, N1, N2.
+  - **Answered by Tp in chat, 8 Nov 2026: real, popular Lagos names** ("We should use popular ones"). Not the recommendation. Designer is choosing the names now, under the Q22 rule at the top of this file.
 - **Q23 Parcel strength.** Does the garri parcel start every hall try with a shield, or only the next try? Recommended: every try. Affects L2, M2, M3.
+  - **Answered by Tp in chat, 8 Nov 2026: confirmed, every try.**
 - **Q24 Left-handed players.** A "Swap sides" switch to put the jump button on the left? Recommended: add it in slice 3, after testers try the layout. Affects H3, H5, N2.
+  - **Answered by Tp in chat, 8 Nov 2026: confirmed, slice 3.**
 - **Q25 Elder look.** No walking stick, so the elder never looks frail, and elder men have a short grey beard. Recommended: yes to both. Affects I1, I2.
+  - **Answered by Tp in chat, 8 Nov 2026: confirmed, yes to both.**
 
 Suggested brief wording for Tp (po does not edit the brief):
 - The idea in one line: "A free run-and-jump game where you play as yourself, fix the everyday problems in each state of Nigeria Company, eat Nigerian food for power, and get Nigeria's wheel turning."
