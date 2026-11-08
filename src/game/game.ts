@@ -12,13 +12,15 @@ import { drawGoat, drawTyre } from '../art/hazards';
 import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
 import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence, END_BUS_BACK, END_BUS_FRONT } from '../art/roadside';
 import { drawBusStop, drawRoad } from '../art/street';
-import { drawWell } from '../art/well';
+import { clipWellMouth, drawFade, drawWell, drawWellBack, drawWellFront, wellDownAt } from '../art/well';
+import { drawGarriParcel, drawRoomRope, drawShelf, drawWellRoom, ROOM_ROPE_BUCKET_Y } from '../art/wellRoom';
 import { STRIP_Y, type View } from '../engine/view';
 import { Camera, heroScreenX } from './camera';
 import { CRATE_RULES, type CrateState } from './crates';
 import { featureOn } from './features';
-import type { Level } from './level';
+import type { Level, WellData } from './level';
 import { HAZARD_BOX, Run, STEPS_PER_SECOND, type RunEvent } from './run';
+import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
 
 export { heroScreenX };
@@ -108,6 +110,10 @@ export class Game {
   still = false;
   /** Where the HUD kobo counter is on screen, world units from the top left (set by main). */
   koboTarget = { x: 70, y: 22 };
+  /** Well rooms by file id (S2.5), set by main before a run starts. */
+  rooms: ReadonlyMap<string, RoomData> = new Map();
+  /** The room camera on a screen narrower than the room (S2.5: it follows, kept inside the room). */
+  private roomCam: Camera | null = null;
 
   constructor(public level: Level) {
     this.run = new Run(level);
@@ -142,7 +148,9 @@ export class Game {
   setView(view: View): void {
     const changed = view.width !== this.viewW;
     this.viewW = view.width;
-    if (changed && this.cam) {
+    if (changed && this.run.below) {
+      this.roomCamera(true);
+    } else if (changed && this.cam) {
       this.cam.x = Math.min(this.cam.x, this.hero.x - view.width * 0.08);
       this.run.viewRight = this.cam.x + this.viewW;
     }
@@ -166,7 +174,7 @@ export class Game {
   /** Start the level from the beginning: full lives, 0 kobo. */
   begin(gentle: boolean, level: Level = this.level): void {
     this.level = level;
-    this.run = new Run(this.level, { gentle });
+    this.run = new Run(this.level, { gentle, rooms: this.rooms });
     this.newCamera();
     this.idle = false;
     this.paused = false;
@@ -178,7 +186,7 @@ export class Game {
   /** Back to the menus: a fresh, standing hero at the start. */
   reset(level: Level = this.level): void {
     this.level = level;
-    this.run = new Run(this.level);
+    this.run = new Run(this.level, { rooms: this.rooms });
     this.newCamera();
     this.idle = true;
     this.paused = false;
@@ -207,6 +215,40 @@ export class Game {
     this.run.steer(dir);
   }
 
+  /** Go down at an entrance well (S2.5). False when the hero is not at one. */
+  goDown(): boolean {
+    return this.run.goDown();
+  }
+
+  /** Go up the room's rope (S2.5). False when the hero is not under it. */
+  goUp(): boolean {
+    return this.run.goUp();
+  }
+
+  /**
+   * The room camera (S2.5): a screen as wide as the room or wider shows it centred (dark earth
+   * at the sides); a narrower one follows the hero, kept inside the room.
+   */
+  private roomCamera(snap: boolean, dt = 0): void {
+    const room = this.run.room?.room;
+    if (!room) return;
+    if (this.viewW >= room.width) {
+      this.roomCam = null;
+      this.camX = (room.width - this.viewW) / 2;
+      return;
+    }
+    const pad = 40; // Camera keeps its edges 40 u outside its walls: here, the room's sides.
+    if (snap || !this.roomCam) {
+      this.roomCam = new Camera(pad, room.width - pad);
+      this.roomCam.snap(this.hero.x, this.viewW);
+    } else if (this.still) {
+      this.roomCam.snap(this.hero.x, this.viewW);
+    } else {
+      this.roomCam.step(this.hero.x, this.viewW, dt);
+    }
+    this.camX = this.roomCam.x;
+  }
+
   update(dt: number): void {
     if (this.idle) return;
     this.clock += dt;
@@ -220,9 +262,12 @@ export class Game {
     if (h0.manual) events.push(...this.animateMoves(vx0, speed0, air0, dt));
     else this.gait = 'run';
     this.animateStride(x0, vy0, air0, dt);
-    if (events.some((e) => e.type === 'fall')) this.clearMoves();
-    if (this.cam) {
-      if (events.some((e) => e.type === 'fall')) this.snapCamera(); // back at the bus stop
+    if (events.some((e) => e.type === 'fall' || e.type === 'room' || e.type === 'wellBack')) this.clearMoves();
+    if (this.run.below) {
+      this.roomCamera(events.some((e) => e.type === 'room'), dt);
+    } else if (this.cam) {
+      // Back at the bus stop after a fall, or up at the exit well: the camera jumps there.
+      if (events.some((e) => e.type === 'fall' || e.type === 'wellBack')) this.snapCamera();
       else this.cam.step(this.hero.x, this.viewW, dt);
       this.run.viewLeft = this.cam.x;
       this.run.viewRight = this.cam.x + this.viewW;
@@ -306,6 +351,7 @@ export class Game {
    * last life was lost in the fight (run.boss is set from the moment the arena starts).
    */
   cameraX(view: View): number {
+    if (this.run.below) return this.camX;
     if (this.cam) {
       this.camX = this.cam.x;
       return this.camX;
@@ -325,6 +371,15 @@ export class Game {
   }
 
   render(g: CanvasRenderingContext2D, view: View): void {
+    if (view.width !== this.viewW) this.setView(view);
+    if (this.run.below) this.renderRoom(g, view);
+    else this.renderStreet(g, view);
+    // Going down or up a well: the screen fades to dark and back (S2.5).
+    g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+    drawFade(g, view.width, view.height, this.run.fade);
+  }
+
+  private renderStreet(g: CanvasRenderingContext2D, view: View): void {
     const { level, run } = this;
     const W = view.width;
     // Raised by `lift`: the screen shows world y from lift down to view.height + lift.
@@ -345,9 +400,10 @@ export class Game {
     // World space.
     g.translate(-camX, 0);
     drawRoad(g, camX, W, level.ground, gy, H);
-    if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t);
+    // The well in use is drawn with the hero (going down); no arrow while Go down shows.
+    if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still });
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
-    if (run.crates.length > 0) this.drawCrates(g, camX, L, R, lift);
+    if (run.crates.length > 0) this.drawCrates(g, run.crates, camX, L, R, lift, true);
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
 
@@ -404,30 +460,58 @@ export class Game {
     }
     // Blinking while safe after a hit: hidden every other 0.1 s.
     const blinkOff = (run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1) || run.boarded;
-    if (!blinkOff) {
-      const skid = this.skid;
-      const walking = h.manual && h.grounded && this.gait === 'walk';
+    const w = run.well;
+    if (run.phase === 'wellDown' && w) {
+      // S2.5 going down: the well's back, the hero clipped at the rim, then the wall in front.
+      const m = wellDownAt(run.wellSteps / STEPS_PER_SECOND);
+      drawWellBack(g, w.x, gy, { kind: 'entrance', drop: m.drop, crank: m.crank });
       g.save();
-      g.translate(h.x, h.y);
-      drawHero(g, this.look, {
-        phase: this.stridePhase,
-        inAir: !h.grounded,
-        vy: h.vy,
-        land: this.landLeft / LAND_TIME,
-        facing: skid > 0 ? this.skidFacing : h.dir,
-        glow: run.power.amala > 0,
-        fast: run.power.corn > 0,
-        standing: this.idle || ((boss?.defeated ?? false) && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
-        gait: walking ? 'walk' : 'run',
-        skid,
-        ...(this.dustAge < DUST_TIME ? { dust: this.dustAge / DUST_TIME } : {}),
-        time: t,
-      });
+      clipWellMouth(g, w.x, gy);
+      this.drawHeroNow(g, m.toRope >= 1);
       g.restore();
+      drawWellFront(g, w.x, gy);
+    } else if (!blinkOff) {
+      this.drawHeroNow(g, false);
     }
     if (run.power.shield) drawShield(g, h.x, h.y, t);
     if (end && bus && busSeen && atBus) drawEndBus(g, end.x, bus, gy);
 
+    this.drawEffects(g);
+    g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+    // Boss hit counter, below the HUD.
+    if (boss) drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
+  }
+
+  /** The hero where it is now, in its pose (rope: holding the well rope). World space. */
+  private drawHeroNow(g: CanvasRenderingContext2D, rope: boolean): void {
+    const h = this.run.hero;
+    const t = this.clock;
+    const boss = this.run.boss;
+    const skid = rope ? 0 : this.skid;
+    const walking = h.manual && h.grounded && this.gait === 'walk';
+    g.save();
+    g.translate(h.x, h.y);
+    drawHero(g, this.look, {
+      phase: this.stridePhase,
+      inAir: !rope && !h.grounded,
+      vy: h.vy,
+      land: this.landLeft / LAND_TIME,
+      facing: skid > 0 ? this.skidFacing : h.dir,
+      glow: this.run.power.amala > 0,
+      fast: this.run.power.corn > 0,
+      standing: this.idle || ((boss?.defeated ?? false) && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
+      gait: walking ? 'walk' : 'run',
+      skid,
+      ...(rope ? { rope: true } : {}),
+      ...(!rope && this.dustAge < DUST_TIME ? { dust: this.dustAge / DUST_TIME } : {}),
+      time: t,
+    });
+    g.restore();
+  }
+
+  /** Sparkles, pops, dust and drum bits now showing. World space. */
+  private drawEffects(g: CanvasRenderingContext2D): void {
+    const t = this.clock;
     for (const f of this.effects) {
       const k = (t - f.t0) / f.len;
       if (f.kind === 'drumSparkle') drawDrumSparkle(g, f.x + (f.vx ?? 0) * (t - f.t0), f.y, k);
@@ -436,9 +520,47 @@ export class Game {
       else if (f.kind === 'dust') drawDustPop(g, f.x, f.y, k);
       else drawShieldPop(g, f.x, f.y, k);
     }
-    g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-    // Boss hit counter, below the HUD.
-    if (boss) drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
+  }
+
+  /**
+   * The well's store room (S2.5, art L1): earth walls and lamps, plank shelves, kobo, the kobo
+   * crate hanging from the beam, the garri parcel, the bucket that brought the hero down, and
+   * the rope back up. Still (reduced motion): no lamp flicker, no rope sway, no parcel bob.
+   */
+  private renderRoom(g: CanvasRenderingContext2D, view: View): void {
+    const run = this.run;
+    const play = run.room!;
+    const room = play.room;
+    const W = view.width;
+    const lift = this.lift;
+    const H = view.height + lift;
+    const t = this.clock;
+    const calm = this.still ? 0 : t;
+    const camX = this.camX;
+    const L = camX - MARGIN;
+    const R = camX + W + MARGIN;
+    const gy = room.groundY;
+    const h = run.hero;
+    g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
+    g.translate(-camX, 0);
+    drawWellRoom(g, camX, W, calm, H);
+    for (const p of room.terrain.platforms) drawShelf(g, p.x, p.y, p.w);
+    for (const c of play.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
+    if (play.crates.length > 0) this.drawCrates(g, play.crates, camX, L, R, lift, false);
+    const gift = play.gift;
+    if (gift && !gift.taken) drawGarriParcel(g, gift.x, gift.y, calm);
+    // The bucket that brought the hero down: it lands, then is pulled back up (gone at once if still).
+    if (run.phase === 'roomIn') drawRoomRope(g, room.entryX, h.y - 9, 0);
+    else if (run.phase === 'room' && !this.still && run.wellSteps < WELL_RULES.bucketBackSteps) {
+      drawRoomRope(g, room.entryX, gy - 9 - (run.wellSteps / WELL_RULES.bucketBackSteps) * (gy + 20), 0);
+    }
+    // The rope back up: the bucket rises with the hero's hands while going up.
+    const up = run.phase === 'wellUp';
+    drawRoomRope(g, room.exitX, ROOM_ROPE_BUCKET_Y + (up ? h.y - gy : 0), up ? 0 : calm);
+    const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
+    if (!blinkOff || run.phase !== 'room') this.drawHeroNow(g, run.phase !== 'room');
+    if (run.power.shield) drawShield(g, h.x, h.y, t);
+    this.drawEffects(g);
   }
   /** Seconds since a step count of this run (crate swings, lids, kobo fans). */
   private since(step: number | null): number | undefined {
@@ -454,11 +576,11 @@ export class Game {
    * S2.4: the lines and poles, each crate on its rope (swinging, the lid opening), a food popped
    * out of a crate, and the three kobo fanning out of a kobo crate and flying to the HUD counter.
    */
-  private drawCrates(g: CanvasRenderingContext2D, camX: number, L: number, R: number, lift: number): void {
-    const crates = this.run.crates;
+  private drawCrates(g: CanvasRenderingContext2D, crates: readonly CrateState[], camX: number, L: number, R: number, lift: number, lines: boolean): void {
     const t = this.clock;
     // Crates at one height less than 160 u apart share a line; poles 36 u outside the end ones.
-    for (let i = 0; i < crates.length; ) {
+    // In the well room a crate hangs from the beam instead (no line, no poles).
+    for (let i = 0; i < crates.length && lines; ) {
       let j = i;
       while (j + 1 < crates.length && crates[j + 1]!.bottomY === crates[i]!.bottomY && crates[j + 1]!.x - crates[j]!.x < 160) j++;
       const x0 = crates[i]!.x - 36;
@@ -505,11 +627,21 @@ const STAMP = { kobo: 'kobo', corn: 'corn', garri: 'cup', amala: 'bowl' } as con
 
 /**
  * Slice 2 street pieces behind the hero (art H5, src/art/roadside.ts): the pavement strip under
- * the road, the start fence with its parked bus, and cones on both lips of every big pit. Wells
- * are scenery only until piece L2 (art L1: entrance with its bucket, exit with none; the "go down
- * here" arrow shows only once going down works). Crates draw in Game.drawCrates (S2.4).
+ * the road, the start fence with its parked bus, cones on both lips of every big pit, and the
+ * wells (art L1: entrance with its bucket and arrow, exit with neither). Crates draw in
+ * Game.drawCrates (S2.4).
  */
-function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number, viewW: number, L: number, R: number, H: number, time: number): void {
+function drawStreetBits(
+  g: CanvasRenderingContext2D,
+  level: Level,
+  camX: number,
+  viewW: number,
+  L: number,
+  R: number,
+  H: number,
+  time: number,
+  wells: { busy: WellData | null; noArrow: WellData | null; still: boolean },
+): void {
   const gy = level.groundY;
   drawPavement(g, camX, viewW, level.ground, STRIP_Y, H);
   const fx = level.startWall;
@@ -520,10 +652,12 @@ function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number,
     if (b - a < BIG_PIT || b + 30 < L || a - 30 > R) continue;
     drawBigPitCones(g, a, b, gy);
   }
-  // Wells: scenery only until piece L2.
+  // Wells (S2.5): the entrance with its bucket and bobbing arrow (still under reduced motion;
+  // none while its Go down button shows), the exit with neither. The one in use draws with the hero.
   const canGoDown = featureOn('wells');
   for (const w of level.wells) {
-    if (w.x + WELL_REACH > L && w.x - WELL_REACH < R) drawWell(g, w.x, gy, { kind: 'entrance', time, arrow: canGoDown });
+    const arrow = canGoDown && w !== wells.noArrow;
+    if (w !== wells.busy && w.x + WELL_REACH > L && w.x - WELL_REACH < R) drawWell(g, w.x, gy, { kind: 'entrance', time: wells.still ? 0 : time, arrow });
     if (w.exitX + WELL_REACH > L && w.exitX - WELL_REACH < R) drawWell(g, w.exitX, gy, { kind: 'exit', time });
   }
 }
