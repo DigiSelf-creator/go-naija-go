@@ -1,7 +1,7 @@
 /**
- * Pieces in the level data before their rules exist (src/game/features.ts). Crates come in J2:
- * until then street 1 draws no crate and never shows a hint about crates, but the crate data
- * stays in lagos-1.json, and switching crates on brings both back.
+ * Pieces in the level data before their rules exist (src/game/features.ts). Crates came in J2
+ * and are on. With a switch off, street 1 draws no crate and never shows a hint about crates,
+ * the crate data stays in lagos-1.json, and switching crates on brings both back.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import lagos1 from '../../src/data/levels/lagos-1.json';
@@ -18,7 +18,7 @@ const L1 = parseLevel(structuredClone(lagos1));
 const CRATE_WORDS = /crate/i;
 
 afterEach(() => {
-  FEATURES.crates = false;
+  FEATURES.crates = true;
 });
 
 /** Every hint shown while the hero is carried along the street from x0 to x1. */
@@ -32,7 +32,7 @@ function hintsAlong(x0: number, x1: number): string[] {
   return words;
 }
 
-/** Calls that draw a crate's body (32 by 28, see drawCratePlaceholder) near this x. */
+/** Crates drawn near this x: each crate body is one 32 by 28 rounded box, filled then outlined (art drawCrate). */
 function crateDrawsAt(x: number): number {
   const game = new Game(L1);
   game.begin(false);
@@ -40,12 +40,12 @@ function crateDrawsAt(x: number): number {
   (game as unknown as { snapCamera(): void }).snapCamera();
   const r = recorder();
   game.render(r.g, fitView(851, 393, 1));
-  return r.calls.filter((c) => c.name === 'fillRect' && c.args[2] === 32 && c.args[3] === 28).length;
+  return r.calls.filter((c) => c.name === 'roundRect' && c.args[0] === -16 && c.args[1] === 0 && c.args[2] === 32 && c.args[3] === 28).length / 2;
 }
 
-describe('crates switch (off until J2)', () => {
-  it('is off now', () => {
-    expect(FEATURES.crates).toBe(false);
+describe('crates switch (on since J2)', () => {
+  it('is on now', () => {
+    expect(FEATURES.crates).toBe(true);
   });
 
   it('keeps the crate data and tags the two crate hints in lagos-1, and the roof crate hint in lagos-2', () => {
@@ -67,6 +67,7 @@ describe('crates switch (off until J2)', () => {
   });
 
   it('off: no crate hint along the whole street, the other hints still show', () => {
+    FEATURES.crates = false;
     const words = hintsAlong(L1.spawnX, 10500);
     expect(words.filter((w) => CRATE_WORDS.test(w))).toEqual([]);
     expect(words).toContain('Pothole! Jump over it.');
@@ -81,6 +82,7 @@ describe('crates switch (off until J2)', () => {
   });
 
   it('off: no crate is drawn; on: the crates over the road are drawn', () => {
+    FEATURES.crates = false;
     expect(crateDrawsAt(2000)).toBe(0);
     FEATURES.crates = true;
     expect(crateDrawsAt(2000)).toBe(2); // 2000 and 2150 are both on screen

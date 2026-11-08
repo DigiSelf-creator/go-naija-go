@@ -10,8 +10,8 @@ export const FEATURE_NAMES = ['crates'] as const;
 export type Feature = (typeof FEATURE_NAMES)[number];
 
 export const FEATURES: Record<Feature, boolean> = {
-  /** Hanging crates you knock with your head (S2.4). On in J2. */
-  crates: false,
+  /** Hanging crates you knock with your head (S2.4). On since J2. */
+  crates: true,
 };
 
 /** A hint or a picture that needs this piece can show. No piece named: always. */
