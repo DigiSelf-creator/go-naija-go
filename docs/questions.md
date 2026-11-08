@@ -1,6 +1,19 @@
 # Open questions for the product owner
 
-## po note, 8 Nov 2026 (read this first): Tp answered Q16 to Q25
+## po note, 8 Nov 2026, later (read this first): Q22 street names fully answered
+
+Accepted: nothing new to accept in this note. No code has changed yet; the names go in with N2.
+Answered: Q22 is fully answered. Tp confirmed the street names in chat on 8 Nov 2026, choosing the recommended option: Street 1 (home) **Alausa**, Street 2 (market) **Computer Village**, Street 3 (bus park) **Ikeja**. The backups (Ogba, Opebi, Ojota) are not used. Earlier the same day Tp chose the cleared line "{street name} is moving again, thanks to you! You got {kobo} kobo." (already decided in docs/design.md S2.10).
+Tp's override, on the record: the Q22 rule (rule 2 below) says "if you are not sure, skip it". Alausa is also a Yoruba family name, and no one has confirmed whether the area honours a person or a family. Tp was told this, and was told Alausa is the seat of the Lagos State Government, and chose Alausa knowing both. So Alausa stands by Tp's own choice, not because it passed rule 2. The guards in design S2.6 ("Alausa, two checks") still apply: no government building, crest, flag, office sign, uniform or official on the street, and no word about government anywhere. If anyone later confirms the name honours a person or family, po will bring it back to Tp with Ogba as the swap.
+Waiting for Tp: only pasting the lines into docs/decisions.md (5, 6, the "wrong premise" line, 7 to 21 below). Line 19 is new wording with the exact names and the cleared line. Recommendation: paste them as written.
+Moving now:
+- **designer (please do, po does not own design.md):** in docs/design.md, change S2.6 "Street names" from "proposed" / "until Tp says OK" to "decided by Tp, 8 Nov 2026". Do the same in the places that still say the names wait for Tp: the S2.10 Streets card row ("proposed, waiting for Tp's OK"), the S2.10 cleared-line note ("Until Tp OKs the street names"), and art list item 9 ("names may change ... if Tp agrees"). Keep the "Alausa, two checks" guards as rules, and add that Tp chose Alausa knowing both checks.
+- **gamedev (N2):** put the three names in the `name` field of lagos-1.json, lagos-2.json and lagos-3.json, the Streets cards, and the cleared line, word for word. Nothing else in the level files changes.
+- **pm:** update the Q22 row and N2's task line in docs/plan.md: names decided.
+- **qa (N3):** "Computer Village" with 3-digit kobo and the parcel line on, at 320 x 240, as S2.10 says.
+Blocks: nothing.
+
+## po note, 8 Nov 2026: Tp answered Q16 to Q25
 
 Accepted: nothing new in this note (L was accepted earlier today, see L4 below).
 Answered: Q16 to Q21 and Q23 to Q25 confirmed as recommended. Q22 answered differently: real, popular Lagos names.
@@ -18,6 +31,7 @@ Tp's exact words: "All answers are Ok. The only one is the street name. We shoul
 - Q20 hair and outfits: **confirmed, option a.** All open to every hero; the first look picked for you fits the choice.
 - Q21 the building's name: **confirmed, option a.** "Go-Slow Hall". Never "temple" or any holy word in player words.
 - Q22 street names: **answered differently.** Tp wants popular, real Lagos names, not made-up ones. Designer is choosing the names now, under the rule below.
+  - **Fully answered by Tp in chat, 8 Nov 2026:** Street 1 Alausa, Street 2 Computer Village, Street 3 Ikeja (designer's recommended option). Tp knowingly overrode "if you are not sure, skip it" for Alausa. See the note at the top of this file.
 - Q23 parcel strength: **confirmed.** The parcel starts every hall try with the shield on, until the hall is cleared.
 - Q24 left-handed players: **confirmed.** A "Swap sides" switch comes in slice 3, after testers try the layout.
 - Q25 elder look: **confirmed.** No walking stick; elder men have a short, neat grey beard. "Elder" stays the row word.
@@ -43,6 +57,8 @@ Who does what:
 - qa (N3): every street name and the cleared line, on the smallest screen.
 
 Blocks: nothing. The made-up names stay until designer's names pass po.
+
+Outcome, 8 Nov 2026: Tp chose the names directly (Alausa, Computer Village, Ikeja), so they are decided. po checked them against this rule: Computer Village and Ikeja pass (reasoned, from design S2.6). Alausa does not pass rule 2 on its own, because no one is sure it is not a family name; Tp chose it knowing that, which overrides the rule for this one name. Rule 1's spread (mainland and island) was also set aside by Tp, who asked for names around Ikeja and Alausa.
 
 ## Slice 2 requests from Tp, 7 Nov 2026
 
@@ -425,7 +441,7 @@ Added 8 Nov 2026, from Tp's answers in chat to Q16 to Q25. Q16 is covered by lin
 16. Progress shows on the Nigeria wheel, one cog per state and the FCT. A map comes when there is more than one region. (Q17)
 17. No auto-run anywhere, gentle mode too. Gentle mode gives 5 lives instead of 3. (Q18)
 18. The well gift is a garri parcel. It starts every Go-Slow Hall try with the shield on, until the hall is cleared. One parcel at a time, no stacking, and the boss can be beaten without it. (Q19, Q23)
-19. Streets use popular, real Lagos names. No street named after a real person, no faith body or holy place, no area shown as broken or to blame, and the words praise the run and the place, never saying a real place "is fixed". Drawings stay our own. (Q22)
+19. World 1's streets are Alausa (street 1, home), Computer Village (street 2, market) and Ikeja (street 3, bus park). When a street is cleared, the game says "{street name} is moving again, thanks to you! You got {kobo} kobo." Future street names are popular, real places: never a real person, a faith body or a holy place, and no place shown as broken or to blame. Drawings stay our own, with no real building, crest or brand. (Q22)
 20. Left-handed players get a "Swap sides" switch in slice 3, after testers try the layout. (Q24)
 21. Elders stand tall with no walking stick; elder men have a short, neat grey beard. The row word is "Elder". (Q25)
 
@@ -435,6 +451,7 @@ Number note: the 7 Nov note also suggested a "7." (the "wrong premise" line is n
 Each was built with the recommendation until Tp answered.
 - **Q22 Street names.** Made-up names ("Your street", "Market road", "Bus park road") or real Lagos areas (Oshodi, Balogun)? Recommended: made-up for now, so no area feels singled out. Affects K2, N1, N2.
   - **Answered by Tp in chat, 8 Nov 2026: real, popular Lagos names** ("We should use popular ones"). Not the recommendation. Designer is choosing the names now, under the Q22 rule at the top of this file.
+  - **Fully answered by Tp in chat, 8 Nov 2026: Alausa, Computer Village, Ikeja** (streets 1, 2 and 3), the recommended option from design S2.6. Backups Ogba, Opebi and Ojota are not used. Tp chose Alausa knowing it is also a Yoruba family name and the seat of the state government.
 - **Q23 Parcel strength.** Does the garri parcel start every hall try with a shield, or only the next try? Recommended: every try. Affects L2, M2, M3.
   - **Answered by Tp in chat, 8 Nov 2026: confirmed, every try.**
 - **Q24 Left-handed players.** A "Swap sides" switch to put the jump button on the left? Recommended: add it in slice 3, after testers try the layout. Affects H3, H5, N2.
