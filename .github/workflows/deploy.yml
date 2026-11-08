@@ -39,10 +39,14 @@ jobs:
       - name: Phone tests (end to end)
         run: npx playwright test --project=phone-landscape
 
+      # Real-time play tests, one at a time so a busy runner does not upset their timing.
+      - name: Play tests in real time (end to end)
+        run: npx playwright test --project=timing --no-deps
+
       # Frame-rate tests. Shared runners are noisy, so a slow run here does not block a deploy.
       - name: Frame-rate tests (optional)
         continue-on-error: true
-        run: npx playwright test --project=perf --no-deps --workers=1
+        run: npx playwright test --project=perf --no-deps
 
       - name: Keep test results if something failed
         if: failure()
