@@ -61,6 +61,15 @@ export const WORDS = {
     gentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
     home: 'Home',
   },
+  /** S2.10 Street cleared (no parcel line until L2; "Streets" until N2 is "Home"). */
+  cleared: {
+    heading: 'Street cleared!',
+    text: (name: string, kobo: number) => `${name} is fixed. You got ${kobo} kobo.`,
+    next: 'Next street',
+    toHall: 'Go to Go-Slow Hall',
+    playAgain: 'Play again',
+    home: 'Home',
+  },
   win: {
     heading: 'Road cleared!',
     text: (kobo: number, lives: number) =>

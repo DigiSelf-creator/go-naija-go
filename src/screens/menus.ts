@@ -20,10 +20,10 @@ import type { Store } from '../storage';
 import { button, h } from './dom';
 import { GAME_NAME, WORDS } from './words';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | 'pause' | 'gameover' | 'win' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'pause' | 'gameover' | 'cleared' | 'win' | null;
 
-/** Screens that open during play (design.md: Pause, Game over, Win): their buttons ignore taps for 0.4 s. */
-const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'win'];
+/** Screens that open during play (design.md: Pause, Game over, Street cleared, Win): their buttons ignore taps for 0.4 s. */
+const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'cleared', 'win'];
 export const EVENT_SCREEN_GUARD_MS = 400;
 
 /**
@@ -51,12 +51,23 @@ export interface MenuHooks {
   restart(at: TapPoint | null): void;
   /** "Home": back to the title. */
   home(): void;
+  /** Street cleared: "Next street", or "Go to Go-Slow Hall" after the last street. */
+  next(at: TapPoint | null): void;
 }
 
 /** What the game over and win screens show. */
 export interface RunSummary {
   kobo: number;
   lives: number;
+}
+
+/** What the Street cleared screen shows (S2.10). */
+export interface ClearedSummary {
+  /** The street's name, e.g. "Market road". */
+  name: string;
+  kobo: number;
+  /** The last street of the state: the big button goes to Go-Slow Hall. */
+  last: boolean;
 }
 
 export class Menus {
@@ -68,6 +79,7 @@ export class Menus {
   private opener: (TapPoint & { t: number }) | null = null;
   private shownAt = 0;
   private summary: RunSummary = { kobo: 0, lives: 0 };
+  private cleared: ClearedSummary = { name: '', kobo: 0, last: false };
   private look: FullLook;
   /** Builder: the player tapped a Hair or Outfit chip, so body and age no longer change them (S2.3). */
   private styled = false;
@@ -113,6 +125,11 @@ export class Menus {
     this.show('gameover');
   }
 
+  showCleared(summary: ClearedSummary): void {
+    this.cleared = summary;
+    this.show('cleared');
+  }
+
   showWin(summary: RunSummary): void {
     this.summary = summary;
     this.show('win');
@@ -133,6 +150,7 @@ export class Menus {
     if (screen === 'credits') this.layer.append(this.credits());
     if (screen === 'pause') this.layer.append(this.pause());
     if (screen === 'gameover') this.layer.append(this.gameOver());
+    if (screen === 'cleared') this.layer.append(this.streetCleared());
     if (screen === 'win') this.layer.append(this.win());
   }
 
@@ -187,6 +205,28 @@ export class Menus {
       !this.settings.gentle && h('p', { class: 'small' }, w.gentleOffer),
       !this.settings.gentle && h('div', { class: 'minor-row' }, this.gentleSwitch()),
       h('div', { class: 'minor-row' }, this.guarded(w.home, 'minor', () => this.hooks.home())),
+    );
+  }
+
+  /**
+   * S2.10 Street cleared. No saving yet (piece N2), and the Streets screen comes in N2 too, so
+   * until then the small buttons are "Play again" and "Home".
+   */
+  private streetCleared(): HTMLElement {
+    const w = WORDS.cleared;
+    const c = this.cleared;
+    return h(
+      'div',
+      { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
+      h('h2', {}, w.heading),
+      h('p', {}, w.text(c.name, c.kobo)),
+      this.guarded(c.last ? w.toHall : w.next, 'go', (e) => this.hooks.next(tapPoint(e))),
+      h(
+        'div',
+        { class: 'minor-row' },
+        this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
+        this.guarded(w.home, 'minor', () => this.hooks.home()),
+      ),
     );
   }
 

@@ -96,6 +96,7 @@ export type RunEvent =
   | { type: 'kobo'; x: number; y: number }
   | { type: 'food'; kind: FoodKind; x: number; y: number }
   | { type: 'hint'; words: string }
+  | { type: 'wake'; kind: HazardKind; x: number }
   | { type: 'bounce'; kind: HazardKind; x: number; y: number }
   | { type: 'smash'; kind: HazardKind | 'honk'; x: number; y: number }
   | { type: 'hit' }
@@ -300,7 +301,7 @@ export class Run {
     });
 
     this.pickUps(ev);
-    this.moveHazards(dt);
+    this.moveHazards(dt, ev);
     this.touchHazards(ev);
     if (this.safe > 0) this.safe--;
     return ev;
@@ -471,7 +472,7 @@ export class Run {
     }
   }
 
-  private moveHazards(dt: number): void {
+  private moveHazards(dt: number, ev: RunEvent[]): void {
     const { terrain, hazardSpeeds, groundY } = this.level;
     const heroX = this.hero.x;
     // Player-moved: the road the camera shows ahead of the hero right now (S2.2).
@@ -490,6 +491,7 @@ export class Run {
           if (z.x - heroX <= wakeDistance) {
             z.mode = 'move';
             z.vx = -hazardSpeeds[z.kind]; // towards the hero
+            ev.push({ type: 'wake', kind: z.kind, x: z.x }); // the drum's "dum" (K1)
           }
           break;
         case 'move': {

@@ -61,7 +61,7 @@ describe('crates switch (on since J2)', () => {
   it('rejects a hint tagged with a piece that does not exist', () => {
     const bad = structuredClone(lagos1) as Record<string, unknown>;
     bad['hints'] = [[100, 'Hello', 'rockets']];
-    expect(() => parseLevel(bad)).toThrow('Level lagos-1: hints[0][2] should be one of crates');
+    expect(() => parseLevel(bad)).toThrow('Level lagos-1: hints[0][2] should be one of crates, wells');
     bad['hints'] = [[100, 'Hello', 'crates', 'more']];
     expect(() => parseLevel(bad)).toThrow('Level lagos-1: hints[0] should have 2 items');
   });

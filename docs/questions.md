@@ -2,6 +2,33 @@
 
 ## Slice 2 requests from Tp, 7 Nov 2026
 
+### po acceptance note, 8 Nov 2026: slice 2 piece K (K4)
+
+**Accepted** on branch gamedev/s2-k2-streets (at d56959b): Street 2 (Market road) and Street 3 (Bus park road) drawn by theme with art's K1 pieces, the rolling drum, wells as scenery only until L2, the Street cleared screen with "Next street" (and "Go to Go-Slow Hall" after street 3), and the level rule test for all three streets.
+
+Why:
+1. qa passed K3 (reported): tsc clean, 462/462 unit, build OK, first load 252.7 KB (limit 3 MB); full e2e 107/107; 4x slow phone worst part 57.7 / 58.1 / 57.8 fps on streets 1 / 2 / 3 (bar 45). Hand play: every crate, the big pits, the drum jumped, bounced and smashed (+2 kobo), lives lost and restart, pause restart, the cleared screen, the 0.4 s tap guard, the secret well; four short screens under 238 px; the hint bar covers nothing and every hint is 35 characters or fewer; no network request after load.
+2. Tp's R7 is met for version 1 (verified in src/main.ts and the level files): Lagos has three streets, each ending on the yellow bus, then the boss. Street 3's big button says "Go to Go-Slow Hall"; the slice 1 boss stands in for the hall until M. That is "many streets, then the region's boss", built as Q16's recommended answer.
+3. "Fix", never "conquer" (verified): the cleared screen says "Market road is fixed. You got 113 kobo." (qa shot A). No "conquer", "defeat", "backward" or "underdeveloped" in any word a player sees; "defeat" appears only in code names.
+4. Matches design S2.6 and S2.10 (verified in code): street names "Your street", "Market road", "Bus park road"; drum 84 u/s, bounce, sparkle, amala smash +2; heading "Street cleared!" and the line, word for word. Each street starts with full lives and 0 kobo, nothing saved yet (N2).
+5. Originality and respect (verified on qa's shots B and C, reported for the rest): a stone well with a bucket and a small roof, never a pipe; a plain blue drum with no writing; made-up signs (VULCANIZER, SUYA SPOT, TICKETS, BATTERY CHARGING, BUKA). Yellow buses and a bus park finish, never a flagpole or castle. Proud Lagos, no brands, no real places.
+6. Wells stay quiet until L2 (verified in src/game/features.ts): the "A well! ... Press {down}." hint is tagged "wells" and hidden, so no first-timer is told to press a button that is not there.
+
+qa's three word gaps, decided (all go to N2, which owns "all S2.10 screen words"; none blocks K):
+- (1) Pause says "Keep running / Start the level again": **fix in N2** to "Keep playing", "Start again", "Streets", "Home", with the Sound and Music switches (Music comes with O). "Keep running" is wrong now that nothing runs by itself.
+- (2) Game over says "The road is still here": **fix in N2** to "The street is still here." One word, but it sits with the other screen words, so it changes once, together.
+- (3) Cleared screen shows "Home" instead of "Streets": **keep Home until N2.** There is no Streets screen yet, and since nothing is saved, Home loses nothing. N2 swaps it to "Streets".
+- Also for M/N2 (po's own find): the win screen after the stand-in boss still says the slice 1 "Road cleared!". S2.10 wants "Lagos is switched on!". Fix in M or N2, wherever the hall's win lands first.
+
+qa's untested items, decided:
+- (a) Real first-timers in 3 tries or fewer: **waits for Tp's own phone test**, with qa's P3 fresh play as a stand-in. It needs real new players, and Tp is the first one we have. If streets 2 or 3 need more than 3 tries, designer picks the tuning order (S2.6 gives one only for street 1; po suggests big pits 170 to 160 first, then one hazard fewer in street 3's goat, tyre, drum group at 3700 to 4250, which is the hardest part before its bus stop). Not blocking K: the layouts match S2.6, and a fall after a bus stop costs only a few seconds.
+- (b) Listening to the drum sounds for originality: **P3** (qa's R8 review of every new sound). art K1 made them as our own; reported, not yet heard by qa.
+- (c) Offline for streets 2 and 3 alone: **enough for K.** Verified: lagos-2 and lagos-3 are imported into the main bundle (src/main.ts), so they are cached with it, and the whole-bundle offline e2e passed. P1/P3 re-check offline by hand.
+- (d) Turning the phone or switching apps on streets 2 and 3: **P3.** The pause code is shared by all streets and qa tested it on street 1 in H and J. Reasoned, low risk.
+- (e) Keyboard play on streets 2 and 3: **P3.** Same keys code as street 1, tested in H.
+
+For Tp: nothing new to decide. Q16 to Q25 still wait, built with my recommended answers; K builds Q16 option a (Lagos, 3 streets, then the hall). Please play streets 2 and 3 on your phone when you can and tell us if any took more than 3 tries.
+
 ### po acceptance note, 8 Nov 2026: slice 2 piece J (J4)
 
 **Accepted** on branch gamedev/s2-j2-crates (at fbc303d): hanging market crates you knock from below, with kobo and food inside, switched on for the Lagos streets, plus the test runner split (parallel, then timing one at a time, then frame rate).

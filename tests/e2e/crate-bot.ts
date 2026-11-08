@@ -49,9 +49,15 @@ export async function crateActor(page: Page, log: CrateLog) {
     }
     return s;
   };
-  const tapJump = async (h: Hands): Promise<void> => {
+  /** A tap jump (70 u high), or held for a full jump (139 u high) to reach a tall roof. */
+  const tapJump = async (h: Hands, hold = false): Promise<void> => {
     await h.down(RIGHT, btn.jump.x, btn.jump.y);
-    await page.waitForTimeout(40);
+    if (hold) {
+      for (let i = 0; i < 200; i++) {
+        const t = await snap(page);
+        if (t.h.vy >= 0 && !t.h.grounded) break;
+      }
+    } else await page.waitForTimeout(40);
     await h.up(RIGHT);
   };
 
@@ -69,7 +75,8 @@ export async function crateActor(page: Page, log: CrateLog) {
       await walkTo(h, roof.x - 30, 4);
       await h.down(LEFT, btn.forward.x, btn.forward.y);
       await page.waitForTimeout(80);
-      await tapJump(h);
+      // A roof more than a tap jump high (S2.6 street 2: 110 u) takes a held jump.
+      await tapJump(h, level.groundY - roof.y > 60);
       for (;;) {
         const t = await snap(page);
         if (t.r.phase !== 'run' || (t.h.grounded && t.h.x > roof.x)) break;
