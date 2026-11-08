@@ -27,6 +27,9 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | One call per street look (morning, market, evening) for the backdrop and the platform | src/art/backdrop.ts | Drawn in code, original | No outside licence |
 | Rolling drum: plain blue metal drum on its side, seen a little from the side (round lid with two caps and a rim scuff that turn as it rolls, body with two raised hoops, a rust spot, speed lines); squash when landed on, bounce sparkle (clang ring, strike lines, sparkles), smash (dents flat, lid pops off, dust) | src/art/drum.ts | Drawn in code, original | No outside licence |
 | K1 gallery pages (?gallery=10 the three street looks, 11 the rolling drum next to the tyre) | src/art/galleryStreets.ts | Drawn in code, original | No outside licence |
+| Go-Slow Hall (M1): our own made-up indoor motor park. Corrugated roof, steel roof truss, 8 hanging roof lamps (dark in the fight; on one by one at the finish, each with a light cone, a floor pool and a short flash), pale block back wall with high louvre windows, pale blue steel columns with yellow and black striped feet, an open roller-shutter door on the left showing the street outside, the "GO-SLOW HALL" name board over it, big ribbed steel doors on the right behind the jam (shut, swinging, open), concrete floor with a yellow lane line, white dashes and five painted arrows (dull, then lit warm yellow left to right), drain grate at the left wall, dark apron strip under the floor, cut walls with the hall's warm outside walls on wide screens; the cone line with a striped bar, and the cones sliding aside; the kind finish timeline (doors, lamps, cones, arrows). Back and outside layers cached at screen pixels (blitLayer) | src/art/hall.ts | Drawn in code, original | No outside licence |
+| High honk (M1): a long, thin, pale blue cloud with pointed ends and "PEEP!", chevron sound lines; General Go-Slow's high-throw warning (honk marks round the light instead of at the heap) | src/art/boss.ts | Drawn in code, original | No outside licence |
+| M1 gallery pages (?gallery=12 the hall in the fight on a wide screen with close-ups, 13 the kind finish frame by frame, reduced motion, narrowest screen) | src/art/galleryHall.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
 
@@ -38,6 +41,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - Well (R4): rope, roller, crank and bucket on a short, wide plastered wall; never a pipe, tube or green cylinder, and no water anywhere (unit tests check for pipe green and water blue in the well and room colours). The going-down clicks step by a whole tone, never by the semitone or fourth steps of famous warp or item sounds. The first brick chips looked like beans, so they became ragged holes showing bricks.
 - Streets 2 and 3 (K1): no pipes, "?" blocks, flagpoles or castles; the bus park is a real-life motor park edge (kiosk, ramp, parked vans, lamp posts, a road sign), not a level from any game. Parked buses carry no writing, no company name and no logo, and are a softer yellow than the bus the hero boards, so nobody tries to board them. Shop signs are everyday words; "GO-SLOW HALL" is our own made-up place.
 - Drum (K1): plain, no writing, no brand, no hazard symbols. It tells apart from the tyre by shape: taller, a long body with ridges and a lid, where the tyre is round and black with tread (a unit test checks the box and that it draws no text).
+- Go-Slow Hall (M1, R6): a roofed motor park, never a temple or a castle. No domes, towers, arches, steeples, crosses, crescents, carved figures, masquerades or any faith's sign; no castle bricks (the wall is plain painted blockwork in pale cream and blue), no lava or fire, no bridge, no axe, no flagpole, no boss platform over a pit. Not modelled on any real building or park. The only writing is our own name "GO-SLOW HALL"; no company, party or brand names. General Go-Slow is still a traffic light and a heap of plain cars, and the finish is kind: the light smiles, the cars drive home through the doors, the lamps come on. The high honk is our own long flat cloud with "PEEP!", told apart from the round "POOO!" by shape, word and colour (unit tests check the shape and words).
 - Store room: lamp-lit earth, never blue bricks or any game's underground. A dry, plainly magic bonus place: nobody is stuck, nothing suggests climbing into a real well.
 
 ## Pride check (things we chose not to do)
@@ -49,6 +53,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - Market road (K1): goods from across the country side by side (yams, onions, plantain, garden eggs, oranges, pepper and tomatoes, printed cloth, finished robes), stalls neat, bright and busy. No traders are drawn, so no job or person is a joke.
 - Umbrellas (K1, flag for po): market umbrellas are everyday, but a party logo is also an umbrella. Ours never use green, white and red together (no green at all; a unit test checks the colours), and carry no writing or symbol.
 - Bus park road (K1): the street lamps are drawn off, to be lit by the fixed look (N1). The bus park is busy and working (suya, buka, tickets, charging), not run-down or dirty.
+- Go-Slow Hall (M1): traffic is the problem, never the drivers: no drivers are drawn, the cars have no faces, and the jam just gives up and drives home. The hall is clean, solid and well built, a place that works once the jam clears, not a picture of Lagos as broken. Its colours carry no green (the go lights are the only green in the room; a unit test checks), and no party colour set. Flag for po: the high honk word "PEEP!" is a car horn sound, not a word from any language, so it mocks no accent.
 - The goat is never hurt: it smiles and trots off. The boss is a problem, not a tribe, job or official, and its defeat is a happy green light.
 
 ## Sound
@@ -86,6 +91,8 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | parcel | Warm two-note "got it", up a fifth, over a low hum |
 | drumWake | The drum wakes: a low hollow "dum", then a soft rolling rumble (four low knocks getting quieter over a low hiss) |
 | drumBounce | Landed on: a deep metal "dong" (a low body note with two bright, out-of-tune metal partials) and a short strike click |
+| highHonk | High honk throw: a thin, high two-tone "pee-PEEP" (two soft triangles a minor third apart, a short toot then a longer one that lifts a little), far above the low sawtooth "POOO" |
+| hallLamp | A roof lamp coming on: a small switch click, then a soft low electric hum that fades (played once per lamp, 0.15 s apart) |
 
 Avoided on purpose: the square-wave B5-to-E6 coin pair, rising square power-up runs, descending "lose" runs, and pipe or warp slides. tests/unit/sound-originality.test.ts checks the coin pair.
 
