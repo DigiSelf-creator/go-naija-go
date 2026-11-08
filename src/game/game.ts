@@ -3,18 +3,22 @@
  * with the art in src/art/. Background layers draw in screen space with parallax; the
  * road, stalls, pickups, hazards and hero draw in world space (art "space rule").
  */
+import { drawBackdrop, drawThemeStall } from '../art/backdrop';
 import { drawBoss, drawDustPop, drawGoLight, drawHitCounter, drawHonkCloud, type GoLightState } from '../art/boss';
 import { crateAngle, crateLineY, drawCrate, drawCrateLine, koboFanAt, koboFlyAt } from '../art/crate';
+import { drawDrum, drawDrumSmash, drawDrumSparkle } from '../art/drum';
 import { drawHero, WALK_STRIDE, type HeroLook } from '../art/hero';
 import { drawGoat, drawTyre } from '../art/hazards';
 import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
 import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence, END_BUS_BACK, END_BUS_FRONT } from '../art/roadside';
-import { drawBusStop, drawPassingBus, drawRoad, drawShopRow, drawSky, drawSkyline, drawStall } from '../art/street';
+import { drawBusStop, drawRoad } from '../art/street';
+import { drawWell } from '../art/well';
 import { STRIP_Y, type View } from '../engine/view';
 import { Camera, heroScreenX } from './camera';
 import { CRATE_RULES, type CrateState } from './crates';
+import { featureOn } from './features';
 import type { Level } from './level';
-import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from './run';
+import { HAZARD_BOX, Run, STEPS_PER_SECOND, type RunEvent } from './run';
 import { DEFAULT_LOOK } from './save';
 
 export { heroScreenX };
@@ -53,8 +57,11 @@ const TELEPORT = 50;
 const MARGIN = 60;
 
 interface Effect {
-  kind: 'sparkle' | 'pop' | 'dust';
+  kind: 'sparkle' | 'pop' | 'dust' | 'drumSparkle' | 'drumSmash';
+  /** Where it starts (for the drum: the bottom centre of its box, on the road). */
   x: number;
+  /** It drifts this way, u/s (a bounced drum rolls on into its sparkle). */
+  vx?: number;
   y: number;
   /** Animation clock when it started. */
   t0: number;
@@ -142,19 +149,13 @@ export class Game {
   }
 
   /**
-   * After a street: the slice 1 boss fight (until Go-Slow Hall, piece M). Lives and kobo
-   * carry over; the hero runs by itself in the arena as in slice 1.
+   * "Go to Go-Slow Hall" after the last street: the slice 1 boss fight on its own (a stand-in
+   * until Go-Slow Hall, piece M), from its start with full lives and 0 kobo. The hero runs by
+   * itself in the arena as in slice 1.
    */
-  toBoss(bossLevel: Level): void {
-    const old = this.run;
-    this.level = bossLevel;
-    const run = new Run(bossLevel, { gentle: old.maxLives === RULES.gentleLives });
-    run.lives = old.lives;
-    run.kobo = old.kobo;
-    run.power.shield = old.power.shield;
-    run.startAtArena();
-    this.run = run;
-    this.effects = [];
+  beginBoss(gentle: boolean, bossLevel: Level): void {
+    this.begin(gentle, bossLevel);
+    this.run.startAtArena();
     this.newCamera();
   }
 
@@ -227,7 +228,12 @@ export class Game {
       this.run.viewRight = this.cam.x + this.viewW;
     }
     for (const e of events) {
-      if (e.type === 'kobo' || e.type === 'food' || e.type === 'smash' || e.type === 'bounce') {
+      if ((e.type === 'smash' || e.type === 'bounce') && e.kind === 'drum') {
+        // K1: a bounced drum rolls on into a clang sparkle (0.3 s); amala dents it flat and its lid flies.
+        const y = e.y + HAZARD_BOX.drum.h;
+        if (e.type === 'bounce') this.effects.push({ kind: 'drumSparkle', x: e.x, y, vx: -this.level.hazardSpeeds.drum, t0: this.clock, len: 0.3 });
+        else this.effects.push({ kind: 'drumSmash', x: e.x, y, t0: this.clock, len: 0.5 });
+      } else if (e.type === 'kobo' || e.type === 'food' || e.type === 'smash' || e.type === 'bounce') {
         // A tyre that is bounced on or smashed vanishes in a short sparkle (0.3 s).
         const len = (e.type === 'smash' || e.type === 'bounce') && e.kind === 'tyre' ? 0.3 : 0.4;
         this.effects.push({ kind: 'sparkle', x: e.x, y: e.y, t0: this.clock, len });
@@ -333,17 +339,14 @@ export class Game {
     const gy = level.groundY;
 
     g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
-    // Screen space, parallax.
-    drawSky(g, camX, W, t, H);
-    drawSkyline(g, camX, W, gy);
-    drawShopRow(g, camX, W, gy);
-    drawPassingBus(g, camX, W, t, gy);
+    // Screen space, parallax: the street's own look (its `theme`, art K1 backdrop.ts).
+    drawBackdrop(g, level.theme, camX, W, t, H, gy);
 
     // World space.
     g.translate(-camX, 0);
     drawRoad(g, camX, W, level.ground, gy, H);
-    if (level.manual) drawStreetBits(g, level, camX, W, L, R, H);
-    for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawStall(g, p.x, p.y, p.w, gy);
+    if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t);
+    for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
     if (run.crates.length > 0) this.drawCrates(g, camX, L, R, lift);
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
@@ -379,7 +382,7 @@ export class Game {
       for (const z of run.hazards) {
         if (z.mode === 'gone' || z.x < L || z.x > R) continue;
         if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx > 0 ? 1 : -1);
-        else if (z.kind === 'drum') drawDrumPlaceholder(g, z.x, z.y, z.rot);
+        else if (z.kind === 'drum') drawDrum(g, z.x, z.y, z.rot, { lines: z.mode === 'move' });
         else drawTyre(g, z.x, z.y, z.rot);
       }
       g.globalAlpha = 1;
@@ -427,7 +430,9 @@ export class Game {
 
     for (const f of this.effects) {
       const k = (t - f.t0) / f.len;
-      if (f.kind === 'sparkle') drawSparkle(g, f.x, f.y, k);
+      if (f.kind === 'drumSparkle') drawDrumSparkle(g, f.x + (f.vx ?? 0) * (t - f.t0), f.y, k);
+      else if (f.kind === 'drumSmash') drawDrumSmash(g, f.x, f.y, k);
+      else if (f.kind === 'sparkle') drawSparkle(g, f.x, f.y, k);
       else if (f.kind === 'dust') drawDustPop(g, f.x, f.y, k);
       else drawShieldPop(g, f.x, f.y, k);
     }
@@ -501,9 +506,10 @@ const STAMP = { kobo: 'kobo', corn: 'corn', garri: 'cup', amala: 'bowl' } as con
 /**
  * Slice 2 street pieces behind the hero (art H5, src/art/roadside.ts): the pavement strip under
  * the road, the start fence with its parked bus, and cones on both lips of every big pit. Wells
- * stay placeholders until piece L. Crates draw in Game.drawCrates (S2.4).
+ * are scenery only until piece L2 (art L1: entrance with its bucket, exit with none; the "go down
+ * here" arrow shows only once going down works). Crates draw in Game.drawCrates (S2.4).
  */
-function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number, viewW: number, L: number, R: number, H: number): void {
+function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number, viewW: number, L: number, R: number, H: number, time: number): void {
   const gy = level.groundY;
   drawPavement(g, camX, viewW, level.ground, STRIP_Y, H);
   const fx = level.startWall;
@@ -514,22 +520,13 @@ function drawStreetBits(g: CanvasRenderingContext2D, level: Level, camX: number,
     if (b - a < BIG_PIT || b + 30 < L || a - 30 > R) continue;
     drawBigPitCones(g, a, b, gy);
   }
-  // Wells (scenery only until piece L).
+  // Wells: scenery only until piece L2.
+  const canGoDown = featureOn('wells');
   for (const w of level.wells) {
-    for (const x of [w.x, w.exitX]) {
-      if (x < L || x > R) continue;
-      g.fillStyle = '#7a6a58';
-      g.fillRect(x - 18, gy - 26, 36, 26);
-      g.fillStyle = '#4a3f33';
-      g.fillRect(x - 18, gy - 30, 36, 5);
-    }
+    if (w.x + WELL_REACH > L && w.x - WELL_REACH < R) drawWell(g, w.x, gy, { kind: 'entrance', time, arrow: canGoDown });
+    if (w.exitX + WELL_REACH > L && w.exitX - WELL_REACH < R) drawWell(g, w.exitX, gy, { kind: 'exit', time });
   }
 }
 
-function drawDrumPlaceholder(g: CanvasRenderingContext2D, x: number, y: number, rot: number): void {
-  g.fillStyle = '#4d6b7a';
-  g.fillRect(x - 13, y - 30, 26, 30);
-  g.fillStyle = '#34505e';
-  const k = ((rot % 1) + 1) % 1;
-  for (let i = 0; i < 3; i++) g.fillRect(x - 13, y - 26 + ((i * 10 + k * 10) % 30), 26, 3);
-}
+/** A well's drawing reaches this far either side of its centre (wall, frame and crank). */
+const WELL_REACH = 50;
