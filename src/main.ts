@@ -501,6 +501,10 @@ function startGame(): void {
         wells: level.wells.map((w) => ({ ...w })),
       };
     },
+    get below() {
+      // Cheap: below the street (the well room shows), for per-frame logs.
+      return game.run.below;
+    },
     get wellButton() {
       // The Go down / Go up button (S2.5) on screen now: which, its words, its box (CSS px).
       const s = wellButton.shown;
@@ -736,6 +740,8 @@ declare global {
         readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
         readonly wells: readonly { readonly x: number; readonly exitX: number; readonly room: string }[];
       };
+      /** Below the street: the well room shows (cheap, for per-frame logs). */
+      readonly below: boolean;
       /** The Go down / Go up button on screen now (CSS px), or null. */
       readonly wellButton: { readonly kind: 'down' | 'up'; readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       readonly toast: string;
