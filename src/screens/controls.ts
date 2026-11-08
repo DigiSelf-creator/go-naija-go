@@ -223,6 +223,27 @@ const WELL_TOP_BAR = 56;
 
 export type WellButtonKind = 'down' | 'up';
 
+/** After a Go down or Go up press, clicks on other buttons are ignored this long, ms (qa L3). */
+export const WELL_CLICK_GUARD_MS = 400;
+
+/**
+ * The well button acts on pointerdown and then hides, so the phone's follow-up click lands on
+ * whatever is under it (on a narrow screen that was Pause). This remembers the press, so that
+ * click, and any other within WELL_CLICK_GUARD_MS, is dropped. Times in ms.
+ */
+export class ClickGuard {
+  private until = -Infinity;
+
+  press(now: number): void {
+    this.until = now + WELL_CLICK_GUARD_MS;
+  }
+
+  /** True when a click at `now` is the tail of a well press and must do nothing. */
+  blocks(now: number): boolean {
+    return now < this.until;
+  }
+}
+
 /**
  * The Go down / Go up button (S2.5, S2.10 "Well button"): a real button, shown only while the
  * hero stands at an entrance well or under the room's rope. It takes its own taps (never a jump),
@@ -234,7 +255,10 @@ export class WellButton {
   private label = '';
   private placed = '';
 
-  constructor(parent: HTMLElement, onPress: (kind: WellButtonKind) => void) {
+  /** Drops the click that follows a press (it would land on what is under the hidden button). */
+  readonly guard = new ClickGuard();
+
+  constructor(parent: HTMLElement, onPress: (kind: WellButtonKind) => void, target: Window = window) {
     this.el = h('button', { type: 'button', class: 'well-btn', 'data-ui': true, hidden: true });
     const press = (): void => {
       if (this.kind) onPress(this.kind);
@@ -242,11 +266,30 @@ export class WellButton {
     // A finger or mouse presses at once (no wait for the lift); the keyboard clicks it.
     this.el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      if (!this.kind) return;
+      this.guard.press(performance.now());
       press();
     });
+    // No mouse events or click made from this touch: the button is gone by the lift.
+    const noClick = (e: TouchEvent): void => {
+      if (e.cancelable) e.preventDefault();
+    };
+    this.el.addEventListener('touchstart', noClick, { passive: false });
+    this.el.addEventListener('touchend', noClick, { passive: false });
     this.el.addEventListener('click', (e) => {
       if (e.detail === 0) press();
     });
+    // Before any button sees it: a tap's click right after a well press does nothing (a key's
+    // click, detail 0, still works).
+    target.addEventListener(
+      'click',
+      (e) => {
+        if (e.detail === 0 || e.target === this.el || !this.guard.blocks(performance.now())) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      },
+      true,
+    );
     parent.append(this.el);
   }
 
