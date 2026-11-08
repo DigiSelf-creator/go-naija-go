@@ -38,7 +38,10 @@ export type SoundName =
   | 'parcel'
   // Slice 2: the rolling drum (K1)
   | 'drumWake'
-  | 'drumBounce';
+  | 'drumBounce'
+  // Slice 2: Go-Slow Hall (M1)
+  | 'highHonk'
+  | 'hallLamp';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -267,6 +270,26 @@ const SOUNDS: Record<SoundName, Recipe> = {
       { f: 220, len: 0.06, wave: 'triangle', to: 160, vol: 0.05 },
     ],
     hiss: [{ len: 0.03, hp: 3500, vol: 0.05 }],
+  },
+  // Slice 2 (M1). High honk throw: a thin, high two-tone "pee-PEEP" (a quick short toot, then a
+  // longer one that lifts a little), two triangles a minor third apart, far above the low
+  // sawtooth "POOO" so the ear tells them apart too.
+  highHonk: {
+    tones: [
+      { f: 932, len: 0.07, wave: 'triangle', vol: 0.04 },
+      { f: 1109, len: 0.07, wave: 'triangle', vol: 0.03 },
+      { f: 932, len: 0.2, wave: 'triangle', to: 960, at: 0.1, vol: 0.045 },
+      { f: 1109, len: 0.2, wave: 'triangle', to: 1142, at: 0.1, vol: 0.035 },
+    ],
+  },
+  // A roof lamp coming on: a small switch click, then a soft low electric hum that fades.
+  hallLamp: {
+    tones: [
+      { f: 1600, len: 0.02, wave: 'triangle', to: 1200, vol: 0.05 },
+      { f: 110, len: 0.45, wave: 'sine', vol: 0.03 },
+      { f: 220, len: 0.35, wave: 'sine', vol: 0.012 },
+    ],
+    hiss: [{ len: 0.015, hp: 3000, vol: 0.04 }],
   },
 };
 
