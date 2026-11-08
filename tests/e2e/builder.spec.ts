@@ -98,7 +98,7 @@ test('credits, sound and gentle mode on the title screen', async ({ page }) => {
   await page.getByRole('button', { name: 'Credits' }).tap();
   const credits = page.getByRole('dialog', { name: 'Credits' });
   await expect(credits.getByText('Made by CoachNaz.')).toBeVisible();
-  await expect(credits.getByText('Every picture and sound is our own.')).toBeVisible();
+  await expect(credits.getByText('Every picture, sound and tune is our own.')).toBeVisible();
   await expect(credits.getByText(/wrong premise/)).toHaveCount(0);
   await credits.getByRole('button', { name: 'Back' }).tap();
 
