@@ -138,6 +138,9 @@ const ALL_SOUNDS: readonly SoundName[] = [
   'drumBounce',
   'highHonk',
   'hallLamp',
+  'cogRatchet',
+  'cogBell',
+  'lockedTuk',
 ];
 
 describe('every gain envelope fades in from near silence (no ticks)', () => {

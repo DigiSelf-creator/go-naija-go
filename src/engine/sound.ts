@@ -41,7 +41,11 @@ export type SoundName =
   | 'drumBounce'
   // Slice 2: Go-Slow Hall (M1)
   | 'highHonk'
-  | 'hallLamp';
+  | 'hallLamp'
+  // Slice 2: Streets screen and Nigeria's wheel (N1)
+  | 'cogRatchet'
+  | 'cogBell'
+  | 'lockedTuk';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -290,6 +294,29 @@ const SOUNDS: Record<SoundName, Recipe> = {
       { f: 220, len: 0.35, wave: 'sine', vol: 0.012 },
     ],
     hiss: [{ len: 0.015, hp: 3000, vol: 0.04 }],
+  },
+  // Slice 2 (N1). A cog starting to turn: four quick dry ratchet clicks, wood-on-metal, that
+  // rock between two close pitches (never a run up or down), each with a tiny tick of hiss.
+  cogRatchet: {
+    tones: [0, 1, 2, 3].map((i): Tone => ({ f: i % 2 ? 2100 : 2350, len: 0.018, wave: 'triangle', to: i % 2 ? 1900 : 2150, at: i * 0.075, vol: 0.045 })),
+    hiss: [0, 1, 2, 3].map((i): Hiss => ({ len: 0.015, hp: 4000, at: i * 0.075, vol: 0.03 })),
+  },
+  // Then a small bell: one soft strike, a low body note with two out-of-tune bell partials
+  // over it (1 : 2.76 : 5.4), lower and rounder than the bus stop's ding.
+  cogBell: {
+    tones: [
+      { f: 1046, len: 0.6, wave: 'sine', to: 1040, vol: 0.05 },
+      { f: 1046 * 2.76, len: 0.32, wave: 'sine', to: 1040 * 2.76, vol: 0.014 },
+      { f: 1046 * 5.4, len: 0.12, wave: 'sine', vol: 0.006 },
+    ],
+  },
+  // Tapping a locked street card: one soft, low, short "tuk", like a knock on a closed door.
+  lockedTuk: {
+    tones: [
+      { f: 200, len: 0.07, wave: 'triangle', to: 150, vol: 0.07 },
+      { f: 400, len: 0.03, wave: 'sine', to: 320, vol: 0.02 },
+    ],
+    hiss: [{ len: 0.02, lp: 900, vol: 0.03 }],
   },
 };
 
