@@ -2,13 +2,37 @@
 
 ## Slice 2 requests from Tp, 7 Nov 2026
 
+### po acceptance note, 8 Nov 2026: slice 2 piece L (L4)
+
+**Accepted** on branch gamedev/s2-l2-wells (at 98c30fd): the wells and the underground gift room. Go down and Go up buttons and keys, the street frozen while the hero is below, the room with 14 kobo, a kobo crate worth 3 and the garri parcel, the HUD chip "Parcel", the way back up with 1 s of safety, a room that stays as you left it on a second visit, and the parcel kept after a lost life and lost on game over, Start again or Home. Includes the L3 fixes: the HUD stays one row down to 320 px (942c649), a well press never presses the button under it (c142925), and the toast "Garri parcel! Keep it safe." (23490c0).
+
+Tp's request, checked honestly: "enter a well to an underground and win some gifts that help me fight the boss".
+- Enter a well to an underground: **met** (verified on qa's shots a02, a03, a05 and h-320x236-2). A stone well with a small roof, a crank and a bucket; the hero goes down and comes up by the rope. A dry, lamp-lit store room with earth walls, clay pots, woven baskets and shelves. No water, no pipe.
+- Win some gifts: **met** (verified on shot h-320x236-2: 3 kobo from the street, then 14 room kobo and the crate's 3 make Kobo 20, with the parcel chip on).
+- That help me fight the boss: **not yet, and that is planned.** Today the parcel lives only for one street. The shield at the hall start comes with M2 (Go-Slow Hall), and carrying the parcel from a street to the hall comes with N2 (saving). Until both are in, the parcel does nothing in a fight. That is why the toast says only "Keep it safe." and makes no promise. Tp should not expect the boss help when playing this build.
+
+Why:
+1. qa passed L3b (reported): tsc clean, 512/512 unit, build OK, first load 269.5 KB (limit 3 MB); full e2e 121/121; timing 42/42 and perf 7/7 at 57.7 to 60 fps at 4x CPU (bar 45). Hand play at 320 x 236, 320 x 240, 340 x 240, 350 x 240, 400 x 240 and 932 x 430, and with reduced motion: Pause never opened from Go up; the HUD stayed one row with every chip at 12 widths; turning the phone, resizing, keys and mouse, the screen reader and no network all passed; every first-round L3 check still passes.
+2. The L3 bug is fixed (reported by qa, and the cause verified in src/screens/controls.ts): the well button acts on pointerdown and hides, so the phone's follow-up click fell on Pause. Its touches now cancel that click, and for 400 ms any other tap click is dropped. Keys are not affected.
+3. Design S2.5 rules (reported by qa, checked against the plan's L2 line): going down is a choice and skipping it never blocks the street; the street waits while you are below; you come up with safety and hazards cleared; a lost life keeps the parcel, game over loses it.
+4. Originality (verified on the shots): our own village well and store room, never a pipe, green tube, blue bricks or any game's underground. Signs are made up. Nothing looks like Mario or any Nintendo game.
+5. Plain words (verified in src/screens/words.ts): "Go down", "Go up", "A secret room! Grab the kobo. Stand under the rope to go back up.", "Garri parcel! Keep it safe.", "Parcel". Clear for a 10 year old, and no promise the build cannot keep.
+6. Privacy and size (reported, spot-checked in the branch diff): no network call added, no photo, no account; the build grew only 17 KB.
+
+qa's notes, decided:
+- (1) The toast line in my c4e538d ruling: **corrected.** Verified on shot d-320x236-03-room-parcel: at 320 x 236 the toast wraps to four short lines ("Garri / parcel! / Keep it / safe.") in the yellow bar, readable, nothing clipped. Corrected line, now in that ruling: "It fits every bar with no short words: one line on wide bars, and at 320 x 236 it wraps to four short lines of 12 px words in the 78 px bar, which design S2.2 allows; nothing is clipped." The same goes for the N2 words, "Garri parcel! Shield for the hall.", fixed in the same ruling. gamedev changes nothing.
+- (2) A second-finger tap on Pause or Sound does nothing while a thumb holds Forward or Jump: **a real bug, small, fix in N2. Not blocking L.** It came before L. Why a bug and not polish: a player on a cheap phone who sees a goat coming, or hears the phone ring, keeps a thumb on Forward and taps Pause with the other hand; the button looks ready and does nothing, which feels broken. Why not now: there is a workaround (lift the thumb), and switching apps or a call already pauses the game by itself (tested in H and J). Why N2: N2 already rebuilds the Pause screen and its words, so the HUD buttons get fixed and tested once, together (qa N3, with the S2.11 accessibility list). Not P: P should find nothing new. What done looks like: Pause and Sound act on a second-finger tap while Forward or Jump is held; one press does one thing (Sound must never switch twice from a pointer event plus a click); a press that opens Pause never also presses what appears under it (the same guard as the well button); keys and screen readers still work. pm: please add this to N2's task line, with an e2e that holds Forward and taps Pause.
+- (3) design.md for the HUD steps and the toast stages: **designer, please do it** with the c4e538d toast work: S2.10 HUD (icon only, then smaller, then a coin icon for the word Kobo, words kept for screen readers) and the two toast stages. Not blocking L.
+
+For Tp: nothing new to decide. Q19 and Q23 (the well gift and how strong it is) still wait, built with my recommended answers: a garri parcel that starts every Go-Slow Hall try with the shield on. Please play street 2 or 3 on your phone, go down a well and pick up the parcel. It helps in the boss fight only after M2 and N2.
+
 ### po ruling, 8 Nov 2026: piece L parcel toast and the Go up button (from qa L3)
 
 Not an acceptance. L still waits for gamedev's narrow-screen fix and qa's re-test. These rulings go into that same fix round.
 
 **(1) The parcel toast words.**
-- Now (until N2 lands): **"Garri parcel! Keep it safe."** (27 characters). One line on every bar, so it needs no short words.
-- From N2 on: **"Garri parcel! Shield for the hall."** (34 characters). It is the short form already in the table and already fits the narrowest bar (78 px at 320 x 240), so one string serves every screen and the short-words row goes away.
+- Now (until N2 lands): **"Garri parcel! Keep it safe."** (27 characters). It fits every bar with no short words: one line on wide bars, and at 320 x 236 it wraps to four short lines of 12 px words in the 78 px bar, which design S2.2 allows; nothing is clipped. (Wording corrected in the L4 note, 8 Nov 2026; it said "one line on every bar", which qa found is not true at 320 x 236.)
+- From N2 on: **"Garri parcel! Shield for the hall."** (34 characters). It is the short form already in the table and fits the narrowest bar (78 px at 320 x 240) as short wrapped lines, so one string serves every screen and the short-words row goes away.
 - Switch it in N2, not M2. N2 owns all S2.10 words, and the promise only comes true when both are in: M2 gives the shield at the hall start, N2 carries the parcel from a street to the hall. With M2 alone, every street is still a new run and the parcel never reaches the hall.
 
 Why:
