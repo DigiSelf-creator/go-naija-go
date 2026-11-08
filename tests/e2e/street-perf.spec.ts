@@ -1,6 +1,7 @@
 /**
- * Frame rate through the whole of street 1 (lagos-1), played by hand with two thumbs, at 4x
- * CPU slowdown on the phone profile. Pass: at least 45 fps in every 1000 u part of the street,
+ * Frame rate through the whole of each Lagos street (lagos-1, lagos-2 Market road, lagos-3 Bus
+ * park road, each with its own backdrop), played by hand with two thumbs, at 4x CPU slowdown on
+ * the phone profile. Pass: at least 45 fps in every 1000 u part of the street,
  * and the game keeps full speed (about 60 physics steps a second). The hero knocks every crate
  * on the way (J2), so swings, kobo fans and the food pop are measured too.
  *
@@ -23,7 +24,13 @@ const busy = (page: Page) =>
     return performance.now() - t + (x < 0 ? 1 : 0);
   });
 
-test('slowed 4x CPU: street 1 by hand, start to bus, at least 45 fps in every part', async ({ page }) => {
+const STREETS = [
+  { n: 1, id: 'lagos-1', url: './' },
+  { n: 2, id: 'lagos-2', url: './?level=lagos-2' },
+  { n: 3, id: 'lagos-3', url: './?level=lagos-3' },
+] as const;
+
+for (const { n, id, url } of STREETS) test(`slowed 4x CPU: street ${n} by hand, start to bus, at least 45 fps in every part`, async ({ page }) => {
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -31,14 +38,14 @@ test('slowed 4x CPU: street 1 by hand, start to bus, at least 45 fps in every pa
   // for an Elder, so each body and age can be measured. Unset: the default hero.
   const perfLook = process.env['PERF_LOOK'];
   if (perfLook) await page.addInitScript((v) => localStorage.setItem('gidi-look', v), perfLook);
-  await page.goto('./');
+  await page.goto(url);
   if (perfLook) expect(await page.evaluate(() => window.__game!.look)).toEqual(JSON.parse(perfLook));
   // Gentle mode, so a missed jump on a slow machine does not end the measurement early.
   await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
-  expect(await page.evaluate(() => window.__game!.level.id)).toBe('lagos-1');
+  expect(await page.evaluate(() => window.__game!.level.id)).toBe(id);
   const dpr = await page.evaluate(() => devicePixelRatio);
   const canvas = await page.evaluate(() => `${document.querySelector('canvas')!.width}x${document.querySelector('canvas')!.height}`);
 
@@ -73,7 +80,7 @@ test('slowed 4x CPU: street 1 by hand, start to bus, at least 45 fps in every pa
   // fps for each 1000 u of street: frames whose hero x is in that part, over the time they span
   // (only gaps of under a second count, so a fall back to the bus stop is not a slow frame).
   const parts: { x: number; fps: number; steps: number }[] = [];
-  for (let x = 0; x < 11000; x += 1000) {
+  for (let x = 0; x < 12000; x += 1000) {
     let n = 0;
     let ms = 0;
     let steps = 0;
@@ -91,11 +98,11 @@ test('slowed 4x CPU: street 1 by hand, start to bus, at least 45 fps in every pa
   const report = parts.map((p) => `${p.x}: ${p.fps.toFixed(1)}${p.fps < BAR ? ' (UNDER)' : ''}`).join(', ');
   const total = frames.length > 1 ? ((frames.length - 1) * 1000) / (frames.at(-1)![0] - frames[0]![0]) : 0;
   console.log(
-    `4x CPU, street 1 by hand (dpr ${dpr}, canvas ${canvas}), fps by part (bar ${BAR}): ${report}. ` +
+    `4x CPU, street ${n} by hand (dpr ${dpr}, canvas ${canvas}), fps by part (bar ${BAR}): ${report}. ` +
       `Worst ${worst.toFixed(1)}, overall ${total.toFixed(1)}. Steps/s worst part ${Math.min(...parts.map((p) => p.steps)).toFixed(1)}. ` +
       `Crates opened ${crates.opened.join(', ') || 'none'}. Reached ${last?.r.phase} at x ${last?.h.x.toFixed(0)}, ${last?.r.lives} lives. Fixed work 1x ${work1.toFixed(0)} ms, 4x ${work4.toFixed(0)} ms`,
   );
-  test.info().annotations.push({ type: 'street 1 fps 4x', description: `worst ${worst.toFixed(1)} | ${report}` });
+  test.info().annotations.push({ type: `street ${n} fps 4x`, description: `worst ${worst.toFixed(1)} | ${report}` });
 
   expect(errors).toEqual([]);
   expect(work4, 'the 4x slowdown is on').toBeGreaterThan(work1 * 2.5);

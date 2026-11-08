@@ -91,7 +91,7 @@ test('street 1 by hand with two thumbs: walk, run, potholes, the big pit by a ru
   expect(seen).toEqual({ walk: true, run: true, dust: true });
   expect(shotWalk && shotRun).toBe(true);
 
-  // Reached the bus: controls locked, then on to the boss fight (slice 1's, until piece M).
+  // Reached the bus: controls locked, then the Street cleared screen.
   expect(last.r.phase).toBe('bus');
   expect(last.r.checkpoint).toBe(true);
   expect(stats.maxSpeed).toBe(228); // ran, and ran on corn
@@ -106,12 +106,20 @@ test('street 1 by hand with two thumbs: walk, run, potholes, the big pit by a ru
   expect(last.r.lives).toBe(2);
   expect(shotPlaying && shotPit).toBe(true);
 
-  await expect.poll(() => page.evaluate(() => window.__game!.run.phase), { timeout: 5000 }).toBe('arena');
-  await expect(page.getByText('General Go-Slow blocks the road! Jump onto the green light.')).toBeVisible();
-  const boss = await snap(page);
-  expect(boss.r.lives).toBe(2);
-  expect(boss.r.kobo).toBe(last.r.kobo);
-  expect(boss.i.buttons).toBe(true);
+  // K2: the Street cleared screen, then "Next street" opens street 2 (Market road).
+  const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
+  await expect(cleared).toBeVisible({ timeout: 5000 });
+  const kobo = await page.evaluate(() => window.__game!.run.kobo);
+  expect(kobo).toBeGreaterThanOrEqual(last.r.kobo);
+  await expect(cleared.getByText(`Your street is fixed. You got ${kobo} kobo.`)).toBeVisible();
+  await waitOutTapLock(page);
+  await cleared.getByRole('button', { name: 'Next street' }).tap();
+  await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-2');
+  const next = await snap(page);
+  expect(next.screen).toBe('play');
+  expect(next.r.lives).toBe(3);
+  expect(next.r.kobo).toBe(0);
+  expect(next.i.buttons).toBe(true);
   expect(errors).toEqual([]);
 });
 
