@@ -44,6 +44,8 @@ export const WORDS = {
     fast: (s: number) => `Fast ${s}`,
     shield: 'Shield',
     strong: (s: number) => `Strong ${s}`,
+    /** S2.10 HUD: the garri parcel icon and this word while it is carried (S2.5). */
+    parcel: 'Parcel',
     pause: 'Pause',
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
@@ -97,6 +99,17 @@ export const WORDS = {
     bossArrives: 'General Go-Slow blocks the road! Jump onto the green light.',
     greenLight: (left: number) => `Green light! ${left} more.`,
     roadFree: 'Green light! The road is free!',
+    /** S2.5 the well and its room. */
+    roomArrive: 'A secret room! Grab the kobo. Stand under the rope to go back up.',
+    parcel: 'Garri parcel! Your shield will be on when the Go-Slow Hall fight starts.',
+    backOnStreet: 'Back on the street!',
+  },
+  /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
+  well: {
+    down: 'Go down',
+    downKeys: 'Go down (\u2193)',
+    up: 'Go up',
+    upKeys: 'Go up (Enter)',
   },
 } as const;
 

@@ -196,3 +196,89 @@ export class TouchButtons {
     this.onChange();
   }
 }
+
+/** The Go down / Go up button's bottom sits this far above the crank top (or the room's bucket), CSS px. */
+export const WELL_BUTTON_GAP = 8;
+/** Kept this far inside the screen's sides, CSS px. */
+const WELL_BUTTON_EDGE = 4;
+
+/**
+ * Where the Go down or Go up button goes (docs/design.md S2.2 Phone buttons, S2.5): a pill
+ * max(56, D) tall and 2.2 D wide, its bottom 8 px above `anchor` (the crank top, or the room's
+ * bucket), centred on it, kept inside the screen and below the top 56 px (the HUD row).
+ * `anchor` is in CSS px.
+ */
+export function wellButtonBox(anchor: { x: number; y: number }, cssW: number, layout: ButtonLayout, safe: Insets = { top: 0, right: 0, bottom: 0, left: 0 }): Box {
+  const h = Math.max(MIN_D, layout.d);
+  const w = Math.round(2.2 * layout.d);
+  const lo = Math.max(WELL_BUTTON_EDGE, safe.left);
+  const hi = cssW - Math.max(WELL_BUTTON_EDGE, safe.right) - w;
+  const x = Math.min(Math.max(anchor.x - w / 2, lo), Math.max(lo, hi));
+  const top = Math.max(WELL_TOP_BAR, safe.top);
+  const y = Math.max(top, anchor.y - WELL_BUTTON_GAP - h);
+  return { x: Math.round(x), y: Math.round(y), w, h };
+}
+/** The HUD row: the well button stays below it (same as the touch areas' top bar). */
+const WELL_TOP_BAR = 56;
+
+export type WellButtonKind = 'down' | 'up';
+
+/**
+ * The Go down / Go up button (S2.5, S2.10 "Well button"): a real button, shown only while the
+ * hero stands at an entrance well or under the room's rope. It takes its own taps (never a jump),
+ * and Enter or Space on it while focused works too. Art's pill with a bucket and an arrow.
+ */
+export class WellButton {
+  readonly el: HTMLButtonElement;
+  private kind: WellButtonKind | null = null;
+  private label = '';
+  private placed = '';
+
+  constructor(parent: HTMLElement, onPress: (kind: WellButtonKind) => void) {
+    this.el = h('button', { type: 'button', class: 'well-btn', 'data-ui': true, hidden: true });
+    const press = (): void => {
+      if (this.kind) onPress(this.kind);
+    };
+    // A finger or mouse presses at once (no wait for the lift); the keyboard clicks it.
+    this.el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      press();
+    });
+    this.el.addEventListener('click', (e) => {
+      if (e.detail === 0) press();
+    });
+    parent.append(this.el);
+  }
+
+  /** Which button shows now (null: none), its words, and its box (CSS px). Cheap every frame. */
+  update(kind: WellButtonKind | null, label: string, box: Box | null): void {
+    if (kind === null || box === null) {
+      if (this.kind !== null) {
+        this.kind = null;
+        this.el.hidden = true;
+      }
+      return;
+    }
+    if (kind !== this.kind || label !== this.label) {
+      this.kind = kind;
+      this.label = label;
+      this.el.setAttribute('aria-label', CONTROL_WORDS[kind]);
+      this.el.innerHTML = `<span class="pad-up">${controlSvg(kind, false, label)}</span><span class="pad-down">${controlSvg(kind, true, label)}</span>`;
+    }
+    this.el.hidden = false;
+    const at = `${box.x},${box.y},${box.w},${box.h}`;
+    if (at !== this.placed) {
+      this.placed = at;
+      const s = this.el.style;
+      s.left = `${box.x}px`;
+      s.top = `${box.y}px`;
+      s.width = `${box.w}px`;
+      s.height = `${box.h}px`;
+    }
+  }
+
+  /** The button on screen now: which and its words; null when hidden. */
+  get shown(): { kind: WellButtonKind; label: string } | null {
+    return this.kind ? { kind: this.kind, label: this.label } : null;
+  }
+}

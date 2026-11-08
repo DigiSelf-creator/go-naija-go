@@ -4,6 +4,7 @@
  * HTML over the canvas; the DOM is only touched when something changes.
  */
 import { drawFoodIcon } from '../art/items';
+import { drawParcelIcon } from '../art/wellRoom';
 import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
 import { button, h } from './dom';
@@ -24,6 +25,8 @@ export class Hud {
   private readonly lives: HTMLElement;
   private readonly kobo: HTMLElement;
   private readonly slots: Record<Slot, { el: HTMLElement; text: HTMLElement }>;
+  /** The garri parcel (S2.5): its icon and "Parcel" next to the kobo while carried. */
+  private readonly parcel: HTMLElement;
   private readonly sound: HTMLButtonElement;
   private last = '';
 
@@ -42,13 +45,20 @@ export class Hud {
       return { el, text };
     };
     this.slots = { garri: slot('garri'), corn: slot('corn'), amala: slot('amala') };
+    const parcelIcon = h('canvas', { class: 'hud-icon', width: '56', height: '56', 'aria-hidden': 'true' });
+    const pg = parcelIcon.getContext('2d');
+    if (pg) {
+      pg.scale(56 / 32, 56 / 32);
+      drawParcelIcon(pg, 16, 16, 26);
+    }
+    this.parcel = h('span', { class: 'hud-food hud-parcel', hidden: true }, parcelIcon, h('span', {}, WORDS.hud.parcel));
     this.sound = button('', 'hud-btn hud-sound', () => hooks.toggleSound(), { 'data-ui': true });
     this.sound.innerHTML = SPEAKER;
     const pause = button('II', 'hud-btn hud-pause', (e) => hooks.pause(e), { 'aria-label': WORDS.hud.pause, 'data-ui': true });
     this.root = h(
       'div',
       { class: 'hud', hidden: true },
-      h('div', { class: 'hud-left' }, this.lives, this.kobo, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el),
+      h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el),
       h('div', { class: 'hud-right' }, this.sound, pause),
     );
     parent.append(this.root);
@@ -63,13 +73,14 @@ export class Hud {
     const p = run.power;
     const secs = (steps: number): number => Math.ceil(steps / STEPS_PER_SECOND);
     const warn = (steps: number): boolean => steps > 0 && steps <= RULES.warnSteps;
-    const key = [run.lives, run.kobo, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn].join('|');
+    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn].join('|');
     if (key === this.last) return;
     this.last = key;
 
     this.lives.textContent = WORDS.hud.lives(run.lives);
     this.lives.setAttribute('aria-label', `Lives: ${run.lives}`);
     this.kobo.textContent = WORDS.hud.kobo(run.kobo);
+    this.parcel.hidden = !run.parcel;
     this.setSlot('garri', p.shield, WORDS.hud.shield, false);
     this.setSlot('corn', p.corn > 0, WORDS.hud.fast(secs(p.corn)), warn(p.corn));
     this.setSlot('amala', p.amala > 0, WORDS.hud.strong(secs(p.amala)), warn(p.amala));

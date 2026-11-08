@@ -27,6 +27,11 @@ export interface ControlHandlers {
   onJumpRelease(by: Source): void;
   /** The direction held changed. */
   onMove(dir: Dir): void;
+  /**
+   * A well key went down (S2.2 Keys: Down, S, Enter, E). The game decides what it does: at a
+   * well Down, S, Enter and E go down; under the room's rope only Enter and E go up.
+   */
+  onWellKey?(code: string): void;
 }
 
 /** The left share of the screen that is the direction area; the rest is the jump area. */
@@ -37,6 +42,10 @@ export const TOP_BAR = 56;
 const FORWARD_KEYS = new Set(['ArrowRight', 'KeyD']);
 const BACK_KEYS = new Set(['ArrowLeft', 'KeyA']);
 const JUMP_KEYS = new Set(['Space', 'ArrowUp', 'KeyW']);
+/** S2.2 Keys: at a well, go down; under the room's rope, Enter and E go up. */
+export const WELL_KEYS: ReadonlySet<string> = new Set(['ArrowDown', 'KeyS', 'Enter', 'KeyE']);
+/** The well keys that also go up the room's rope (Down and S do nothing there). */
+export const WELL_UP_KEYS: ReadonlySet<string> = new Set(['Enter', 'KeyE']);
 
 interface Finger {
   area: 'dir' | 'jump' | 'none';
@@ -132,6 +141,11 @@ export class Controls {
 
   /** Returns true when the key is a game key (so the page should not scroll or click). */
   keyDown(code: string, repeat: boolean): boolean {
+    if (WELL_KEYS.has(code)) {
+      this.lastKind = 'keys';
+      if (!repeat) this.handlers.onWellKey?.(code); // key repeat is ignored
+      return true;
+    }
     const dir: Dir = FORWARD_KEYS.has(code) ? 1 : BACK_KEYS.has(code) ? -1 : 0;
     const jump = JUMP_KEYS.has(code);
     if (!dir && !jump) return false;

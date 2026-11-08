@@ -1,7 +1,7 @@
 /**
  * K2: Lagos streets 2 and 3 in play (docs/design.md S2.6). Each street draws its own look from
  * its `theme` (art K1), drums roll and bounce with their own pictures and sounds, wells are
- * scenery until L2, street 3's secret well is reached by walking back, and a simple two-thumb
+ * drawn (and work since L2), street 3's secret well is reached by walking back, and a simple two-thumb
  * bot (the same moves as the e2e hand bot) gets every street from the start to the bus.
  */
 import { afterEach, describe, expect, it } from 'vitest';
@@ -28,7 +28,7 @@ const WIDE = fitView(851, 393, 1);
 const NARROW = fitView(320, 240, 1);
 
 afterEach(() => {
-  FEATURES.wells = false;
+  FEATURES.wells = true;
 });
 
 const snap = (game: Game): void => (game as unknown as { snapCamera(): void }).snapCamera();
@@ -113,7 +113,7 @@ describe('the rolling drum (S2.6) in play', () => {
   });
 });
 
-describe('wells are scenery until L2', () => {
+describe('wells (switched on in L2)', () => {
   it('both wells of street 2 are drawn (art L1), and the hero walks past them', () => {
     for (const x of [2950, 4100]) {
       const { r } = drawnAt(L2, x);
@@ -131,10 +131,10 @@ describe('wells are scenery until L2', () => {
       }
       return words;
     };
-    expect(FEATURES.wells).toBe(false);
-    expect(along()).toEqual([]);
-    FEATURES.wells = true;
+    expect(FEATURES.wells).toBe(true);
     expect(along()).toEqual(['A well! Stand by it. Press {down}.']);
+    FEATURES.wells = false;
+    expect(along()).toEqual([]);
   });
 });
 

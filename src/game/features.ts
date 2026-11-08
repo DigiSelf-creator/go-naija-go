@@ -12,11 +12,8 @@ export type Feature = (typeof FEATURE_NAMES)[number];
 export const FEATURES: Record<Feature, boolean> = {
   /** Hanging crates you knock with your head (S2.4). On since J2. */
   crates: true,
-  /**
-   * Going down a well into its room (S2.5). Off until L2: wells are drawn as scenery only, and
-   * the "A well! ... Press Go down." hint stays quiet, since the button is not built yet.
-   */
-  wells: false,
+  /** Going down a well into its room and up at the exit well (S2.5). On since L2. */
+  wells: true,
 };
 
 /** A hint or a picture that needs this piece can show. No piece named: always. */
