@@ -3,8 +3,19 @@
  * and in the run: pause, game over, and a "boss next" placeholder until piece E.
  * An HTML layer over the canvas; one screen shows at a time.
  */
-import { HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
-import { hasSavedLook, loadSettings, saveLook, saveSettings, type Settings } from '../game/save';
+import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
+import {
+  changeBody,
+  fixLook,
+  hasSavedLook,
+  isOldSave,
+  loadSettings,
+  saveLook,
+  saveSettings,
+  wearsFirstLook,
+  type FullLook,
+  type Settings,
+} from '../game/save';
 import type { Store } from '../storage';
 import { button, h } from './dom';
 import { GAME_NAME, WORDS } from './words';
@@ -57,15 +68,21 @@ export class Menus {
   private opener: (TapPoint & { t: number }) | null = null;
   private shownAt = 0;
   private summary: RunSummary = { kobo: 0, lives: 0 };
+  private look: FullLook;
+  /** Builder: the player tapped a Hair or Outfit chip, so body and age no longer change them (S2.3). */
+  private styled = false;
+  /** Builder: watches the right column, to show the fade while more is below. */
+  private sideWatch: ResizeObserver | null = null;
   /** S2.2: the title shows the touch words when the phone buttons are shown, else the key words. */
   touchWords: () => boolean = () => true;
 
   constructor(
     parent: HTMLElement,
     private readonly store: Store,
-    private look: HeroLook,
+    look: HeroLook,
     private readonly hooks: MenuHooks,
   ) {
+    this.look = fixLook(look);
     this.settings = loadSettings(store);
     // data-ui: taps inside menus never count as jumps.
     this.layer = h('div', { class: 'screen', 'data-ui': true, hidden: true });
@@ -103,6 +120,8 @@ export class Menus {
 
   show(screen: MenuScreen, by?: MouseEvent): void {
     cancelAnimationFrame(this.previewFrame);
+    this.sideWatch?.disconnect();
+    this.sideWatch = null;
     this.screen = screen;
     this.shownAt = performance.now();
     const at = by ? tapPoint(by) : null;
@@ -200,7 +219,13 @@ export class Menus {
       h('h1', {}, GAME_NAME),
       h('p', { class: 'tagline' }, w.tagline),
       h('p', {}, this.touchWords() ? w.howTo : w.howToKeys),
-      saved ? button(w.start, 'go', (e) => this.hooks.start(tapPoint(e))) : button(w.makeHero, 'go', (e) => this.show('builder', e)),
+      saved
+        ? button(w.start, 'go', (e) => {
+            // S2.3: a slice 1 hero opens the builder once, with the "New!" line.
+            if (isOldSave(this.store)) this.show('builder', e);
+            else this.hooks.start(tapPoint(e));
+          })
+        : button(w.makeHero, 'go', (e) => this.show('builder', e)),
       h(
         'div',
         { class: 'minor-row' },
@@ -214,17 +239,29 @@ export class Menus {
 
   private builder(): HTMLElement {
     const w = WORDS.builder;
-    const preview = h('canvas', { class: 'preview', role: 'img', 'aria-label': 'Your hero' });
+    const preview = h('canvas', { class: 'preview', role: 'img', 'aria-label': w.preview });
+    // S2.3: a hero that already wears a picked hair or outfit (not the first look) keeps it.
+    this.styled = hasSavedLook(this.store) && !wearsFirstLook(this.look);
+    const showNew = isOldSave(this.store);
 
-    const pick = (part: keyof HeroLook, i: number, e: MouseEvent): void => {
-      if (this.ignoreTap(e)) return; // the builder opened under the finger
-      this.look = saveLook(this.store, { ...this.look, [part]: i });
-      this.hooks.lookChanged(this.look);
-      for (const b of this.layer.querySelectorAll<HTMLButtonElement>(`[data-part="${part}"]`)) {
-        b.setAttribute('aria-pressed', String(Number(b.dataset['index']) === this.look[part]));
+    type Part = keyof FullLook;
+    const parts: readonly Part[] = ['body', 'age', 'skin', 'hair', 'outfit'];
+    const mark = (): void => {
+      for (const part of parts) {
+        for (const b of this.layer.querySelectorAll<HTMLButtonElement>(`[data-part="${part}"]`)) {
+          b.setAttribute('aria-pressed', String(Number(b.dataset['index']) === this.look[part]));
+        }
       }
     };
-    const opt = (part: keyof HeroLook, i: number, label: string, cls: string, style?: string): HTMLButtonElement => {
+    const pick = (part: Part, i: number, e: MouseEvent): void => {
+      if (this.ignoreTap(e)) return; // the builder opened under the finger
+      if (part === 'hair' || part === 'outfit') this.styled = true;
+      const next = part === 'body' || part === 'age' ? changeBody(this.look, part, i, this.styled) : { ...this.look, [part]: i };
+      this.look = saveLook(this.store, next);
+      this.hooks.lookChanged(this.look);
+      mark();
+    };
+    const opt = (part: Part, i: number, label: string, cls: string, style?: string): HTMLButtonElement => {
       return button(cls === 'swatch' ? '' : label, cls, (e) => pick(part, i, e), {
         'data-part': part,
         'data-index': String(i),
@@ -233,35 +270,66 @@ export class Menus {
         style,
       });
     };
-    const row = (label: string, ...items: HTMLElement[]): HTMLElement =>
-      h('div', { class: 'choice-row', role: 'group', 'aria-label': label }, h('b', {}, label), h('div', { class: 'choices' }, ...items));
+    const row = (part: Part, label: string, ...items: HTMLElement[]): HTMLElement =>
+      h(
+        'div',
+        { class: `choice-row row-${part}`, role: 'group', 'aria-label': label },
+        h('b', {}, label),
+        h('div', { class: 'choices' }, ...items),
+      );
+
+    const side = h(
+      'div',
+      { class: 'builder-side' },
+      h('h2', {}, w.heading),
+      showNew && h('p', { class: 'new-note' }, w.newNote),
+      row('body', w.body, ...BODIES.map((o, i) => opt('body', i, o.label, 'chip'))),
+      row('age', w.age, ...AGES.map((o, i) => opt('age', i, o.label, 'chip'))),
+      row('skin', w.skin, ...SKINS.map((s, i) => opt('skin', i, s.label, 'swatch', `background:${s.base}`))),
+      row('hair', w.hair, ...HAIRS.map((o, i) => opt('hair', i, o.label, 'chip'))),
+      row('outfit', w.outfit, ...OUTFITS.map((o, i) => opt('outfit', i, o.label, 'chip'))),
+      h('p', { class: 'small' }, w.savedNote),
+    );
+    const bar = h('div', { class: 'side-bar', 'aria-hidden': 'true', hidden: true });
+    const start = button(w.start, 'go', (e) => {
+      if (this.ignoreTap(e)) return;
+      // Starting keeps the look shown, even if nothing was tapped, and always saves body and age.
+      this.look = saveLook(this.store, this.look);
+      this.hooks.start(tapPoint(e));
+    });
 
     const card = h(
       'div',
-      { class: 'card', role: 'dialog', 'aria-label': w.heading },
-      h('h2', {}, w.heading),
-      h(
-        'div',
-        { class: 'builder' },
-        preview,
-        h(
-          'div',
-          {},
-          row(w.skin, ...SKINS.map((s, i) => opt('skin', i, s.label, 'swatch', `background:${s.base}`))),
-          row(w.hair, ...HAIRS.map((o, i) => opt('hair', i, o.label, 'chip'))),
-          row(w.outfit, ...OUTFITS.map((o, i) => opt('outfit', i, o.label, 'chip'))),
-        ),
-      ),
-      button(w.start, 'go', (e) => {
-        if (this.ignoreTap(e)) return;
-        // Starting keeps the look shown, even if nothing was tapped.
-        this.look = saveLook(this.store, this.look);
-        this.hooks.start(tapPoint(e));
-      }),
-      h('p', { class: 'small' }, w.savedNote),
+      { class: 'card hero-card', role: 'dialog', 'aria-label': w.heading },
+      h('div', { class: 'builder' }, h('div', { class: 'builder-main' }, preview, start), h('div', { class: 'builder-wrap' }, side, bar)),
     );
+    this.watchSide(side, bar);
     this.animatePreview(preview);
     return card;
+  }
+
+  /**
+   * S2.3: while more of the right column is below, its bottom 24 px fades to the panel colour
+   * and our own scroll bar shows whenever there is more to scroll.
+   */
+  private watchSide(side: HTMLElement, bar: HTMLElement): void {
+    const update = (): void => {
+      const { scrollHeight: total, clientHeight: seen, scrollTop: top } = side;
+      side.classList.toggle('more-below', total - top - seen > 2);
+      const scrolls = total > seen + 2 && seen > 0;
+      bar.hidden = !scrolls;
+      if (scrolls) {
+        const h = Math.max(24, (seen * seen) / total);
+        bar.style.setProperty('--bar-h', `${h}px`);
+        bar.style.setProperty('--bar-top', `${(top / (total - seen)) * (seen - h)}px`);
+      }
+    };
+    side.addEventListener('scroll', update, { passive: true });
+    if (typeof ResizeObserver !== 'undefined') {
+      this.sideWatch = new ResizeObserver(update);
+      this.sideWatch.observe(side);
+    }
+    requestAnimationFrame(update);
   }
 
   private animatePreview(c: HTMLCanvasElement): void {

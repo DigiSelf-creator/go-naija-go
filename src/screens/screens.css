@@ -94,12 +94,94 @@
   font-weight: bold;
 }
 
-/* Hero builder */
+/* Hero builder (design.md S2.3 "Builder layout"). Sideways: two columns. Left: the live
+   preview with the green button under it, always on screen. Right: heading, then the rows
+   (Male or female, Age, Skin, Hair, Outfit); it scrolls by itself when the screen is short.
+   Upright: preview on top, rows below, button at the bottom, the card scrolls. */
+.hero-card {
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  overflow: hidden;
+  padding: 12px 8px 12px 16px;
+}
 .builder {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: 140px minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+}
+.builder-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+}
+.builder-main .go {
+  margin: 0;
+  min-height: 56px;
+}
+.builder-wrap {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+/* The rows scroll by themselves. The phone's own scroll bar often hides, so our own bar
+   (.side-bar) shows instead, whenever there is more to scroll. Room on the left for the
+   chosen swatch's outer ring. */
+.builder-side {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 12px 0 5px;
+  scrollbar-width: none;
+}
+.builder-side::-webkit-scrollbar {
+  display: none;
+}
+.side-bar {
+  position: absolute;
+  right: 2px;
+  top: var(--bar-top, 0);
+  width: 5px;
+  height: var(--bar-h, 0);
+  border-radius: 3px;
+  background: #8d877e;
+  pointer-events: none;
+}
+.side-bar[hidden] {
+  display: none;
+}
+/* While more is below: the bottom 24 px fades to the panel colour. */
+.builder-side::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  display: block;
+  height: 24px;
+  margin-top: -24px;
+  background: linear-gradient(rgba(255, 250, 240, 0), #fffaf0);
+  pointer-events: none;
+  visibility: hidden;
+}
+.builder-side.more-below::after {
+  visibility: visible;
+}
+.builder-side .small {
+  margin-bottom: 0;
+}
+.new-note {
+  margin: 0 0 4px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #fff1c2;
+  border: 2px solid #f2b300;
+  font-weight: bold;
 }
 .preview {
   width: 140px;
@@ -114,7 +196,7 @@
   margin: 8px 0; /* design.md: 8 px between targets, rows too */
 }
 .choice-row > b {
-  flex: 0 0 56px;
+  flex: 0 0 64px;
   font-size: 0.95rem;
 }
 .choices {
@@ -148,6 +230,7 @@
 }
 .chip {
   min-height: 44px;
+  min-width: 44px;
   padding: 4px 14px;
   border: 2px solid #d8cfbd;
   border-radius: 999px;
@@ -164,50 +247,128 @@
 .chip[aria-pressed='true']::before {
   content: '\2713  ';
 }
-
-/* Upright phone: preview on top. */
-@media (orientation: portrait) {
-  .builder {
-    grid-template-columns: 1fr;
-  }
-  .preview {
-    margin: 0 auto;
-    width: 120px;
-    height: 150px;
-  }
-  .choice-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .choice-row > b {
-    flex: none;
-  }
+.chip:focus-visible,
+.swatch:focus-visible,
+.go:focus-visible,
+.minor:focus-visible {
+  outline: 3px solid #2b59c3;
+  outline-offset: 2px;
 }
-/* Short landscape phones: tighter. */
+
+/* Sideways, 420 px tall or less: labels above their chips, smaller preview. */
 @media (max-height: 420px) and (orientation: landscape) {
   .screen h1 {
     font-size: 1.7rem;
   }
+  .builder {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 7px;
+  }
   .preview {
     width: 120px;
-    height: 160px;
+    height: 150px;
   }
-  .builder {
-    grid-template-columns: 120px 1fr;
+  .choice-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin: 6px 0 8px;
+  }
+  .choice-row > b {
+    flex: none;
   }
 }
-/* Tiny or narrow screens (e.g. 320 x 240 sideways): one column, small preview,
-   labels above the choices, chips wrap. Nothing may scroll sideways. */
-@media (max-width: 560px), (max-height: 260px) {
+/* Very short (e.g. 320 x 240): left column 104 px, preview 104 x 120, button 104 x 56 with its
+   words on two lines; right column about 182 px. Male or female and Age fit one line each. */
+@media (max-height: 300px) and (orientation: landscape) {
+  .screen:has(.hero-card) {
+    padding: max(6px, var(--safe-top)) max(6px, var(--safe-right)) max(6px, var(--safe-bottom)) max(6px, var(--safe-left));
+  }
+  .hero-card {
+    padding: 8px 4px 8px 8px;
+    border-radius: 12px;
+  }
   .builder {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 4px;
   }
   .preview {
+    width: 104px;
+    height: 120px;
+  }
+  .builder-main .go {
+    padding: 4px 6px;
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+  .builder-side h2 {
+    font-size: 1.15rem;
+    margin-bottom: 2px;
+  }
+  .builder-side .new-note {
+    font-size: 0.85rem;
+    padding: 4px 6px;
+  }
+  .choice-row > b {
+    font-size: 0.85rem;
+  }
+  .builder-side {
+    padding: 0 7px 0 5px;
+  }
+  .side-bar {
+    right: 1px;
+  }
+  .chip {
+    padding: 4px 6px;
+    font-size: 0.82rem;
+  }
+  .chip[aria-pressed='true']::before {
+    content: '\2713';
+    margin-right: 3px;
+  }
+}
+/* Upright phone: preview on top, rows below, button at the bottom; the card scrolls. */
+@media (orientation: portrait) {
+  .hero-card {
+    overflow: auto;
+    padding: 12px 16px;
+  }
+  .builder,
+  .builder-main,
+  .builder-wrap,
+  .builder-side {
+    display: contents;
+  }
+  .side-bar,
+  .builder-side::after {
+    display: none !important;
+  }
+  .hero-card {
+    flex-direction: column;
+  }
+  .builder-side > h2 {
+    order: 0;
+  }
+  .builder-side > .new-note {
+    order: 1;
+  }
+  .preview {
+    order: 2;
     margin: 0 auto;
-    width: 72px;
-    height: 92px;
+    width: 120px;
+    height: 150px;
+    flex: none;
+  }
+  .builder-side > .choice-row {
+    order: 3;
+  }
+  .builder-main .go {
+    order: 4;
+    margin-top: 8px;
+    flex: none;
+  }
+  .builder-side > .small {
+    order: 5;
   }
   .choice-row {
     align-items: flex-start;
@@ -217,7 +378,39 @@
   .choice-row > b {
     flex: none;
   }
-  .card {
+}
+/* Narrow upright screens: smaller preview. */
+@media (max-width: 360px) and (orientation: portrait) {
+  .preview {
+    width: 96px;
+    height: 120px;
+  }
+  .hero-card {
+    padding: 10px 12px;
+  }
+}
+/* Tiny screens that are not short (narrow sideways windows): a smaller preview column. */
+@media (max-width: 560px) and (min-height: 301px) and (orientation: landscape) {
+  .builder {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .preview {
+    width: 104px;
+    height: 120px;
+  }
+  .choice-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .choice-row > b {
+    flex: none;
+  }
+}
+/* Tiny screens: smaller title. */
+@media (max-width: 560px), (max-height: 260px) {
+  .card:not(.hero-card) {
     padding: 10px 12px;
   }
   .screen h1 {
