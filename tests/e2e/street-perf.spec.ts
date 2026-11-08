@@ -1,6 +1,6 @@
 /**
- * Frame rate through the whole of each Lagos street (lagos-1, lagos-2 Market road, lagos-3 Bus
- * park road, each with its own backdrop), played by hand with two thumbs, at 4x CPU slowdown on
+ * Frame rate through the whole of each Lagos street (lagos-1 Alausa, lagos-2 Computer Village,
+ * lagos-3 Ikeja, each with its own backdrop, and again in the fixed look once Lagos is switched on, N2), played by hand with two thumbs, at 4x CPU slowdown on
  * the phone profile. Pass: at least 45 fps in every 1000 u part of the street,
  * and the game keeps full speed (about 60 physics steps a second). The hero knocks every crate
  * on the way (J2), so swings, kobo fans and the food pop are measured too.
@@ -25,12 +25,21 @@ const busy = (page: Page) =>
   });
 
 const STREETS = [
-  { n: 1, id: 'lagos-1', url: './' },
-  { n: 2, id: 'lagos-2', url: './?level=lagos-2' },
-  { n: 3, id: 'lagos-3', url: './?level=lagos-3' },
+  { n: 1, id: 'lagos-1', url: './', fixed: false },
+  { n: 2, id: 'lagos-2', url: './?level=lagos-2', fixed: false },
+  { n: 3, id: 'lagos-3', url: './?level=lagos-3', fixed: false },
+  { n: 1, id: 'lagos-1', url: './?level=lagos-1', fixed: true },
+  { n: 2, id: 'lagos-2', url: './?level=lagos-2', fixed: true },
+  { n: 3, id: 'lagos-3', url: './?level=lagos-3', fixed: true },
 ] as const;
 
-for (const { n, id, url } of STREETS) test(`slowed 4x CPU: street ${n} by hand, start to bus, at least 45 fps in every part`, async ({ page }) => {
+/** N2: Lagos switched on, so the streets draw their fixed look (lamps, lit signs, bunting, fresh paint). */
+const SWITCHED_ON = JSON.stringify({
+  v: 1,
+  states: { lagos: { streets: { 1: { done: true, best: 1 }, 2: { done: true, best: 1 }, 3: { done: true, best: 1 } }, parcel: false, hall: { done: true, best: 0 } } },
+});
+
+for (const { n, id, url, fixed } of STREETS) test(`slowed 4x CPU: street ${n}${fixed ? ' in the fixed look' : ''} by hand, start to bus, at least 45 fps in every part`, async ({ page }) => {
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -38,6 +47,7 @@ for (const { n, id, url } of STREETS) test(`slowed 4x CPU: street ${n} by hand, 
   // for an Elder, so each body and age can be measured. Unset: the default hero.
   const perfLook = process.env['PERF_LOOK'];
   if (perfLook) await page.addInitScript((v) => localStorage.setItem('gidi-look', v), perfLook);
+  if (fixed) await page.addInitScript((v) => localStorage.setItem('gidi-progress', v), SWITCHED_ON);
   await page.goto(url);
   if (perfLook) expect(await page.evaluate(() => window.__game!.look)).toEqual(JSON.parse(perfLook));
   // Gentle mode, so a missed jump on a slow machine does not end the measurement early.
@@ -46,6 +56,7 @@ for (const { n, id, url } of STREETS) test(`slowed 4x CPU: street ${n} by hand, 
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
   expect(await page.evaluate(() => window.__game!.level.id)).toBe(id);
+  expect(await page.evaluate(() => window.__game!.fixedLook)).toBe(fixed);
   const dpr = await page.evaluate(() => devicePixelRatio);
   const canvas = await page.evaluate(() => `${document.querySelector('canvas')!.width}x${document.querySelector('canvas')!.height}`);
 
@@ -98,11 +109,11 @@ for (const { n, id, url } of STREETS) test(`slowed 4x CPU: street ${n} by hand, 
   const report = parts.map((p) => `${p.x}: ${p.fps.toFixed(1)}${p.fps < BAR ? ' (UNDER)' : ''}`).join(', ');
   const total = frames.length > 1 ? ((frames.length - 1) * 1000) / (frames.at(-1)![0] - frames[0]![0]) : 0;
   console.log(
-    `4x CPU, street ${n} by hand (dpr ${dpr}, canvas ${canvas}), fps by part (bar ${BAR}): ${report}. ` +
+    `4x CPU, street ${n}${fixed ? ' (fixed look)' : ''} by hand (dpr ${dpr}, canvas ${canvas}), fps by part (bar ${BAR}): ${report}. ` +
       `Worst ${worst.toFixed(1)}, overall ${total.toFixed(1)}. Steps/s worst part ${Math.min(...parts.map((p) => p.steps)).toFixed(1)}. ` +
       `Crates opened ${crates.opened.join(', ') || 'none'}. Reached ${last?.r.phase} at x ${last?.h.x.toFixed(0)}, ${last?.r.lives} lives. Fixed work 1x ${work1.toFixed(0)} ms, 4x ${work4.toFixed(0)} ms`,
   );
-  test.info().annotations.push({ type: `street ${n} fps 4x`, description: `worst ${worst.toFixed(1)} | ${report}` });
+  test.info().annotations.push({ type: `street ${n}${fixed ? ' fixed' : ''} fps 4x`, description: `worst ${worst.toFixed(1)} | ${report}` });
 
   expect(errors).toEqual([]);
   expect(work4, 'the 4x slowdown is on').toBeGreaterThan(work1 * 2.5);
