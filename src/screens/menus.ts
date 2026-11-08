@@ -59,6 +59,8 @@ export interface MenuHooks {
 export interface RunSummary {
   kobo: number;
   lives: number;
+  /** Lost in Go-Slow Hall: the hall's game over words (S2.10). */
+  hall?: boolean;
 }
 
 /** What the Street cleared screen shows (S2.10). */
@@ -199,7 +201,7 @@ export class Menus {
       'div',
       { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
-      h('p', {}, w.text(this.summary.kobo)),
+      h('p', {}, this.summary.hall ? w.hallText : w.text(this.summary.kobo)),
       this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('p', { class: 'small' }, w.gentleOffer),

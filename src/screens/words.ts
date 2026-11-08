@@ -59,6 +59,8 @@ export const WORDS = {
   gameOver: {
     heading: 'Out of lives',
     text: (kobo: number) => `You got ${kobo} kobo. The road is still here. Try again!`,
+    /** S2.10 Game over (hall). */
+    hallText: 'General Go-Slow is still jamming the hall. Try again!',
     playAgain: 'Play again',
     gentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
     home: 'Home',
@@ -72,11 +74,15 @@ export const WORDS = {
     playAgain: 'Play again',
     home: 'Home',
   },
+  /**
+   * S2.10 Win, after Go-Slow Hall (po K4 note: never slice 1's "Road cleared!" here). The cog line
+   * ("Lagos's cog is turning: {n} of 37.") and "See Nigeria's wheel" come with the wheel in N2.
+   */
   win: {
-    heading: 'Road cleared!',
+    heading: 'Lagos is switched on!',
     text: (kobo: number, lives: number) =>
-      `You beat General Go-Slow with ${kobo} kobo and ${lives} ${lives === 1 ? 'life' : 'lives'} left.`,
-    more: 'More roads are coming soon.',
+      `You cleared General Go-Slow with ${kobo} kobo and ${lives} ${lives === 1 ? 'life' : 'lives'} left.`,
+    more: 'More of Nigeria is coming soon.',
     playAgain: 'Play again',
     home: 'Home',
   },
@@ -96,9 +102,13 @@ export const WORDS = {
     cornWearingOff: 'Corn is wearing off!',
     amalaWearingOff: 'Amala is wearing off!',
     shieldUsed: 'Shield used up!',
-    bossArrives: 'General Go-Slow blocks the road! Jump onto the green light.',
+    /** S2.7 Go-Slow Hall. */
+    hallStart: 'General Go-Slow is jamming the hall! Jump onto the green light.',
+    parcelShield: 'Your garri parcel: the shield is on!',
     greenLight: (left: number) => `Green light! ${left} more.`,
-    roadFree: 'Green light! The road is free!',
+    highHonks: 'PEEP! High honks fly high. Stay low on the floor.',
+    hallClear: 'Green light! The hall is clear!',
+    switchedOn: 'Lagos is switched on!',
     /** S2.5 the well and its room. */
     roomArrive: 'A secret room! Grab the kobo. Stand under the rope to go back up.',
     /** po ruling 8 Nov 2026: these words until N2; N2 makes it "Garri parcel! Shield for the hall." */
@@ -124,7 +134,6 @@ export const SHORT_TOAST: Readonly<Record<string, string>> = {
   'Roasted corn! You run faster for 6 seconds.': 'Roasted corn! You run faster!',
   'Garri, sugar and epa (groundnut)! A shield takes one hit for you.': 'Garri, sugar and epa! Shield on!',
   'Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
-  'General Go-Slow blocks the road! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
   'A secret room! Grab the kobo. Stand under the rope to go back up.': 'Secret room! Use the rope to go up.',
   'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
   'General Go-Slow is jamming the hall! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
