@@ -5,12 +5,13 @@ import { fitView, readSafeArea, type View } from './engine/view';
 import street1Data from './data/levels/lagos-1.json';
 import bossLevelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
-import { BUS_BOARD } from './art/roadside';
+import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
+import { FEATURES } from './game/features';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel } from './game/level';
 import { STEPS_PER_SECOND, type RunPhase } from './game/run';
 import { loadLook } from './game/save';
-import { TouchButtons } from './screens/controls';
+import { TouchButtons, hintBarBox, type HintBarBox } from './screens/controls';
 import { Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type MenuScreen, type TapPoint } from './screens/menus';
@@ -70,6 +71,8 @@ function startGame(): void {
     // A very short screen: raise the road line clear of the buttons (0 almost always).
     game.lift = buttons.layout.lift;
   };
+  /** The hint bar sits between the buttons shown now (S2.2, "The hint bar"). */
+  const barBox = (): HintBarBox => hintBarBox(window.innerWidth, window.innerHeight, readSafeArea(), buttons.layout, buttons.which);
   onResize.push(placeButtons, () => game.setView(view));
   placeButtons();
   game.setView(view);
@@ -103,6 +106,7 @@ function startGame(): void {
     if (!playing || game.paused || !inPlay()) return;
     loop.pause();
     game.paused = true;
+    toast.hide();
     controls.releaseAll();
     game.release();
     game.steer(0);
@@ -156,10 +160,15 @@ function startGame(): void {
     },
   });
   const toast = new Toast(document.body);
+  const placeBar = (): void => toast.place(barBox(), window.innerHeight);
+  buttons.onChange = placeBar;
+  placeBar();
   sound.enabled = menus.sound;
   menus.touchWords = () => buttons.touch;
 
   const W = WORDS.toast;
+  /** S2.2: a level hint shows 3.5 s in the hint bar. */
+  const HINT_MS = 3500;
   game.onEvent = (e) => {
     switch (e.type) {
       case 'kobo':
@@ -170,7 +179,7 @@ function startGame(): void {
         toast.show(W[e.kind], 3200);
         break;
       case 'hint':
-        toast.show(hintWords(e.words, controls.lastKind), 2600);
+        toast.show(hintWords(e.words, controls.lastKind), HINT_MS);
         break;
       case 'bounce':
         sound.play(e.kind === 'goat' ? 'meeh' : 'bounce');
@@ -179,6 +188,7 @@ function startGame(): void {
         sound.play(e.kind === 'goat' ? 'meeh' : 'smash');
         break;
       case 'hit':
+        toast.hide(); // a lost life: the bar hides at once (S2.2)
         sound.play('hit');
         break;
       case 'shieldPop':
@@ -186,6 +196,7 @@ function startGame(): void {
         toast.show(W.shieldUsed);
         break;
       case 'fall':
+        toast.hide();
         sound.play('fall');
         break;
       case 'checkpoint':
@@ -394,6 +405,66 @@ function startGame(): void {
     get sound() {
       return { enabled: sound.enabled, started: sound.started };
     },
+    get hintBar() {
+      // The hint bar as laid out now, CSS px, and whether its words fit uncut (S2.2).
+      const el = document.querySelector<HTMLElement>('.toast')!;
+      const r = el.getBoundingClientRect();
+      return {
+        words: toast.text,
+        x: r.x,
+        y: r.y,
+        w: r.width,
+        h: r.height,
+        font: parseFloat(getComputedStyle(el).fontSize),
+        fits: el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth,
+        limits: barBox(),
+      };
+    },
+    get drawn() {
+      // Drawn boxes (CSS px, generous) of everything on screen the player collects or reacts to,
+      // for the S2.2 check that the hint bar never covers any of them.
+      const k = canvas.getBoundingClientRect().width / view.width;
+      const cam = game.camera;
+      const lift = game.lift;
+      const out: { what: string; x: number; y: number; w: number; h: number }[] = [];
+      const add = (what: string, x0: number, y0: number, x1: number, y1: number): void => {
+        const x = (x0 - cam) * k;
+        const w = (x1 - x0) * k;
+        if (x + w < 0 || x > window.innerWidth) return;
+        out.push({ what, x, y: (y0 - lift) * k, w, h: (y1 - y0) * k });
+      };
+      const r = game.run;
+      const level = game.level;
+      const gy = level.groundY;
+      for (const c of r.coins) if (!c.taken) add('kobo', c.x - 11, c.y - 11, c.x + 11, c.y + 11);
+      for (const f of r.foods) if (!f.taken) add('food', f.x - 20, f.y - 22, f.x + 20, f.y + 22);
+      if (r.hazardFade < 1) {
+        for (const z of r.hazards) {
+          if (z.mode === 'gone') continue;
+          if (z.kind === 'goat') add('goat', z.x - 32, z.y - 52, z.x + 32, z.y + 3);
+          else add(z.kind, z.x - 18, z.y - 40, z.x + 18, z.y + 4);
+        }
+      }
+      if (FEATURES.crates) for (const c of level.crates) add('crate', c.x - 17, c.bottomY - 90, c.x + 17, c.bottomY + 1);
+      for (const w of level.wells) for (const x of [w.x, w.exitX]) add('well', x - 19, gy - 31, x + 19, gy + 1);
+      for (let i = 1; i < level.ground.length; i++) {
+        const a = level.ground[i - 1]![1];
+        const b = level.ground[i]![0];
+        add('pit lip', a - 6, gy - 2, a + 6, gy + 12);
+        add('pit lip', b - 6, gy - 2, b + 6, gy + 12);
+      }
+      const h = game.hero;
+      // A hero falling into a pit may pass behind the bar (S2.2 qa check 2).
+      if (h.y <= gy + 2 && !r.boarded) add('hero', h.x - 20, h.y - 58, h.x + 20, h.y + 2);
+      const end = level.end;
+      if (end) {
+        const atBus = r.phase === 'bus' || r.phase === 'cleared';
+        const dx = busEndAt(atBus ? r.endSteps / STEPS_PER_SECOND : 0).dx ?? 0;
+        add('bus', end.x + END_BUS_BACK + dx, gy - 80, end.x + END_BUS_FRONT + dx, gy + 2);
+        add('BUS PARK board', end.x + BUS_BOARD.dx, gy + BUS_BOARD.dy, end.x + BUS_BOARD.dx + BUS_BOARD.w, gy + BUS_BOARD.dy + BUS_BOARD.h);
+      }
+      return out;
+    },
     get busBoard() {
       // The "BUS PARK" board as drawn on screen right now, CSS px (null on a level with no bus park).
       const end = game.level.end;
@@ -484,6 +555,19 @@ declare global {
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
       };
       readonly toast: string;
+      /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
+      readonly hintBar: {
+        readonly words: string;
+        readonly x: number;
+        readonly y: number;
+        readonly w: number;
+        readonly h: number;
+        readonly font: number;
+        readonly fits: boolean;
+        readonly limits: HintBarBox;
+      };
+      /** Drawn boxes (CSS px) of every kobo, food, hazard, crate, well, pit lip, the hero, the bus and its board on screen. */
+      readonly drawn: readonly { readonly what: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number }[];
       readonly boss: {
         readonly hits: number;
         readonly lit: number;
