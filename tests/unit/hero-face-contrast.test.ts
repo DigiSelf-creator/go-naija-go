@@ -6,7 +6,7 @@
  * (ink on lighter skins, a brown on darker ones). The dark brow stays the main shape.
  */
 import { describe, expect, it } from 'vitest';
-import { SKINS, drawHero } from '../../src/art/hero';
+import { AGES, BODIES, SKINS, drawHero, type HeroLook } from '../../src/art/hero';
 
 function luminance(hex: string): number {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -21,7 +21,7 @@ function contrast(a: string, b: string): number {
 }
 
 /** Records every colour set while the hero is drawn. */
-function coloursUsed(skin: number): Set<string> {
+function coloursUsed(skin: number, body?: number, age?: number): Set<string> {
   const used = new Set<string>();
   const g = new Proxy({} as Record<string, unknown>, {
     get(t, k) {
@@ -35,8 +35,11 @@ function coloursUsed(skin: number): Set<string> {
       return true;
     },
   }) as unknown as CanvasRenderingContext2D;
+  const look: HeroLook = { skin, hair: 0, outfit: 0 };
+  if (body !== undefined) look.body = body;
+  if (age !== undefined) look.age = age;
   for (const blink of [false, true]) {
-    drawHero(g, { skin, hair: 0, outfit: 0 }, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, blink });
+    drawHero(g, look, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, blink });
   }
   return used;
 }
@@ -62,9 +65,40 @@ describe('hero face contrast', () => {
       if (contrast(f.line, s.base) < 3) expect(f.lipLine.toLowerCase()).not.toBe(f.line.toLowerCase());
       // The smile line sits on the lip
       expect(contrast(f.line, f.lip)).toBeGreaterThanOrEqual(3);
-      // And the drawing really uses these colours
-      const used = coloursUsed(i);
-      for (const c of [f.line, f.lip, f.rim, f.lipLine]) if (c) expect(used.has(c.toLowerCase())).toBe(true);
+      // And the drawing really uses these colours, on every head: Male and Female,
+      // Teen, Adult and Elder (I1), and a slice 1 look with neither
+      const heads: [number | undefined, number | undefined][] = [[undefined, undefined]];
+      for (let body = 0; body < BODIES.length; body++) for (let age = 0; age < AGES.length; age++) heads.push([body, age]);
+      for (const [body, age] of heads) {
+        const used = coloursUsed(i, body, age);
+        for (const c of [f.line, f.lip, f.rim, f.lipLine]) if (c) expect(used.has(c.toLowerCase()), `${c} body ${body} age ${age}`).toBe(true);
+        // Same eyes (white, ink pupil) and the skin itself on every head
+        for (const c of ['#ffffff', s.base]) expect(used.has(c.toLowerCase()), `${c} body ${body} age ${age}`).toBe(true);
+      }
     });
+  });
+
+  it('every head shows the rose lip exactly once (no beard or hair hides or doubles it)', () => {
+    // The face is one shared drawing; bodies and ages only add to it (lash, smile
+    // lines, beard, studs) or scale it.
+    const faceStrokes = (body: number, age: number): number => {
+      let lipFills = 0;
+      const g = new Proxy({} as Record<string, unknown>, {
+        get(t, k) {
+          if (typeof k !== 'string') return undefined;
+          if (k in t) return t[k];
+          return () => {
+            if (k === 'fill' && t['fillStyle'] === SKINS[2]!.face.lip) lipFills++;
+          };
+        },
+        set(t, k, v) {
+          t[k as string] = v;
+          return true;
+        },
+      }) as unknown as CanvasRenderingContext2D;
+      drawHero(g, { skin: 2, hair: 0, outfit: 0, body, age }, { phase: 0, inAir: false, facing: 1, glow: false, standing: true });
+      return lipFills;
+    };
+    for (let body = 0; body < BODIES.length; body++) for (let age = 0; age < AGES.length; age++) expect(faceStrokes(body, age)).toBe(1);
   });
 });
