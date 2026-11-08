@@ -318,3 +318,140 @@ test('skipping the well never blocks the street: a thumb walks past it to the bu
   // Running past, the hero was in the well's zone for a moment.
   console.log(`walked past the well: Go down seen ${sawButton}`);
 });
+
+/** Boxes of everything in the HUD row that shows now, CSS px. */
+async function hudBoxes(page: Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('.hud-left > span, .hud-btn')]
+      .filter((e) => !e.hidden && e.offsetParent !== null)
+      .map((e) => {
+        const r = e.getBoundingClientRect();
+        return { what: e.className, text: e.textContent ?? '', x: r.x, y: r.y, w: r.width, h: r.height };
+      }),
+  );
+}
+type Box = { x: number; y: number; w: number; h: number };
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** design.md HUD: one row, inside the top 56 px; Sound and Pause never under a well button. */
+async function expectOneRow(page: Page, label: string): Promise<void> {
+  const boxes = await hudBoxes(page);
+  const chips = boxes.filter((b) => !b.what.includes('hud-btn'));
+  const btns = boxes.filter((b) => b.what.includes('hud-btn'));
+  expect(btns, `${label}: Sound and Pause`).toHaveLength(2);
+  for (const b of boxes) expect(b.y + b.h, `${label}: ${b.what} "${b.text}" inside the top 56 px`).toBeLessThanOrEqual(56);
+  const mid = (b: Box) => b.y + b.h / 2;
+  for (const b of boxes) expect(Math.abs(mid(b) - mid(boxes[0]!)), `${label}: ${b.what} "${b.text}" on the one row`).toBeLessThanOrEqual(8);
+  // Nothing overlaps, and the chips end before Sound starts.
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) expect(overlaps(boxes[i]!, boxes[j]!), `${label}: ${boxes[i]!.what} over ${boxes[j]!.what}`).toBe(false);
+  expect(Math.max(...chips.map((c) => c.x + c.w))).toBeLessThanOrEqual(Math.min(...btns.map((b) => b.x)));
+}
+
+/**
+ * qa L3: on a narrow screen with the parcel, the HUD wrapped to two rows; Sound and Pause dropped
+ * under the Go up button, and the tap on Go up also opened Pause. Both causes, at three sizes:
+ * (a) the HUD stays one row with every chip; (b) a well press never presses what is under it.
+ */
+test.describe('the HUD row and the well button on narrow phones (qa L3)', () => {
+  for (const [width, height] of [
+    [320, 236],
+    [340, 240],
+    [400, 240],
+    [932, 430],
+  ] as const) {
+    test(`${width}x${height}: every HUD chip at once (kobo 999, parcel, shield, fast, strong) stays on one row`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await openStreet(page, 'lagos-3');
+      // The hero stands still at the start (street 3 is walked by hand), so the HUD does not
+      // change by itself: show every chip, the longest kobo count, and let the HUD fit again.
+      await page.evaluate(() => {
+        for (const e of document.querySelectorAll<HTMLElement>('.hud-food')) e.hidden = false;
+        document.querySelector('.hud-kobo .hud-text')!.innerHTML = '<span class="hud-word">Kobo </span>999';
+        // The food slots in HUD order: garri (shield), corn (fast), amala (strong).
+        const [garri, corn, amala] = document.querySelectorAll<HTMLElement>('.hud-food:not(.hud-parcel) .hud-text');
+        garri!.innerHTML = '<span class="hud-word">Shield</span>';
+        corn!.innerHTML = '<span class="hud-word">Fast </span>6';
+        amala!.innerHTML = '<span class="hud-word">Strong </span>7';
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForTimeout(50);
+      await expectOneRow(page, `${width}x${height} every chip`);
+      // Each chip keeps its words for screen readers, even when only its icon shows.
+      await expect(page.locator('.hud-parcel')).toContainText('Parcel');
+    });
+  }
+
+  for (const [width, height] of [
+    [320, 236],
+    [340, 240],
+    [400, 240],
+    [932, 430],
+  ] as const) {
+    test(`${width}x${height}: Go down over Pause does not pause; with the parcel the HUD is one row, Go up does not pause and the hero comes out; Pause and Sound still work`, async ({ page }) => {
+      test.setTimeout(240_000);
+      const errors: string[] = [];
+      page.on('pageerror', (e) => errors.push(e.message));
+      await page.setViewportSize({ width, height });
+      await openStreet(page, 'lagos-3');
+      const h = hands(await page.context().newCDPSession(page));
+      const bot = await wellBot(page, h);
+      const paused = page.getByRole('dialog', { name: 'Paused' });
+
+      // (b) Back to the secret well at 160. Put Pause right under Go down, then tap Go down: the
+      // phone's click after the tap must not press Pause.
+      await bot.walkTo(160, 10);
+      await expect.poll(() => page.evaluate(() => window.__game!.wellButton?.kind ?? null)).toBe('down');
+      const down = (await page.evaluate(() => window.__game!.wellButton))!;
+      await page.addStyleTag({
+        content: `.hud-pause{position:fixed;left:${Math.round(down.x + down.w / 2 - 22)}px;top:${Math.round(down.y + down.h / 2 - 22)}px}`,
+      });
+      await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+      await bot.tapWellButton('down');
+      await expect.poll(() => page.evaluate(() => window.__game!.run.phase)).toBe('wellDown');
+      await page.waitForTimeout(500);
+      await expect(paused).toBeHidden();
+      expect(await page.evaluate(() => window.__game!.paused)).toBe(false);
+      // The test is fair: once the button hid, Pause was what lay under the finger.
+      const under = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.className ?? '', { x: down.x + down.w / 2, y: down.y + down.h / 2 });
+      expect(under).toContain('hud-pause');
+      await page.evaluate(() => document.querySelectorAll('style').forEach((s) => s.textContent?.startsWith('.hud-pause{position:fixed') && s.remove()));
+
+      // (a) Every gift in the room (about 20 kobo and the parcel), then under the rope.
+      await bot.playRoom();
+      const s = await snap(page);
+      expect(s.r.parcel).toBe(true);
+      expect(s.r.underRope).toBe(true);
+      expect(s.r.kobo).toBeGreaterThanOrEqual(10);
+      await expect(page.locator('.hud-parcel')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.__game!.wellButton?.kind ?? null)).toBe('up');
+      await expectOneRow(page, `${width}x${height} parcel and kobo ${s.r.kobo}`);
+      const up = (await page.evaluate(() => window.__game!.wellButton))!;
+      for (const b of (await hudBoxes(page)).filter((b) => b.what.includes('hud-btn'))) expect(overlaps(b, up), `${b.what} under Go up`).toBe(false);
+      await page.screenshot({ path: join(SHOTS, `hud-one-row-parcel-${width}x${height}.png`) });
+
+      // Tap the middle of Go up: up the rope, no Pause, out on the street at the exit well.
+      await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+      await bot.tapWellButton('up');
+      await expect.poll(() => page.evaluate(() => window.__game!.run.phase)).toBe('wellUp');
+      await page.waitForTimeout(500);
+      await expect(paused).toBeHidden();
+      await expect.poll(() => page.evaluate(() => window.__game!.run.phase), { timeout: 5000 }).toBe('run');
+      expect((await snap(page)).h.x).toBe(1330);
+      expect(await page.evaluate(() => window.__game!.paused)).toBe(false);
+
+      // At other times Sound and Pause work as before.
+      const sound = page.locator('.hud-sound');
+      const was = await sound.getAttribute('aria-label');
+      await sound.tap();
+      await expect(sound).not.toHaveAttribute('aria-label', was!);
+      await sound.tap();
+      await expect(sound).toHaveAttribute('aria-label', was!);
+      await page.getByRole('button', { name: 'Pause' }).tap();
+      await expect(paused).toBeVisible();
+      await waitOutTapLock(page);
+      await paused.getByRole('button', { name: /^Keep (running|playing)$/ }).tap();
+      await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
+      expect(errors).toEqual([]);
+    });
+  }
+});
