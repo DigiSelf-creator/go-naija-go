@@ -20,7 +20,7 @@ describe('level loader', () => {
     expect(l.hazards.filter((h) => h.kind === 'goat').length).toBe(4);
     expect(l.hints[0]).toEqual({ x: 400, words: 'Tap to jump.' });
     expect(l.checkpoint).toBe(5600);
-    expect(l.arena.x).toBe(11000);
+    expect(l.arena!.x).toBe(11000);
     expect(l.terrain.fallY).toBe(420);
   });
 

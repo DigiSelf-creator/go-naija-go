@@ -2,12 +2,13 @@
  * qa E5 / F3 / F4: General Go-Slow and the win screen, broken on purpose, by touch on the
  * phone profile. Screenshots for the originality check go to $QA_SHOTS
  * (default test-results/qa-shots).
+ * Slice 2: the slice 1 level is played the old way (OLD_WAY) until Go-Slow Hall (piece M).
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
 import { playStreet } from './bot';
-import { PAST_DOUBLE_TAP_MS } from './helpers';
+import { OLD_WAY, PAST_DOUBLE_TAP_MS } from './helpers';
 import { fightBossSloppy } from './sloppy-bot';
 
 const SHOTS = process.env['QA_SHOTS'] ?? 'test-results/qa-shots';
@@ -29,7 +30,7 @@ function watchErrors(page: Page): string[] {
 
 /** Fresh visit, build a hero by touch, play the street with the bot to the arena line. */
 async function toArena(page: Page): Promise<CDPSession> {
-  await page.goto('./');
+  await page.goto(OLD_WAY);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await page.getByRole('dialog', { name: 'Make your hero' }).getByRole('button', { name: 'Start running' }).tap();
@@ -126,7 +127,7 @@ test('E5 break it: boss in every state, pause and turn the phone mid-fight, tiny
         await page.setViewportSize(size);
         await page.waitForTimeout(300);
         const v = await snap(page);
-        const worldW = (size.width / size.height) * 360;
+        const worldW = (size.width / size.height) * 420;
         expect(v.paused, `${size.width}x${size.height} keeps playing`).toBe(false);
         expect(v.h.x - 11000, `hero on screen at ${size.width}x${size.height}`).toBeLessThanOrEqual(worldW);
         for (const l of await page.evaluate(() => window.__game!.level.lights)) expect(l.x + l.w - 11000).toBeLessThanOrEqual(worldW);
@@ -281,7 +282,7 @@ test('F4 break it: a tablet held upright (768x1024, no turn-sideways note) still
     await expect(page.locator('#rotate')).toBeVisible();
     return;
   }
-  const worldW = (768 / 1024) * 360;
+  const worldW = (768 / 1024) * 420;
   const lights = await page.evaluate(() => window.__game!.level.lights);
   const turnRightX = await page.evaluate(() => window.__game!.level.turnRightX);
   // Everything the player must see: the lit lights and the hero's whole path.

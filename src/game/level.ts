@@ -1,11 +1,17 @@
 /**
- * Level loader. Levels are JSON data files in src/data/levels/ (docs/design.md, Level 1:
- * schema). This turns one into the shapes the game uses, with a light check of its shape,
- * so a typo in a data file gives a clear message instead of a strange game.
+ * Level loader. Levels are JSON data files in src/data/levels/. This turns one into the shapes
+ * the game uses, with a light check of its shape, so a typo in a data file gives a clear
+ * message instead of a strange game.
+ *
+ * Two formats: slice 1 (no `schema`, docs/design.md Level 1: the hero runs by itself and the
+ * boss arena is at the end) and schema 2 streets (S2.6 Level data format: the player moves the
+ * hero, a start fence and a bus at the end). Crates and wells are read and kept; wells draw as
+ * plain placeholders until piece L, and crates draw only once their switch is on (features.ts, J2).
  */
 import { FALL_Y, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
+import { FEATURE_NAMES, type Feature } from './features';
 
-export type HazardKind = 'goat' | 'tyre';
+export type HazardKind = 'goat' | 'tyre' | 'drum';
 export type ThrowKind = 'tyre' | 'honk';
 
 /** Boss rules from the level file (design.md: Boss). */
@@ -24,14 +30,45 @@ export interface BossData {
   honkSpeed: number;
 }
 export type FoodKind = 'corn' | 'garri' | 'amala';
+export type CrateContents = 'kobo' | FoodKind;
+
+/** A crate hung over the road or a roof (S2.4): centre x, bottom edge y. */
+export interface CrateData {
+  x: number;
+  bottomY: number;
+  contents: CrateContents;
+}
+
+/** A well (S2.5): entrance x, exit x, room file id. */
+export interface WellData {
+  x: number;
+  exitX: number;
+  room: string;
+}
 
 export interface Level {
   id: string;
   name: string;
+  /** 1: slice 1 format. 2: S2.6 format. */
+  schema: 1 | 2;
+  /** The player moves the hero (schema 2). Slice 1 levels run by themselves. */
+  manual: boolean;
+  /** Which backdrop art draws (schema 2), e.g. "morning". */
+  theme: string;
   groundY: number;
+  /** Walk speed (schema 2; slice 1 levels never walk). */
+  walkSpeed: number;
   runSpeed: number;
+  /** Walk speed with roasted corn. */
+  cornWalkSpeed: number;
   /** Run speed with roasted corn. */
   cornSpeed: number;
+  /** The start fence x; the hero stays right of startWall + 7. -Infinity on slice 1 levels. */
+  startWall: number;
+  /** Bus door x and bus park wall x (schema 2), or null. */
+  end: { x: number; wall: number } | null;
+  crates: readonly CrateData[];
+  wells: readonly WellData[];
   spawnX: number;
   koboSpacing: number;
   /** A hazard starts moving when it is this far ahead of the hero. */
@@ -44,9 +81,11 @@ export interface Level {
   coins: readonly { x: number; y: number }[];
   foods: readonly { x: number; y: number; kind: FoodKind }[];
   hazards: readonly { kind: HazardKind; x: number }[];
-  hints: readonly { x: number; words: string }[];
+  /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
+  hints: readonly { x: number; words: string; needs?: Feature }[];
   checkpoint: number;
-  arena: { x: number; width: number; turnLeftX: number; turnRightX: number };
+  /** Slice 1 only: the boss arena at the end of the street. */
+  arena: { x: number; width: number; turnLeftX: number; turnRightX: number } | null;
   /** Boss rules, or null for a level with no boss. */
   boss: BossData | null;
 }
@@ -59,7 +98,8 @@ export class LevelError extends Error {
 }
 
 const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala'];
-const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre'];
+const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', ...FOOD_KINDS];
+const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum'];
 
 export function parseLevel(raw: unknown): Level {
   const id = isObj(raw) && typeof raw['id'] === 'string' ? raw['id'] : '(no id)';
@@ -78,6 +118,11 @@ export function parseLevel(raw: unknown): Level {
     options.includes(v as T) ? (v as T) : fail(path, `should be one of ${options.join(', ')}`);
 
   const r = obj(raw, 'level');
+  const schema = r['schema'] === undefined ? 1 : r['schema'] === 2 ? 2 : fail('schema', 'should be 2 (or left out for slice 1)');
+  if (schema === 2) {
+    const type = oneOf(r['type'], 'type', ['street', 'room', 'hall'] as const);
+    if (type !== 'street') fail('type', `"${type}" files are not played yet (only streets)`);
+  }
   const groundY = num(r['groundY'], 'groundY');
   const koboSpacing = num(r['koboSpacing'], 'koboSpacing');
 
@@ -118,19 +163,52 @@ export function parseLevel(raw: unknown): Level {
     return { kind: oneOf(kind, `hazards[${i}][0]`, HAZARD_KINDS), x: num(x, `hazards[${i}][1]`) };
   });
 
+  // [x, words], or [x, words, piece] for a hint that only shows once that piece is on.
   const hints = list(r['hints'], 'hints').map((h, i) => {
-    const [x, words] = tuple(h, `hints[${i}]`, 2);
-    return { x: num(x, `hints[${i}][0]`), words: str(words, `hints[${i}][1]`) };
+    const a = list(h, `hints[${i}]`);
+    const [x, words, needs] = a.length === 3 ? a : tuple(h, `hints[${i}]`, 2);
+    const hint: { x: number; words: string; needs?: Feature } = { x: num(x, `hints[${i}][0]`), words: str(words, `hints[${i}][1]`) };
+    if (a.length === 3) hint.needs = oneOf(needs, `hints[${i}][2]`, FEATURE_NAMES);
+    return hint;
   });
 
   const speeds = obj(r['hazardSpeeds'], 'hazardSpeeds');
-  const a = obj(r['arena'], 'arena');
-  const arena = {
-    x: num(a['x'], 'arena.x'),
-    width: num(a['width'], 'arena.width'),
-    turnLeftX: num(a['turnLeftX'], 'arena.turnLeftX'),
-    turnRightX: num(a['turnRightX'], 'arena.turnRightX'),
+  const parseArena = (): Level['arena'] => {
+    if (schema === 2 && r['arena'] === undefined) return null;
+    const a = obj(r['arena'], 'arena');
+    return {
+      x: num(a['x'], 'arena.x'),
+      width: num(a['width'], 'arena.width'),
+      turnLeftX: num(a['turnLeftX'], 'arena.turnLeftX'),
+      turnRightX: num(a['turnRightX'], 'arena.turnRightX'),
+    };
   };
+  const arena = parseArena();
+
+  const crates: CrateData[] =
+    r['crates'] === undefined && schema === 1
+      ? []
+      : list(r['crates'], 'crates').map((c, i) => {
+          const [x, y, contents] = tuple(c, `crates[${i}]`, 3);
+          return { x: num(x, `crates[${i}][0]`), bottomY: num(y, `crates[${i}][1]`), contents: oneOf(contents, `crates[${i}][2]`, CRATE_CONTENTS) };
+        });
+  const wells: WellData[] =
+    r['wells'] === undefined && schema === 1
+      ? []
+      : list(r['wells'], 'wells').map((w, i) => {
+          const o = obj(w, `wells[${i}]`);
+          return { x: num(o['x'], `wells[${i}].x`), exitX: num(o['exitX'], `wells[${i}].exitX`), room: str(o['room'], `wells[${i}].room`) };
+        });
+  let end: Level['end'] = null;
+  if (schema === 2) {
+    const e = obj(r['end'], 'end');
+    end = { x: num(e['x'], 'end.x'), wall: num(e['wall'], 'end.wall') };
+    if (end.wall <= end.x) fail('end.wall', 'should be past the bus door (end.x)');
+  }
+  const runSpeed = num(r['runSpeed'], 'runSpeed');
+  // design.md: the level carries cornSpeed; 228 is only the fallback when it is missing.
+  const cornSpeed = r['cornSpeed'] === undefined ? PHYSICS.fastRunSpeed : num(r['cornSpeed'], 'cornSpeed');
+  const tyreSpeed = num(speeds['tyre'], 'hazardSpeeds.tyre');
 
   const parseBoss = (v: unknown): BossData | null => {
     if (v === undefined || (isObj(v) && Object.keys(v).length === 0)) return null;
@@ -162,14 +240,26 @@ export function parseLevel(raw: unknown): Level {
   return {
     id: str(r['id'], 'id'),
     name: str(r['name'], 'name'),
+    schema,
+    manual: schema === 2,
+    theme: schema === 2 ? str(r['theme'], 'theme') : 'morning',
     groundY,
-    runSpeed: num(r['runSpeed'], 'runSpeed'),
-    // design.md: the level carries cornSpeed; 228 is only the fallback when it is missing.
-    cornSpeed: r['cornSpeed'] === undefined ? PHYSICS.fastRunSpeed : num(r['cornSpeed'], 'cornSpeed'),
+    walkSpeed: schema === 2 ? num(r['walkSpeed'], 'walkSpeed') : runSpeed,
+    runSpeed,
+    cornWalkSpeed: schema === 2 ? num(r['cornWalkSpeed'], 'cornWalkSpeed') : cornSpeed,
+    cornSpeed,
+    startWall: schema === 2 ? num(r['startWall'], 'startWall') : -Infinity,
+    end,
+    crates,
+    wells,
     spawnX: num(r['spawnX'], 'spawnX'),
     koboSpacing,
     wakeDistance: num(r['wakeDistance'], 'wakeDistance'),
-    hazardSpeeds: { goat: num(speeds['goat'], 'hazardSpeeds.goat'), tyre: num(speeds['tyre'], 'hazardSpeeds.tyre') },
+    hazardSpeeds: {
+      goat: num(speeds['goat'], 'hazardSpeeds.goat'),
+      tyre: tyreSpeed,
+      drum: speeds['drum'] === undefined ? tyreSpeed : num(speeds['drum'], 'hazardSpeeds.drum'),
+    },
     ground,
     terrain: { groundY, ground: spans, platforms, fallY: Math.max(FALL_Y, groundY + 120) },
     coins,

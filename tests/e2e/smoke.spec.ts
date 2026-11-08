@@ -85,7 +85,7 @@ test('plays offline on the second visit', async ({ page, context }) => {
   await expect.poll(() => page.evaluate(() => window.__game?.steps ?? 0)).toBeGreaterThan(5);
 });
 
-test('a tap anywhere makes the hero jump and land again', async ({ page }) => {
+test('a tap on the jump side makes the hero jump straight up and land again (no auto-run)', async ({ page }) => {
   await openAndRun(page);
   await expect.poll(() => page.evaluate(() => window.__game?.hero.grounded)).toBe(true);
   const start = await page.evaluate(() => window.__game!.hero);
@@ -96,5 +96,5 @@ test('a tap anywhere makes the hero jump and land again', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { timeout: 3000 }).toBe(true);
   const end = await page.evaluate(() => window.__game!.hero);
   expect(end.y).toBe(300);
-  expect(end.x).toBeGreaterThan(start.x);
+  expect(end.x).toBe(start.x);
 });

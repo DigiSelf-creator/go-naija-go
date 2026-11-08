@@ -4,8 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import w1l1 from '../../src/data/levels/w1-l1.json';
-import { HERO_HEIGHT } from '../../src/art/hero';
-import { Game, LAND_TIME, STRIDE } from '../../src/game/game';
+import lagos1 from '../../src/data/levels/lagos-1.json';
+import { HERO_HEIGHT, WALK_STRIDE } from '../../src/art/hero';
+import { DUST_TIME, Game, LAND_TIME, SKID_TIME, STRIDE, type GameEvent } from '../../src/game/game';
 import { parseLevel } from '../../src/game/level';
 import { RULES } from '../../src/game/run';
 
@@ -85,5 +86,92 @@ describe('hero motion', () => {
     expect(RULES.heroHalfW * 2).toBe(14);
     expect(RULES.heroH).toBe(44);
     expect(HERO_HEIGHT).toBe(50);
+  });
+});
+
+describe('hero motion on a player-moved street (S2.2, art H5)', () => {
+  const street = (): Game => {
+    const g = new Game(parseLevel(structuredClone(lagos1)));
+    g.begin(false);
+    return g;
+  };
+  const go = (g: Game, n: number): GameEvent[] => {
+    const out: GameEvent[] = [];
+    g.onEvent = (e) => out.push(e);
+    for (let i = 0; i < n; i++) g.update(DT);
+    return out;
+  };
+
+  it('a walk turns one cycle per STRIDE x WALK_STRIDE of ground, so the feet do not slide', () => {
+    const g = street();
+    g.steer(1);
+    go(g, 6); // up to walk speed
+    expect(g.gait).toBe('walk');
+    const p0 = g.stridePhase;
+    const x0 = g.hero.x;
+    go(g, 10);
+    expect(g.gait).toBe('walk');
+    const moved = g.hero.x - x0;
+    expect(moved).toBeGreaterThan(10);
+    expect((g.stridePhase - p0 + 1) % 1).toBeCloseTo((moved / (STRIDE * WALK_STRIDE)) % 1, 6);
+  });
+
+  it('breaking into a run: one runStart, a dust puff that lasts DUST_TIME, then a run stride', () => {
+    const g = street();
+    g.steer(1);
+    const ev = go(g, 60);
+    expect(ev.filter((e) => e.type === 'runStart')).toHaveLength(1);
+    expect(g.gait).toBe('run');
+    const start = ev.findIndex((e) => e.type === 'runStart');
+    expect(start).toBeGreaterThanOrEqual(0);
+    // Holding on: no more run starts, the puff fades out.
+    expect(go(g, Math.ceil(DUST_TIME / DT) + 2).some((e) => e.type === 'runStart')).toBe(false);
+    expect(g.dustAge).toBe(DUST_TIME);
+    const p0 = g.stridePhase;
+    const x0 = g.hero.x;
+    go(g, 5);
+    expect((g.stridePhase - p0 + 1) % 1).toBeCloseTo(((g.hero.x - x0) / STRIDE) % 1, 6);
+  });
+
+  it('turning round from a run: a skid sound, the old facing, braced feet, then the new way', () => {
+    const g = street();
+    g.steer(1);
+    go(g, 70);
+    expect(g.gait).toBe('run');
+    g.steer(-1);
+    const ev = go(g, 1);
+    expect(ev).toContainEqual({ type: 'skid' });
+    expect(g.skid).toBe(1);
+    expect(g.skidFacing).toBe(1);
+    const p0 = g.stridePhase;
+    go(g, 3);
+    expect(g.stridePhase).toBe(p0); // the braced foot does not cycle
+    go(g, Math.ceil(SKID_TIME / DT));
+    expect(g.skid).toBe(0);
+    expect(g.hero.vx).toBeLessThan(0);
+    expect(g.hero.dir).toBe(-1);
+  });
+
+  it('turning round from a walk: a smaller skid and no skid sound', () => {
+    const g = street();
+    g.steer(1);
+    go(g, 10);
+    expect(g.gait).toBe('walk');
+    g.steer(-1);
+    const ev = go(g, 1);
+    expect(ev.some((e) => e.type === 'skid')).toBe(false);
+    expect(g.skid).toBeGreaterThan(0);
+    expect(g.skid).toBeLessThan(1);
+  });
+
+  it('a jump ends a skid at once', () => {
+    const g = street();
+    g.steer(1);
+    go(g, 70);
+    g.steer(-1);
+    go(g, 1);
+    g.press();
+    go(g, 2);
+    expect(g.skid).toBe(0);
   });
 });

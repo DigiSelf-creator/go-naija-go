@@ -5,8 +5,9 @@
  * restart point come back, and kobo already taken stay counted and do not come back.
  * Q15 (provisional): the number of lives is fixed when the run starts.
  */
-import { bounce, createBody, groundAt, press, release, step, type Body, type Terrain } from '../engine/physics';
+import { bounce, createBody, createWalker, groundAt, halt, press, release, steer, step, type Body, type Gait, type Terrain } from '../engine/physics';
 import { BOSS_RULES, BossFight, type BossEvent } from './boss';
+import { featureOn } from './features';
 import type { FoodKind, HazardKind, Level } from './level';
 
 export const STEPS_PER_SECOND = 60;
@@ -34,12 +35,30 @@ export const RULES = {
   goatRunAwaySteps: secs(2.5),
   /** Tyres that leave the road fall until this far below it, then are gone. */
   tyreFallSpeed: 300,
+  /** S2.2 walls: the hero's centre stays this far inside the start fence and the end wall. */
+  wallGap: 7,
+  /** S2.2: a woken hazard this far outside the camera's edges is gone for good this play. */
+  leaveDistance: 200,
+  /** S2.2: a hint at or before the spawn shows this long after the street starts. */
+  firstHintSteps: secs(0.5),
+  /**
+   * S2.6 street end: hazards fade, the door slides open, the hero hops in, the door shuts and
+   * the bus pulls away, then the street is cleared. Same times as art's busEndAt (BUS_END).
+   */
+  fadeSteps: secs(0.3),
+  doorSteps: secs(0.2),
+  hopSteps: secs(0.6),
+  busLeaveSteps: secs(1.4),
+  clearedSteps: secs(2.2),
+  /** The bus speeds up evenly as it pulls away, u/s² (about 600 u gone in 1.4 s). */
+  busAccel: 612,
 } as const;
 
 /** Size of each hazard's box (half width, height), feet on the road. */
 export const HAZARD_BOX: Record<HazardKind, { halfW: number; h: number }> = {
   goat: { halfW: 16, h: 26 },
   tyre: { halfW: 10, h: 22 },
+  drum: { halfW: 13, h: 30 },
 };
 
 export type HazardMode = 'wait' | 'move' | 'runAway' | 'falling' | 'gone';
@@ -87,10 +106,19 @@ export type RunEvent =
   | { type: 'powerEnd'; kind: 'corn' | 'amala' }
   | { type: 'gameOver' }
   | { type: 'arena' }
+  | { type: 'busBoard' }
+  | { type: 'busGo' }
+  | { type: 'streetCleared' }
   | BossEvent;
 
-/** run: the street. arena: the boss fight. won: General Go-Slow beaten. over: out of lives. */
-export type RunPhase = 'run' | 'arena' | 'won' | 'over';
+/**
+ * run: the street. bus: the street end (controls locked, getting on the bus). cleared: the
+ * bus has gone. arena: the boss fight. won: General Go-Slow beaten. over: out of lives.
+ */
+export type RunPhase = 'run' | 'bus' | 'cleared' | 'arena' | 'won' | 'over';
+
+/** Who pressed jump: a finger id, or a key. The hold for higher belongs to the last presser. */
+export type PressSource = string | number;
 
 export interface Power {
   /** Steps of roasted corn left. */
@@ -129,6 +157,18 @@ export class Run {
    * With no screen (unit tests), only the level's wakeDistance counts.
    */
   viewAhead = -Infinity;
+  /**
+   * The camera's edges, world x (set by the game each step on player-moved streets). Woken
+   * hazards more than 200 u outside them are gone for good (S2.2). Unit tests: no limits.
+   */
+  viewLeft = -Infinity;
+  viewRight = Infinity;
+  /** Steps since the street end started (phase 'bus'). Seconds = endSteps / STEPS_PER_SECOND. */
+  endSteps = 0;
+  /** Where the hero's hop onto the bus starts. */
+  private hopFrom = 0;
+  /** Who started the jump that is held now. */
+  private holdBy: PressSource | null = null;
 
   constructor(
     readonly level: Level,
@@ -149,36 +189,87 @@ export class Run {
     return this.steps / STEPS_PER_SECOND;
   }
 
-  press(): ReturnType<typeof press> {
+  press(by: PressSource = 'tap'): ReturnType<typeof press> {
     if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches
     if (this.phase !== 'run' && this.phase !== 'arena') return null;
-    return press(this.hero);
+    const out = press(this.hero);
+    if (out) this.holdBy = by;
+    return out;
   }
 
-  release(): void {
+  /** A press ends. Only the one that started the jump ends the hold for higher. */
+  release(by?: PressSource): void {
+    if (by !== undefined && this.holdBy !== null && by !== this.holdBy) return;
+    this.holdBy = null;
     release(this.hero);
+  }
+
+  /** The direction held on a player-moved street: -1 back, 0 none, 1 forward. */
+  steer(move: -1 | 0 | 1): void {
+    if (!this.hero.manual) return;
+    steer(this.hero, this.phase === 'run' ? move : 0);
+  }
+
+  /** The direction held (player-moved streets). */
+  get move(): -1 | 0 | 1 {
+    return this.hero.move;
+  }
+
+  /** Walk and run speeds right now (corn changes both). */
+  private gait(): Gait {
+    const corn = this.power.corn > 0;
+    return { walk: corn ? this.level.cornWalkSpeed : this.level.walkSpeed, run: corn ? this.level.cornSpeed : this.level.runSpeed };
+  }
+
+  /**
+   * Slice 1 boss level only: start straight in the boss fight (the street before it was
+   * played by hand on a schema 2 street). Lives and kobo are the caller's to carry over.
+   */
+  startAtArena(): void {
+    const arena = this.level.arena;
+    if (!arena) return;
+    this.hero = this.newHero(arena.x);
+    this.spawnX = arena.x;
+    this.checkpointReached = true;
+    this.phase = 'arena';
+    if (this.level.boss) this.boss = new BossFight(this.level.boss, arena.x, this.level.groundY);
   }
 
   /** One fixed step (dt is always 1/60 s). Returns what happened, for sounds and words. */
   step(dt: number): RunEvent[] {
     const ev: RunEvent[] = [];
     if (this.phase === 'arena') return this.arenaStep(dt);
+    if (this.phase === 'bus') return this.busStep(ev);
     if (this.phase !== 'run') return ev;
     this.steps++;
     this.tickPower(ev);
     const h = this.hero;
-    h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
+    if (h.manual) h.gait = this.gait();
+    else h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
 
     step(h, this.terrain, dt);
     if (h.fallen) {
       this.fall(ev);
       return ev;
     }
+    if (h.manual) this.walls();
 
-    if (h.x >= this.level.arena.x) {
+    const arena = this.level.arena;
+    if (arena && h.x >= arena.x) {
       this.phase = 'arena';
       ev.push({ type: 'arena' });
-      if (this.level.boss) this.boss = new BossFight(this.level.boss, this.level.arena.x, this.level.groundY);
+      if (this.level.boss) this.boss = new BossFight(this.level.boss, arena.x, this.level.groundY);
+      return ev;
+    }
+    const end = this.level.end;
+    if (end && h.grounded && h.x >= end.x) {
+      // S2.6 street end: controls lock, nothing can hurt now.
+      this.phase = 'bus';
+      this.endSteps = 0;
+      this.hopFrom = h.x;
+      steer(h, 0);
+      release(h);
+      ev.push({ type: 'busBoard' });
       return ev;
     }
 
@@ -188,7 +279,11 @@ export class Run {
       ev.push({ type: 'checkpoint' });
     }
     this.level.hints.forEach((hint, i) => {
-      if (h.x >= hint.x && !this.hintsShown.has(i)) {
+      if (!featureOn(hint.needs)) return; // about a piece not built yet (features.ts)
+      // A hint at or before the spawn (player-moved streets) shows 0.5 s after the start.
+      const atStart = h.manual && hint.x <= this.level.spawnX;
+      const due = atStart ? this.steps >= RULES.firstHintSteps : h.x >= hint.x;
+      if (due && !this.hintsShown.has(i)) {
         this.hintsShown.add(i);
         ev.push({ type: 'hint', words: hint.words });
       }
@@ -201,6 +296,57 @@ export class Run {
     return ev;
   }
 
+  /** The hero stays inside the start fence and the end wall; bumping one stops dead. */
+  private walls(): void {
+    const h = this.hero;
+    const lo = this.level.startWall + RULES.wallGap;
+    const hi = (this.level.end?.wall ?? Infinity) - RULES.wallGap;
+    if (h.x < lo || h.x > hi) {
+      h.x = Math.min(Math.max(h.x, lo), hi);
+      halt(h);
+    }
+  }
+
+  /** The street end: the hero hops onto the bus, the bus pulls away, the street is cleared. */
+  private busStep(ev: RunEvent[]): RunEvent[] {
+    this.steps++;
+    this.endSteps++;
+    const h = this.hero;
+    const end = this.level.end!;
+    const inAt = RULES.doorSteps + RULES.hopSteps;
+    if (this.endSteps > RULES.doorSteps && this.endSteps <= inAt) {
+      // Into the open door: a small hop from where the feet touched to the door.
+      const k = (this.endSteps - RULES.doorSteps) / RULES.hopSteps;
+      h.x = this.hopFrom + (end.x + 10 - this.hopFrom) * k;
+      h.y = this.level.groundY - Math.sin(k * Math.PI) * 18;
+      h.grounded = k >= 1;
+      halt(h);
+    }
+    if (this.endSteps === inAt) ev.push({ type: 'busGo' });
+    if (this.endSteps === RULES.clearedSteps) {
+      this.phase = 'cleared';
+      ev.push({ type: 'streetCleared' });
+    }
+    return ev;
+  }
+
+  /** 0 to 1: how far the hazards have faded at the street end. */
+  get hazardFade(): number {
+    return this.phase === 'bus' || this.phase === 'cleared' ? Math.min(1, this.endSteps / RULES.fadeSteps) : 0;
+  }
+
+  /** The hero is on the bus (hidden). */
+  get boarded(): boolean {
+    return (this.phase === 'bus' || this.phase === 'cleared') && this.endSteps >= RULES.doorSteps + RULES.hopSteps;
+  }
+
+  /** How far the bus has pulled away to the right, u. */
+  get busGone(): number {
+    if (this.phase !== 'bus' && this.phase !== 'cleared') return 0;
+    const t = Math.max(0, this.endSteps - RULES.doorSteps - RULES.hopSteps) / STEPS_PER_SECOND;
+    return 0.5 * RULES.busAccel * t * t;
+  }
+
   /** One step of the boss fight (design.md: Boss). */
   private arenaStep(dt: number): RunEvent[] {
     const ev: RunEvent[] = [];
@@ -208,7 +354,7 @@ export class Run {
     this.steps++;
     this.tickPower(ev);
     const h = this.hero;
-    const { turnLeftX, turnRightX } = this.level.arena;
+    const { turnLeftX, turnRightX } = this.level.arena!;
     if (boss?.defeated) {
       h.speed = 0; // stops and stands
     } else {
@@ -269,6 +415,7 @@ export class Run {
   }
 
   private newHero(x: number): Body {
+    if (this.level.manual) return createWalker(x, this.terrain, { walk: this.level.walkSpeed, run: this.level.runSpeed });
     const b = createBody(x, this.terrain);
     b.speed = this.level.runSpeed;
     return b;
@@ -315,9 +462,18 @@ export class Run {
 
   private moveHazards(dt: number): void {
     const { terrain, hazardSpeeds, groundY } = this.level;
-    const wakeDistance = Math.max(this.level.wakeDistance, this.viewAhead + 40);
     const heroX = this.hero.x;
+    // Player-moved: the road the camera shows ahead of the hero right now (S2.2).
+    const ahead = this.hero.manual ? this.viewRight - heroX : this.viewAhead;
+    const wakeDistance = Math.max(this.level.wakeDistance, ahead + 40);
     for (const z of this.hazards) {
+      if (this.hero.manual && z.mode !== 'wait' && z.mode !== 'gone') {
+        // Woken hazards well off either edge of the screen are gone for good this play.
+        if (z.x < this.viewLeft - RULES.leaveDistance || z.x > this.viewRight + RULES.leaveDistance) {
+          z.mode = 'gone';
+          continue;
+        }
+      }
       switch (z.mode) {
         case 'wait':
           if (z.x - heroX <= wakeDistance) {
@@ -414,9 +570,11 @@ export class Run {
     }
     // Start again at the bus stop (or the start). Food effects end; foods and hazards
     // past the restart point come back; kobo already taken stay taken and counted.
-    const down = this.hero.down;
+    const { down, move } = this.hero;
     this.hero = this.newHero(this.spawnX);
     this.hero.down = down;
+    // Facing right, standing still; a direction still held walks on from here (run timer at 0).
+    this.hero.move = move;
     for (const f of this.foods) if (f.x >= this.spawnX) f.taken = false;
     this.hazards.forEach((z, i) => {
       if (z.x0 >= this.spawnX) this.hazards[i] = freshHazard(z.kind, z.x0, this.level.groundY);

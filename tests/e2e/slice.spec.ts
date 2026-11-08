@@ -2,10 +2,12 @@
  * Piece E and the whole first slice, by touch on the phone profile, from a fresh visit:
  * build a hero, play level 1 with all three foods, beat General Go-Slow, see the win screen,
  * no network after load, then a reload offline brings back the saved hero and plays.
+ * Slice 2: the slice 1 level is played the old way (OLD_WAY) until Go-Slow Hall (piece M);
+ * street 1 by hand into this boss fight is in hands.spec.ts.
  */
 import { expect, test } from '@playwright/test';
 import { fightBoss, playStreet } from './bot';
-import { PAST_DOUBLE_TAP_MS } from './helpers';
+import { OLD_WAY, PAST_DOUBLE_TAP_MS } from './helpers';
 
 test('the first slice from a fresh visit: hero, level 1, all foods, General Go-Slow, win, offline', async ({ page, context }) => {
   test.setTimeout(240_000);
@@ -19,7 +21,7 @@ test('the first slice from a fresh visit: hero, level 1, all foods, General Go-S
   });
 
   // A fresh visit.
-  await page.goto('./');
+  await page.goto(OLD_WAY);
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
@@ -103,7 +105,7 @@ test('the first slice from a fresh visit: hero, level 1, all foods, General Go-S
 
 test('Win screen buttons: Play again starts fresh, after a short tap lock', async ({ page }) => {
   test.setTimeout(240_000);
-  await page.goto('./');
+  await page.goto(OLD_WAY);
   await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
@@ -123,7 +125,7 @@ test('Win screen buttons: Play again starts fresh, after a short tap lock', asyn
 
 test('slowed CPU: 4x in the boss fight, at least 30 fps', async ({ page }) => {
   test.setTimeout(240_000);
-  await page.goto('./');
+  await page.goto(OLD_WAY);
   await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);

@@ -7,7 +7,8 @@ import { drawFoodIcon } from '../art/items';
 import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
 import { button, h } from './dom';
-import { WORDS } from './words';
+import type { HintBarBox } from './controls';
+import { WORDS, barWords } from './words';
 
 type Slot = 'corn' | 'garri' | 'amala';
 
@@ -84,18 +85,44 @@ export class Hud {
   }
 }
 
-/** A short message in the middle of the screen. A new one replaces the old. */
+/** Biggest word size of each row of the S2.2 table, px; the bar steps down from it to MIN_FONT. */
+const BAR_FONT: Record<HintBarBox['size'], number> = { small: 12, mid: 14, big: 16 };
+/** The smallest the bar's words go before it is a designer bug (S2.2). */
+export const MIN_FONT = 11;
+
+/**
+ * The hint bar (docs/design.md S2.2, "The hint bar"): every hint and toast shows here, in the
+ * pavement strip between Forward and Jump, where nothing playable is ever drawn. A new one
+ * replaces the old. It takes no taps.
+ */
 export class Toast {
   private readonly el: HTMLElement;
   private timer = 0;
+  private box: HintBarBox | null = null;
+  private cssH = 0;
+  private full = '';
 
   constructor(parent: HTMLElement) {
     this.el = h('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
     parent.append(this.el);
   }
 
+  /** Where the bar goes now (from hintBarBox); called on resize and when the buttons change. */
+  place(box: HintBarBox, cssH: number): void {
+    this.box = box;
+    this.cssH = cssH;
+    const s = this.el.style;
+    s.left = `${box.x}px`;
+    s.width = `${box.w}px`;
+    s.bottom = `${cssH - box.bottom}px`;
+    s.maxHeight = `${Math.max(0, box.bottom - box.top)}px`;
+    this.el.dataset['size'] = box.size;
+    if (this.full) this.setWords(this.full);
+  }
+
   show(words: string, ms = 2200): void {
-    this.el.textContent = words;
+    this.full = words;
+    this.setWords(words);
     this.el.classList.add('show');
     clearTimeout(this.timer);
     this.timer = window.setTimeout(() => this.el.classList.remove('show'), ms);
@@ -108,5 +135,16 @@ export class Toast {
 
   get text(): string {
     return this.el.classList.contains('show') ? (this.el.textContent ?? '') : '';
+  }
+
+  /** The words for this bar's width, at the biggest size (down to 11 px) that fits uncut. */
+  private setWords(words: string): void {
+    const box = this.box;
+    this.el.textContent = box ? barWords(words, box.w) : words;
+    if (!box || this.cssH <= 0) return;
+    for (let px = BAR_FONT[box.size]; px >= MIN_FONT; px--) {
+      this.el.style.fontSize = `${px}px`;
+      if (this.el.scrollHeight <= this.el.clientHeight && this.el.scrollWidth <= this.el.clientWidth) break;
+    }
   }
 }

@@ -191,11 +191,11 @@ function playTry(level: Level, bot: Bot, rand: () => number, gentle = false): Tr
 }
 
 describe('C7: hazards are on screen at least 1.5 s before they touch the hero', () => {
-  // Landscape screens from 4:3 to 21:9. World is 360 tall, so width = 360 * aspect.
+  // Landscape screens from 4:3 to 21:9. World is 420 tall (S2.1), so width = 420 * aspect.
   const aspects = { '4:3': 4 / 3, '16:9': 16 / 9, 'Pixel 5 sideways, test profile (727x393)': 727 / 393, 'phone screen 851x393': 851 / 393, '21:9': 21 / 9 };
   for (const [name, aspect] of Object.entries(aspects)) {
     it(`on a ${name} screen`, () => {
-      const W = 360 * aspect;
+      const W = 420 * aspect;
       const ahead = W * 0.7; // the hero stands at 30 percent
       const report: string[] = [];
       L1.hazards.forEach((_, k) => {

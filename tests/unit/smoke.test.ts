@@ -46,7 +46,7 @@ describe('fixed time step', () => {
 });
 
 describe('view', () => {
-  it('keeps the world 360 units tall and caps pixel ratio at 2', () => {
+  it('keeps the world 420 units tall and caps pixel ratio at 2', () => {
     const v = fitView(851, 393, 2.75);
     expect(v.height).toBe(WORLD_H);
     expect(v.pixelH).toBe(786);

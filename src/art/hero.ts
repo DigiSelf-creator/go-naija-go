@@ -9,6 +9,7 @@
  * and two-part arms and legs. Poses are angles, blended from key poses, so the
  * run, jump, fall, landing and standing all move like a person.
  */
+import { drawDustPuff, drawSkidScuff } from './dust';
 import { GLOW, INK, WHITE } from './palette';
 
 /** Lip rose. Every skin draws the same lip shape with a thin outline darker than the skin. */
@@ -126,7 +127,22 @@ export interface HeroPose {
   vy?: number;
   /** Landing squash, 1 just after touching down, easing to 0. */
   land?: number;
+  /**
+   * Slice 2 ground moves. 'walk' is a shorter, calmer stride with a straight back;
+   * 'run' (the default) is the slice 1 run with its lean. Advance phase by ground
+   * covered: one cycle per STRIDE at a run, per STRIDE x WALK_STRIDE at a walk.
+   */
+  gait?: 'walk' | 'run';
+  /** Turning round from a run: 0 none, 1 full skid (leans back, front foot braced, scuff). */
+  skid?: number;
+  /** Start-of-run dust puff behind the feet: 0 just started, 1 gone. Leave unset for none. */
+  dust?: number;
+  /** Holding the well rope with both hands above the head (going down or up). */
+  rope?: boolean;
 }
+
+/** A walking stride is this share of a running one, so feet never slide. */
+export const WALK_STRIDE = 0.62;
 
 export const HERO_HEIGHT = 50;
 
@@ -269,6 +285,23 @@ function runRig(phase: number, big: boolean): Rig {
   return { thigh, knee, foot, arm, elbow, lean: 0.16, lift: loop8(RUN_LIFT, phase * 2) * s, tilt: -0.08 };
 }
 
+/** Walk: the run's keys made smaller and calmer, back nearly straight, small arm swing. */
+function walkRig(phase: number): Rig {
+  const legs = [phase + 0.5, phase];
+  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * 0.62) as [number, number];
+  const knee = legs.map((q) => loop8(RUN_KNEE, q) * 0.42) as [number, number];
+  const foot = legs.map((q) => loop8(RUN_FOOT, q) * 0.35) as [number, number];
+  const arm = thigh.map((a) => -a * 0.8 + 0.04) as [number, number];
+  const elbow = arm.map((a) => 0.35 + Math.max(0, a) * 0.4) as [number, number];
+  return { thigh, knee, foot, arm, elbow, lean: 0.04, lift: loop8(RUN_LIFT, phase * 2) * 0.3, tilt: -0.02 };
+}
+
+/** Skid on a turn: leaning back, near foot braced ahead (toe up), arms out for balance. */
+const SKID: Rig = { thigh: [-0.2, 0.78], knee: [0.95, 0.12], foot: [0.1, -0.45], arm: [1.5, 2.0], elbow: [0.35, 0.25], lean: -0.22, lift: 0, tilt: 0.04 };
+
+/** Holding the well rope: both hands up on the rope, legs together and a little bent. */
+const ROPE: Rig = { thigh: [0.12, 0.3], knee: [0.3, 0.5], foot: [0.35, 0.45], arm: [3.4, 3.35], elbow: [0.45, 0.5], lean: 0, lift: 0, tilt: -0.12 };
+
 const JUMP: Rig = { thigh: [0.55, 1.3], knee: [1.9, 2.1], foot: [0.8, 0.7], arm: [2.75, 1.7], elbow: [0.4, 0.8], lean: 0.06, lift: 0, tilt: -0.12 };
 const FALL: Rig = { thigh: [-0.3, 0.42], knee: [0.95, 0.3], foot: [0.7, 0.2], arm: [-1.95, 1.75], elbow: [-0.45, 0.3], lean: -0.02, lift: 0, tilt: 0.05 };
 const CROUCH: Rig = { thigh: [0.5, 0.95], knee: [1.25, 1.6], foot: [0, -0.05], arm: [-0.5, 0.9], elbow: [0.7, 0.9], lean: 0.34, lift: 0, tilt: 0.12 };
@@ -299,13 +332,17 @@ function clamp01(x: number): number {
 
 function rigFor(pose: HeroPose, t: number): Rig {
   let r: Rig;
+  if (pose.rope) return ROPE;
   if (pose.inAir) {
     const k = typeof pose.vy === 'number' && Number.isFinite(pose.vy) ? clamp01((pose.vy + 80) / 300) : 0;
     r = mix(JUMP, FALL, k * k * (3 - 2 * k));
   } else if (pose.standing) {
     r = standRig(t);
   } else {
-    r = runRig(Number.isFinite(pose.phase) ? pose.phase : 0, pose.glow);
+    const ph = Number.isFinite(pose.phase) ? pose.phase : 0;
+    r = pose.gait === 'walk' ? walkRig(ph) : runRig(ph, pose.glow);
+    const skid = typeof pose.skid === 'number' && Number.isFinite(pose.skid) ? clamp01(pose.skid) : 0;
+    if (skid > 0) r = mix(r, SKID, skid);
   }
   const land = !pose.inAir && typeof pose.land === 'number' && Number.isFinite(pose.land) ? clamp01(pose.land) : 0;
   if (land > 0) r = mix(r, CROUCH, land * 0.85);
@@ -966,6 +1003,9 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
 
   g.save();
   g.scale(pose.facing === -1 ? -1 : 1, 1);
+
+  if (!pose.inAir && typeof pose.dust === 'number') drawDustPuff(g, pose.dust);
+  if (!pose.inAir && !pose.standing && typeof pose.skid === 'number') drawSkidScuff(g, pose.skid, t);
 
   if (pose.fast) {
     // Speed lines behind the hero

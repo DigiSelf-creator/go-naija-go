@@ -116,7 +116,7 @@ test('20 taps in 1 s: never more than one jump in the air per airtime', async ({
   expect((await hero(page)).y).toBe(300);
 });
 
-test('finger held forever: one jump, then running on the road', async ({ page }) => {
+test('finger held forever: one jump, then standing on the road', async ({ page }) => {
   await ready(page);
   const cdp = await page.context().newCDPSession(page);
   await touch(cdp, 'touchStart');
@@ -241,7 +241,7 @@ for (const size of [
     // Pixel ratio capped at 2.
     expect(c.w).toBe(size.width * 2);
     expect(c.h).toBe(size.height * 2);
-    // The hero is drawn where it should be: 30 percent across (C, qa: further left on narrow
+    // The hero is drawn where it should be (slice 2: near the start fence, where the camera stops): 30 percent across (C, qa: further left on narrow
     // screens, so the hook says where), standing on the road.
     // B3: the drawn hero (default look: green jersey) replaced the capsule, and arms swing
     // across the body, so look for jersey green anywhere in a short column through the chest.
@@ -251,7 +251,7 @@ for (const size of [
       const x = Math.round(el.width * window.__game!.heroScreenX);
       const out: number[][] = [];
       for (let wy = 266; wy <= 290; wy++) {
-        out.push(Array.from(g.getImageData(x, Math.round(el.height * (wy / 360)), 1, 1).data.slice(0, 3)));
+        out.push(Array.from(g.getImageData(x, Math.round(el.height * (wy / 420)), 1, 1).data.slice(0, 3)));
       }
       return out;
     });
@@ -264,7 +264,7 @@ for (const size of [
       const out: number[][] = [];
       for (const fx of [0.6, 0.9]) {
         for (let wy = 266; wy <= 290; wy++) {
-          out.push(Array.from(g.getImageData(Math.round(el.width * fx), Math.round(el.height * (wy / 360)), 1, 1).data.slice(0, 3)));
+          out.push(Array.from(g.getImageData(Math.round(el.width * fx), Math.round(el.height * (wy / 420)), 1, 1).data.slice(0, 3)));
         }
       }
       return out;

@@ -350,12 +350,127 @@ Hints in the level files use four markers so one file fits touch and keys. The w
 
 | Marker | Touch | Keys |
 |---|---|---|
-| {forward} | the forward arrow | the right arrow |
-| {back} | the back arrow | the left arrow |
+| {forward} | → | → |
+| {back} | ← | ← |
 | {jump} | Jump | Space |
-| {down} | Go down | the down arrow |
+| {down} | Go down | ↓ |
+
+The arrows are the plain characters → (U+2192), ← (U+2190) and ↓ (U+2193), drawn in the hint's own font, never as emoji. On a phone → matches the triangle on the Forward button; on a computer it is the arrow key. The short markers keep every hint short enough for the hint bar below.
 
 A hint whose x is at or before `spawnX` shows 0.5 s after the street starts.
+
+### The hint bar: hints never hide what you play (Tp's iPhone note)
+
+Tp on an iPhone: the hint banner covered high kobo, so a player could not tell there were coins to jump for. The old banner sat 24 percent down the screen (and on short screens at the very top), right where high kobo, crates, the BUS PARK board and a double-jumping hero go. This replaces both places.
+
+**The rule: every hint and every toast shows in the hint bar, in the pavement strip at the bottom of the screen, between the left buttons and Jump. Nothing the player collects or must react to is ever drawn there, so a hint can never hide it.**
+
+Options weighed:
+
+| Option | Verdict |
+|---|---|
+| a) Bottom pavement strip, between the buttons | **Chosen.** The strip below the road front holds nothing playable (S2.1), on every screen. Even at 320 x 240 the gap is 78 px wide and 57 px tall: four short lines of 12 px words |
+| b) Slim see-through line at the top | No. At 320 x 240 the top 50 px already hold lives, kobo, Sound and Pause, so a top line would cover the HUD. A double jump from a platform takes the hero's head to y 10, so even a kobo-free band would hide the hero. See-through words over a busy sky are hard to read |
+| c) Shorter hints with icons | Partly taken: every hint is now 35 characters or fewer, and the control words are short (→, Jump, Space). No new icons: no art work, and words teach better than a picture of a button |
+| d) Show only when the hero stands still or the area is clear | No. Hints must come at the right place, and the hero waits for the player but is often running; a hint held back would arrive late, after the pothole. Also hard for qa to test |
+
+#### Where the bar goes (CSS px)
+
+Gamedev already has `perPx` and `lift` from `buttonLayout` (src/screens/controls.ts). A world y shows at screen y = (y - lift) / perPx.
+
+1. Top limit: screen y of world y 312. That keeps 12 u of road front in sight under the road line, so the hero's feet, hazards on the road and the lips of every pit and pothole always show.
+2. Bottom: H - max(8, safe bottom) on screens 280 px tall or more (in line with the buttons' bottoms); H - max(4, safe bottom) on shorter screens.
+3. Sides with the buttons shown: left = Forward's right edge + 6; right = Jump's left edge - 6. If that is wider than 480, the bar is 480 wide, centred between those two edges.
+4. Sides with no buttons (a computer with keys only): width min(480, W - 2 x max(24, safe left, safe right)), centred on the screen.
+5. The bar is fixed to its bottom edge. Its height fits its words, never taller than bottom minus top limit. Words are centred in it, left to right and top to bottom.
+6. Never on the HUD row, never over Back, Forward, Jump, Go down, Go up, Sound or Pause. It takes no taps (pointer-events none), so a thumb on the pavement still walks or jumps as S2.2 says.
+
+#### Size of the words
+
+| Screen height | Font | Line height | Padding | Lines that fit |
+|---|---|---|---|---|
+| under 280 px | bold 12 px | 12.6 px | 2 px top and bottom, 5 px sides | 4 |
+| 280 to 419 px | bold 14 px | 16 px | 4 px, 8 px sides | 3 or more |
+| 420 px and up | bold 16 px | 19 px | 6 px, 12 px sides | 3 or more |
+
+If the words still do not fit inside the bar, the font steps down 1 px at a time to 11 px. Never cut words or add "...". If a hint still does not fit at 11 px, that is a designer bug: qa reports it and designer shortens the words.
+
+Look: the same yellow (#f2b300) with dark words (#1d1a14), a 1 px dark outline (#1d1a14 at 60 percent), radius 6 px under 280 px tall, else 10 px. Solid, not see-through: it only ever sits on the plain pavement. Fade in and out over 0.15 s (no fade with reduced motion). Keeps `role="status"` and `aria-live="polite"`.
+
+#### Sizes on the screens qa tests (CSS px, rounded)
+
+| Screen | Road line y | Bar x | Bar width | Bar y (top limit to bottom) | Room | Font |
+|---|---|---|---|---|---|---|
+| 320 x 240 | 171 | 140 to 218 | 78 | 178 to 236 | 58 | 12 |
+| 640 x 200 (lift 23) | 132 | 140 to 538 | 398 | 138 to 196 | 58 | 12 |
+| 568 x 230 (lift 4) | 162 | 140 to 466 | 326 | 169 to 226 | 57 | 12 |
+| 480 x 270 | 193 | 158 to 364 | 206 | 201 to 266 | 65 | 12 |
+| 568 x 320 | 229 | 186 to 432 | 246 | 238 to 312 | 74 | 14 |
+| 667 x 375 | 268 | 188 to 529 | 341 | 279 to 367 | 88 | 14 |
+| 851 x 393, home bar 21 | 281 | 210 to 690 | 480 | 292 to 372 | 80 | 14 |
+| 1024 x 768 | 549 | 297 to 777 | 480 | 571 to 760 | 189 | 16 |
+| 1280 x 720, keys only | 514 | 400 to 880 | 480 | 535 to 712 | 177 | 16 |
+
+#### How long it shows
+
+Level hints: 3.5 s (was 2.6 s; it hides nothing now, and four short lines need a moment). Food, shield, well, parcel and boss toasts: as before. A new hint or toast replaces the one showing, as now. The bar hides at once when the pause screen or any screen opens over the game, and when a life is lost.
+
+#### Short words for narrow bars
+
+When the bar is under 160 px wide (only screens near 320 x 240), a toast longer than 35 characters shows its short words instead. Level hints have no short form: every level hint is 35 characters or fewer with the markers filled in, touch and keys.
+
+| Full words (bar 160 px wide or more) | Short words (bar under 160 px) |
+|---|---|
+| Roasted corn! You run faster for 6 seconds. | Roasted corn! You run faster! |
+| Garri, sugar and epa (groundnut)! A shield takes one hit for you. | Garri, sugar and epa! Shield on! |
+| Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through! | Amala, gbegiri and ewedu! Strong! |
+| General Go-Slow blocks the road! Jump onto the green light. | Go-Slow! Jump on the green light. |
+| A secret room! Grab the kobo. Stand under the rope to go back up. | Secret room! Use the rope to go up. |
+| Garri parcel! Your shield will be on when the Go-Slow Hall fight starts. | Garri parcel! Shield for the hall. |
+| Your garri parcel: the shield is on! | Garri parcel: shield on! |
+| General Go-Slow is jamming the hall! Jump onto the green light. | Go-Slow! Jump on the green light. |
+| PEEP! High honks fly high. Stay low on the floor. | PEEP! High honks: stay low. |
+
+Every other toast is already 35 characters or fewer. Any new toast longer than 35 characters must come with short words in this table.
+
+#### New hint words (gamedev: change the level files to these)
+
+Touch and keys are the same file words with the markers filled in.
+
+| Level, x | Old | New | Touch shows | Keys show |
+|---|---|---|---|---|
+| lagos-1, 0 | Hold {forward} to walk. Keep holding to run. | Hold {forward} to walk. Hold on to run. | Hold → to walk. Hold on to run. | same |
+| lagos-1, 700 | Press {jump} to jump. | same | Press Jump to jump. | Press Space to jump. |
+| lagos-1, 1450 | Hold {jump} down to jump higher. | Hold {jump} to jump higher. | Hold Jump to jump higher. | Hold Space to jump higher. |
+| lagos-1, 1880 (crates) | A crate! Jump up under it and knock it with your head. | Crate! Jump up under it. | same | same |
+| lagos-1, 2350 | Pothole! Jump over it. | same | same | same |
+| lagos-1, 3200 | Wider pothole! Hold {jump} to jump higher. | Wider pothole! Hold {jump}. | Wider pothole! Hold Jump. | Wider pothole! Hold Space. |
+| lagos-1, 3500 | Press {jump} again in the air for a second jump. | In the air, press {jump} again. | In the air, press Jump again. | In the air, press Space again. |
+| lagos-1, 3880 | Wide pothole! Jump, then jump again in the air. | Wide pothole! Jump twice. | same | same |
+| lagos-1, 4400 | Bus stop! If you fall, you start again here. | Bus stop! Now you start here. | same | same |
+| lagos-1, 4560 | To jump far, run first. Keep holding {forward}. | To jump far, run first. | same | same |
+| lagos-1, 4820 | Big pit! Run, jump, then jump again in the air. | Big pit! Run, then jump twice. | same | same |
+| lagos-1, 5350 | Goat! Jump over it, or land on it to bounce. | Goat! Jump over, or bounce on it. | same | same |
+| lagos-1, 5950 | Rolling tyre! Jump over it. | same | same | same |
+| lagos-1, 6380 (crates) | This crate has food inside. Knock it! | Food in this crate! Knock it. | same | same |
+| lagos-1, 10450 | The yellow bus! Get on to finish the street. | Yellow bus! Get on to finish. | same | same |
+| lagos-2, 1000 (crates) | Crates hang over stall roofs too. Jump up from the roof. | High crate? Jump from the roof. | same | same |
+| lagos-2, 2780 | A well! Stand by it, then press {down}. | A well! Stand by it. Press {down}. | A well! Stand by it. Press Go down. | A well! Stand by it. Press ↓. |
+| lagos-2, 5200 | Bus stop! If you fall, you start again here. | Bus stop! Now you start here. | same | same |
+| lagos-2, 5450 | Big pit! Run first, then jump twice. | Big pit! Run, then jump twice. | same | same |
+| lagos-3, 1350 | Rolling drum! It rolls fast. Jump over it, or land on it to bounce. | Fast rolling drum! Jump over it. | same | same |
+| lagos-3, 4600 | Bus stop! If you fall, you start again here. | Bus stop! Now you start here. | same | same |
+
+"Bus stop! Now you start here." is said as the hero reaches the stop: from now on a lost life brings you back here. The goat line still teaches the bounce; the drum line drops it (the goat taught it first), so the drum hint is just "it is fast, jump".
+
+#### What qa checks
+
+1. At every size in the table above, landscape, touch and keys, with and without a home bar: the bar's box is inside its limits (top at or below world y 312, bottom as rule 2, sides as rules 3 and 4). No pixel of the bar overlaps Back, Forward, Jump, Go down, Go up, Sound, Pause, lives, kobo or the food timer.
+2. Play every street and the hall at 320 x 240, 568 x 320 and 667 x 375. On every frame a hint or toast shows, no bar pixel overlaps the drawn box of any kobo, food, crate, hazard, boss throw, honk, light, pit or pothole lip, the hero (unless the hero is falling into a pit), the well, the bus, the bus door or the BUS PARK board.
+3. Every hint and toast (touch and key words, full or short as the bar width picks) fits inside the bar with no clipping, no "..." and no scroll (scrollHeight not more than clientHeight), at 12 px or the fallback 11 px. Report any that need 11 px.
+4. Level data test: every hint in every level file is 35 characters or fewer after the markers are filled in, touch and keys.
+5. Art and level rule test: nothing playable or anything the player must react to is drawn below world y 306 (hero feet, hazards, wells, crates' poles, the bus and its wheels sit on y 300; only shadows and the pavement may go lower). Pits are the only thing drawn into the strip, and their lips at y 300 stay in sight.
+6. The bar hides when pause opens and does not come back on "Keep playing" for a hint whose time ran out.
 
 ## S2.3 Hero choices (R2)
 
@@ -537,7 +652,7 @@ Length: spawn 80 to bus 10600 = 10520 u. 67 s at full run; about 90 s for a firs
 
 | Part | x | About | Teaches | What is there |
 |---|---|---|---|---|
-| Warm up | 80-700 | 0-5 s | walk, run | Fence and parked bus behind the start. Hint at once: "Hold {forward} to walk. Keep holding to run." Kobo at 300 and 560 on the road |
+| Warm up | 80-700 | 0-5 s | walk, run | Fence and parked bus behind the start. Hint at once: "Hold {forward} to walk. Hold on to run." Kobo at 300 and 560 on the road |
 | Jump | 700-1880 | 5-15 s | tap, then hold | "Press {jump} to jump." Kobo in the air at 880. Roof at 1150, 50 high (tap). "Hold {jump} down to jump higher." Roof at 1650, 110 high. Solid road under both |
 | Crate | 1880-2300 | 15-19 s | hit from below | "A crate! Jump up under it and knock it with your head." Kobo crates at 2000 and 2150 |
 | Pothole | 2300-3400 | 19-28 s | potholes | "Pothole! Jump over it." Tap potholes 30, 36, 40 wide at 2450, 2750, 3050. "Wider pothole! Hold {jump} to jump higher." Hold pothole 60 wide at 3300. Kobo over each |
@@ -811,7 +926,7 @@ Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that
 
 Flow: Title "Play" goes straight into street 1 if no street is done yet, else to Streets. A card starts that street or the hall. Street cleared "Next street" starts the next one. Win "See Nigeria's wheel" opens the wheel, and its "Back" goes to Streets.
 
-Toasts and hints in one place (all also in the level files or in S2.5 and S2.7): "A secret room! Grab the kobo. Stand under the rope to go back up." / "Garri parcel! Your shield will be on when the Go-Slow Hall fight starts." / "Back on the street!" / "Your garri parcel: the shield is on!" / "General Go-Slow is jamming the hall! Jump onto the green light." / "Green light! 2 more." / "Green light! 1 more." / "PEEP! High honks fly high. Stay low on the floor." / "Green light! The hall is clear!" / "Lagos is switched on!" Part 1's food toasts stay.
+Toasts and hints in one place (all also in the level files or in S2.5 and S2.7): "A secret room! Grab the kobo. Stand under the rope to go back up." / "Garri parcel! Your shield will be on when the Go-Slow Hall fight starts." / "Back on the street!" / "Your garri parcel: the shield is on!" / "General Go-Slow is jamming the hall! Jump onto the green light." / "Green light! 2 more." / "Green light! 1 more." / "PEEP! High honks fly high. Stay low on the floor." / "Green light! The hall is clear!" / "Lagos is switched on!" Part 1's food toasts stay. All of them show in the hint bar (S2.2, "The hint bar"); the long ones have short words there for narrow bars.
 
 ## S2.11 Accessibility check (slice 2)
 
@@ -821,6 +936,7 @@ Toasts and hints in one place (all also in the level files or in S2.5 and S2.7):
 4. Gentle mode: 5 lives on every street and in the hall. No auto-run (Q18); revisit after testing.
 5. No time limits anywhere; the hero waits for the player.
 6. Reduced motion (`prefers-reduced-motion`): no camera ease (it snaps), no wheel spin (the tick and name stay), no crate sway.
+7. Hints and toasts never hide anything: they show in the hint bar in the bottom pavement strip, never over kobo, food, crates, hazards, pit lips, the bus, the hero, the buttons or the HUD (S2.2, "The hint bar"). Every level hint is 35 characters or fewer.
 
 ## S2.12 What art must make (for pm)
 

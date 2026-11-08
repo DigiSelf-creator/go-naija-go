@@ -305,26 +305,47 @@
   }
 }
 
-/* Toast: short words in the run (hints, foods). Never takes taps. */
+/* The hint bar (design.md S2.2): every hint and toast, in the pavement strip between Forward
+   and Jump. Place, width, bottom and the most height it may take are set from hintBarBox
+   (src/screens/controls.ts); its height fits its words. Solid: it only sits on plain pavement.
+   Never takes taps. */
 .toast {
   position: fixed;
-  left: 50%;
-  top: 24%;
   z-index: 6;
-  transform: translateX(-50%);
-  max-width: min(86vw, 560px);
-  padding: 8px 14px;
-  border-radius: 12px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px 8px;
+  border: 1px solid rgba(29, 26, 20, 0.6);
+  border-radius: 10px;
   background: #f2b300;
   color: #1d1a14;
-  font: bold 1.05rem 'Trebuchet MS', Verdana, sans-serif;
+  font: bold 14px/1.143 'Trebuchet MS', Verdana, sans-serif;
   text-align: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.15s;
   pointer-events: none;
+}
+.toast[data-size='small'] {
+  padding: 2px 5px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.05;
+}
+.toast[data-size='big'] {
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 1.1875;
 }
 .toast.show {
   opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
 }
 .go.secondary {
   background: #5d574b;
@@ -336,4 +357,36 @@
 }
 .screen .stack .go {
   margin: 0;
+}
+
+/* Phone buttons (S2.2): art's drawings (src/art/controls.ts), plain and pressed. The pressed
+   look (fuller, 94 percent size, icon solid dark) is drawn in the SVG itself. They never take
+   pointer events: the touch areas behind them are much bigger (src/engine/input.ts). */
+.pads {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.pads[hidden],
+.pad[hidden] {
+  display: none;
+}
+.pad {
+  position: absolute;
+  box-sizing: border-box;
+}
+.pad > span {
+  position: absolute;
+  inset: 0;
+}
+.pad svg {
+  display: block;
+}
+.pad .pad-down,
+.pad.down .pad-up {
+  display: none;
+}
+.pad.down .pad-down {
+  display: block;
 }

@@ -1,9 +1,11 @@
 /**
  * qa (A6): frame rate on a slowed-down CPU, phone profile (Pixel 5 sideways, pixel ratio capped at 2).
  * Pass: at least 30 frames a second at 4x slowdown. 6x is measured and reported.
- * The game keeps hopping the whole time, so physics and drawing both run.
+ * The hero keeps walking, running and hopping the whole time (slice 2: back and forth on street 1,
+ * by touch, so the camera swings too), so physics and drawing both run.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { LEFT, RIGHT, buttonCentres, hands } from './hands';
 import { startRun } from './helpers';
 
 interface Sample {
@@ -58,9 +60,24 @@ test('frame rate on a slowed-down CPU (phone profile)', async ({ page }) => {
   const dpr = await page.evaluate(() => devicePixelRatio);
   const canvas = await page.evaluate(() => `${document.querySelector('canvas')!.width}x${document.querySelector('canvas')!.height}`);
 
-  // Keep the hero jumping during every measurement.
-  const hopper = setInterval(() => void page.touchscreen.tap(500, 150).catch(() => {}), 400);
+  // Keep the hero moving during every measurement: run one way for 1.5 s, then the other
+  // (it stays on the solid road before the first pothole), hopping every 0.4 s.
   const cdp = await page.context().newCDPSession(page);
+  const h = hands(cdp);
+  const btn = await buttonCentres(page);
+  let way = 1;
+  let ticks = 0;
+  const hopper = setInterval(() => {
+    void (async () => {
+      if (ticks++ % 4 === 0) {
+        await h.up(LEFT);
+        await h.down(LEFT, way === 1 ? btn.forward.x : btn.back.x, btn.forward.y);
+        way = -way;
+      }
+      await h.down(RIGHT, btn.jump.x, btn.jump.y);
+      await h.up(RIGHT);
+    })().catch(() => {});
+  }, 400);
   const results: Record<string, Sample> = {};
   const work: Record<string, number> = {};
   // The same fixed piece of work, timed, proves the slowdown is really on.
@@ -81,6 +98,7 @@ test('frame rate on a slowed-down CPU (phone profile)', async ({ page }) => {
   } finally {
     clearInterval(hopper);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    await h.upAll().catch(() => {});
   }
 
   const line = Object.entries(results)
@@ -94,6 +112,8 @@ test('frame rate on a slowed-down CPU (phone profile)', async ({ page }) => {
     .join(', ');
   console.log(`slow CPU (dpr ${dpr}, canvas ${canvas}): ${line}. Fixed work took: ${workLine}`);
   test.info().annotations.push({ type: 'fps', description: line });
+  const end = await page.evaluate(() => window.__game!.run);
+  expect(end.phase, 'still playing (no pothole) after the measurements').toBe('run');
 
   expect(work['4x']!).toBeGreaterThan(work['1x']! * 2.5);
   expect(work['6x']!).toBeGreaterThan(work['4x']!);

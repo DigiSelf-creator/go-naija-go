@@ -1,15 +1,19 @@
 import './screens/screens.css';
-import { attachInput } from './engine/input';
+import { Controls, attachControls, type Source } from './engine/input';
 import { FixedLoop } from './engine/loop';
 import { fitView, readSafeArea, type View } from './engine/view';
-import levelData from './data/levels/w1-l1.json';
+import street1Data from './data/levels/lagos-1.json';
+import bossLevelData from './data/levels/w1-l1.json';
 import { Sound } from './engine/sound';
-import { Game, heroScreenX } from './game/game';
+import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
+import { FEATURES } from './game/features';
+import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel } from './game/level';
-import type { RunPhase } from './game/run';
+import { STEPS_PER_SECOND, type RunPhase } from './game/run';
 import { loadLook } from './game/save';
+import { TouchButtons, hintBarBox, type HintBarBox } from './screens/controls';
 import { Hud, Toast } from './screens/hud';
-import { WORDS } from './screens/words';
+import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type MenuScreen, type TapPoint } from './screens/menus';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
@@ -22,23 +26,28 @@ if (!ctx) throw new Error('Canvas 2D is not available');
 const g: CanvasRenderingContext2D = ctx;
 
 let view: View = fitView(1, 1, 1);
+const onResize: (() => void)[] = [];
 function resize(): void {
   view = fitView(window.innerWidth, window.innerHeight, window.devicePixelRatio, readSafeArea());
   canvas.width = view.pixelW;
   canvas.height = view.pixelH;
+  for (const f of onResize) f();
 }
 window.addEventListener('resize', resize);
 resize();
 
 registerServiceWorker();
 
-if (new URLSearchParams(location.search).has('gallery')) {
-  // Debug only: every picture at once, for art checks (?gallery).
+const query = new URLSearchParams(location.search);
+if (query.has('gallery')) {
+  // Debug only: every picture at once, for art checks (?gallery, ?gallery=2 for page 2, &t=1.5 to hold the time).
   void import('./art/gallery').then(({ drawGallery }) => {
     const t0 = performance.now();
+    const page = Number(query.get('gallery')) || 0;
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
     const frame = (now: number): void => {
       g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawGallery(g, view.width, view.height, (now - t0) / 1000);
+      drawGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -49,8 +58,24 @@ if (new URLSearchParams(location.search).has('gallery')) {
 
 function startGame(): void {
   const store = createStore();
-  const level = parseLevel(levelData);
-  const game = new Game(level);
+  // Street 1 by hand (slice 2). The slice 1 boss fight comes after its bus until Go-Slow Hall
+  // (piece M). ?level=w1-l1 still plays the whole slice 1 level the old way, running by itself.
+  const bossLevel = parseLevel(bossLevelData);
+  const oldWay = new URLSearchParams(location.search).get('level') === 'w1-l1';
+  const startLevel = oldWay ? bossLevel : parseLevel(street1Data);
+  const game = new Game(startLevel);
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const buttons = new TouchButtons(document.body, coarse);
+  const placeButtons = (): void => {
+    buttons.place(window.innerWidth, window.innerHeight, readSafeArea());
+    // A very short screen: raise the road line clear of the buttons (0 almost always).
+    game.lift = buttons.layout.lift;
+  };
+  /** The hint bar sits between the buttons shown now (S2.2, "The hint bar"). */
+  const barBox = (): HintBarBox => hintBarBox(window.innerWidth, window.innerHeight, readSafeArea(), buttons.layout, buttons.which);
+  onResize.push(placeButtons, () => game.setView(view));
+  placeButtons();
+  game.setView(view);
   game.look = loadLook(store);
   const sound = new Sound();
 
@@ -58,7 +83,10 @@ function startGame(): void {
     update: (dt) => game.update(dt),
     render: () => {
       game.render(g, view);
-      if (playing) hud.update(game.run, menus.sound);
+      if (playing) {
+        hud.update(game.run, menus.sound);
+        buttons.pressed(controls.dir, controls.jumpHeld > 0);
+      }
     },
   });
 
@@ -78,7 +106,10 @@ function startGame(): void {
     if (!playing || game.paused || !inPlay()) return;
     loop.pause();
     game.paused = true;
+    toast.hide();
+    controls.releaseAll();
     game.release();
+    game.steer(0);
     menus.show('pause', by);
   }
   function resume(): void {
@@ -93,8 +124,10 @@ function startGame(): void {
     toast.hide();
     playing = true;
     document.body.classList.add('playing');
-    game.begin(menus.gentle);
+    controls.releaseAll();
+    game.begin(menus.gentle, startLevel);
     hud.show(true);
+    buttons.show(true, game.level.manual);
     loop.resume();
     if (portrait.matches || document.hidden) pause();
   }
@@ -102,9 +135,11 @@ function startGame(): void {
     playing = false;
     document.body.classList.remove('playing');
     hud.show(false);
+    buttons.show(false);
     toast.hide();
     loop.pause();
-    game.reset();
+    controls.releaseAll();
+    game.reset(startLevel);
     menus.show('title');
   }
 
@@ -125,9 +160,15 @@ function startGame(): void {
     },
   });
   const toast = new Toast(document.body);
+  const placeBar = (): void => toast.place(barBox(), window.innerHeight);
+  buttons.onChange = placeBar;
+  placeBar();
   sound.enabled = menus.sound;
+  menus.touchWords = () => buttons.touch;
 
   const W = WORDS.toast;
+  /** S2.2: a level hint shows 3.5 s in the hint bar. */
+  const HINT_MS = 3500;
   game.onEvent = (e) => {
     switch (e.type) {
       case 'kobo':
@@ -138,7 +179,7 @@ function startGame(): void {
         toast.show(W[e.kind], 3200);
         break;
       case 'hint':
-        toast.show(e.words, 2600);
+        toast.show(hintWords(e.words, controls.lastKind), HINT_MS);
         break;
       case 'bounce':
         sound.play(e.kind === 'goat' ? 'meeh' : 'bounce');
@@ -147,6 +188,7 @@ function startGame(): void {
         sound.play(e.kind === 'goat' ? 'meeh' : 'smash');
         break;
       case 'hit':
+        toast.hide(); // a lost life: the bar hides at once (S2.2)
         sound.play('hit');
         break;
       case 'shieldPop':
@@ -154,6 +196,7 @@ function startGame(): void {
         toast.show(W.shieldUsed);
         break;
       case 'fall':
+        toast.hide();
         sound.play('fall');
         break;
       case 'checkpoint':
@@ -169,11 +212,31 @@ function startGame(): void {
         break;
       case 'gameOver':
         sound.play('gameOver');
+        controls.releaseAll();
         loop.pause();
         toast.hide();
         menus.showGameOver({ kobo: game.run.kobo, lives: 0 });
         break;
       case 'arena':
+        sound.play('arena');
+        toast.show(W.bossArrives, 3000);
+        break;
+      case 'busBoard':
+        break;
+      case 'busGo':
+        // The hero is in: the door hisses shut and our horn sounds as the bus pulls away.
+        sound.play('busBoard');
+        break;
+      case 'runStart':
+        sound.play('runStart');
+        break;
+      case 'skid':
+        sound.play('skid');
+        break;
+      case 'streetCleared':
+        // Until Go-Slow Hall (piece M): on to the slice 1 boss fight, lives and kobo carried.
+        game.toBoss(bossLevel);
+        buttons.show(true, false);
         sound.play('arena');
         toast.show(W.bossArrives, 3000);
         break;
@@ -192,6 +255,7 @@ function startGame(): void {
         toast.show(W.roadFree, 2000);
         break;
       case 'win':
+        controls.releaseAll();
         loop.pause();
         toast.hide();
         menus.showWin({ kobo: game.run.kobo, lives: game.run.lives });
@@ -214,16 +278,31 @@ function startGame(): void {
   window.addEventListener('pointerdown', unlock, true);
   window.addEventListener('keydown', unlock, true);
 
-  attachInput(window, {
-    onPress: (at) => {
-      if (!playing || game.paused || !inPlay()) return;
-      if (isSecondTap(startTap, at)) return;
-      const jump = game.press();
-      if (jump === 'ground') sound.play('jump');
-      else if (jump === 'air') sound.play('airJump');
+  const controls = new Controls(
+    {
+      onJumpPress: (by: Source, at) => {
+        if (!playing || game.paused || !inPlay()) return;
+        if (isSecondTap(startTap, at)) return;
+        const jump = game.press(by);
+        if (jump === 'ground') sound.play('jump');
+        else if (jump === 'air') sound.play('airJump');
+      },
+      onJumpRelease: (by) => game.release(by),
+      onMove: (dir) => {
+        if (playing && !game.paused) game.steer(dir);
+        else game.steer(0);
+      },
     },
-    onRelease: () => game.release(),
-  });
+    () => ({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      midX: buttons.layout.midX,
+      // Area rules only with the buttons on screen on a player-moved street; else a press anywhere jumps.
+      buttons: buttons.touch && game.level.manual,
+    }),
+    coarse ? 'touch' : 'keys',
+  );
+  attachControls(window, controls, () => buttons.sawTouch());
 
   // Menus first; the street stands still behind them.
   loop.start();
@@ -239,11 +318,24 @@ function startGame(): void {
       return loop.stepCount;
     },
     get hero() {
-      const { x, y, vy, grounded, dir, speed, airJump } = game.hero;
-      return { x, y, vy, grounded, dir, speed, airJump };
+      const { x, y, vy, vx, grounded, dir, speed, airJump, move, runTime, manual } = game.hero;
+      return { x, y, vy, vx, grounded, dir, speed, airJump, move, runTime, manual };
+    },
+    get input() {
+      return {
+        dir: controls.dir,
+        jumpHeld: controls.jumpHeld,
+        fingers: controls.fingerCount,
+        lastKind: controls.lastKind,
+        buttons: buttons.shown,
+        layout: buttons.layout,
+      };
     },
     get look() {
       return { ...game.look };
+    },
+    get anim() {
+      return { gait: game.gait, skid: game.skid, dust: game.dustAge < DUST_TIME };
     },
     get screen() {
       return menus.current ?? (playing ? 'play' : null);
@@ -256,6 +348,7 @@ function startGame(): void {
         maxLives: r.maxLives,
         kobo: r.kobo,
         time: r.time,
+        busTime: r.phase === 'bus' || r.phase === 'cleared' ? r.endSteps / STEPS_PER_SECOND : 0,
         checkpoint: r.checkpointReached,
         safe: r.safe,
         power: { ...r.power },
@@ -263,12 +356,18 @@ function startGame(): void {
       };
     },
     get level() {
+      const level = game.level;
       return {
+        id: level.id,
+        manual: level.manual,
         gaps: level.ground.slice(1).map((s, i) => [level.ground[i]![1], s[0]] as const),
         checkpoint: level.checkpoint,
-        arenaX: level.arena.x,
-        turnLeftX: level.arena.turnLeftX,
-        turnRightX: level.arena.turnRightX,
+        spawnX: level.spawnX,
+        startWall: level.startWall,
+        end: level.end ? { ...level.end } : null,
+        arenaX: level.arena?.x ?? Infinity,
+        turnLeftX: level.arena?.turnLeftX ?? Infinity,
+        turnRightX: level.arena?.turnRightX ?? Infinity,
         groundY: level.groundY,
         lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
       };
@@ -290,13 +389,94 @@ function startGame(): void {
         : null;
     },
     get heroScreenX() {
-      return heroScreenX(view.width);
+      // Where the hero is drawn across the screen right now (the street camera may lag or
+      // stop at the start fence; slice 1 levels keep heroScreenX).
+      return game.level.manual ? (game.hero.x - game.camera) / view.width : heroScreenX(view.width);
     },
     get camX() {
       return game.camera;
     },
+    get camLook() {
+      return game.cameraLook;
+    },
+    get viewW() {
+      return view.width;
+    },
     get sound() {
       return { enabled: sound.enabled, started: sound.started };
+    },
+    get hintBar() {
+      // The hint bar as laid out now, CSS px, and whether its words fit uncut (S2.2).
+      const el = document.querySelector<HTMLElement>('.toast')!;
+      const r = el.getBoundingClientRect();
+      return {
+        words: toast.text,
+        x: r.x,
+        y: r.y,
+        w: r.width,
+        h: r.height,
+        font: parseFloat(getComputedStyle(el).fontSize),
+        fits: el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth,
+        limits: barBox(),
+      };
+    },
+    get drawn() {
+      // Drawn boxes (CSS px, generous) of everything on screen the player collects or reacts to,
+      // for the S2.2 check that the hint bar never covers any of them.
+      const k = canvas.getBoundingClientRect().width / view.width;
+      const cam = game.camera;
+      const lift = game.lift;
+      const out: { what: string; x: number; y: number; w: number; h: number }[] = [];
+      const add = (what: string, x0: number, y0: number, x1: number, y1: number): void => {
+        const x = (x0 - cam) * k;
+        const w = (x1 - x0) * k;
+        if (x + w < 0 || x > window.innerWidth) return;
+        out.push({ what, x, y: (y0 - lift) * k, w, h: (y1 - y0) * k });
+      };
+      const r = game.run;
+      const level = game.level;
+      const gy = level.groundY;
+      for (const c of r.coins) if (!c.taken) add('kobo', c.x - 11, c.y - 11, c.x + 11, c.y + 11);
+      for (const f of r.foods) if (!f.taken) add('food', f.x - 20, f.y - 22, f.x + 20, f.y + 22);
+      if (r.hazardFade < 1) {
+        for (const z of r.hazards) {
+          if (z.mode === 'gone') continue;
+          if (z.kind === 'goat') add('goat', z.x - 32, z.y - 52, z.x + 32, z.y + 3);
+          else add(z.kind, z.x - 18, z.y - 40, z.x + 18, z.y + 4);
+        }
+      }
+      if (FEATURES.crates) for (const c of level.crates) add('crate', c.x - 17, c.bottomY - 90, c.x + 17, c.bottomY + 1);
+      for (const w of level.wells) for (const x of [w.x, w.exitX]) add('well', x - 19, gy - 31, x + 19, gy + 1);
+      for (let i = 1; i < level.ground.length; i++) {
+        const a = level.ground[i - 1]![1];
+        const b = level.ground[i]![0];
+        add('pit lip', a - 6, gy - 2, a + 6, gy + 12);
+        add('pit lip', b - 6, gy - 2, b + 6, gy + 12);
+      }
+      const h = game.hero;
+      // A hero falling into a pit may pass behind the bar (S2.2 qa check 2).
+      if (h.y <= gy + 2 && !r.boarded) add('hero', h.x - 20, h.y - 58, h.x + 20, h.y + 2);
+      const end = level.end;
+      if (end) {
+        const atBus = r.phase === 'bus' || r.phase === 'cleared';
+        const dx = busEndAt(atBus ? r.endSteps / STEPS_PER_SECOND : 0).dx ?? 0;
+        add('bus', end.x + END_BUS_BACK + dx, gy - 80, end.x + END_BUS_FRONT + dx, gy + 2);
+        add('BUS PARK board', end.x + BUS_BOARD.dx, gy + BUS_BOARD.dy, end.x + BUS_BOARD.dx + BUS_BOARD.w, gy + BUS_BOARD.dy + BUS_BOARD.h);
+      }
+      return out;
+    },
+    get busBoard() {
+      // The "BUS PARK" board as drawn on screen right now, CSS px (null on a level with no bus park).
+      const end = game.level.end;
+      if (!end) return null;
+      const k = canvas.getBoundingClientRect().width / view.width;
+      const gy = game.level.groundY;
+      return {
+        x: (end.x + BUS_BOARD.dx - game.camera) * k,
+        y: (gy + BUS_BOARD.dy - game.lift) * k,
+        w: BUS_BOARD.w * k,
+        h: BUS_BOARD.h * k,
+      };
     },
   };
 }
@@ -308,16 +488,44 @@ declare global {
       readonly steps: number;
       /** Camera left edge (world x) as last drawn. */
       readonly camX: number;
+      /** Which way the street camera looks. */
+      readonly camLook: 1 | -1;
+      /** World width shown. */
+      readonly viewW: number;
       readonly hero: {
         readonly x: number;
         readonly y: number;
         readonly vy: number;
+        /** Speed across (player-moved), u/s. */
+        readonly vx: number;
         readonly grounded: boolean;
         readonly dir: 1 | -1;
         readonly speed: number;
         readonly airJump: boolean;
+        /** Direction held (player-moved). */
+        readonly move: -1 | 0 | 1;
+        readonly runTime: number;
+        readonly manual: boolean;
+      };
+      readonly input: {
+        readonly dir: -1 | 0 | 1;
+        readonly jumpHeld: number;
+        readonly fingers: { readonly dir: number; readonly jump: number };
+        readonly lastKind: 'touch' | 'keys';
+        readonly buttons: boolean;
+        readonly layout: {
+          readonly d: number;
+          readonly midX: number;
+          readonly back: { x: number; y: number; w: number; h: number };
+          readonly forward: { x: number; y: number; w: number; h: number };
+          readonly jump: { x: number; y: number; w: number; h: number };
+          /** World units the picture is raised on a very short screen. */
+          readonly lift: number;
+        };
       };
       readonly look: { readonly skin: number; readonly hair: number; readonly outfit: number };
+      /** How the hero is drawn: walk or run, skid (0 to 1), dust puff showing. */
+      readonly anim: { readonly gait: 'walk' | 'run'; readonly skid: number; readonly dust: boolean };
       readonly screen: MenuScreen | 'play';
       readonly run: {
         readonly phase: RunPhase;
@@ -325,12 +533,19 @@ declare global {
         readonly maxLives: number;
         readonly kobo: number;
         readonly time: number;
+        /** Seconds since the hero reached the bus door (0 before). */
+        readonly busTime: number;
         readonly checkpoint: boolean;
         readonly safe: number;
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
       };
       readonly level: {
+        readonly id: string;
+        readonly manual: boolean;
+        readonly spawnX: number;
+        readonly startWall: number;
+        readonly end: { readonly x: number; readonly wall: number } | null;
         readonly gaps: readonly (readonly [number, number])[];
         readonly checkpoint: number;
         readonly arenaX: number;
@@ -340,6 +555,19 @@ declare global {
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
       };
       readonly toast: string;
+      /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
+      readonly hintBar: {
+        readonly words: string;
+        readonly x: number;
+        readonly y: number;
+        readonly w: number;
+        readonly h: number;
+        readonly font: number;
+        readonly fits: boolean;
+        readonly limits: HintBarBox;
+      };
+      /** Drawn boxes (CSS px) of every kobo, food, hazard, crate, well, pit lip, the hero, the bus and its board on screen. */
+      readonly drawn: readonly { readonly what: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number }[];
       readonly boss: {
         readonly hits: number;
         readonly lit: number;
@@ -351,6 +579,8 @@ declare global {
       /** Where the hero stands across the screen, 0 to 1. */
       readonly heroScreenX: number;
       readonly sound: { readonly enabled: boolean; readonly started: boolean };
+      /** The "BUS PARK" board's drawn box on screen, CSS px; null when the level has no bus park. */
+      readonly busBoard: { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
     };
   }
 }

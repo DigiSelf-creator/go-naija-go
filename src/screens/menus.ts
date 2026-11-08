@@ -57,6 +57,8 @@ export class Menus {
   private opener: (TapPoint & { t: number }) | null = null;
   private shownAt = 0;
   private summary: RunSummary = { kobo: 0, lives: 0 };
+  /** S2.2: the title shows the touch words when the phone buttons are shown, else the key words. */
+  touchWords: () => boolean = () => true;
 
   constructor(
     parent: HTMLElement,
@@ -197,7 +199,7 @@ export class Menus {
       { class: 'card narrow', role: 'dialog', 'aria-label': GAME_NAME },
       h('h1', {}, GAME_NAME),
       h('p', { class: 'tagline' }, w.tagline),
-      h('p', {}, w.howTo),
+      h('p', {}, this.touchWords() ? w.howTo : w.howToKeys),
       saved ? button(w.start, 'go', (e) => this.hooks.start(tapPoint(e))) : button(w.makeHero, 'go', (e) => this.show('builder', e)),
       h(
         'div',

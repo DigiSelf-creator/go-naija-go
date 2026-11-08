@@ -1,8 +1,18 @@
 /**
- * Piece C: World 1 level 1 on the phone profile, by touch.
+ * Piece C on the phone profile, by touch. Slice 2: lives, the HUD and pause on street 1 by
+ * hand (lagos-1); the slice 1 level bot plays the old way (OLD_WAY) until piece M.
  */
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS, openAndRun } from './helpers';
+import { LEFT, buttonCentres, hands } from './hands';
+import { OLD_WAY, PAST_DOUBLE_TAP_MS, openAndRun } from './helpers';
+
+/** Street 1: a thumb on Forward. */
+async function holdForward(page: Page) {
+  const h = hands(await page.context().newCDPSession(page));
+  const btn = await buttonCentres(page);
+  await h.down(LEFT, btn.forward.x, btn.forward.y);
+  return h;
+}
 
 const run = (page: Page) => page.evaluate(() => window.__game!.run);
 
@@ -14,12 +24,12 @@ function finger(cdp: CDPSession) {
   };
 }
 
-test('a bot plays level 1 by touch from the start to the boss fight with lives to spare', async ({ page }) => {
+test('a bot plays the slice 1 level (the old way) by touch from the start to the boss fight with lives to spare', async ({ page }) => {
   test.setTimeout(150_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await openAndRun(page);
+  await openAndRun(page, OLD_WAY);
   const level = await page.evaluate(() => window.__game!.level);
   const f = finger(await page.context().newCDPSession(page));
 
@@ -81,12 +91,14 @@ test('a bot plays level 1 by touch from the start to the boss fight with lives t
 test('out of lives: game over, then Play again starts the level fresh', async ({ page }) => {
   test.setTimeout(120_000);
   await openAndRun(page);
-  // Never tap: the hero runs into the first pothole three times (no bus stop yet).
-  await expect.poll(() => run(page).then((r) => r.lives), { timeout: 20_000 }).toBe(2);
+  // Hold Forward and never jump: the hero runs into the first pothole three times (no bus stop yet).
+  const h = await holdForward(page);
+  await expect.poll(() => run(page).then((r) => r.lives), { timeout: 25_000 }).toBe(2);
   expect((await page.evaluate(() => window.__game!.hero)).x).toBeLessThan(400); // back at the start
   await expect(page.locator('.hud-lives')).toHaveText('♥ 2');
   const over = page.getByRole('dialog', { name: 'Out of lives' });
   await expect(over).toBeVisible({ timeout: 60_000 });
+  await h.upAll();
   const r = await run(page);
   expect(r.phase).toBe('over');
   expect(r.lives).toBe(0);
@@ -121,9 +133,12 @@ test('HUD: lives, kobo going up, a spoken pause button and the sound button', as
   await openAndRun(page);
   await expect(page.locator('.hud-lives')).toHaveText('♥ 3');
   await expect(page.locator('.hud-lives')).toHaveAttribute('aria-label', 'Lives: 3');
-  // Kobo on the road at x 300: picked up by running.
+  // The first hint shows 0.5 s after the start, in touch words.
+  await expect(page.getByText('Hold \u2192 to walk. Hold on to run.')).toBeVisible();
+  // Kobo on the road at x 300: picked up by walking there.
+  const h = await holdForward(page);
   await expect(page.locator('.hud-kobo')).toHaveText('Kobo 5', { timeout: 5000 });
-  await expect(page.getByText('Tap to jump.')).toBeVisible();
+  await h.upAll();
   for (const b of await page.locator('.hud button').all()) {
     const box = (await b.boundingBox())!;
     expect(box.width).toBeGreaterThanOrEqual(44);
@@ -150,7 +165,9 @@ test('sound starts only after the first tap', async ({ page }) => {
 
 test('pause screen: Start the level again and Home', async ({ page }) => {
   await openAndRun(page);
+  const h = await holdForward(page);
   await expect.poll(() => run(page).then((r) => r.kobo)).toBeGreaterThan(0);
+  await h.upAll();
   await page.getByRole('button', { name: 'Pause' }).tap();
   const card = page.getByRole('dialog', { name: 'Paused' });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);

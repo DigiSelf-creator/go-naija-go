@@ -8,8 +8,9 @@
  * - World things (drawRoad, drawPothole, drawStall, drawBusStop) draw in WORLD
  *   space: call them after g.translate(-camX, 0).
  *
- * The shop row is cached to an offscreen canvas (text and many rects are costly
- * on a slow phone); the sky gradient is made once per canvas.
+ * The shop row and the sky gradient are painted once into offscreen canvases at the
+ * screen's own pixel size and copied 1:1 each frame (blitLayer): text, gradients and
+ * scaled pictures are costly to paint every frame on a slow phone.
  */
 import * as P from './palette';
 
@@ -31,23 +32,103 @@ function rr(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: num
   g.fill();
 }
 
+// ---------- Screen-pixel layers ----------
+
+/**
+ * A picture painted once into an offscreen canvas at the screen's own pixel size, then copied
+ * pixel for pixel each frame. A copy at 1:1 is much cheaper on a slow phone than painting a
+ * gradient or scaling a picture every frame (qa perf, piece H).
+ */
+export interface PixelLayer {
+  key: string;
+  canvas: HTMLCanvasElement;
+}
+
+/**
+ * Copies `paint` (drawn in world units over w x h from the layer's origin) to (x, y) on g.
+ * Painted again only when `key` or the screen scale changes. Returns false when it cannot copy
+ * 1:1 (no document, or a turned or stretched transform): the caller then paints directly.
+ */
+export function blitLayer(
+  g: CanvasRenderingContext2D,
+  slot: { layer: PixelLayer | null },
+  key: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  paint: (cg: CanvasRenderingContext2D) => void,
+  snap = false,
+): boolean {
+  if (typeof document === 'undefined' || typeof g.getTransform !== 'function') return false;
+  const m = g.getTransform();
+  if (m.b !== 0 || m.c !== 0 || m.a <= 0 || Math.abs(m.a - m.d) > 1e-9) return false;
+  const s = m.d;
+  // Where the layer lands in screen pixels. The fraction of a pixel is painted into the layer
+  // so the copy sits exactly where direct painting would (snap: whole pixels, for a layer that
+  // moves every frame and would otherwise be painted again each frame).
+  const px = m.e + x * s;
+  const py = m.f + y * s;
+  const ix = Math.floor(px);
+  const iy = Math.floor(py);
+  const fx = snap ? 0 : px - ix;
+  const fy = snap ? 0 : py - iy;
+  const full = `${key}|${s}|${fx.toFixed(3)}|${fy.toFixed(3)}`;
+  let layer = slot.layer;
+  if (!layer || layer.key !== full) {
+    const c = layer?.canvas ?? document.createElement('canvas');
+    c.width = Math.ceil(w * s + fx) + 1;
+    c.height = Math.ceil(h * s + fy) + 1;
+    const cg = c.getContext('2d');
+    if (!cg) return false;
+    cg.setTransform(s, 0, 0, s, fx, fy);
+    paint(cg);
+    layer = { key: full, canvas: c };
+    slot.layer = layer;
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.drawImage(layer.canvas, snap ? Math.round(px) : ix, snap ? Math.round(py) : iy);
+  g.setTransform(m);
+  return true;
+}
+
 // ---------- Sky ----------
 
-const skyCache = new WeakMap<CanvasRenderingContext2D, { h: number; grad: CanvasGradient }>();
+const SUN_R = 26;
+const skyLayer = { layer: null as PixelLayer | null };
 
+function paintSkyFill(g: CanvasRenderingContext2D, viewW: number, upTo: number, grad: CanvasGradient): void {
+  g.fillStyle = grad;
+  g.fillRect(0, 0, viewW, upTo);
+  g.fillStyle = P.SUN;
+  g.beginPath();
+  g.arc(viewW - 80, 58, SUN_R, 0, TAU);
+  g.fill();
+}
+
+function skyGradient(g: CanvasRenderingContext2D, viewH: number): CanvasGradient {
+  const grad = g.createLinearGradient(0, 0, 0, viewH);
+  grad.addColorStop(0, P.SKY_TOP);
+  grad.addColorStop(0.8, P.SKY_LOW);
+  return grad;
+}
+
+/**
+ * The sky, its sun and drifting clouds. Screen space. The gradient and the sun's disc stand
+ * still on screen, so they are painted once and copied; below 80 percent of viewH the sky is
+ * plain SKY_LOW (the gradient's last stop), a cheap flat fill.
+ */
 export function drawSky(g: CanvasRenderingContext2D, camX: number, viewW: number, time: number, viewH = 360): void {
-  let c = skyCache.get(g);
-  if (!c || c.h !== viewH) {
-    const grad = g.createLinearGradient(0, 0, 0, viewH);
-    grad.addColorStop(0, P.SKY_TOP);
-    grad.addColorStop(0.8, P.SKY_LOW);
-    c = { h: viewH, grad };
-    skyCache.set(g, c);
+  const flat = viewH * 0.8;
+  const copied = blitLayer(g, skyLayer, `${viewW}|${viewH}`, 0, 0, viewW, flat, (cg) => paintSkyFill(cg, viewW, flat, skyGradient(cg, viewH)));
+  if (copied) {
+    g.fillStyle = P.SKY_LOW;
+    g.fillRect(0, flat, viewW, viewH - flat);
+  } else {
+    paintSkyFill(g, viewW, viewH, skyGradient(g, viewH));
   }
-  g.fillStyle = c.grad;
-  g.fillRect(0, 0, viewW, viewH);
 
-  // Sun with slowly turning rays
+  // Sun's slowly turning rays (they start clear of the disc, so drawing them after it is the same)
   const sx = viewW - 80;
   const sy = 58;
   g.strokeStyle = P.SUN_RING;
@@ -60,10 +141,6 @@ export function drawSky(g: CanvasRenderingContext2D, camX: number, viewW: number
     g.lineTo(sx + Math.cos(a) * 40, sy + Math.sin(a) * 40);
   }
   g.stroke();
-  g.fillStyle = P.SUN;
-  g.beginPath();
-  g.arc(sx, sy, 26, 0, TAU);
-  g.fill();
 
   // Clouds drift slowly
   g.fillStyle = P.CLOUD;
@@ -201,26 +278,7 @@ function paintShops(g: CanvasRenderingContext2D): void {
   }
 }
 
-interface ShopCache {
-  scale: number;
-  canvas: HTMLCanvasElement;
-}
-let shopCache: ShopCache | null = null;
-
-function shopTile(scale: number): HTMLCanvasElement | null {
-  if (typeof document === 'undefined') return null;
-  const s = Math.max(1, Math.min(3, Math.round(scale * 4) / 4));
-  if (shopCache && shopCache.scale === s) return shopCache.canvas;
-  const c = document.createElement('canvas');
-  c.width = Math.ceil(SHOP_TILE_W * s);
-  c.height = Math.ceil(SHOP_TOP * s);
-  const cg = c.getContext('2d');
-  if (!cg) return null;
-  cg.scale(s, s);
-  paintShops(cg);
-  shopCache = { scale: s, canvas: c };
-  return c;
-}
+const shopLayer = { layer: null as PixelLayer | null };
 
 /** Shop row at half camera speed, plus the pavement band down to the road. */
 export function drawShopRow(g: CanvasRenderingContext2D, camX: number, viewW: number, groundY = GROUND_Y): void {
@@ -231,19 +289,17 @@ export function drawShopRow(g: CanvasRenderingContext2D, camX: number, viewW: nu
   g.fillStyle = '#b8a477';
   g.fillRect(0, base, viewW, 3);
 
+  // The eight shops are one picture at the screen's own pixel size, copied whole pixel for
+  // whole pixel (signs, text and many shapes are costly to paint every frame on a slow phone).
   const par = camX * 0.5;
   const startTile = Math.floor(par / SHOP_TILE_W);
-  const tile = shopTile(g.getTransform().d || 1);
   for (let t = startTile; t * SHOP_TILE_W - par < viewW; t++) {
     const x = t * SHOP_TILE_W - par;
-    if (tile) {
-      g.drawImage(tile, x, base - SHOP_TOP, SHOP_TILE_W, SHOP_TOP);
-    } else {
-      g.save();
-      g.translate(x, base - SHOP_TOP);
-      paintShops(g);
-      g.restore();
-    }
+    if (blitLayer(g, shopLayer, 'shops', x, base - SHOP_TOP, SHOP_TILE_W, SHOP_TOP, paintShops, true)) continue;
+    g.save();
+    g.translate(x, base - SHOP_TOP);
+    paintShops(g);
+    g.restore();
   }
 }
 
@@ -306,10 +362,11 @@ export function drawPassingBus(g: CanvasRenderingContext2D, camX: number, viewW:
 export function drawPothole(g: CanvasRenderingContext2D, x0: number, x1: number, groundY = GROUND_Y, viewH = 360): void {
   g.fillStyle = P.POTHOLE;
   g.fillRect(x0, groundY, x1 - x0, viewH - groundY);
+  // A thin band of rain water near the top; dark below it, down to the bottom edge (S2.1).
   g.fillStyle = P.POTHOLE_WATER;
-  g.fillRect(x0 + 2, groundY + 34, x1 - x0 - 4, viewH - groundY);
+  g.fillRect(x0 + 2, groundY + 34, x1 - x0 - 4, 7);
   g.fillStyle = 'rgba(255,255,255,0.35)';
-  g.fillRect(x0 + 6, groundY + 38, Math.min(14, x1 - x0 - 12), 2);
+  g.fillRect(x0 + 6, groundY + 36, Math.min(14, x1 - x0 - 12), 2);
   // Broken rims on both sides so it reads as a hole, not just a dark patch
   g.fillStyle = P.POTHOLE_RIM;
   for (const [x, dir] of [[x0, 1], [x1, -1]] as const) {

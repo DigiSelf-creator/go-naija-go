@@ -36,8 +36,14 @@ export async function startRun(page: Page): Promise<void> {
   await expect.poll(() => page.evaluate(() => window.__game?.screen)).toBe('play');
 }
 
-/** Opens the game and starts a run. */
-export async function openAndRun(page: Page): Promise<void> {
-  await page.goto('./');
+/**
+ * The slice 1 level, played the old way (the hero runs by itself, the boss arena at the end).
+ * It stays reachable like this until Go-Slow Hall (piece M) replaces it.
+ */
+export const OLD_WAY = './?level=w1-l1';
+
+/** Opens the game (street 1 by hand, or `url`) and starts a run. */
+export async function openAndRun(page: Page, url = './'): Promise<void> {
+  await page.goto(url);
   await startRun(page);
 }

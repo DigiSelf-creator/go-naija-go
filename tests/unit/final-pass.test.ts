@@ -80,11 +80,11 @@ describe('game over', () => {
     while (game.run.phase === 'run') game.run.step(DT);
     expect(game.run.phase).toBe('arena');
     for (let i = 0; i < 120; i++) game.cameraX(view);
-    expect(game.cameraX(view)).toBe(game.level.arena.x);
+    expect(game.cameraX(view)).toBe(game.level.arena!.x);
     game.run.lives = 1;
     hit(game.run);
     expect(game.run.phase).toBe('over');
-    for (let i = 0; i < 60; i++) expect(game.cameraX(view)).toBe(game.level.arena.x);
+    for (let i = 0; i < 60; i++) expect(game.cameraX(view)).toBe(game.level.arena!.x);
   });
 
   it('on the street, the camera still follows the hero after game over', () => {
@@ -96,7 +96,7 @@ describe('game over', () => {
     expect(game.run.phase).toBe('over');
     const view = fitView(851, 393, 1);
     expect(game.cameraX(view)).toBeLessThan(game.hero.x);
-    expect(game.cameraX(view)).toBeLessThan(game.level.arena.x - 1000);
+    expect(game.cameraX(view)).toBeLessThan(game.level.arena!.x - 1000);
   });
 });
 
@@ -107,7 +107,7 @@ describe('view safety net', () => {
     expect(v.height).toBeGreaterThanOrEqual(WORLD_H);
     expect(v.pixelW).toBe(1536);
   });
-  it('a sideways phone is unchanged: 360 u tall', () => {
+  it('a sideways phone is unchanged: 420 u tall (S2.1)', () => {
     const v = fitView(851, 393, 2);
     expect(v.height).toBe(WORLD_H);
     expect(v.width).toBeGreaterThan(MIN_WORLD_W);
