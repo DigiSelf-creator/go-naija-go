@@ -4,7 +4,7 @@
   "id": "lagos-2",
   "state": "lagos",
   "street": 2,
-  "name": "Market road",
+  "name": "Computer Village",
   "theme": "market",
   "schemaNote": "See docs/design.md, Slice 2, Level data format.",
   "groundY": 300,

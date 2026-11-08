@@ -4,7 +4,7 @@
   "id": "lagos-3",
   "state": "lagos",
   "street": 3,
-  "name": "Bus park road",
+  "name": "Ikeja",
   "theme": "evening",
   "schemaNote": "See docs/design.md, Slice 2, Level data format. The well at x 160 is behind the start on purpose (a secret).",
   "groundY": 300,

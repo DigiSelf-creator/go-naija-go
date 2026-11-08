@@ -4,7 +4,7 @@
   "id": "lagos-1",
   "state": "lagos",
   "street": 1,
-  "name": "Your street",
+  "name": "Alausa",
   "theme": "morning",
   "schemaNote": "See docs/design.md, Slice 2, Level data format. World units, y grows down, road top 300. ground: [startX, endX] (gaps are pits). platforms: [x, topY, width]. kobo: [x, centreY, count]. foods: [x, centreY, kind]. crates: [centreX, bottomY, contents]. hazards: [kind, x]. wells: entrance x, exit x, room id. hints: [x, words] or [x, words, piece] (a piece from src/game/features.ts, e.g. \"crates\": the hint shows only once that piece is switched on), with {forward} {back} {jump} {down} filled in for touch or keys.",
   "groundY": 300,
