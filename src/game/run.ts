@@ -6,7 +6,7 @@
  * Q15 (provisional): the number of lives is fixed when the run starts.
  */
 import { bounce, createBody, createWalker, groundAt, halt, press, release, steer, step, type Body, type Gait, type Terrain } from '../engine/physics';
-import { BOSS_RULES, BossFight, type BossEvent } from './boss';
+import { BossFight, throwBox, type BossEvent } from './boss';
 import { freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import type { FoodKind, HazardKind, Level, WellData } from './level';
@@ -55,6 +55,11 @@ export const RULES = {
   clearedSteps: secs(2.2),
   /** The bus speeds up evenly as it pulls away, u/s² (about 600 u gone in 1.4 s). */
   busAccel: 612,
+  /**
+   * S2.7 hall start with the garri parcel: "Your garri parcel: the shield is on!" shows first,
+   * then the boss words this long after (before the first throw's warning at 1.6 s).
+   */
+  parcelWordsSteps: secs(1.5),
 } as const;
 
 /** Size of each hazard's box (half width, height), feet on the road. */
@@ -109,7 +114,9 @@ export type RunEvent =
   | { type: 'tick' }
   | { type: 'powerEnd'; kind: 'corn' | 'amala' }
   | { type: 'gameOver' }
-  | { type: 'arena' }
+  /** S2.7: the hall fight starts (the boss words). With the parcel, 'parcelShield' comes first. */
+  | { type: 'hallStart' }
+  | { type: 'parcelShield' }
   | { type: 'busBoard' }
   | { type: 'busGo' }
   | { type: 'streetCleared' }
@@ -124,7 +131,8 @@ export type RunEvent =
 
 /**
  * run: the street. bus: the street end (controls locked, getting on the bus). cleared: the
- * bus has gone. arena: the boss fight. won: General Go-Slow beaten. over: out of lives.
+ * bus has gone. arena: the boss fight in a hall (S2.7), from the hall's start and through the
+ * kind finish. won: General Go-Slow beaten (the Win screen). over: out of lives.
  * S2.5 well: wellDown (going down, controls locked, the street frozen), roomIn (the bucket
  * lands in the room), room (playing in the room), wellUp (going up the rope).
  */
@@ -142,6 +150,21 @@ export interface Power {
   /** Steps of amala left. */
   amala: number;
   shield: boolean;
+}
+
+/** How a run starts (all optional). */
+export interface RunOptions {
+  /** Gentle mode: 5 lives instead of 3. */
+  gentle?: boolean;
+  /** Well rooms by file id. */
+  rooms?: ReadonlyMap<string, RoomData>;
+  /** The state already has a saved parcel: well rooms show kobo instead of the parcel (N2). */
+  parcelSaved?: boolean;
+  /**
+   * A hall only: the state has a garri parcel, so this try starts with the shield on (S2.5 gift
+   * rule 5, S2.7). Until N2 saves the parcel, the game passes the parcel carried off the bus.
+   */
+  parcel?: boolean;
 }
 
 export class Run {
@@ -162,7 +185,7 @@ export class Run {
   readonly hazards: HazardState[];
   /** Hanging crates (S2.4); none while the crates switch is off (features.ts). */
   readonly crates: CrateState[];
-  /** The fight, once the hero reaches the arena. */
+  /** The fight (halls only). */
   boss: BossFight | null = null;
   /** The level's road and roofs, plus the boss's light platforms (solid all fight long). */
   readonly terrain: Terrain;
@@ -208,12 +231,17 @@ export class Run {
   private readonly roomPlays = new Map<number, RoomPlay>();
   /** The state already has a saved parcel: rooms show kobo instead (N2 fills this from the save). */
   private readonly parcelSaved: boolean;
+  /**
+   * S2.5 gift rule 5 and S2.7 t = 0: this hall try starts with the garri shield on (the state
+   * has a parcel). Set once at the start; never stacks, and a lost life does not bring it back.
+   */
+  readonly parcelShield: boolean;
   /** Events from Go down and Go up presses, sent with the next step. */
   private pending: RunEvent[] = [];
 
   constructor(
     readonly level: Level,
-    opts: { gentle?: boolean; rooms?: ReadonlyMap<string, RoomData>; parcelSaved?: boolean } = {},
+    opts: RunOptions = {},
   ) {
     this.rooms = opts.rooms ?? new Map();
     this.parcelSaved = opts.parcelSaved ?? false;
@@ -226,6 +254,24 @@ export class Run {
     this.foods = level.foods.map((f) => ({ ...f, taken: false }));
     this.hazards = level.hazards.map((h) => freshHazard(h.kind, h.x, level.groundY));
     this.crates = featureOn('crates') ? freshCrates(level.crates) : [];
+    this.parcelShield = level.hall !== null && (opts.parcel ?? false);
+    if (level.hall && level.boss) {
+      // S2.7: the fight starts at once, the hero inside by the left door, standing, facing right.
+      this.phase = 'arena';
+      this.checkpointReached = true;
+      this.boss = new BossFight(level.boss, level.groundY);
+      if (this.parcelShield) {
+        this.power.shield = true; // one shield, never more (it is a yes or no, never a count)
+        this.pending.push({ type: 'parcelShield' });
+      } else {
+        this.pending.push({ type: 'hallStart' });
+      }
+    }
+  }
+
+  /** A hall: the fight is the whole level (S2.7). */
+  get inHall(): boolean {
+    return this.level.hall !== null;
   }
 
   /** What well `i`'s room holds in this play (null before the first visit). For tests and drawing. */
@@ -239,7 +285,7 @@ export class Run {
   }
 
   press(by: PressSource = 'tap'): ReturnType<typeof press> {
-    if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches
+    if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches the finish
     if (this.phase !== 'run' && this.phase !== 'arena' && this.phase !== 'room') return null;
     const out = press(this.hero);
     if (out) this.holdBy = by;
@@ -256,7 +302,8 @@ export class Run {
   /** The direction held on a player-moved street: -1 back, 0 none, 1 forward. */
   steer(move: -1 | 0 | 1): void {
     if (!this.hero.manual) return;
-    steer(this.hero, this.phase === 'run' || this.phase === 'room' ? move : 0);
+    const free = this.phase === 'run' || this.phase === 'room' || (this.phase === 'arena' && !this.boss?.defeated);
+    steer(this.hero, free ? move : 0);
   }
 
   /** The direction held (player-moved streets). */
@@ -270,25 +317,11 @@ export class Run {
     return { walk: corn ? this.level.cornWalkSpeed : this.level.walkSpeed, run: corn ? this.level.cornSpeed : this.level.runSpeed };
   }
 
-  /**
-   * Slice 1 boss level only: start straight in the boss fight (the street before it was
-   * played by hand on a schema 2 street). Lives and kobo are the caller's to carry over.
-   */
-  startAtArena(): void {
-    const arena = this.level.arena;
-    if (!arena) return;
-    this.hero = this.newHero(arena.x);
-    this.spawnX = arena.x;
-    this.checkpointReached = true;
-    this.phase = 'arena';
-    if (this.level.boss) this.boss = new BossFight(this.level.boss, arena.x, this.level.groundY);
-  }
-
   /** One fixed step (dt is always 1/60 s). Returns what happened, for sounds and words. */
   step(dt: number): RunEvent[] {
     const ev: RunEvent[] = this.pending;
     this.pending = [];
-    if (this.phase === 'arena') return this.arenaStep(dt);
+    if (this.phase === 'arena') return this.arenaStep(dt, ev);
     if (this.phase === 'bus') return this.busStep(ev);
     if (this.phase === 'wellDown' || this.phase === 'roomIn' || this.phase === 'wellUp') return this.wellStep(ev);
     if (this.phase === 'room') return this.roomStep(dt, ev);
@@ -312,13 +345,6 @@ export class Run {
       ev.push(...out.events);
     }
 
-    const arena = this.level.arena;
-    if (arena && h.x >= arena.x) {
-      this.phase = 'arena';
-      ev.push({ type: 'arena' });
-      if (this.level.boss) this.boss = new BossFight(this.level.boss, arena.x, this.level.groundY);
-      return ev;
-    }
     const end = this.level.end;
     if (end && h.grounded && h.x >= end.x) {
       // S2.6 street end: controls lock, nothing can hurt now.
@@ -549,11 +575,12 @@ export class Run {
     ev.push({ type: 'wellBack', x: w.exitX });
   }
 
-  /** The hero stays inside the start fence and the end wall; bumping one stops dead. */
+  /** The hero stays inside the start fence and the end wall (a hall: its left wall and the cone line); bumping one stops dead. */
   private walls(): void {
     const h = this.hero;
-    const lo = this.level.startWall + RULES.wallGap;
-    const hi = (this.level.end?.wall ?? Infinity) - RULES.wallGap;
+    const hall = this.level.hall;
+    const lo = hall ? hall.leftLimit : this.level.startWall + RULES.wallGap;
+    const hi = hall ? hall.rightLimit : (this.level.end?.wall ?? Infinity) - RULES.wallGap;
     if (h.x < lo || h.x > hi) {
       h.x = Math.min(Math.max(h.x, lo), hi);
       halt(h);
@@ -600,32 +627,26 @@ export class Run {
     return 0.5 * RULES.busAccel * t * t;
   }
 
-  /** One step of the boss fight (design.md: Boss). */
-  private arenaStep(dt: number): RunEvent[] {
-    const ev: RunEvent[] = [];
-    const boss = this.boss;
+  /**
+   * One step of the hall fight (S2.7): the player moves the hero between the hall's limits,
+   * lands on the lit light, and keeps clear of the throws. From the third hit the hero stands
+   * still and cannot be hurt while the kind finish plays.
+   */
+  private arenaStep(dt: number, ev: RunEvent[]): RunEvent[] {
+    const boss = this.boss!;
     this.steps++;
+    if (this.parcelShield && this.steps === RULES.parcelWordsSteps) ev.push({ type: 'hallStart' });
     this.tickPower(ev);
     const h = this.hero;
-    const { turnLeftX, turnRightX } = this.level.arena!;
-    if (boss?.defeated) {
-      h.speed = 0; // stops and stands
-    } else {
-      h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
-      // Runs by itself and turns around at once at each end.
-      if (h.dir === 1 && h.x >= turnRightX) h.dir = -1;
-      else if (h.dir === -1 && h.x <= turnLeftX) h.dir = 1;
+    if (boss.defeated) {
+      // Stands and watches: no direction, no jump hold, standing still once down.
+      steer(h, 0);
+      if (h.grounded) halt(h);
     }
+    h.gait = this.gait();
     const wasGrounded = h.grounded;
     step(h, this.terrain, dt);
-    if (h.fallen) {
-      this.fall(ev);
-      return ev;
-    }
-    if (!boss) {
-      if (this.safe > 0) this.safe--;
-      return ev;
-    }
+    this.walls();
     if (h.grounded && !wasGrounded) {
       const hit = boss.landedOn(h.on);
       if (hit.length > 0) {
@@ -647,20 +668,18 @@ export class Run {
     const h = this.hero;
     const box = this.heroBox();
     for (const t of [...boss.throws]) {
-      const size = BOSS_RULES[t.kind];
-      const top = t.kind === 'tyre' ? t.y - size.h : t.y - size.h / 2;
-      const bottom = t.kind === 'tyre' ? t.y : t.y + size.h / 2;
-      if (box.r < t.x - size.halfW || box.l > t.x + size.halfW || box.b < top || box.t > bottom) continue;
-      if (t.kind === 'tyre' && h.vy > 0 && h.prevY <= top + RULES.stompSlack) {
+      const tb = throwBox(t);
+      if (box.r < tb.l || box.l > tb.r || box.b < tb.t || box.t > tb.b) continue;
+      if (t.kind === 'tyre' && h.vy > 0 && h.prevY <= tb.t + RULES.stompSlack) {
         bounce(h);
-        h.y = Math.min(h.y, top);
+        h.y = Math.min(h.y, tb.t);
         boss.remove(t);
-        ev.push({ type: 'bounce', kind: 'tyre', x: t.x, y: top });
+        ev.push({ type: 'bounce', kind: 'tyre', x: t.x, y: tb.t });
       } else if (this.power.amala > 0) {
-        // Smashed (never counts as a hit on the boss, Q6).
+        // Smashed (never counts as a hit on the boss, Q6). No amala in the hall (S2.7); kept for safety.
         boss.remove(t);
         this.kobo += RULES.smashKobo;
-        ev.push({ type: 'smash', kind: t.kind === 'tyre' ? 'tyre' : 'honk', x: t.x, y: top });
+        ev.push({ type: 'smash', kind: t.kind === 'tyre' ? 'tyre' : 'honk', x: t.x, y: tb.t });
       } else {
         this.hurt(ev);
       }

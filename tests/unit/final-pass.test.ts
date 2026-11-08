@@ -1,15 +1,16 @@
 /**
- * qa final pass fixes: a used go light goes dark, the arena view stays behind game over,
+ * qa final pass fixes: a used go light goes dark, the hall view stays behind game over,
  * food effects end on any game over, and the view always shows at least 480 u across.
  */
 import { describe, expect, it } from 'vitest';
-import w1l1 from '../../src/data/levels/w1-l1.json';
+import hallData from '../../src/data/levels/lagos-hall.json';
 import { drawGoLight, type GoLightState } from '../../src/art/boss';
 import * as P from '../../src/art/palette';
 import { MIN_WORLD_W, WORLD_H, fitView } from '../../src/engine/view';
 import { Game } from '../../src/game/game';
 import { parseLevel } from '../../src/game/level';
 import { RULES, Run, type RunEvent } from '../../src/game/run';
+import { autoLevel } from './auto-level';
 
 const DT = 1 / 60;
 
@@ -50,9 +51,7 @@ describe('go light after a hit', () => {
   });
 });
 
-function arenaLevel() {
-  return parseLevel({ ...structuredClone(w1l1), spawnX: 10980, hazards: [], foods: [], kobo: [], hints: [] });
-}
+const hallLevel = () => parseLevel(structuredClone(hallData));
 
 /** Hurt the hero as a honk cloud does (the private rule, called directly). */
 function hit(run: Run): RunEvent[] {
@@ -64,7 +63,7 @@ function hit(run: Run): RunEvent[] {
 
 describe('game over', () => {
   it('a hit on the last life ends food effects (corn and amala)', () => {
-    const run = new Run(arenaLevel());
+    const run = new Run(hallLevel());
     run.power = { corn: RULES.cornSteps, amala: RULES.amalaSteps, shield: false };
     run.lives = 1;
     const ev = hit(run);
@@ -73,22 +72,31 @@ describe('game over', () => {
     expect(run.power).toEqual({ corn: 0, amala: 0, shield: false });
   });
 
-  it('keeps the arena view behind the game over screen', () => {
-    const game = new Game(arenaLevel());
+  it('keeps the hall view behind the game over screen: the whole hall, centred', () => {
+    const game = new Game(hallLevel());
     game.begin(false);
     const view = fitView(851, 393, 1);
-    while (game.run.phase === 'run') game.run.step(DT);
-    expect(game.run.phase).toBe('arena');
-    for (let i = 0; i < 120; i++) game.cameraX(view);
-    expect(game.cameraX(view)).toBe(game.level.arena!.x);
+    for (let i = 0; i < 60; i++) game.run.step(DT);
+    const centred = (560 - view.width) / 2;
+    expect(game.cameraX(view)).toBeCloseTo(centred, 6);
     game.run.lives = 1;
     hit(game.run);
     expect(game.run.phase).toBe('over');
-    for (let i = 0; i < 60; i++) expect(game.cameraX(view)).toBe(game.level.arena!.x);
+    for (let i = 0; i < 60; i++) expect(game.cameraX(view)).toBeCloseTo(centred, 6);
   });
 
-  it('on the street, the camera still follows the hero after game over', () => {
-    const game = new Game(parseLevel(structuredClone(w1l1)));
+  it('a screen narrower than the hall (an upright tablet, 480 u) follows the hero, kept inside the hall', () => {
+    const game = new Game(hallLevel());
+    game.begin(false);
+    const view = fitView(768, 1024, 1);
+    expect(view.width).toBeLessThan(560);
+    expect(game.cameraX(view)).toBe(0);
+    game.run.hero.x = 400;
+    expect(game.cameraX(view)).toBeCloseTo(560 - view.width, 6);
+  });
+
+  it('on a street, the camera still follows the hero after game over', () => {
+    const game = new Game(autoLevel());
     game.begin(false);
     for (let i = 0; i < 60; i++) game.run.step(DT);
     game.run.lives = 1;
@@ -96,7 +104,7 @@ describe('game over', () => {
     expect(game.run.phase).toBe('over');
     const view = fitView(851, 393, 1);
     expect(game.cameraX(view)).toBeLessThan(game.hero.x);
-    expect(game.cameraX(view)).toBeLessThan(game.level.arena!.x - 1000);
+    expect(game.cameraX(view)).toBeGreaterThan(game.hero.x - view.width);
   });
 });
 

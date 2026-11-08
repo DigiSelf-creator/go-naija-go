@@ -3,16 +3,16 @@
  * hard landing gives a short squash. Hitboxes do not depend on the drawing.
  */
 import { describe, expect, it } from 'vitest';
-import w1l1 from '../../src/data/levels/w1-l1.json';
 import lagos1 from '../../src/data/levels/lagos-1.json';
 import { HERO_HEIGHT, WALK_STRIDE } from '../../src/art/hero';
 import { DUST_TIME, Game, LAND_TIME, SKID_TIME, STRIDE, type GameEvent } from '../../src/game/game';
 import { parseLevel } from '../../src/game/level';
 import { RULES } from '../../src/game/run';
+import { autoLevel } from './auto-level';
 
 const DT = 1 / 60;
 const fresh = (): Game => {
-  const g = new Game(parseLevel(structuredClone(w1l1)));
+  const g = new Game(autoLevel());
   g.begin(false);
   return g;
 };
@@ -41,7 +41,7 @@ describe('hero motion', () => {
     expect(corn.stridePhase - c0).toBeGreaterThan(plain.stridePhase - p0);
   });
 
-  it('the cycle moves on when running left too (boss arena)', () => {
+  it('the cycle moves on when running left too', () => {
     const g = fresh();
     g.update(DT);
     g.hero.dir = -1;

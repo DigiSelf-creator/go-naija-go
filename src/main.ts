@@ -5,7 +5,7 @@ import { fitView, readSafeArea, type View } from './engine/view';
 import street1Data from './data/levels/lagos-1.json';
 import street2Data from './data/levels/lagos-2.json';
 import street3Data from './data/levels/lagos-3.json';
-import bossLevelData from './data/levels/w1-l1.json';
+import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
 import { Sound } from './engine/sound';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
@@ -65,18 +65,22 @@ if (query.has('gallery')) {
 function startGame(): void {
   const store = createStore();
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
-  // `theme`. After street 3 the slice 1 boss fight stands in for Go-Slow Hall (piece M).
-  // ?level=w1-l1 still plays the whole slice 1 level the old way, running by itself;
-  // ?level=lagos-2 or lagos-3 starts at that street (for testing).
-  const bossLevel = parseLevel(bossLevelData);
+  // `theme`, then Go-Slow Hall (S2.7, lagos-hall.json). ?level=lagos-2, lagos-3 or lagos-hall
+  // starts there (for testing).
+  const hall = parseLevel(hallData);
   const streets: readonly Level[] = [street1Data, street2Data, street3Data].map((d) => parseLevel(d));
   const asked = new URLSearchParams(location.search).get('level');
-  const oldWay = asked === 'w1-l1';
-  const firstStreet = Math.max(0, streets.findIndex((l) => l.id === asked));
-  /** The street being played (index into streets), or 'hall' for the boss fight after street 3. */
+  const firstStreet: number | 'hall' = asked === hall.id ? 'hall' : Math.max(0, streets.findIndex((l) => l.id === asked));
+  /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
   let where: number | 'hall' = firstStreet;
-  const levelOf = (w: number | 'hall'): Level => (oldWay ? bossLevel : w === 'hall' ? bossLevel : streets[w]!);
+  const levelOf = (w: number | 'hall'): Level => (w === 'hall' ? hall : streets[w]!);
   const startLevel = levelOf(firstStreet);
+  /**
+   * S2.5 gift rules 4 and 5: a street finished while carrying the garri parcel keeps it for
+   * Lagos, and every hall try then starts with the shield on. Saving it on the phone is N2's
+   * (gidi-progress); until then it lasts while the page is open.
+   */
+  let parcelForHall = false;
   const game = new Game(startLevel);
   // Well rooms by file id (S2.5); both Lagos wells use lagos-well.
   const room = parseRoom(wellRoomData);
@@ -122,7 +126,7 @@ function startGame(): void {
   // Pause when the tab is hidden or the phone turns upright (the "turn sideways" note shows).
   const portrait = window.matchMedia('(orientation: portrait)');
 
-  /** The street, the well and its room, or the boss fight is being played (not game over or won). */
+  /** The street, the well and its room, or the hall fight is being played (not game over or won). */
   const PLAY_PHASES: ReadonlySet<RunPhase> = new Set(['run', 'arena', 'wellDown', 'roomIn', 'room', 'wellUp']);
   const inPlay = (): boolean => PLAY_PHASES.has(game.run.phase);
 
@@ -152,11 +156,8 @@ function startGame(): void {
     playing = true;
     document.body.classList.add('playing');
     controls.releaseAll();
-    if (where === 'hall' && !oldWay) {
-      game.beginBoss(menus.gentle, bossLevel);
-      sound.play('arena');
-      toast.show(W.bossArrives, 3000);
-    } else game.begin(menus.gentle, levelOf(where));
+    // The hall's start words come from the run's first step ('hallStart', 'parcelShield').
+    game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: parcelForHall } : {});
     hud.show(true);
     buttons.show(true, game.level.manual);
     loop.resume();
@@ -291,11 +292,16 @@ function startGame(): void {
         controls.releaseAll();
         loop.pause();
         toast.hide();
-        menus.showGameOver({ kobo: game.run.kobo, lives: 0 });
+        menus.showGameOver({ kobo: game.run.kobo, lives: 0, hall: game.run.inHall });
         break;
-      case 'arena':
+      case 'parcelShield':
+        // S2.7 t = 0 with a parcel: the shield is on; the boss words follow.
         sound.play('arena');
-        toast.show(W.bossArrives, 3000);
+        toast.show(W.parcelShield, 3000);
+        break;
+      case 'hallStart':
+        if (!game.run.parcelShield) sound.play('arena');
+        toast.show(W.hallStart, 3000);
         break;
       case 'busBoard':
         break;
@@ -331,21 +337,33 @@ function startGame(): void {
         controls.releaseAll();
         loop.pause();
         toast.hide();
+        if (game.run.parcel) parcelForHall = true;
         menus.showCleared({ name: game.level.name, kobo: game.run.kobo, last: typeof where === 'number' && where + 1 >= streets.length });
         break;
       case 'bossThrow':
         if (e.kind === 'honk') sound.play('honk');
+        else if (e.kind === 'highHonk') sound.play('highHonk');
         break;
       case 'bossHit':
         sound.play('greenHit');
         if (e.left > 0) toast.show(W.greenLight(e.left));
         break;
+      case 'bossLight':
+        // S2.7: before the phase with high honks starts.
+        if (e.highHonks) toast.show(W.highHonks, HINT_MS);
+        break;
       case 'bossDefeat':
       case 'dust':
         break;
-      case 'roadFree':
+      case 'hallClear':
         sound.play('bossWin');
-        toast.show(W.roadFree, 2000);
+        toast.show(W.hallClear, 2000);
+        break;
+      case 'lamp':
+        sound.play('hallLamp');
+        break;
+      case 'switchedOn':
+        toast.show(W.switchedOn, 3000);
         break;
       case 'win':
         controls.releaseAll();
@@ -492,9 +510,7 @@ function startGame(): void {
         spawnX: level.spawnX,
         startWall: level.startWall,
         end: level.end ? { ...level.end } : null,
-        arenaX: level.arena?.x ?? Infinity,
-        turnLeftX: level.arena?.turnLeftX ?? Infinity,
-        turnRightX: level.arena?.turnRightX ?? Infinity,
+        hall: level.hall ? { ...level.hall } : null,
         groundY: level.groundY,
         lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
         platforms: level.terrain.platforms.map((p) => ({ ...p })),
@@ -523,6 +539,9 @@ function startGame(): void {
             lit: b.lit,
             litLight: b.litLight ? { ...b.litLight } : null,
             mode: b.mode,
+            aim: b.aim,
+            /** Seconds in this mode (in 'defeat': since the third hit). */
+            modeTime: b.modeTime,
             defeated: b.defeated,
             throws: b.throws.map((t) => ({ kind: t.kind, x: t.x, y: t.y, vx: t.vx })),
           }
@@ -576,6 +595,19 @@ function startGame(): void {
       const r = game.run;
       const level = game.level;
       const gy = level.groundY;
+      const b = r.boss;
+      if (b) {
+        // Go-Slow Hall: the go lights (with the lit one's arrow), every throw, and the hero.
+        for (const l of level.boss!.lights) add('light', l.x, l.y - 52, l.x + l.w, l.y + 15);
+        for (const t of b.throws) {
+          if (t.kind === 'tyre') add('tyre', t.x - 13, t.y - 25, t.x + 13, t.y + 2);
+          else if (t.kind === 'honk') add('honk', t.x - 30, t.y - 20, t.x + 30, t.y + 20);
+          else add('high honk', t.x - 30, t.y - 15, t.x + 30, t.y + 15);
+        }
+        const hh = game.hero;
+        add('hero', hh.x - 20, hh.y - 58, hh.x + 20, hh.y + 2);
+        return out;
+      }
       if (r.room) {
         // Below the street: the room's kobo, crate, gift, the rope's bucket and the hero.
         const play = r.room;
@@ -731,9 +763,8 @@ declare global {
         readonly end: { readonly x: number; readonly wall: number } | null;
         readonly gaps: readonly (readonly [number, number])[];
         readonly checkpoint: number;
-        readonly arenaX: number;
-        readonly turnLeftX: number;
-        readonly turnRightX: number;
+        /** Go-Slow Hall's size and the hero's limits, or null on a street. */
+        readonly hall: { readonly width: number; readonly leftLimit: number; readonly rightLimit: number } | null;
         readonly groundY: number;
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
         /** Roofs and other one-way platforms: top y, from x to x + w. */
@@ -756,13 +787,15 @@ declare global {
         readonly fits: boolean;
         readonly limits: HintBarBox;
       };
-      /** Drawn boxes (CSS px) of every kobo, food, hazard, crate, well, pit lip, the hero, the bus and its board on screen. */
+      /** Drawn boxes (CSS px) of every kobo, food, hazard, crate, well, pit lip, the hero, the bus and its board on screen; in the hall the lights, the throws and the hero. */
       readonly drawn: readonly { readonly what: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number }[];
       readonly boss: {
         readonly hits: number;
         readonly lit: number;
         readonly litLight: { readonly x: number; readonly y: number; readonly w: number } | null;
         readonly mode: string;
+        readonly aim: 'low' | 'high';
+        readonly modeTime: number;
         readonly defeated: boolean;
         readonly throws: readonly { readonly kind: string; readonly x: number; readonly y: number; readonly vx: number }[];
       } | null;

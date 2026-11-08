@@ -3,31 +3,54 @@
  * the game uses, with a light check of its shape, so a typo in a data file gives a clear
  * message instead of a strange game.
  *
- * Two formats: slice 1 (no `schema`, docs/design.md Level 1: the hero runs by itself and the
- * boss arena is at the end) and schema 2 streets (S2.6 Level data format: the player moves the
- * hero, a start fence and a bus at the end). Crates and wells are read and kept; wells draw as
- * plain placeholders until piece L, and crates draw only once their switch is on (features.ts, J2).
+ * Formats: slice 1 streets (no `schema`: the hero runs by itself; kept for the engine's unit
+ * tests, no slice 1 file ships since piece M retired w1-l1), schema 2 streets (S2.6 Level data
+ * format: the player moves the hero, a start fence and a bus at the end) and schema 2 halls
+ * (S2.7: one room where the state's boss is fought; the boss block lives only here).
+ * Room files are read by parseRoom (well.ts).
  */
-import { FALL_Y, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
+import { FALL_Y, GAIT, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
 import { FEATURE_NAMES, type Feature } from './features';
 
 export type HazardKind = 'goat' | 'tyre' | 'drum';
-export type ThrowKind = 'tyre' | 'honk';
+export type ThrowKind = 'tyre' | 'honk' | 'highHonk';
+export const THROW_KINDS: readonly ThrowKind[] = ['tyre', 'honk', 'highHonk'];
 
-/** Boss rules from the level file (design.md: Boss). */
+/** One phase of the fight (one per hit taken so far): throw gap (s), tyre speed (u/s), repeating pattern, hall music tempo. */
+export interface BossPhase {
+  every: number;
+  speed: number;
+  pattern: readonly ThrowKind[];
+  bpm: number;
+}
+
+/** Boss rules from the hall file (design.md S2.7). */
 export interface BossData {
   kind: string;
-  /** Bottom centre of the heap on the road. */
+  /** Bottom centre of the heap on the floor. */
   x: number;
+  /** Throws come out of the gap at the heap's foot here. */
+  throwX: number;
+  /** Throws are gone (into the drain grate, or faded at the left wall) at this x. */
+  drainX: number;
+  /** Seconds from the fight's start to the first throw. */
+  startDelay: number;
   /** Light platforms in the order they light up. */
   lights: readonly Platform[];
   /** Seconds with no throws after a hit. */
   breakAfterHit: number;
-  /** One phase per hit taken so far: throw gap (s), tyre speed (u/s), repeating pattern. */
-  phases: readonly { every: number; speed: number; pattern: readonly ThrowKind[] }[];
-  /** Honk cloud centre y and speed. */
+  phases: readonly BossPhase[];
+  /** Low honk centre y, high honk centre y, and their speed. */
   honkY: number;
+  highHonkY: number;
   honkSpeed: number;
+}
+
+/** A hall (S2.7): the hero moves between these limits; the whole hall is `width` wide. */
+export interface HallData {
+  width: number;
+  leftLimit: number;
+  rightLimit: number;
 }
 export type FoodKind = 'corn' | 'garri' | 'amala';
 export type CrateContents = 'kobo' | FoodKind;
@@ -84,9 +107,9 @@ export interface Level {
   /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
   hints: readonly { x: number; words: string; needs?: Feature }[];
   checkpoint: number;
-  /** Slice 1 only: the boss arena at the end of the street. */
-  arena: { x: number; width: number; turnLeftX: number; turnRightX: number } | null;
-  /** Boss rules, or null for a level with no boss. */
+  /** A hall (S2.7), or null for a street. */
+  hall: HallData | null;
+  /** Boss rules (halls only), or null. */
   boss: BossData | null;
 }
 
@@ -96,6 +119,11 @@ export class LevelError extends Error {
     this.name = 'LevelError';
   }
 }
+
+/** S2.2: the hero's centre stays this far inside a wall (RULES.wallGap in run.ts). */
+const WALL_GAP = 7;
+/** S2.6 street walk speed with roasted corn (the hall file has no speeds; it uses the streets'). */
+const CORN_WALK = 120;
 
 const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala'];
 const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', ...FOOD_KINDS];
@@ -121,7 +149,8 @@ export function parseLevel(raw: unknown): Level {
   const schema = r['schema'] === undefined ? 1 : r['schema'] === 2 ? 2 : fail('schema', 'should be 2 (or left out for slice 1)');
   if (schema === 2) {
     const type = oneOf(r['type'], 'type', ['street', 'room', 'hall'] as const);
-    if (type !== 'street') fail('type', `"${type}" files are not played yet (only streets)`);
+    if (type === 'room') fail('type', '"room" files are read as well rooms, not levels');
+    if (type === 'hall') return parseHall(r, { fail, obj, num, str, list, tuple, oneOf });
   }
   const groundY = num(r['groundY'], 'groundY');
   const koboSpacing = num(r['koboSpacing'], 'koboSpacing');
@@ -173,17 +202,6 @@ export function parseLevel(raw: unknown): Level {
   });
 
   const speeds = obj(r['hazardSpeeds'], 'hazardSpeeds');
-  const parseArena = (): Level['arena'] => {
-    if (schema === 2 && r['arena'] === undefined) return null;
-    const a = obj(r['arena'], 'arena');
-    return {
-      x: num(a['x'], 'arena.x'),
-      width: num(a['width'], 'arena.width'),
-      turnLeftX: num(a['turnLeftX'], 'arena.turnLeftX'),
-      turnRightX: num(a['turnRightX'], 'arena.turnRightX'),
-    };
-  };
-  const arena = parseArena();
 
   const crates: CrateData[] =
     r['crates'] === undefined && schema === 1
@@ -209,32 +227,6 @@ export function parseLevel(raw: unknown): Level {
   // design.md: the level carries cornSpeed; 228 is only the fallback when it is missing.
   const cornSpeed = r['cornSpeed'] === undefined ? PHYSICS.fastRunSpeed : num(r['cornSpeed'], 'cornSpeed');
   const tyreSpeed = num(speeds['tyre'], 'hazardSpeeds.tyre');
-
-  const parseBoss = (v: unknown): BossData | null => {
-    if (v === undefined || (isObj(v) && Object.keys(v).length === 0)) return null;
-    const b = obj(v, 'boss');
-    const lights = list(b['lights'], 'boss.lights').map((l, i) => {
-      const [x, y, w] = tuple(l, `boss.lights[${i}]`, 3);
-      return { x: num(x, `boss.lights[${i}][0]`), y: num(y, `boss.lights[${i}][1]`), w: num(w, `boss.lights[${i}][2]`) };
-    });
-    const phases = list(b['phases'], 'boss.phases').map((ph, i) => {
-      const p = obj(ph, `boss.phases[${i}]`);
-      const pattern = list(p['pattern'], `boss.phases[${i}].pattern`).map((k, j) => oneOf(k, `boss.phases[${i}].pattern[${j}]`, ['tyre', 'honk'] as const));
-      if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
-      return { every: num(p['every'], `boss.phases[${i}].every`), speed: num(p['speed'], `boss.phases[${i}].speed`), pattern };
-    });
-    if (lights.length === 0) fail('boss.lights', 'should have at least one light');
-    if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
-    return {
-      kind: str(b['kind'], 'boss.kind'),
-      x: num(b['x'], 'boss.x'),
-      lights,
-      breakAfterHit: num(b['breakAfterHit'], 'boss.breakAfterHit'),
-      phases,
-      honkY: num(b['honkY'], 'boss.honkY'),
-      honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
-    };
-  };
 
   const spans: GroundSpan[] = ground.map(([x0, x1]) => ({ x0, x1 }));
   return {
@@ -267,8 +259,96 @@ export function parseLevel(raw: unknown): Level {
     hazards: hazards.sort((p, q) => p.x - q.x),
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
-    arena,
-    boss: parseBoss(r['boss']),
+    hall: null,
+    boss: null,
+  };
+}
+
+/** The checkers parseLevel uses, shared with parseHall. */
+interface Check {
+  fail: (path: string, problem: string) => never;
+  obj: (v: unknown, path: string) => Record<string, unknown>;
+  num: (v: unknown, path: string) => number;
+  str: (v: unknown, path: string) => string;
+  list: (v: unknown, path: string) => unknown[];
+  tuple: (v: unknown, path: string, n: number) => unknown[];
+  oneOf: <T extends string>(v: unknown, path: string, options: readonly T[]) => T;
+}
+
+/**
+ * A hall file (S2.6 Level data format, S2.7): the floor, the hero's limits and the boss.
+ * Played as a level with no road pieces: the whole floor is solid, and the hero walks and runs
+ * at the street speeds (S2.2) between leftLimit and rightLimit.
+ */
+function parseHall(r: Record<string, unknown>, c: Check): Level {
+  const { fail, obj, num, str, list, tuple, oneOf } = c;
+  const groundY = num(r['groundY'], 'groundY');
+  const width = num(r['width'], 'width');
+  const hall: HallData = { width, leftLimit: num(r['leftLimit'], 'leftLimit'), rightLimit: num(r['rightLimit'], 'rightLimit') };
+  if (hall.leftLimit < 0 || hall.rightLimit > width || hall.rightLimit <= hall.leftLimit) fail('rightLimit', 'should be past leftLimit, both inside the hall');
+  const spawnX = num(r['spawnX'], 'spawnX');
+  if (spawnX < hall.leftLimit || spawnX > hall.rightLimit) fail('spawnX', 'should be between leftLimit and rightLimit');
+
+  const b = obj(r['boss'], 'boss');
+  const lights = list(b['lights'], 'boss.lights').map((l, i) => {
+    const [x, y, w] = tuple(l, `boss.lights[${i}]`, 3);
+    return { x: num(x, `boss.lights[${i}][0]`), y: num(y, `boss.lights[${i}][1]`), w: num(w, `boss.lights[${i}][2]`) };
+  });
+  const phases = list(b['phases'], 'boss.phases').map((ph, i) => {
+    const p = obj(ph, `boss.phases[${i}]`);
+    const pattern = list(p['pattern'], `boss.phases[${i}].pattern`).map((k, j) => oneOf(k, `boss.phases[${i}].pattern[${j}]`, THROW_KINDS));
+    if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
+    const every = num(p['every'], `boss.phases[${i}].every`);
+    if (every <= 0) fail(`boss.phases[${i}].every`, 'should be above 0');
+    return { every, speed: num(p['speed'], `boss.phases[${i}].speed`), pattern, bpm: num(p['bpm'], `boss.phases[${i}].bpm`) };
+  });
+  if (lights.length === 0) fail('boss.lights', 'should have at least one light');
+  if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
+  const boss: BossData = {
+    kind: str(b['kind'], 'boss.kind'),
+    x: num(b['x'], 'boss.x'),
+    throwX: num(b['throwX'], 'boss.throwX'),
+    drainX: num(b['drainX'], 'boss.drainX'),
+    startDelay: num(b['startDelay'], 'boss.startDelay'),
+    lights,
+    breakAfterHit: num(b['breakAfterHit'], 'boss.breakAfterHit'),
+    phases,
+    honkY: num(b['honkY'], 'boss.honkY'),
+    highHonkY: num(b['highHonkY'], 'boss.highHonkY'),
+    honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
+  };
+  if (boss.throwX <= hall.rightLimit) fail('boss.throwX', 'should be right of the cone line (rightLimit)');
+
+  // The floor runs past both walls: there are no pits in a hall.
+  const floor: readonly [number, number] = [-200, width + 200];
+  return {
+    id: str(r['id'], 'id'),
+    name: str(r['name'], 'name'),
+    schema: 2,
+    manual: true,
+    theme: 'hall',
+    groundY,
+    walkSpeed: GAIT.walk,
+    runSpeed: PHYSICS.runSpeed,
+    cornWalkSpeed: CORN_WALK,
+    cornSpeed: PHYSICS.fastRunSpeed,
+    startWall: hall.leftLimit - WALL_GAP,
+    end: null,
+    crates: [],
+    wells: [],
+    spawnX,
+    koboSpacing: 24,
+    wakeDistance: 0,
+    hazardSpeeds: { goat: 0, tyre: 0, drum: 0 },
+    ground: [floor],
+    terrain: { groundY, ground: [{ x0: floor[0], x1: floor[1] }], platforms: [], fallY: Math.max(FALL_Y, groundY + 120) },
+    coins: [],
+    foods: [],
+    hazards: [],
+    hints: [],
+    checkpoint: Infinity,
+    hall,
+    boss,
   };
 }
 

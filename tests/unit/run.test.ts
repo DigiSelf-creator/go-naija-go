@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import w1l1 from '../../src/data/levels/w1-l1.json';
 import { GROUND_Y, PHYSICS } from '../../src/engine/physics';
 import { parseLevel, type Level } from '../../src/game/level';
 import { HAZARD_BOX, RULES, Run, type RunEvent } from '../../src/game/run';
@@ -24,8 +23,6 @@ function level(patch: Record<string, unknown> = {}): Level {
     hazards: [],
     hints: [],
     checkpoint: 5000,
-    arena: { x: 19000, width: 560, turnLeftX: 19015, turnRightX: 19440 },
-    boss: {},
     ...patch,
   });
 }
@@ -275,7 +272,7 @@ describe('foods (piece D rules)', () => {
   });
 });
 
-describe('hints, bus stop and arena', () => {
+describe('hints and the bus stop', () => {
   it('each hint shows once per try, when the hero passes it', () => {
     const run = new Run(level({ hints: [[100, 'One.'], [300, 'Two.']], ground: [[-400, 500], [600, 20000]] }));
     const ev = runUntil(run, (r) => r.lives < 3);
@@ -287,50 +284,6 @@ describe('hints, bus stop and arena', () => {
     expect(again.filter((e) => e.type === 'hint')).toEqual([]);
   });
 
-  it('the boss fight starts when the hero passes the arena start', () => {
-    const run = new Run(level({ arena: { x: 600, width: 560, turnLeftX: 615, turnRightX: 1040 } }));
-    const ev = runUntil(run, (r) => r.phase === 'arena');
-    expect(types(ev).at(-1)).toBe('arena');
-    expect(run.hero.x).toBeGreaterThanOrEqual(600);
-    expect(run.hero.x).toBeLessThan(604);
-  });
-});
-
-describe('world 1 level 1 data', () => {
-  it('can be run from start to arena by a simple player who jumps every hazard and pothole', () => {
-    const lvl = parseLevel(w1l1);
-    const run = new Run(lvl);
-    const gaps = lvl.ground.slice(1).map((s, i) => ({ a: lvl.ground[i]![1], b: s[0] }));
-    let holding = 0;
-    let airPlanned = false;
-    for (let i = 0; i < 60 * 120 && run.phase === 'run'; i++) {
-      const h = run.hero;
-      if (h.grounded && holding === 0) {
-        const gap = gaps.find((g) => g.a - h.x > 0 && g.a - h.x < 30);
-        const z = run.hazards.find((q) => (q.mode === 'move' || q.mode === 'wait') && q.x - h.x > 0 && q.x - h.x < 70);
-        if (gap || z) {
-          run.press();
-          holding = 1;
-          airPlanned = !!gap && gap.b - gap.a > 110;
-        }
-      } else if (holding > 0 && h.vy >= 0) {
-        run.release();
-        holding = 0;
-        if (airPlanned) {
-          run.press();
-          holding = 1;
-          airPlanned = false;
-        }
-      }
-      run.step(DT);
-    }
-    expect(run.phase).toBe('arena');
-    expect(run.lives).toBe(3);
-    // Design: start x 80 to arena x 11000 is about 70 s (corn makes it a little shorter).
-    expect(run.time).toBeGreaterThan(60);
-    expect(run.time).toBeLessThan(75);
-    expect(run.foods.every((f) => f.taken)).toBe(true);
-  });
 });
 
 describe('designer decisions (ef3d033)', () => {

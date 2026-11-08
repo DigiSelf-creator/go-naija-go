@@ -1,10 +1,10 @@
 /**
  * Piece C on the phone profile, by touch. Slice 2: lives, the HUD and pause on street 1 by
- * hand (lagos-1); the slice 1 level bot plays the old way (OLD_WAY) until piece M.
+ * hand (lagos-1). The slice 1 level bot went with w1-l1 (piece M2).
  */
-import { expect, test, type CDPSession, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { LEFT, buttonCentres, hands } from './hands';
-import { OLD_WAY, PAST_DOUBLE_TAP_MS, openAndRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, openAndRun } from './helpers';
 
 /** Street 1: a thumb on Forward. */
 async function holdForward(page: Page) {
@@ -15,78 +15,6 @@ async function holdForward(page: Page) {
 }
 
 const run = (page: Page) => page.evaluate(() => window.__game!.run);
-
-/** A real finger through the DevTools protocol, so it can stay down for a held jump. */
-function finger(cdp: CDPSession) {
-  return {
-    down: () => cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 600, y: 220, id: 1 }] }),
-    up: () => cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }),
-  };
-}
-
-test('a bot plays the slice 1 level (the old way) by touch from the start to the boss fight with lives to spare', async ({ page }) => {
-  test.setTimeout(150_000);
-  const errors: string[] = [];
-  page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await openAndRun(page, OLD_WAY);
-  const level = await page.evaluate(() => window.__game!.level);
-  const f = finger(await page.context().newCDPSession(page));
-
-  // The bot reads what is ahead (potholes from the level data, hazards as they move)
-  // and plays by touch: a held jump over every pothole and hazard, plus a second jump
-  // at the top for potholes wider than a held jump can clear.
-  let holding = false;
-  let secondJump = false;
-  let taps = 0;
-  const seen = { lives: 3, foods: new Set<string>() };
-  for (;;) {
-    const s = await page.evaluate(() => ({ h: window.__game!.hero, r: window.__game!.run, screen: window.__game!.screen }));
-    if (s.r.phase !== 'run' || s.screen !== 'play') break;
-    if (s.r.power.corn) seen.foods.add('corn');
-    if (s.r.power.amala) seen.foods.add('amala');
-    if (s.r.power.shield) seen.foods.add('garri');
-    seen.lives = s.r.lives;
-    const { h } = s;
-    if (holding) {
-      if (h.vy >= 0) {
-        await f.up();
-        holding = false;
-        if (secondJump) {
-          await f.down();
-          taps++;
-          holding = true;
-          secondJump = false;
-        }
-      }
-      continue;
-    }
-    if (!h.grounded) continue;
-    const gap = level.gaps.find(([a]) => a - h.x > -4 && a - h.x < 32);
-    const hazard = s.r.hazards.find((z) => (z.mode === 'wait' || z.mode === 'move') && z.x - h.x > 0 && z.x - h.x < 80);
-    if (gap || hazard) {
-      await f.down();
-      taps++;
-      holding = true;
-      secondJump = !!gap && gap[1] - gap[0] > 110;
-    }
-  }
-  if (holding) await f.up();
-
-  const end = await run(page);
-  const hero = await page.evaluate(() => window.__game!.hero);
-  console.log(`bot: reached ${end.phase} at x ${hero.x} in ${end.time.toFixed(1)} s of play, ${end.lives} lives, ${end.kobo} kobo, ${taps} presses, foods ${[...seen.foods].join(', ')}`);
-  test.info().annotations.push({ type: 'level time', description: `${end.time.toFixed(1)} s` });
-  expect(end.phase).toBe('arena');
-  expect(hero.x).toBeGreaterThanOrEqual(level.arenaX);
-  expect(end.lives).toBeGreaterThanOrEqual(1);
-  expect(end.checkpoint).toBe(true);
-  expect([...seen.foods].sort()).toEqual(['amala', 'corn', 'garri']);
-  // The boss fight starts: the left light is lit and the arrival words show.
-  await expect.poll(() => page.evaluate(() => window.__game!.boss?.lit)).toBe(0);
-  await expect(page.getByText('General Go-Slow blocks the road! Jump onto the green light.')).toBeVisible();
-  expect(errors).toEqual([]);
-});
 
 test('out of lives: game over, then Play again starts the level fresh', async ({ page }) => {
   test.setTimeout(120_000);

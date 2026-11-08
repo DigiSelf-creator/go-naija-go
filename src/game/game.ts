@@ -4,7 +4,8 @@
  * road, stalls, pickups, hazards and hero draw in world space (art "space rule").
  */
 import { drawBackdrop, drawThemeStall } from '../art/backdrop';
-import { drawBoss, drawDustPop, drawGoLight, drawHitCounter, drawHonkCloud, type GoLightState } from '../art/boss';
+import { drawBoss, drawDustPop, drawGoLight, drawHighHonk, drawHitCounter, drawHonkCloud, type GoLightState } from '../art/boss';
+import { drawHall, drawHallCones, drawHallFront, hallDoors, hallFinishAt } from '../art/hall';
 import { crateAngle, crateLineY, drawCrate, drawCrateLine, koboFanAt, koboFlyAt } from '../art/crate';
 import { drawDrum, drawDrumSmash, drawDrumSparkle } from '../art/drum';
 import { drawHero, WALK_STRIDE, type HeroLook } from '../art/hero';
@@ -19,11 +20,13 @@ import { Camera, heroScreenX } from './camera';
 import { CRATE_RULES, type CrateState } from './crates';
 import { featureOn } from './features';
 import type { Level, WellData } from './level';
-import { HAZARD_BOX, Run, STEPS_PER_SECOND, type RunEvent } from './run';
+import { HAZARD_BOX, Run, STEPS_PER_SECOND, type RunEvent, type RunOptions } from './run';
 import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
 
 export { heroScreenX };
+/** Honk clouds fade over this last stretch before the hall's left wall, u. */
+const HONK_FADE = 60;
 /** Pits this wide or wider are big pits: cones on both lips (S2.2). */
 const BIG_PIT = 160;
 /**
@@ -132,7 +135,8 @@ export class Game {
 
   private newCamera(): void {
     const { level } = this;
-    this.cam = level.manual ? new Camera(level.startWall, level.end?.wall ?? Infinity) : null;
+    // A hall has its own camera (cameraX); streets have the street camera (S2.2).
+    this.cam = level.manual && !level.hall ? new Camera(level.startWall, level.end?.wall ?? Infinity) : null;
     this.snapCamera();
   }
 
@@ -156,25 +160,17 @@ export class Game {
     }
   }
 
-  /**
-   * "Go to Go-Slow Hall" after the last street: the slice 1 boss fight on its own (a stand-in
-   * until Go-Slow Hall, piece M), from its start with full lives and 0 kobo. The hero runs by
-   * itself in the arena as in slice 1.
-   */
-  beginBoss(gentle: boolean, bossLevel: Level): void {
-    this.begin(gentle, bossLevel);
-    this.run.startAtArena();
-    this.newCamera();
-  }
-
   get hero(): Run['hero'] {
     return this.run.hero;
   }
 
-  /** Start the level from the beginning: full lives, 0 kobo. */
-  begin(gentle: boolean, level: Level = this.level): void {
+  /**
+   * Start the level (a street or a hall) from the beginning: full lives, 0 kobo. parcel: a hall
+   * try that starts with the garri shield on (S2.7).
+   */
+  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel'> = {}): void {
     this.level = level;
-    this.run = new Run(this.level, { gentle, rooms: this.rooms });
+    this.run = new Run(this.level, { gentle, rooms: this.rooms, ...opts });
     this.newCamera();
     this.idle = false;
     this.paused = false;
@@ -346,33 +342,30 @@ export class Game {
   }
 
   /**
-   * The camera follows the hero at heroScreenX. In the boss arena it glides to the arena's
-   * left edge and stays there (design.md: Boss), also behind the game over screen when the
-   * last life was lost in the fight (run.boss is set from the moment the arena starts).
+   * The camera. Streets: the street camera (S2.2), or for slice 1 levels the hero at
+   * heroScreenX. A hall (S2.7): a screen as wide as the hall or wider shows it all, centred (the
+   * outside walls at the sides); a narrower one follows the hero, kept inside the hall.
    */
   cameraX(view: View): number {
     if (this.run.below) return this.camX;
+    const hall = this.level.hall;
+    if (hall) {
+      const W = view.width;
+      this.camX = W >= hall.width ? (hall.width - W) / 2 : Math.min(Math.max(0, this.hero.x - W * 0.4), hall.width - W);
+      return this.camX;
+    }
     if (this.cam) {
       this.camX = this.cam.x;
       return this.camX;
     }
-    const follow = this.hero.x - view.width * heroScreenX(view.width);
-    const phase = this.run.phase;
-    const arena = this.level.arena;
-    const inArena = arena !== null && (phase === 'arena' || phase === 'won' || (phase === 'over' && this.run.boss !== null));
-    if (!inArena || Math.abs(this.camX - follow) > view.width * 2) {
-      this.camX = inArena ? arena.x : follow;
-      return this.camX;
-    }
-    const target = arena.x;
-    this.camX += (target - this.camX) * 0.12;
-    if (Math.abs(target - this.camX) < 0.5) this.camX = target;
+    this.camX = this.hero.x - view.width * heroScreenX(view.width);
     return this.camX;
   }
 
   render(g: CanvasRenderingContext2D, view: View): void {
     if (view.width !== this.viewW) this.setView(view);
     if (this.run.below) this.renderRoom(g, view);
+    else if (this.level.hall) this.renderHall(g, view);
     else this.renderStreet(g, view);
     // Going down or up a well: the screen fades to dark and back (S2.5).
     g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
@@ -415,21 +408,6 @@ export class Game {
     const busSeen = end !== null && bus !== null && end.x + END_BUS_BACK - 160 < R && end.x + END_BUS_FRONT + (bus.dx ?? 0) + 200 > L;
     if (end && busSeen) drawBusPark(g, end.x, end.wall, gy);
 
-    const boss = run.boss;
-    const bossData = level.boss;
-    if (bossData && bossData.x - 100 < R) {
-      bossData.lights.forEach((p, i) => {
-        const state: GoLightState = boss && i < boss.hits ? 'done' : boss && boss.lit === i ? 'lit' : 'off';
-        drawGoLight(g, p.x, p.y, p.w, state, t, gy);
-      });
-      drawBoss(g, bossData.x, gy, {
-        mode: boss?.mode ?? 'idle',
-        t: boss?.modeTime ?? 0,
-        hits: boss?.hits ?? 0,
-        time: t,
-      });
-    }
-
     for (const c of run.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
     for (const f of run.foods) if (!f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, t);
     const fade = run.hazardFade;
@@ -442,13 +420,6 @@ export class Game {
         else drawTyre(g, z.x, z.y, z.rot);
       }
       g.globalAlpha = 1;
-    }
-
-    if (boss) {
-      for (const th of boss.throws) {
-        if (th.kind === 'tyre') drawTyre(g, th.x, th.y, th.rot);
-        else drawHonkCloud(g, th.x, th.y, t);
-      }
     }
 
     const h = run.hero;
@@ -477,9 +448,55 @@ export class Game {
     if (end && bus && busSeen && atBus) drawEndBus(g, end.x, bus, gy);
 
     this.drawEffects(g);
+  }
+
+  /**
+   * Go-Slow Hall (S2.7, art M1 src/art/hall.ts): the hall's back, the go lights and General
+   * Go-Slow, the throws, the cone line, the hero, then the hall's front walls. In the fight the
+   * right doors open and shut after each hit; from the third hit the kind finish plays (doors
+   * stay open, lamps come on, cones slide aside, floor arrows light). Still (reduced motion):
+   * the doors and cones jump instead of swinging and sliding, and nothing pulses.
+   */
+  private renderHall(g: CanvasRenderingContext2D, view: View): void {
+    const { level, run } = this;
+    const boss = run.boss!;
+    const data = level.boss!;
+    const W = view.width;
+    const lift = this.lift;
+    const H = view.height + lift;
+    const t = this.clock;
+    const camX = this.cameraX(view);
+    const gy = level.groundY;
+    const still = this.still;
+    g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
+    g.translate(-camX, 0);
+    const finish = boss.defeated ? hallFinishAt(boss.modeTime, still) : null;
+    drawHall(g, camX, W, H, finish ? { ...finish, time: t, still } : { doors: hallDoors(boss.mode, boss.modeTime, still), time: t });
+    data.lights.forEach((p, i) => {
+      const state: GoLightState = i < boss.hits ? 'done' : boss.lit === i ? 'lit' : 'off';
+      drawGoLight(g, p.x, p.y, p.w, state, still ? 0 : t, gy);
+    });
+    drawBoss(g, data.x, gy, { mode: boss.mode, t: boss.modeTime, hits: boss.hits, time: still ? 0 : t, aim: boss.aim });
+    for (const th of boss.throws) {
+      if (th.kind === 'tyre') {
+        drawTyre(g, th.x, th.y, th.rot);
+        continue;
+      }
+      // Honks fade as they reach the left wall (never fully: they can still touch the hero).
+      g.globalAlpha = Math.min(1, Math.max(0.3, (th.x - data.drainX) / HONK_FADE));
+      if (th.kind === 'highHonk') drawHighHonk(g, th.x, th.y, still ? 0 : t);
+      else drawHonkCloud(g, th.x, th.y, still ? 0 : t);
+      g.globalAlpha = 1;
+    }
+    drawHallCones(g, finish?.cones ?? 0);
+    const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
+    if (!blinkOff) this.drawHeroNow(g, false);
+    if (run.power.shield) drawShield(g, run.hero.x, run.hero.y, t);
+    this.drawEffects(g);
+    drawHallFront(g, camX, W, H);
     g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-    // Boss hit counter, below the HUD.
-    if (boss) drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
+    // The hit counter, under the HUD row.
+    drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
   }
 
   /** The hero where it is now, in its pose (rope: holding the well rope). World space. */

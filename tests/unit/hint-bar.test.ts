@@ -64,7 +64,9 @@ describe('hint bar place (S2.2 table, CSS px, rounded)', () => {
 
 describe('hint bar words', () => {
   it('every toast longer than 35 characters has short words of 35 or fewer', () => {
-    const toasts = [WORDS.toast.corn, WORDS.toast.garri, WORDS.toast.amala, WORDS.toast.bossArrives, WORDS.toast.cornWearingOff, WORDS.toast.amalaWearingOff, WORDS.toast.shieldUsed, WORDS.toast.roadFree, WORDS.toast.greenLight(2)];
+    const toasts = [WORDS.toast.corn, WORDS.toast.garri, WORDS.toast.amala, WORDS.toast.cornWearingOff, WORDS.toast.amalaWearingOff, WORDS.toast.shieldUsed, WORDS.toast.greenLight(2),
+      // S2.7 Go-Slow Hall (piece M2)
+      WORDS.toast.hallStart, WORDS.toast.parcelShield, WORDS.toast.highHonks, WORDS.toast.hallClear, WORDS.toast.switchedOn, WORDS.toast.greenLight(1)];
     for (const t of toasts) {
       if (t.length <= SHORT_AT) continue;
       expect(SHORT_TOAST[t], t).toBeDefined();
