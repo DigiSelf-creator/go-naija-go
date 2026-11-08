@@ -2,6 +2,32 @@
 
 ## Slice 2 requests from Tp, 7 Nov 2026
 
+### po ruling, 8 Nov 2026: piece L parcel toast and the Go up button (from qa L3)
+
+Not an acceptance. L still waits for gamedev's narrow-screen fix and qa's re-test. These rulings go into that same fix round.
+
+**(1) The parcel toast words.**
+- Now (until N2 lands): **"Garri parcel! Keep it safe."** (27 characters). One line on every bar, so it needs no short words.
+- From N2 on: **"Garri parcel! Shield for the hall."** (34 characters). It is the short form already in the table and already fits the narrowest bar (78 px at 320 x 240), so one string serves every screen and the short-words row goes away.
+- Switch it in N2, not M2. N2 owns all S2.10 words, and the promise only comes true when both are in: M2 gives the shield at the hall start, N2 carries the parcel from a street to the hall. With M2 alone, every street is still a new run and the parcel never reaches the hall.
+
+Why:
+1. The interim words must not promise. Verified in src/screens/words.ts and the plan: today the parcel is lost when the street ends and the hall is still the slice 1 boss, so "Your shield will be on when the Go-Slow Hall fight starts" is not true in any build before N2. Tp plays these builds on a phone; a kid (or Tp) who carries the parcel to the boss and gets no shield learns the game breaks its word. "Keep it safe" is true today: a lost life keeps it, game over loses it (S2.5 gift rules 2 and 3).
+2. The old words are too long (73 characters, two lines, the longest toast in the game) and say "Go-Slow Hall fight starts" when a kid only needs "this is a shield for later". The details are said again where they matter: the cleared screen "Your garri parcel is saved for Go-Slow Hall." (N2) and the hall toast "Your garri parcel: the shield is on!" (M2). Opinion: the short pickup line plus those two lines teach it better than one long line.
+3. Plain test (reasoned): "Keep it safe" and "Shield for the hall" are words a 10 year old reads in one glance mid-jump. By N2 the player has seen "Go-Slow Hall" on the Streets card and the street 3 button, so "the hall" is known.
+
+Who does what:
+- gamedev (L fix round): WORDS.toast.parcel = "Garri parcel! Keep it safe."; drop its row from the short-words map (it is under 36 characters); update tests/unit/well.test.ts lines 304 and 305 and any e2e that reads the toast.
+- designer: update docs/design.md in three places to show both stages: S2.2 short-words table (remove the parcel row), S2.5 "The gift" item 1, and the S2.10 list of toasts. Note "until N2" and "from N2".
+- pm: add the switch to N2's task line: parcel toast becomes "Garri parcel! Shield for the hall."; qa N3 checks it.
+
+**(2) Go up button over a kobo above shelf 3 at 932 x 430: fine, no change.**
+Why (reasoned from design S2.2 and S2.5 and lagos-well.json): the button shows only while the hero stands at the rope (x 480 to 520), which is the moment the player is leaving. The kobo row over shelf 3 (x 415 to 463, y 216) is seen in full on the way there, and the button is 35 percent see-through, so the coin is still visible behind it. Stepping left out of the zone hides the button at once. Kobo are picked up by the hero's body, not by a tap, so nothing a player wants to press is lost. The "nothing collectable under it" rule is the hint bar's rule (S2.2), not the buttons'. If qa sees a kobo fully hidden on any tested size, designer moves that kobo, not the button: the button's place over the bucket is what tells the player "this is the way up".
+
+Note on references: the parcel is Q19 (and Q23, parcel strength), not Q17 (the wheel). Q19 and Q23 still wait for Tp; these words fit the recommended answers (a parcel that starts every hall try with the shield on). If Tp picks "only the next try" for Q23, the N2 words still hold.
+
+For Tp: nothing new to decide here.
+
 ### po acceptance note, 8 Nov 2026: slice 2 piece K (K4)
 
 **Accepted** on branch gamedev/s2-k2-streets (at d56959b): Street 2 (Market road) and Street 3 (Bus park road) drawn by theme with art's K1 pieces, the rolling drum, wells as scenery only until L2, the Street cleared screen with "Next street" (and "Go to Go-Slow Hall" after street 3), and the level rule test for all three streets.
