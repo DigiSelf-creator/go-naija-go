@@ -426,12 +426,13 @@ When the bar is under 160 px wide (only screens near 320 x 240), a toast longer 
 | Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through! | Amala, gbegiri and ewedu! Strong! |
 | General Go-Slow blocks the road! Jump onto the green light. | Go-Slow! Jump on the green light. |
 | A secret room! Grab the kobo. Stand under the rope to go back up. | Secret room! Use the rope to go up. |
-| Garri parcel! Your shield will be on when the Go-Slow Hall fight starts. | Garri parcel! Shield for the hall. |
 | Your garri parcel: the shield is on! | Garri parcel: shield on! |
 | General Go-Slow is jamming the hall! Jump onto the green light. | Go-Slow! Jump on the green light. |
 | PEEP! High honks fly high. Stay low on the floor. | PEEP! High honks: stay low. |
 
 Every other toast is already 35 characters or fewer. Any new toast longer than 35 characters must come with short words in this table.
+
+The garri parcel toast has no row here. It comes in two stages (po ruling, 8 Nov 2026): until N2 it is "Garri parcel! Keep it safe." (27 characters); from N2 on it is "Garri parcel! Shield for the hall." (34 characters). Both are 35 characters or fewer, so one string serves every bar. On the 78 px bar at 320 x 236 or 320 x 240 they wrap to short lines of 12 px words (the first one to four lines: "Garri / parcel! / Keep it / safe."), which this section allows; nothing is clipped.
 
 #### New hint words (gamedev: change the level files to these)
 
@@ -578,7 +579,7 @@ Placement rules (checked by the level test):
 
 A village or compound well, our own drawing: a round wall of plastered brick, about 48 u wide and 30 u tall (top at y 270), a wooden frame with a crank on top (up to y 210), a rope and a bucket. Never a pipe, tube, green cylinder or any game's warp. It is scenery: the hero walks in front of it.
 
-Entrance well (`wells[].x`): the bucket hangs above the mouth and a soft down arrow bobs over the crank every 2 s, so it is findable.
+Entrance well (`wells[].x`): the bucket hangs above the mouth and a soft down arrow bobs over the crank every 2 s, so it is findable. The arrow hides while the Go down button shows (the button now says the way, and the arrow would sit under it).
 
 Going down:
 1. The hero is on the ground with its centre within the well's x plus or minus 20.
@@ -594,8 +595,8 @@ Look: a dry, cool, lamp-lit store room under the ground. Earth-brown walls, thre
 
 | Thing | Where |
 |---|---|
-| Floor | y 300, solid from wall to wall. No pits. Walls at x 30 and 530 (hero limits) |
-| Arrive | the bucket lowers at x 60; the hero steps off facing right. Toast: "A secret room! Grab the kobo. Stand under the rope to go back up." |
+| Floor | y 300, solid from wall to wall. No pits. Walls at x 30 and 530 (`leftLimit` and `rightLimit` in the room file); as on the street, the hero's centre stays 7 u inside them, so between x 37 and 523 |
+| Arrive | the bucket lowers at x 60: the hero rides it down the last 60 u in 0.5 s while the screen fades in, then steps off facing right. Toast: "A secret room! Grab the kobo. Stand under the rope to go back up." |
 | Shelves (one-way platforms) | [120, 250, 80] (50 high, tap), [250, 200, 90] (100 high, hold), [400, 240, 80] (60 high, tap) |
 | Kobo | 14 in rows (floor at 80, over shelf 1, an arc between shelves 1 and 2, over shelf 3, the floor under shelf 3), plus one kobo crate at x 370 (3 kobo): 17 in all |
 | The gift | the garri parcel on the middle shelf, centre (295, 176) |
@@ -608,12 +609,12 @@ Music changes to the well tune while in the room.
 
 A small parcel of garri, sugar and epa wrapped in a leaf and tied with string. Our own drawing.
 
-1. Pick it up by touching it. Toast: "Garri parcel! Your shield will be on when the Go-Slow Hall fight starts." The HUD shows a small parcel icon and the word "Parcel" next to the kobo count while it is carried.
+1. Pick it up by touching it. Toast, in two stages: until N2, "Garri parcel! Keep it safe."; from N2 on, "Garri parcel! Shield for the hall." (The promise is only made once it is true: M2 gives the shield at the hall start and N2 carries the parcel from a street to the hall.) Neither has short words; both wrap on the narrowest bar (S2.2). The HUD shows a small parcel icon and the word "Parcel" next to the kobo count while it is carried (icon only on a tight HUD, S2.10).
 2. It does nothing on the street. It is not a shield yet.
 3. A lost life keeps it. Game over, "Start again" or leaving the street loses it.
 4. Finishing the street (getting on the bus) while carrying it saves it for the state (`parcel: true`).
 5. Once a state has a saved parcel, every try at that state's hall starts with the garri shield on. It never stacks: the most is one shield at the start.
-6. If the state already has a saved parcel, the room shows 5 kobo on the middle shelf instead of the parcel.
+6. If the state already has a saved parcel, the room shows 5 kobo on the middle shelf instead of the parcel: one row centred on x 295 at y 176, 24 u apart (x 247 to 343), from `giftIfCarried` in the room file.
 7. The hall is beatable without it (S2.7).
 
 ### Going up
@@ -624,6 +625,9 @@ A small parcel of garri, sugar and epa wrapped in a leaf and tied with string. O
 4. Any woken hazard within 300 u of the exit is removed. The level rule keeps unwoken ones at least 400 u away.
 5. The exit well is always before the street's bus stop, so the bus stop is never skipped.
 6. The entrance well can be used again; the room remembers what was taken during this play.
+7. Hints between the entrance well and the exit well stay quiet after coming up (they would replace "Back on the street!", and the player skipped that stretch). Level rule: never put a hint that teaches something new between a well's x and its exitX; a player who goes down never sees it. Today none does (street 2: none between 2950 and 4100; street 3's drum hint at 1350 is past exitX 1300 and still shows).
+
+Double taps: a Go down or Go up press never also presses a button under it. The button acts on pointerdown and calls preventDefault on its touch events, and for 400 ms after the press every other button ignores tap clicks; keyboard clicks (Enter, Space) are never blocked.
 
 ## S2.6 Streets of Lagos (R7, Q16)
 
@@ -910,7 +914,7 @@ Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that
 | Hero builder | First-time players, and anyone changing their look | Pick a look | See S2.3 |
 | Streets | A player who pressed "Play" with at least one street done, or "Streets" anywhere | Pick where to play | Heading "Lagos". Line "Fix 3 streets, then clear Go-Slow Hall." Four cards: "Street 1: Your street", "Street 2: Market road", "Street 3: Bus park road", "Go-Slow Hall". Under each name one line: done: "Done ✓ Best: {best} kobo"; open, not done: "Ready to play"; locked: a padlock and "Finish street {n} first" (hall: "Finish street 3 first"). On the hall card, if a parcel is saved: "You have a garri parcel." Buttons "Nigeria's wheel", "Home" |
 | Nigeria's wheel | Anyone who taps "Nigeria's wheel" | Show how much of Nigeria is working | Heading "Nigeria's wheel". "Every state is a part of Nigeria Company. Fix a state's problems and its cog starts turning." Then "{n} of 37 cogs turning." When n is 0: "Fix Lagos to turn the first cog." When n is 1 or more: "More states are coming soon." Button "Back" |
-| HUD (in play) | The player | Show lives, kobo, food, parcel | "♥ 3", "Kobo 12", food slot (part 1), parcel icon and "Parcel" when carried. In the hall, the three hit circles. Top right: sound, pause (spoken "Sound", "Pause"). Bottom: Back, Forward, Jump (S2.2) |
+| HUD (in play) | The player | Show lives, kobo, food, parcel | "♥ 3", "Kobo 12", food slot (part 1), parcel icon and "Parcel" when carried. In the hall, the three hit circles. Top right: sound, pause (spoken "Sound", "Pause"). Bottom: Back, Forward, Jump (S2.2). One row always: see "The HUD row" below |
 | Well button | A player standing at a well, or under the room's rope | Go down or up | "Go down" / "Go up". On a computer: "Go down (↓)" / "Go up (Enter)" |
 | Pause | A player who pressed pause, left the app, or turned the phone upright | Get back to playing | "Paused". Buttons "Keep playing", "Start again", "Streets", "Home". Switches "Sound: on" / "Sound: off", "Music: on" / "Music: off". Tapping outside the buttons does nothing |
 | Turn phone | A player holding the phone upright in play | Get the phone sideways | "Turn your phone sideways to play." (part 1) |
@@ -920,13 +924,26 @@ Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that
 | Win | A player who cleared Go-Slow Hall | Celebrate Lagos switching on | "Lagos is switched on!" "You cleared General Go-Slow with {kobo} kobo and {lives} lives left." ("1 life left" when one.) "Lagos's cog is turning: {n} of 37." "More of Nigeria is coming soon." Big button "See Nigeria's wheel". Small "Play again", "Streets" |
 | Credits | Anyone who taps "Credits" | Say who made it | "Credits". "Made by CoachNaz." "Every picture, sound and tune is our own." Button "Back" |
 
+### The HUD row
+
+The HUD is one row, inside the top 56 px, at every width down to 320 px, with every chip shown (lives, kobo, parcel, shield, corn or amala). Never a second row: a second row would sit under the Go up button and the room's high kobo. Sound and Pause never wrap and never shrink below 44 x 44 px. When the chips do not fit, the left side steps down, one step at a time, only as far as it needs (code: src/screens/hud.ts, HUD_TIGHT and Hud.fit; src/screens/screens.css, .hud-tight, .hud-tighter, .hud-tightest):
+
+| Step | What changes | Example, every chip shown |
+|---|---|---|
+| 0 | Full words in dark chip boxes | "♥ 3" "Kobo 12" [parcel] "Parcel" [bowl] "Shield" [corn] "Fast 5" |
+| 1 | The parcel, shield and food chips show only their icon; food keeps its seconds. Less padding inside and between chips | "♥ 3" "Kobo 12" [parcel] [bowl] [corn] "5" |
+| 2 | Words, icons and gaps all get smaller (icons 24 px), and the HUD's side margins shrink | as step 1, smaller |
+| 3 | No chip boxes (the words keep their dark edge so they read on the sky), icons 20 px, and a coin icon replaces the word "Kobo" | "♥ 3" [coin] "12" [parcel] [bowl] [corn] "5" |
+
+Screen readers read the full words at every step ("Lives: 3", "Kobo 12", "Parcel", "Shield", "Fast 5"): the hidden words stay in the page, only hidden from sight. Never colour alone: each chip is its own icon shape. The HUD fits again (and can step back up) when the screen size changes or a chip comes or goes.
+
 320 x 240 fits: Streets puts the four cards in a 2 x 2 grid (each about 140 x 60), heading and line on one row each, the two small buttons in one row. Pause puts its four buttons in a 2 x 2 grid and the two switches in one row.
 
 "Start again" restarts the current street (or the hall) from its beginning with full lives and 0 kobo. "Streets" and "Home" leave without saving anything from the street.
 
 Flow: Title "Play" goes straight into street 1 if no street is done yet, else to Streets. A card starts that street or the hall. Street cleared "Next street" starts the next one. Win "See Nigeria's wheel" opens the wheel, and its "Back" goes to Streets.
 
-Toasts and hints in one place (all also in the level files or in S2.5 and S2.7): "A secret room! Grab the kobo. Stand under the rope to go back up." / "Garri parcel! Your shield will be on when the Go-Slow Hall fight starts." / "Back on the street!" / "Your garri parcel: the shield is on!" / "General Go-Slow is jamming the hall! Jump onto the green light." / "Green light! 2 more." / "Green light! 1 more." / "PEEP! High honks fly high. Stay low on the floor." / "Green light! The hall is clear!" / "Lagos is switched on!" Part 1's food toasts stay. All of them show in the hint bar (S2.2, "The hint bar"); the long ones have short words there for narrow bars.
+Toasts and hints in one place (all also in the level files or in S2.5 and S2.7): "A secret room! Grab the kobo. Stand under the rope to go back up." / "Garri parcel! Keep it safe." (until N2) / "Garri parcel! Shield for the hall." (from N2 on; N2 makes the switch) / "Back on the street!" / "Your garri parcel: the shield is on!" / "General Go-Slow is jamming the hall! Jump onto the green light." / "Green light! 2 more." / "Green light! 1 more." / "PEEP! High honks fly high. Stay low on the floor." / "Green light! The hall is clear!" / "Lagos is switched on!" Part 1's food toasts stay. All of them show in the hint bar (S2.2, "The hint bar"); the long ones have short words there for narrow bars.
 
 ## S2.11 Accessibility check (slice 2)
 
@@ -935,7 +952,8 @@ Toasts and hints in one place (all also in the level files or in S2.5 and S2.7):
 3. Never colour alone: pressed buttons shrink, the lit light says "GO" with an arrow, big pits have cones, crates carry picture stamps, the drum and tyre have different shapes, done streets have a tick and words, working cogs turn and carry a tick and a name, the two honks have different shapes and words.
 4. Gentle mode: 5 lives on every street and in the hall. No auto-run (Q18); revisit after testing.
 5. No time limits anywhere; the hero waits for the player.
-6. Reduced motion (`prefers-reduced-motion`): no camera ease (it snaps), no wheel spin (the tick and name stay), no crate sway.
+6. Reduced motion (`prefers-reduced-motion`): the well room camera snaps (no ease), no wheel spin (the tick and name stay), no crate sway, no lamp flicker or rope sway in the room. The street camera keeps its ease, on purpose: the street must scroll to be played at all, the 10 percent follow is the smoothest way to do it, and snapping it would make each look switch (S2.2 Camera, rule 2) throw the whole street about 40 percent of the screen in one frame, which is harder to follow and more jarring than the ease.
+8. Screen readers hear the full HUD words at every HUD step (S2.10, "The HUD row").
 7. Hints and toasts never hide anything: they show in the hint bar in the bottom pavement strip, never over kobo, food, crates, hazards, pit lips, the bus, the hero, the buttons or the HUD (S2.2, "The hint bar"). Every level hint is 35 characters or fewer.
 
 ## S2.12 What art must make (for pm)
