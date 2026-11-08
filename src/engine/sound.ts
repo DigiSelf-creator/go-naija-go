@@ -35,7 +35,10 @@ export type SoundName =
   | 'wellDown'
   | 'wellUp'
   | 'roomThump'
-  | 'parcel';
+  | 'parcel'
+  // Slice 2: the rolling drum (K1)
+  | 'drumWake'
+  | 'drumBounce';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -243,6 +246,27 @@ const SOUNDS: Record<SoundName, Recipe> = {
       { f: 587, len: 0.3, wave: 'triangle', peak: 594, to: 587, at: 0.12, vol: 0.06 },
       { f: 294, len: 0.4, wave: 'sine', at: 0.12, vol: 0.03 },
     ],
+  },
+  // Slice 2 (K1). The drum wakes: a low hollow "dum", then a soft rolling rumble (four low
+  // knocks getting quieter, under a low hiss), like an empty drum starting to roll on tar.
+  drumWake: {
+    tones: [
+      { f: 98, len: 0.22, wave: 'sine', peak: 110, to: 82, vol: 0.12 },
+      { f: 196, len: 0.08, wave: 'triangle', to: 150, vol: 0.03 },
+      ...[0, 1, 2, 3].map((i): Tone => ({ f: 72 + (i % 2) * 6, len: 0.07, wave: 'triangle', to: 60, at: 0.16 + i * 0.09, vol: 0.06 - i * 0.012 })),
+    ],
+    hiss: [{ len: 0.45, lp: 380, at: 0.1, vol: 0.05 }],
+  },
+  // Landed on: a deep metal "dong" (a low body note with two bright, out-of-tune metal
+  // partials over it, as an empty drum rings), and a short strike click.
+  drumBounce: {
+    tones: [
+      { f: 147, len: 0.45, wave: 'sine', to: 140, vol: 0.1 },
+      { f: 147 * 2.76, len: 0.3, wave: 'sine', to: 147 * 2.7, vol: 0.035 },
+      { f: 147 * 5.4, len: 0.16, wave: 'sine', to: 147 * 5.3, vol: 0.018 },
+      { f: 220, len: 0.06, wave: 'triangle', to: 160, vol: 0.05 },
+    ],
+    hiss: [{ len: 0.03, hp: 3500, vol: 0.05 }],
   },
 };
 
