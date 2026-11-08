@@ -91,6 +91,7 @@
 }
 .minor[aria-checked='true']::before {
   content: '\2713  ';
+  content: '\2713  ' / ''; /* the tick is a picture: not read out, aria-pressed says it */
   font-weight: bold;
 }
 
@@ -114,6 +115,8 @@
   gap: 16px;
 }
 .builder-main {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -126,6 +129,8 @@
   min-height: 56px;
 }
 .builder-wrap {
+  grid-column: 2;
+  grid-row: 1;
   position: relative;
   min-height: 0;
   display: grid;
@@ -246,6 +251,7 @@
 }
 .chip[aria-pressed='true']::before {
   content: '\2713  ';
+  content: '\2713  ' / ''; /* the tick is a picture: not read out, aria-pressed says it */
 }
 .chip:focus-visible,
 .swatch:focus-visible,
@@ -324,6 +330,7 @@
   }
   .chip[aria-pressed='true']::before {
     content: '\2713';
+    content: '\2713' / '';
     margin-right: 3px;
   }
 }

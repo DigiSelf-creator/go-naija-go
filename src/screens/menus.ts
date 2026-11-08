@@ -301,7 +301,8 @@ export class Menus {
     const card = h(
       'div',
       { class: 'card hero-card', role: 'dialog', 'aria-label': w.heading },
-      h('div', { class: 'builder' }, h('div', { class: 'builder-main' }, preview, start), h('div', { class: 'builder-wrap' }, side, bar)),
+      // Heading and rows come first for screen readers and Tab; the CSS puts them on the right.
+      h('div', { class: 'builder' }, h('div', { class: 'builder-wrap' }, side, bar), h('div', { class: 'builder-main' }, preview, start)),
     );
     this.watchSide(side, bar);
     this.animatePreview(preview);
