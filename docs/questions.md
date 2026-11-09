@@ -1,5 +1,29 @@
 # Open questions for the product owner
 
+## po note, 9 Nov 2026 (read this first): city direction
+
+Accepted: nothing new. docs/city.md is a proposal, not built work.
+po checked city.md against the brief, decisions, the pending lines 7 to 21 and CLAUDE.md, and fixed it in place: no real place name in a "something is wrong" line (line 19, Alausa guard); beggars never in the game at all; no brands on signs or masts; bridges drawn our own way; the lane run is phone sideways and pauses on a call with a "3, 2, 1" restart; more "must not copy" guards for Subway Surfers and for Homescapes and Township; the hall's 150 kobo changes the M4 Win line; kobo is never sold for real money.
+Waiting for Tp: the 10 choices below. Recommendation: the first option in each. Still waiting too: pasting lines 5, 6, the "wrong premise" line and 7 to 21 into docs/decisions.md.
+Blocks: slice 3 only. O, P and the no-sound fix can go on now.
+
+## City direction (9 Nov 2026), waiting for Tp
+
+Full detail: docs/city.md. First option is po's pick.
+
+1. **Make Lagos a city you fix, as home?** a) Yes: the city is home, challenges earn kobo, kobo fixes it, never ends. b) Yes, later, after more streets. c) No, stay a side-view game.
+2. **What first?** a) Finish music and slice 2 polish plus the no-sound fix, while designer writes slice 3. b) Only the sound fix, rest goes to slice 3. c) Stop slice 2, start slice 3.
+3. **May the lane run move by itself?** You said "no auto-run anywhere" (Q18). a) Yes, in the lane run only; it cannot work otherwise. b) No, drop the lane run.
+4. **Lane run setting and name?** a) Running on foot past a go-slow to a bus stop; nothing drives at you; "Lane run" for now. b) Market road on market day. c) New road before it opens.
+5. **Food throws?** a) Only while a throw food works, at problems only, never people; goats fed off the road. b) Throwing all the time, food changes the throw (makes dodging pointless). c) No throws yet.
+6. **How long do foods last?** a) 12 s. b) 10 s. c) 15 s.
+7. **Kobo becomes money you spend on fixes?** a) Yes: any kobo fixes anything, one or two wins per fix, no timers, nothing breaks while away, never sold for real money. b) A fix also needs a win in its own challenge. c) Fixes take real time to finish (leans to paying later).
+8. **Fufu?** a) Fufu and egusi: a fufu ball rolls and plugs potholes, after slice 3. b) Same, in slice 3. c) Fufu is a shield, no throw.
+9. **Art: try Blender?** a) Keep drawing in code; try Blender (free, about 300 to 400 MB) on one city picture as a side test. b) Install now, render the city and lane run. c) No Blender.
+10. **New title line?** a) "Build up Lagos. Get Nigeria working." (po: "development never ends", and no real place called broken). b) "Fix Lagos. Get Nigeria working." (designer; matches the wheel's "Fix Lagos to turn the first cog."). c) Keep "Fix the streets. Get Nigeria working."
+
+If 1 is a): the brief and decisions need new lines. Suggested wording is at the end of docs/city.md ("Lines for Tp"). Only Tp edits those files.
+
 ## po note, 8 Nov 2026, night (read this first): N accepted
 
 Accepted: N (saving, Streets cards, Nigeria's wheel), branch gamedev/s2-n2-progress at 1ab6bca, after qa's N3 retest passed. See "po acceptance, 8 Nov 2026: N2" under Slice 2.

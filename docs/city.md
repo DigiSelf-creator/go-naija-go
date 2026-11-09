@@ -15,7 +15,7 @@ Tp's words (9 Nov 2026), and what they mean for the game:
 | "we can still leave this game as one of the hurdles that you go into and play and win" | The side-view street runner and Go-Slow Hall we built in slice 2 become the first challenges. Nothing built is wasted. |
 | "As long as its a never ending cycle. Development never ends." | The heart of the game. The city grows, new problems come, more of Nigeria opens on the wheel. There is always one more thing to fix, switch on or build. |
 | "I want some of the challenges to have the view & experience like subway surfer" | A new challenge seen from behind the hero: three lanes, swipe to change lane, jump and slide, endless, speed rises. It may play like that kind of game, but everything you see and hear is our own (part 2B). |
-| "like contra … the shooting is constant and the guntype changes the shooting type. So corn will fire corns to obstacles" | Foods that throw things at **problems**, never at people. Corn throws corn, fufu rolls a fufu ball. Goats are fed and shooed off the road, never hit. Beggars are never in the game as targets, ever (CLAUDE.md rule 4). No guns, soldiers or war look. See part 2C and 2D. |
+| "like contra … the shooting is constant and the guntype changes the shooting type. So corn will fire corns to obstacles" | Foods that throw things at **problems**, never at people. Corn throws corn, fufu rolls a fufu ball. Goats are fed and shooed off the road, never hit. Beggars are never in the game at all: not as targets, not as scenery, not as a problem to clear (CLAUDE.md rule 4). No guns, soldiers or war look. See part 2C and 2D. |
 | Phone test: no sound; expected fufu to throw something; power-ups wear off too fast | No sound: a fix comes first, whatever Tp decides (part 4 and choice 2). Fufu gets a throw (2D). Timed foods last 12 seconds instead of 6 or 7 (2D, choice 5). |
 
 ## 1. The core loop
@@ -23,7 +23,7 @@ Tp's words (9 Nov 2026), and what they mean for the game:
 ### The loop in one picture
 
 1. **Look at Lagos.** The city screen shows Lagos. Some spots have a problem: a dark street, a road full of potholes, a jammed junction, a flooded corner.
-2. **Tap a problem.** A card says what is wrong and which challenge helps: "Potholes on Alausa road. Run the street to raise kobo for the repair."
+2. **Tap a problem.** A card says what is wrong and which challenge helps: "Potholes on this road. Run the street to raise kobo for the repair." (A real place name never sits in a line that says something is wrong; see "Words".)
 3. **Play the challenge.** A street run, the hall, or the new lane run. Win and you keep the kobo you picked up, plus a win prize.
 4. **Bring the kobo home.** Back in the city, the kobo counter fills up.
 5. **Fix it.** Tap "Fix it (100 kobo)". The spot changes where you can see it: new tarmac rolls out, lamps switch on, a bus stop is built. A short sound and a little party.
@@ -31,10 +31,10 @@ Tp's words (9 Nov 2026), and what they mean for the game:
 
 ### The city screen
 
-- **What it looks like.** One wide picture of Lagos seen from the side, like our streets but further back, that you slide left and right with a finger (or the arrow keys). Sky, the lagoon and bridges at the back, buildings and roads in the middle, the street at the front. It uses the same drawn style as the streets now. In slice 3 it shows one area (around Ikeja: Alausa, Computer Village, Ikeja). Later areas join on the sides (the island, Ikorodu, Badagry, Epe and more, each name checked with the Q22 rule).
+- **What it looks like.** One wide picture of Lagos seen from the side, like our streets but further back, that you slide left and right with a finger (or the arrow keys). Sky, the lagoon and bridges at the back (drawn our own way, never a real bridge or landmark drawn to look real), buildings and roads in the middle, the street at the front. It uses the same drawn style as the streets now. In slice 3 it shows one area (around Ikeja: Alausa, Computer Village, Ikeja). Later areas join on the sides (the island, Ikorodu, Badagry, Epe and more, each name checked with the Q22 rule).
 - **Problem pins.** A problem shows as a round sign floating over its spot, with an icon and a short word under it ("Potholes", "Lights out", "Go-slow", "Flood"). Never colour alone: icon, word and a gentle bob up and down.
 - **States of a spot.** Each spot has three looks: *problem* (pin showing), *ready to fix* (you have enough kobo; the pin gets a tick-in-a-circle badge and the word "Ready"), *fixed* (the new look, no pin, a small star of sparkle once).
-- **Kobo counter** at the top: "Kobo 240". Next to it the people counter: "Lagos: 1,200 new people" which goes up as you fix things (a happy number, never a worry).
+- **Kobo counter** at the top: "Kobo 240". Under the heading, a small line of words (no people icon, no cap): "Lagos: 1,200 new people", which goes up as you fix things (a happy number, never a worry, never a limit you must build homes to raise).
 - **Buttons** (each at least 44 px): "Nigeria's wheel", "Hero", "Settings" (sound, music, gentle mode). Pause is not needed on the city screen: nothing moves against you there.
 - **Nothing ever goes wrong on its own.** A fixed spot never breaks again on a timer. There are no energy bars, no waiting clocks, no "come back in 4 hours". New problems come because the city grows, not because the player was away. This keeps it kind, offline, and with nothing to buy (brief: no payments in version 1).
 
@@ -45,8 +45,8 @@ Three kinds of change, and the words players see say only these (never "conquer"
 | Word | When | Example of the visible change |
 |---|---|---|
 | **Fix** | Something broken is repaired | Potholes filled, fresh tarmac and lane paint; a broken drain cleared |
-| **Switch on** | Power or light comes back | Street lamps and shop signs light up, a transformer hums, Computer Village signs glow |
-| **Build** | Something new the growing city needs | A new bus stop and more yellow buses, a footbridge, a bigger drain, a phone mast, a ferry jetty |
+| **Switch on** | Power or light comes back | Street lamps and shop signs light up, a transformer hums, Computer Village signs glow (made-up shop words, never a brand) |
+| **Build** | Something new the growing city needs | A new bus stop and more yellow buses, a footbridge, a bigger drain, a phone mast (no network's name or colours), a ferry jetty |
 
 A bigger spot can take two or three steps (fix, then switch on, then build), each with its own change, so the same corner keeps getting better.
 
@@ -85,6 +85,7 @@ Any kobo can pay for any fix: the kobo is the city's purse. The pin only says wh
 
 - Arrivals are good news. "More people are coming to Lagos! The city needs a new bus stop." Never "too many people", "crowded with outsiders", or any line that blames newcomers, a group, a job, a region or an accent. The problem is always the thing (not enough buses), never the people.
 - No area is shown as dirty, dangerous or behind. Every area has the same kinds of problems and ends proud (Q22 rule 4).
+- Real place names go only in challenge names ("Run Alausa") and in praise. A line that says something is wrong uses "here" or "this road", never the place name (decision line 19, waiting to be pasted: "no place shown as broken or to blame"). This matters most for Alausa, the seat of the state government: no line may read as a dig at it (design S2.6 "Alausa, two checks").
 - No real people, officials, governors, parties, party colours or government buildings anywhere in the city (CLAUDE.md rule 3; the Alausa guards in design S2.6 stay).
 - The player is a worker who gets things working. No mayor, no chairman, no "boss of the city".
 
@@ -95,12 +96,17 @@ Any kobo can pay for any fix: the kobo is the city's purse. The pin only says wh
 - Streets 1 to 3 (Alausa, Computer Village, Ikeja) and Go-Slow Hall stay exactly as built and accepted in slice 2: walk, run, jump, crates, the well and the parcel, the bus at the end, the hall fight.
 - What changes: you reach them from a pin on the city screen instead of only the Streets list, and the end card has one new big button, "Take the kobo home". The Streets list stays as a plain list of every challenge (also good for screen readers).
 - "Lagos is switched on!" after the hall becomes the hall's fix: the junction's traffic lights switch on in the city picture.
+- The hall now pays 150 kobo for a win, so po's M4 ruling (no kobo on the hall Win line) changes when the city is built: the Win line becomes "You cleared General Go-Slow with {lives} lives left. You got 150 kobo for Lagos."
 
 ### 2B. The lane run (new, seen from behind)
 
 Working name: **Lane run**. (Tp can name it; see choice 3.)
 
-**The idea.** The camera sits behind the hero, a little above. The road runs away to the horizon. Three lanes. You run forward by yourself and the speed slowly rises. Things come towards you down the lanes; you change lane, jump or slide to get past them.
+**The idea.** The camera sits behind the hero, a little above. The road runs away to the horizon. Three lanes. You run forward by yourself and the speed slowly rises.
+
+**Runs by itself: needs Tp's yes.** Tp confirmed "no auto-run anywhere" on 8 Nov (Q18, decision line 17, waiting to be pasted). The lane run cannot work without it, so it would be the one exception. Street runs and halls keep "no auto-run". This is a choice for Tp in docs/questions.md.
+
+**Phone sideways, like every other screen.** The lane run plays with the phone sideways, the same as the streets, so nobody turns the phone between challenges. Holding the phone upright shows "Turn your phone sideways to play." and pauses, as now (design S2.10). It also pauses by itself when a call comes in, the app is switched or the tab is hidden, and every finger is let go (design S2.2). After a pause, play starts again with a short "3, 2, 1" so nothing hits you the moment you come back. Things come towards you down the lanes; you change lane, jump or slide to get past them.
 
 **Controls.**
 - Swipe left or right: change lane. Swipe up: jump. Swipe down: slide (duck low, a short skid on the ground).
@@ -119,7 +125,7 @@ Things in the lanes:
 | Parked okada, kickstand down | Change lane or jump | No rider on it |
 | Row of road cones | Jump | Orange and white |
 | Pothole | Jump | Same pothole idea as the streets, seen from above-behind |
-| Barrier arm across the lane | Slide under | A plain striped pole on a post |
+| Barrier arm across the lane | Slide under | A car-park arm on one post, yellow and black, our own drawing. Never a red-and-white rail barrier on two legs |
 | Low market umbrella or bunting line | Slide under | Bright cloth, our own patterns |
 | Wheelbarrow of yams left in the lane | Jump or change lane | A proud market sight, not litter |
 | Goat crossing | Change lane, or jump; corn feeds it off the road (2C) | Never hurt, never a target |
@@ -144,19 +150,21 @@ People stand on the pavements as scenery only (market traders at their stalls, p
 2. No chasing guard, inspector, police or dog, and nobody chasing the hero at all. Nothing behind you; the danger is only ahead.
 3. No graffiti, spray cans, tagging or "street art crew" theme, and no graffiti-style lettering anywhere.
 4. No hoverboard, skateboard, jetpack, pogo stick, super sneakers or any ride that saves you from a crash. Our saving power is the garri shield.
-5. No coin magnet look (no horseshoe magnet), no "mystery box", no score multiplier pickups, no letter-collecting hunt, no keys to continue.
-6. No characters, outfits, colours, fonts, logos, menu layouts, icons, music or sounds from any of those games.
-7. No turning corners on a path over a cliff and no monster chase (Temple Run).
-8. Our own: the hero you built, Lagos roads, danfo, keke, okada, cones, market umbrellas, a bus stop goal, Nigerian foods, our own highlife tunes and our own sounds.
+5. No coin magnet look (no horseshoe magnet), no "mystery box", no score multiplier pickups, no letter-collecting hunt, no keys to continue, no daily missions, streaks or login prizes.
+6. No "stumble once, caught the second time" rule. We use lives and the 1.7 s blink, as on our streets.
+7. Phone sideways, never an upright screen like theirs.
+8. No characters, outfits, colours, fonts, logos, menu layouts, icons, music or sounds from any of those games.
+9. No turning corners on a path over a cliff and no monster chase (Temple Run).
+10. Our own: the hero you built, Lagos roads, danfo, keke, okada, cones, market umbrellas, a bus stop goal, Nigerian foods, our own highlife tunes and our own sounds.
 
 ### 2C. Food throws at problems ("problems, not people")
 
-Tp's idea: like an old shooting game, things fly out all the time and the food you ate changes what flies. We keep the fun and drop the war:
+Tp's idea: like an old shooting game, things fly out all the time and the food you ate changes what flies. We keep the fun and drop the war. Recommended: throws happen only while a throw food is working (12 s), not all the time, so dodging stays the game (choice 4 for Tp):
 
 - **No guns, no bullets, no soldiers, no army look, no "spread gun" or any name from Contra.** The hero tosses food bits by hand, like a friendly throw.
 - **Targets are problems only:** potholes (plugged), cones (knocked aside, they slide to the roadside), smoke and exhaust puffs (popped), broken or dark street lamps (switched on with a "ping"), blocked drain covers (cleared), litter bags (knocked into a bin), barrier arms (lifted).
 - **Never targets:** people of any kind (beggars, traders, hawkers, drivers, riders, police, anyone), animals, faith places, homes. The aim never even turns towards a person.
-- **Goats:** corn never hits a goat. When a goat is near, the corn lands on the roadside in front of it and the goat trots off the road after the snack, happy. Shooing, feeding, never hurting. Tp's "fire corns to the goat" becomes "feed the goat off the road".
+- **Goats:** corn never hits a goat. When a goat is near, the corn lands on the roadside in front of it and the goat trots off the road after the snack, happy. Shooing, feeding, never hurting. Tp's idea of firing corn at the goat becomes "feed the goat off the road".
 - **How it fires:** while a throw food is active, the hero throws on their own, about two times a second, at the nearest problem ahead in their lane. Nothing to aim, so the one-hand control stays simple. Each thing hit gives +2 kobo.
 - **Where:** as a food power in the lane run and in the street runs (recommended). A whole challenge built on it ("Clean-up run") can come later (choice 4).
 - The throws are small food bits: corn kernels, a rolling fufu ball. No flames, no fire, no explosions. The word "fireball" is never used, and no ball bounces along in arcs (that is a famous plumber game's fire flower; R8).
@@ -206,7 +214,7 @@ Today all our art and sound are drawn and made in code, so they cost almost noth
 | Streets 1 to 3, crates, well, garri parcel | Keep | They become the street-run challenges behind city pins |
 | Go-Slow Hall | Keep | The first boss challenge; its win fixes the junction in the city. P2's hall tuning still needed |
 | Walk, run, jump controls | Keep | For side-view challenges. The lane run has its own swipe controls |
-| Kobo | Change | Kobo were only a score. Now they are the city's purse and are spent on fixes. Saved on the phone |
+| Kobo | Change | Kobo were only a score. Now they are the city's purse and are spent on fixes. Saved on the phone. "Best: {n} kobo" on a challenge card stays a record of the best run and is never spent. Kobo is never sold for real money |
 | Food lengths (corn 6 s, amala 7 s) | Change | 12 s each; corn also tosses corn |
 | Nigeria's wheel, 37 cogs | Keep | Still the big progress picture; a cog turns when a state reaches its first big mark |
 | Fixed street look (lamps, bunting, road paint) | Keep, reuse | It is exactly a city "after" look; reuse it for the city spots |
@@ -216,7 +224,7 @@ Today all our art and sound are drawn and made in code, so they cost almost noth
 | Save `gidi-progress` | Keep, add | Add a `city` part under each state (merge, never overwrite, as now) |
 | Music tunes (O1) | Keep | Add a calm city tune and a lane-run tune later |
 | Gentle mode 5 lives | Keep | Also halves the lane run's speed rise |
-| Title words "Fix the streets. Get Nigeria working." | Change slightly | "Fix Lagos. Get Nigeria working." if Tp agrees |
+| Title words "Fix the streets. Get Nigeria working." | Change slightly | designer: "Fix Lagos. Get Nigeria working."; po: "Build up Lagos. Get Nigeria working." (Tp picks, see docs/questions.md) |
 | Brief's "one-tap runner", "Worlds" list, "a level is 60 to 120 s" | Change (Tp only) | Tp edits the brief if this is approved; see "Lines for Tp" at the end |
 | Nothing | Drop | No built feature is thrown away |
 
@@ -252,17 +260,17 @@ Opening order: pin 1 first, then pin 2, then pin 3 (one new thing at a time). Af
 | Screen | Who sees it | One job | Words |
 |---|---|---|---|
 | City | Anyone who taps "Play" | Pick a problem to fix | Heading "Lagos". "Kobo {n}". "Lagos: {n} new people". Pins with one word each. Buttons "Nigeria's wheel", "Hero", "Settings" |
-| Problem card | A player who taps a pin | Say what is wrong and how to help | "Potholes on Alausa road." "Run the street to raise kobo for the repair." Big button "Run Alausa" (or "Fix it ({cost} kobo)" when you have enough). Small "Back" |
+| Problem card | A player who taps a pin | Say what is wrong and how to help | "Potholes on this road." "Run the street to raise kobo for the repair." Big button "Run Alausa" (or "Fix it ({cost} kobo)" when you have enough). Small "Back" |
 | Fixed! | A player who paid for a fix | Celebrate the change | "Fixed!" (or "Switched on!" or "Built!") "{n} more people are coming to Lagos." Button "Back to Lagos" |
 | Lane run end | A player who reached the goal or ran out of lives | Bring kobo home | Goal reached: "You made it to the bus stop! You got {kobo} kobo." Big "Take the kobo home", small "Keep running". Out of lives before the goal: "Out of lives. You keep {half} kobo. Try again!" Big "Play again", small "Take the kobo home" |
 | Pause (lane run) | A player who paused | Get back to playing | "Paused". "Keep playing", "Start again", "Back to Lagos". Sound and Music switches |
 
-Accessibility for all of it: every button at least 44 px (in-play at least 56), sound and music switches on every pause and on Settings, no meaning by colour alone (icon, word, shape), gentle mode, the "Buttons instead of swipes" setting, screen readers hear each pin as "Potholes on Alausa road, problem" or "Alausa road, fixed", reduced motion keeps the city still.
+Accessibility for all of it: every button at least 44 px (in-play at least 56), sound and music switches on every pause and on Settings, no meaning by colour alone (icon, word, shape), gentle mode, the "Buttons instead of swipes" setting, screen readers hear each pin as "Potholes, problem" or "New road, done", reduced motion keeps the city still.
 
 ## 6. Original only: the check list for every new piece
 
 On top of design R8 and part 2B's "must NOT copy" list:
-1. From Homescapes, Township and Wordscapes: the loop only. No butler or helper character, no match-3 board, no letter wheel, no star currency, no farm, no their screens, fonts or sounds.
+1. From Homescapes, Township and Wordscapes: the loop only. No butler or helper character, no match-3 board, no letter wheel, no star currency, no farm, no screens, fonts or sounds of theirs. Also: no task list down the side with a cost on each task, no "pick one of three styles" for a fix, no top-down tilted town, no population cap or houses to raise it, no crops, no trains or zeppelins, no area locked behind a paid key.
 2. From Contra: no guns, soldiers, military look, aliens, weapon letters or names, no Konami code.
 3. From Mario and every Nintendo game: everything in R8, plus no bouncing fireballs and no fire flower.
 4. From Subway Surfers and Temple Run: part 2B's list.
@@ -270,7 +278,7 @@ On top of design R8 and part 2B's "must NOT copy" list:
 
 ## 7. Open choices for Tp
 
-Each has a recommended answer (first) and other options. po passes these on in docs/questions.md if Tp asks for that.
+Each has a recommended answer (first) and other options. po has put these to Tp in docs/questions.md, "City direction (9 Nov 2026)", with two changes: the kobo spending point joins choice 7, and po adds the lane run's auto-run and the title line.
 
 **Choice 1. Do we change the game's shape to the city loop?**
 - **a (recommended):** Yes, as written here: a Lagos city screen is the home, challenges earn kobo, kobo fixes the city, and it never ends.
@@ -288,8 +296,8 @@ Each has a recommended answer (first) and other options. po passes these on in d
 - c: A brand-new road before it opens (cones, barriers, road works; no traffic).
 
 **Choice 4. The food throws (Tp's "Contra" idea).**
-- **a (recommended):** As food powers (corn toss, fufu roll) in the lane run and the street runs. Problems only; goats fed off the road; no people ever.
-- b: Also a challenge of its own later ("Clean-up run": throw all the way, clear the street of problems).
+- **a (recommended):** As food powers (corn toss, fufu roll) in the lane run and the street runs, throwing only while the food works. Problems only; goats fed off the road; no people ever. A "Clean-up run" challenge built on throwing can come later.
+- b: Throwing all the time, as Tp first said; the food only changes what flies. (po: the throws would clear the road for you, so dodging stops mattering, and more things on screen is harder on a cheap phone.)
 - c: Leave throwing out for now.
 
 **Choice 5. How long timed foods last.**
@@ -316,6 +324,6 @@ Each has a recommended answer (first) and other options. po passes these on in d
 
 These are suggestions for Tp to put in docs/brief.md and docs/decisions.md. No agent edits those files.
 1. The idea in one line: "A free game where you build up Lagos, then all of Nigeria: play short street challenges, earn kobo, and spend it to fix, switch on and build the city. Development never ends."
-2. How it plays: the city screen is home. Challenges are the side-view street run, the boss halls, and a lane run seen from behind. The "one-tap runner" line and "a level is 60 to 120 s" apply to the street run only.
+2. How it plays: the city screen is home. Challenges are the side-view street run, the boss halls, and a lane run seen from behind. "A level is 60 to 120 s" applies to the street run only. The lane run is the one challenge where the hero runs by itself (an exception to decision line 17); street runs and halls keep line 8's controls.
 3. Food powers last 12 seconds. Corn tosses corn and fufu rolls fufu at problems, never at people; goats are fed off the road, never hurt.
 4. Worlds become states on Nigeria's wheel, each with its own city screen, Lagos first.
