@@ -27,7 +27,7 @@ async function touch(cdp: CDPSession, type: 'touchStart' | 'touchEnd', x = 500, 
 
 /**
  * C: the pause screen (design.md Screens: Pause). First proves a tap outside its buttons does
- * nothing (still paused, hero frozen), then taps "Keep running" and reads the hero the instant
+ * nothing (still paused, hero frozen), then taps "Keep playing" and reads the hero the instant
  * the game has handled that tap (before any frame can step).
  */
 async function keepRunningAndRead(page: Page): Promise<{ vy: number; paused: boolean }> {
@@ -53,7 +53,7 @@ async function keepRunningAndRead(page: Page): Promise<{ vy: number; paused: boo
       { once: true },
     );
   });
-  await pauseCard.getByRole('button', { name: 'Keep running' }).tap();
+  await pauseCard.getByRole('button', { name: 'Keep playing' }).tap();
   await expect(pauseCard).toBeHidden();
   return page.evaluate(() => (window as unknown as { __afterTap: { vy: number; paused: boolean } }).__afterTap);
 }
@@ -170,7 +170,7 @@ test('switching apps mid-jump: pauses in the air, comes back to the same spot', 
   expect(back.grounded).toBe(false);
   expect(back.y).toBeLessThan(300);
   expect(back.x).toBeGreaterThanOrEqual(before.x);
-  // C: only "Keep running" ends the pause, and it does not jump; the hero carries on the same arc.
+  // C: only "Keep playing" ends the pause, and it does not jump; the hero carries on the same arc.
   const resumed = await keepRunningAndRead(page);
   expect(resumed.paused).toBe(false);
   expect(resumed.vy).toBe(frozen.vy);
@@ -178,7 +178,7 @@ test('switching apps mid-jump: pauses in the air, comes back to the same spot', 
   expect((await hero(page)).y).toBe(300);
 });
 
-test('turning the phone upright mid-jump pauses; turning back and Keep running carries on', async ({ page }) => {
+test('turning the phone upright mid-jump pauses; turning back and Keep playing carries on', async ({ page }) => {
   await ready(page);
   const vp = page.viewportSize()!;
   await midJump(page);
@@ -205,7 +205,7 @@ test('turning the phone upright mid-jump pauses; turning back and Keep running c
   expect(canvas.cw).toBe(vp.width);
   expect(canvas.ch).toBe(vp.height);
   expect(canvas.w).toBe(Math.round(vp.width * 2));
-  // C: once sideways the pause screen shows; "Keep running" carries on without a jump.
+  // C: once sideways the pause screen shows; "Keep playing" carries on without a jump.
   const resumed = await keepRunningAndRead(page);
   expect(resumed.paused).toBe(false);
   expect(resumed.vy).toBe(frozen.vy);
@@ -300,7 +300,7 @@ test('no network requests after the first load', async ({ page, context }) => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
   });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS); // design: Pause ignores taps for its first 0.4 s
-  await page.getByRole('button', { name: 'Keep running' }).tap();
+  await page.getByRole('button', { name: 'Keep playing' }).tap();
   await page.touchscreen.tap(500, 150);
   await page.waitForTimeout(1000);
   expect(await paused(page)).toBe(false);

@@ -15,12 +15,14 @@ import { STEPS_PER_SECOND, type RunPhase } from './game/run';
 import { parseRoom } from './game/well';
 import { WELL } from './art/well';
 import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
-import { WELL_UP_KEYS } from './engine/input';
+import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
+import { LAGOS, Progress, anyDone, switchedOn } from './game/progress';
 import { TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
 import { Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
-import { Menus, isSecondTap, type MenuScreen, type TapPoint } from './screens/menus';
+import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
+import type { Where } from './screens/streets';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
 
@@ -64,23 +66,20 @@ if (query.has('gallery')) {
 
 function startGame(): void {
   const store = createStore();
+  /** S2.8: streets done, best kobo, the saved parcel and the hall, under gidi-progress. */
+  const progress = new Progress(store);
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
   // `theme`, then Go-Slow Hall (S2.7, lagos-hall.json). ?level=lagos-2, lagos-3 or lagos-hall
-  // starts there (for testing).
+  // makes "Play" start there (for testing).
   const hall = parseLevel(hallData);
   const streets: readonly Level[] = [street1Data, street2Data, street3Data].map((d) => parseLevel(d));
   const asked = new URLSearchParams(location.search).get('level');
-  const firstStreet: number | 'hall' = asked === hall.id ? 'hall' : Math.max(0, streets.findIndex((l) => l.id === asked));
+  const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
+  const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
-  let where: number | 'hall' = firstStreet;
-  const levelOf = (w: number | 'hall'): Level => (w === 'hall' ? hall : streets[w]!);
+  let where: Where = firstStreet;
+  const levelOf = (w: Where): Level => (w === 'hall' ? hall : streets[w]!);
   const startLevel = levelOf(firstStreet);
-  /**
-   * S2.5 gift rules 4 and 5: a street finished while carrying the garri parcel keeps it for
-   * Lagos, and every hall try then starts with the shield on. Saving it on the phone is N2's
-   * (gidi-progress); until then it lasts while the page is open.
-   */
-  let parcelForHall = false;
   const game = new Game(startLevel);
   // Well rooms by file id (S2.5); both Lagos wells use lagos-well.
   const room = parseRoom(wellRoomData);
@@ -126,12 +125,11 @@ function startGame(): void {
   // Pause when the tab is hidden or the phone turns upright (the "turn sideways" note shows).
   const portrait = window.matchMedia('(orientation: portrait)');
 
-  /** The street, the well and its room, or the hall fight is being played (not game over or won). */
-  const PLAY_PHASES: ReadonlySet<RunPhase> = new Set(['run', 'arena', 'wellDown', 'roomIn', 'room', 'wellUp']);
-  const inPlay = (): boolean => PLAY_PHASES.has(game.run.phase);
+  /** The street, the well and its room, or the hall fight is being played (not a finish, game over or won). */
+  const inPlay = (): boolean => game.run.inPlay;
 
   /** Pause the run and show the pause screen (button, app switch, or phone upright). */
-  function pause(by?: MouseEvent): void {
+  function pause(): void {
     if (!playing || game.paused || !inPlay()) return;
     loop.pause();
     game.paused = true;
@@ -139,7 +137,7 @@ function startGame(): void {
     controls.releaseAll();
     game.release();
     game.steer(0);
-    menus.show('pause', by);
+    menus.show('pause');
   }
   function resume(): void {
     if (!playing || document.hidden || portrait.matches) return;
@@ -148,8 +146,9 @@ function startGame(): void {
     loop.resume();
   }
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
-  function startRun(at: TapPoint | null, to: number | 'hall' = where): void {
+  function startRun(at: TapPoint | null, to: Where = where): void {
     where = to;
+    const lagos = progress.state(LAGOS);
     startTap = at ? { ...at, t: performance.now() } : null;
     menus.show(null);
     toast.hide();
@@ -157,13 +156,18 @@ function startGame(): void {
     document.body.classList.add('playing');
     controls.releaseAll();
     // The hall's start words come from the run's first step ('hallStart', 'parcelShield').
-    game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: parcelForHall } : {});
+    // S2.5 gift rules 5 and 6: with a saved parcel every hall try starts with the shield on, and
+    // well rooms show 5 kobo instead of a second parcel.
+    game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: lagos.parcel } : { parcelSaved: lagos.parcel });
+    // S2.8: once Lagos is switched on its streets show their fixed look.
+    game.fixed = where !== 'hall' && switchedOn(lagos);
     hud.show(true);
     buttons.show(true, game.level.manual);
     loop.resume();
     if (portrait.matches || document.hidden) pause();
   }
-  function goHome(): void {
+  /** Leaves the run (saving nothing from it) for the title, Streets or Nigeria's wheel. */
+  function leave(to: LeaveTo): void {
     playing = false;
     document.body.classList.remove('playing');
     hud.show(false);
@@ -172,29 +176,53 @@ function startGame(): void {
     loop.pause();
     controls.releaseAll();
     where = firstStreet;
+    game.fixed = false;
     game.reset(startLevel);
-    menus.show('title');
+    if (to === 'wheel') {
+      menus.showWheel('streets');
+      // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
+      sound.play('cogRatchet');
+      window.setTimeout(() => sound.play('cogBell'), 320);
+    } else menus.show(to);
   }
 
   const menus = new Menus(document.body, store, game.look, {
-    // The title always starts at street 1 for now (saved progress comes in piece N2).
-    start: (at) => startRun(at, firstStreet),
+    // S2.10 flow: "Play" goes straight into street 1 until a street is done, then to Streets.
+    start: (at) => {
+      if (askedAt === null && anyDone(progress.state(LAGOS))) menus.show('streets');
+      else startRun(at, firstStreet);
+    },
+    play: (to, at) => startRun(at, to),
     restart: (at) => startRun(at),
     next: (at) => startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall'),
     resume,
-    home: goHome,
+    leave,
     lookChanged: (look) => {
       game.look = look;
     },
+    soundChanged: (on) => {
+      sound.enabled = on;
+    },
+    progress: () => ({
+      lagos: progress.state(LAGOS),
+      names: streets.map((l) => l.name),
+      themes: streets.map((l) => l.theme),
+      working: progress.working(),
+    }),
+    playSound: (name) => sound.play(name),
+    stillWanted: () => reduceMotion.matches,
   });
   const hud = new Hud(document.body, {
-    pause: (e) => pause(e),
+    pause: () => pause(),
     toggleSound: () => {
       sound.enabled = menus.toggleSound();
       hud.update(game.run, sound.enabled);
     },
   });
   const toast = new Toast(document.body);
+  // po M4 bug 2: in the hall the chips stay left of the hit circles (drawn 32 u each side of the
+  // middle, at the top; see drawHitCounter).
+  hud.limit = () => (game.run.inHall ? window.innerWidth / 2 - (34 * canvas.getBoundingClientRect().width) / view.width : Infinity);
 
   /** Go down at an entrance well, or Go up the room's rope (S2.5): the controls lock. */
   function useWell(kind: WellButtonKind): void {
@@ -337,8 +365,14 @@ function startGame(): void {
         controls.releaseAll();
         loop.pause();
         toast.hide();
-        if (game.run.parcel) parcelForHall = true;
-        menus.showCleared({ name: game.level.name, kobo: game.run.kobo, last: typeof where === 'number' && where + 1 >= streets.length });
+        // S2.8: saved only now, when the bus is boarded (with the parcel, if carried).
+        if (typeof where === 'number') progress.finish({ state: LAGOS, street: where + 1, kobo: game.run.kobo, parcel: game.run.parcel });
+        menus.showCleared({
+          name: game.level.name,
+          kobo: game.run.kobo,
+          last: typeof where === 'number' && where + 1 >= streets.length,
+          parcel: game.run.parcel,
+        });
         break;
       case 'bossThrow':
         if (e.kind === 'honk') sound.play('honk');
@@ -353,6 +387,11 @@ function startGame(): void {
         if (e.highHonks) toast.show(W.highHonks, HINT_MS);
         break;
       case 'bossDefeat':
+        // S2.8: the hall is won at the third hit. Saved now, so leaving or reloading during the
+        // 6 s kind finish never loses it (qa N3). The same save uses the garri parcel up (po ruling
+        // d). 'win' saves the same again (merge, never lower).
+        progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo });
+        break;
       case 'dust':
         break;
       case 'hallClear':
@@ -369,6 +408,8 @@ function startGame(): void {
         controls.releaseAll();
         loop.pause();
         toast.hide();
+        // S2.8: the hall is won, so Lagos is switched on and its cog turns.
+        progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo });
         menus.showWin({ kobo: game.run.kobo, lives: game.run.lives });
         break;
     }
@@ -383,6 +424,17 @@ function startGame(): void {
   };
   portrait.addEventListener('change', checkUpright);
   window.addEventListener('resize', checkUpright);
+
+  // S2.2 Keys: P and Escape pause in play (the streets, the well room and the hall) and resume
+  // from Pause. They do nothing in the finish or on any other card. On the wheel's list,
+  // Escape closes the list (menus.ts).
+  window.addEventListener('keydown', (e) => {
+    const act = pauseKeyAction(e.code, e.repeat, menus.current, playing && !game.paused && inPlay());
+    if (!act) return;
+    e.preventDefault();
+    if (act === 'pause') pause();
+    else resume();
+  });
 
   // Sound may start only after the player's first tap or key.
   const unlock = (): void => sound.unlock();
@@ -530,6 +582,9 @@ function startGame(): void {
     },
     get toast() {
       return toast.text;
+    },
+    get fixedLook() {
+      return game.fixed;
     },
     get boss() {
       const b = game.run.boss;
@@ -776,6 +831,8 @@ declare global {
       /** The Go down / Go up button on screen now (CSS px), or null. */
       readonly wellButton: { readonly kind: 'down' | 'up'; readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       readonly toast: string;
+      /** The street shows its fixed look (Lagos switched on, S2.8). */
+      readonly fixedLook: boolean;
       /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
       readonly hintBar: {
         readonly words: string;

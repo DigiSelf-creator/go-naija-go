@@ -29,11 +29,13 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
   await page.goto('./');
   expect(await lines(page, '.screen .card')).toEqual([
     'Gbese!',
-    'Run your street. Clear the jam.',
+    'Fix the streets. Get Nigeria working.',
     'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
     'Make your hero',
+    "Nigeria's wheel",
     'Credits',
     'Sound: on',
+    'Music: on',
     'Gentle mode: 5 lives instead of 3',
   ]);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
@@ -73,17 +75,19 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
   const colours = await page.$$eval('[data-part="skin"]', (els) => els.map((e) => getComputedStyle(e).backgroundColor));
   expect(colours).toEqual(['rgb(241, 201, 165)', 'rgb(217, 161, 114)', 'rgb(168, 105, 63)', 'rgb(122, 74, 42)', 'rgb(75, 44, 26)']);
 
-  // With a saved hero, the title says "Start running" and offers "Change hero".
+  // With a saved hero, the title says "Play" and offers "Change hero".
   await d.getByRole('button', { name: 'Start running' }).tap();
   await page.reload();
   expect(await lines(page, '.screen .card')).toEqual([
     'Gbese!',
-    'Run your street. Clear the jam.',
+    'Fix the streets. Get Nigeria working.',
     'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
-    'Start running',
+    'Play',
     'Change hero',
+    "Nigeria's wheel",
     'Credits',
     'Sound: on',
+    'Music: on',
     'Gentle mode: 5 lives instead of 3',
   ]);
 });
@@ -420,7 +424,7 @@ test('broken saves on the phone never break the game', async ({ page }) => {
     ['null', 'Make your hero'],
     ['[1,2,3]', 'Make your hero'],
     ['{"skin":"x","hair":0,"outfit":0}', 'Make your hero'],
-    ['{"skin":99,"hair":-1,"outfit":2}', 'Start running'],
+    ['{"skin":99,"hair":-1,"outfit":2}', 'Play'],
   ] as const) {
     await page.goto('./');
     await page.evaluate((v) => localStorage.setItem('gidi-look', v), raw);

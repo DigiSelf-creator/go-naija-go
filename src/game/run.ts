@@ -284,6 +284,16 @@ export class Run {
     return this.steps / STEPS_PER_SECOND;
   }
 
+  /**
+   * The street, the well and its room, or the hall fight is being played: Pause (button, P,
+   * Escape, app switch, phone upright) can open. Not in the bus finish, nor in the hall's kind
+   * finish after the third hit (po M4: they do nothing in the finish), nor on any end card.
+   */
+  get inPlay(): boolean {
+    if (this.phase === 'arena') return !this.boss?.defeated;
+    return this.phase === 'run' || this.phase === 'wellDown' || this.phase === 'roomIn' || this.phase === 'room' || this.phase === 'wellUp';
+  }
+
   press(by: PressSource = 'tap'): ReturnType<typeof press> {
     if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches the finish
     if (this.phase !== 'run' && this.phase !== 'arena' && this.phase !== 'room') return null;

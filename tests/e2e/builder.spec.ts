@@ -29,15 +29,15 @@ async function pickLook(page: Page): Promise<void> {
 test('pick a look, reload: the same look comes back', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('./');
-  await expect(page.getByText('Run your street. Clear the jam.')).toBeVisible();
+  await expect(page.getByText('Fix the streets. Get Nigeria working.')).toBeVisible();
   await pickLook(page);
   expect(await page.evaluate(() => localStorage.getItem('gidi-look'))).toBe('{"skin":3,"hair":1,"outfit":4,"body":0,"age":1}');
   await page.getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
 
   await page.reload();
-  // A saved hero: the title goes straight to Start running, with Change hero beside it.
-  await expect(page.getByRole('button', { name: 'Start running' })).toBeVisible();
+  // A saved hero: the title shows Play, with Change hero beside it.
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Make your hero' })).toHaveCount(0);
   expect(await look(page)).toEqual({ skin: 3, hair: 1, outfit: 4, body: 0, age: 1 });
   await page.getByRole('button', { name: 'Change hero' }).tap();
@@ -98,7 +98,7 @@ test('credits, sound and gentle mode on the title screen', async ({ page }) => {
   await page.getByRole('button', { name: 'Credits' }).tap();
   const credits = page.getByRole('dialog', { name: 'Credits' });
   await expect(credits.getByText('Made by CoachNaz.')).toBeVisible();
-  await expect(credits.getByText('Every picture and sound is our own.')).toBeVisible();
+  await expect(credits.getByText('Every picture, sound and tune is our own.')).toBeVisible();
   await expect(credits.getByText(/wrong premise/)).toHaveCount(0);
   await credits.getByRole('button', { name: 'Back' }).tap();
 
@@ -132,11 +132,11 @@ test('the builder works with the phone upright', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.__game!.paused)).toBe(true);
 });
 
-test('a fast double tap on "Start running" does not jump; a tap elsewhere right away does', async ({ page }) => {
+test('a fast double tap on "Play" does not jump; a tap elsewhere right away does', async ({ page }) => {
   await page.goto('./');
   await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":1,"hair":1,"outfit":1,"body":0,"age":1}'));
   await page.reload();
-  const box = (await page.getByRole('button', { name: 'Start running' }).boundingBox())!;
+  const box = (await page.getByRole('button', { name: 'Play', exact: true }).boundingBox())!;
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
   await page.touchscreen.tap(x, y);
@@ -160,7 +160,7 @@ test('a fast double tap on "Start running" does not jump; a tap elsewhere right 
 
   // A quick tap far from the button is a real jump, even straight after starting.
   await page.reload();
-  await page.getByRole('button', { name: 'Start running' }).tap();
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
   await page.touchscreen.tap(700, 60);
   await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { intervals: [16] }).toBe(false);
 });

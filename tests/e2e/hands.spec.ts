@@ -111,7 +111,7 @@ test('street 1 by hand with two thumbs: walk, run, potholes, the big pit by a ru
   await expect(cleared).toBeVisible({ timeout: 5000 });
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
   expect(kobo).toBeGreaterThanOrEqual(last.r.kobo);
-  await expect(cleared.getByText(`Your street is fixed. You got ${kobo} kobo.`)).toBeVisible();
+  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${kobo} kobo.`)).toBeVisible();
   await waitOutTapLock(page);
   await cleared.getByRole('button', { name: 'Next street' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-2');
@@ -203,7 +203,7 @@ test('a pause never leaves the hero moving: app switch while running, then a thu
   expect((await snap(page)).i.dir).toBe(0); // let go of everything
   await setHidden(page, false);
   await waitOutTapLock(page);
-  await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Keep running' }).click();
+  await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Keep playing' }).click();
   // The hero slows to a stop at the normal rate and stays stopped, thumb or no thumb.
   await page.waitForTimeout(400);
   const a = await hero(page);
@@ -217,7 +217,7 @@ test('a pause never leaves the hero moving: app switch while running, then a thu
   await h.upAll();
 });
 
-test('turning the phone upright while running lets go; turning back and Keep running: the hero stands still', async ({ page }) => {
+test('turning the phone upright while running lets go; turning back and Keep playing: the hero stands still', async ({ page }) => {
   const { h, btn } = await begin(page);
   const vp = page.viewportSize()!;
   await h.down(LEFT, btn.forward.x, btn.forward.y);
@@ -227,7 +227,7 @@ test('turning the phone upright while running lets go; turning back and Keep run
   expect((await snap(page)).i.dir).toBe(0);
   await page.setViewportSize(vp);
   await waitOutTapLock(page);
-  await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Keep running' }).click();
+  await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Keep playing' }).click();
   await page.waitForTimeout(400);
   expect((await hero(page)).vx).toBe(0);
   await h.upAll();

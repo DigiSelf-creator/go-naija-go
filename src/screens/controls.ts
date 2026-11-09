@@ -245,6 +245,42 @@ export class ClickGuard {
 }
 
 /**
+ * A HUD button that acts on the press itself (po L4 note 2): Chrome sends no click for a second
+ * finger while a thumb holds Forward or Jump, so Pause and Sound act on pointerdown, as the
+ * well button does. One press does one thing: the touch's own click (and any mouse click) is
+ * dropped, and for WELL_CLICK_GUARD_MS after the press every other tap click is dropped too, so
+ * the press that opens Pause never also presses what appears under the finger. A keyboard or
+ * screen reader click (detail 0) still works.
+ */
+export function pressOnDown(el: HTMLElement, act: () => void, target: Window = window): ClickGuard {
+  const guard = new ClickGuard();
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    guard.press(performance.now());
+    act();
+  });
+  const noClick = (e: TouchEvent): void => {
+    if (e.cancelable) e.preventDefault();
+  };
+  el.addEventListener('touchstart', noClick, { passive: false });
+  el.addEventListener('touchend', noClick, { passive: false });
+  el.addEventListener('click', (e) => {
+    if (e.detail === 0) act();
+  });
+  target.addEventListener(
+    'click',
+    (e) => {
+      if (e.detail === 0 || !guard.blocks(performance.now())) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    },
+    true,
+  );
+  return guard;
+}
+
+/**
  * The Go down / Go up button (S2.5, S2.10 "Well button"): a real button, shown only while the
  * hero stands at an entrance well or under the room's rope. It takes its own taps (never a jump),
  * and Enter or Space on it while focused works too. Art's pill with a bucket and an arrow.

@@ -229,7 +229,7 @@ test('a slice 1 save: the builder opens once with "New!", then never by itself a
   await page.reload();
   // It loads as Adult, Female (Gele), the old choices kept.
   expect(await look(page)).toEqual({ skin: 1, hair: 3, outfit: 1, body: 1, age: 1 });
-  await page.getByRole('button', { name: 'Start running' }).tap();
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
   const d = builderDialog(page);
   await expect(d).toBeVisible();
   await expect(d.getByText(NEW_LINE, { exact: true })).toBeVisible();
@@ -253,7 +253,7 @@ test('a slice 1 save: the builder opens once with "New!", then never by itself a
   // Next visits: the title starts the run at once.
   for (let visit = 0; visit < 2; visit++) {
     await page.reload();
-    await page.getByRole('button', { name: 'Start running' }).tap();
+    await page.getByRole('button', { name: 'Play', exact: true }).tap();
     await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
   }
   // Change hero shows no "New!" line any more.
@@ -268,7 +268,7 @@ test('a slice 1 save with Start running pressed and nothing changed saves body a
   await page.goto('./');
   await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":4,"hair":1,"outfit":4}'));
   await page.reload();
-  await page.getByRole('button', { name: 'Start running' }).tap();
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
   await expect(builderDialog(page).getByText(NEW_LINE)).toBeVisible();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await builderDialog(page).getByRole('button', { name: 'Start running' }).tap();

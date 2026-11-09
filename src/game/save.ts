@@ -1,5 +1,5 @@
 /**
- * What the game keeps on the phone: the hero look and two settings.
+ * What the game keeps on the phone: the hero look and three settings (progress: progress.ts).
  * The look is stored as indices under `gidi-look` (design.md S2.3 "Saved look"), and always
  * passed through fixLook, so a look saved today still loads after the option lists grow,
  * and a slice 1 look (no body, no age) still loads.
@@ -15,6 +15,8 @@ export type FullLook = Required<HeroLook>;
 
 const KEY_LOOK = 'look';
 const KEY_SOUND = 'sound';
+/** S2.8, S2.9 rule 5: the Music switch, its own key (the player itself comes with O2). */
+const KEY_MUSIC = 'music';
 const KEY_GENTLE = 'gentle';
 
 function isLookShape(v: unknown): v is HeroLook {
@@ -93,16 +95,20 @@ export function saveLook(store: Store, look: HeroLook): FullLook {
 
 export interface Settings {
   sound: boolean;
+  /** Music on or off (default on). */
+  music: boolean;
   gentle: boolean;
 }
 
 export function loadSettings(store: Store): Settings {
   const sound = store.load(KEY_SOUND, (v): v is boolean => typeof v === 'boolean');
+  const music = store.load(KEY_MUSIC, (v): v is boolean => typeof v === 'boolean');
   const gentle = store.load(KEY_GENTLE, (v): v is boolean => typeof v === 'boolean');
-  return { sound: sound ?? true, gentle: gentle ?? false };
+  return { sound: sound ?? true, music: music ?? true, gentle: gentle ?? false };
 }
 
 export function saveSettings(store: Store, s: Settings): void {
   store.save(KEY_SOUND, s.sound);
+  store.save(KEY_MUSIC, s.music);
   store.save(KEY_GENTLE, s.gentle);
 }

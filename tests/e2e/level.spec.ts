@@ -30,7 +30,7 @@ test('out of lives: game over, then Play again starts the level fresh', async ({
   const r = await run(page);
   expect(r.phase).toBe('over');
   expect(r.lives).toBe(0);
-  await expect(over.getByText(`You got ${r.kobo} kobo. The road is still here. Try again!`)).toBeVisible();
+  await expect(over.getByText(`You got ${r.kobo} kobo. The street is still here. Try again!`)).toBeVisible();
   await expect(over.getByText('Want more tries? Gentle mode gives you 5 lives.')).toBeVisible();
   // Taps meant as jumps do nothing to a stopped run.
   const steps = await page.evaluate(() => window.__game!.steps);
@@ -91,7 +91,7 @@ test('sound starts only after the first tap', async ({ page }) => {
   expect(await page.evaluate(() => window.__game!.sound.started)).toBe(true);
 });
 
-test('pause screen: Start the level again and Home', async ({ page }) => {
+test('pause screen: Start again and Home', async ({ page }) => {
   await openAndRun(page);
   const h = await holdForward(page);
   await expect.poll(() => run(page).then((r) => r.kobo)).toBeGreaterThan(0);
@@ -99,7 +99,7 @@ test('pause screen: Start the level again and Home', async ({ page }) => {
   await page.getByRole('button', { name: 'Pause' }).tap();
   const card = page.getByRole('dialog', { name: 'Paused' });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await card.getByRole('button', { name: 'Start the level again' }).tap();
+  await card.getByRole('button', { name: 'Start again' }).tap();
   expect(await run(page)).toMatchObject({ phase: 'run', lives: 3, kobo: 0 });
   expect(await page.evaluate(() => window.__game!.paused)).toBe(false);
   await page.getByRole('button', { name: 'Pause' }).tap();

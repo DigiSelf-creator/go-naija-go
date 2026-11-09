@@ -16,7 +16,7 @@ const PERF = /slowed/i;
  * alone but can fail when four browsers share a loaded computer, so they run one at a time.
  * Playwright matches grep against "project file describe title", so file names work here.
  */
-const TIMING = /(^|\s)(level|level-qa|hall|hall-qa|hands|break|hint-banner|crates|streets|wells)\.spec\.ts\s|then street 1 plays|the pick is announced/;
+const TIMING = /(^|\s)(level|level-qa|hall|hall-qa|hands|break|hint-banner|crates|streets|wells|progress)\.spec\.ts\s|then street 1 plays|the pick is announced/;
 
 export default defineConfig({
   testDir: 'tests/e2e',

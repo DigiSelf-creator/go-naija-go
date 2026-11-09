@@ -24,10 +24,10 @@ export async function waitOutTapLock(page: Page): Promise<void> {
 
 /**
  * From the title screen into a run, by touch: "Make your hero" then "Start running" on a
- * first visit, or straight "Start running" when a hero is saved.
+ * first visit, or "Play" when a hero is saved (straight into the street until one is done).
  */
 export async function startRun(page: Page): Promise<void> {
-  await page.getByRole('button', { name: /^(Make your hero|Start running)$/ }).tap();
+  await page.getByRole('button', { name: /^(Make your hero|Play)$/ }).tap();
   const builder = page.getByRole('dialog', { name: 'Make your hero' });
   if (await builder.isVisible()) {
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
