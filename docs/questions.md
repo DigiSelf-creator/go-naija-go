@@ -1,5 +1,36 @@
 # Open questions for the product owner
 
+## po note, 9 Nov 2026, later (read this first): quick fixes accepted
+
+Accepted: the quick fixes (sound on iPhone, longer foods, HUD step 4), branch gamedev/s2-quick-fixes at ff810d3. See "po acceptance, 9 Nov 2026: quick fixes" just below.
+Waiting for Tp: one new sound choice (S1, below). Recommendation: a), keep the silent switch working as it does now and add one plain hint. The 10 city choices and the decisions.md paste still wait too.
+Please, Tp: when you test sound on your iPhone, turn silent mode off first (the side switch shows no orange; on newer iPhones, check the Action button or Control Centre) and turn the volume up. In silent mode, iPhones mute game sound, so it can look like the fix failed.
+
+## po acceptance, 9 Nov 2026: quick fixes
+
+Verdict: **accepted.** Branch gamedev/s2-quick-fixes at ff810d3 (cut from main 06982ab). Merge it and get it onto Tp's phone.
+Why, against the brief:
+- Done when 3 ("All three food power-ups work and say what they do in plain words"): verified in the diff. The toasts now say "for 12 seconds" and "for 14 seconds", the short toasts still match, and the HUD counts from 12 and 14. Brief "Power-ups" says "for a few seconds"; 12 and 14 still fit that, and Tp asked for longer.
+- Done when 6 ("No network request after load, no trackers, no photo access"): verified in the diff. audio-unlock.ts only listens to taps and keys and plays a silent sample. Nothing is fetched, stored or sent.
+- Done when 7 (nothing copied): the silent sample is one blank sample; nothing new to see or hear.
+- qa PASS (reported by qa): unit 609/609, e2e 133/133, first load 317 KB, durations, 2 s warning, HUD one row at 320 x 240, amala in the hall.
+What is not proven: sound on a real iPhone. qa tested a fake iOS-style audio, not real Safari (WebKit is not installed). The fix matches how iOS is known to work (reasoned), but only Tp's phone settles it. If Tp still hears nothing with the silent switch off, it comes back to gamedev as a bug.
+
+Rulings on qa's follow-ups:
+1. **Hazards inside the longer corn (design.md "1370 u" and "1400 u" rules): P2, designer.** Not a blocker: there is no auto-run (Tp, Q18), so a player can let go and slow down before the tyre or drum. But 12 s of corn is about 2740 u of road, so the rule no longer protects what it was written for: street 1 tyre 8900; street 2 tyre 8950; street 3 tyre 9100, drums 9550 and 10200. Designer decides in P2: move those hazards, or restate the rule (for example "a corn stretch has a warning and room to slow down"). Wait for Tp's city choice 6 first (12 s for every food), so this is done once. The tests that hard-code 1370 and 1400 should then be worked out from the corn time in code, so they catch the next change. Tp's own play of the streets also feeds this.
+2. **design.md still says 6 s, "Fast 6" and the old toasts: now, designer, a small doc fix on its own branch.** Change the Power-ups table, the toast table and the S2 short-words table to 12 s, 14 s and the toasts as built. Note there that amala may go to 12 s if Tp picks 6 a). design.md is what gamedev builds from, so a stale line could undo this fix.
+3. **iPhone silent switch: to Tp, choice S1 below.** Nothing is blocked: the game already respects the switch, which is po's pick.
+4. **Test flake at progress.spec:108: now, qa, a small test-only fix on its own branch** (poll after setViewportSize). Not a game bug and does not block this merge, but a gate that fails at random gets ignored.
+
+## Sound choice (9 Nov 2026), waiting for Tp
+
+**S1. iPhone silent switch.** With the silent switch on, iPhones mute the game's sound. First option is po's pick.
+- a) Keep it: the switch wins. Add one line on the pause screen, next to Sound, on iPhones only: "No sound? Turn off silent mode on your phone." Best case: the player stays in charge; no surprise noise in class, church or at night.
+- b) Play through the switch (Safari 16.4 and newer). Best case: sound always works once Sound is on in the game.
+- c) Keep it, with no hint. Best case: nothing to build.
+Why a): a teen who set their phone to silent should not be caught out by game music. The game's own Sound button is still there. b) also stops the player's own music or podcast when the game starts.
+Blocks: nothing. Only the hint line (if a) waits; designer writes it into the pause screen note and po checks the words.
+
 ## po note, 9 Nov 2026 (read this first): city direction
 
 Accepted: nothing new. docs/city.md is a proposal, not built work.
