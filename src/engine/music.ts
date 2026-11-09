@@ -15,6 +15,7 @@
  * at most 6 notes sound at once (checked in the tests).
  */
 import { TUNES, type Instrument, type MusicPlace, type Track, type Tune } from '../art/tunes';
+import { audioCtor, playSilence, wake } from './audio-unlock';
 
 export type { MusicPlace };
 
@@ -167,11 +168,12 @@ export class Music {
   unlock(): void {
     try {
       if (!this.ac) {
-        const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        const Ctor = audioCtor();
         if (!Ctor) return;
         this.ac = new Ctor();
+        playSilence(this.ac);
       }
-      if (this.ac.state === 'suspended') void this.ac.resume().catch(() => {});
+      wake(this.ac);
       if (this.current && this.on && !this.paused && !this.timer) this.start(this.current, this.tempo, this.resumeBar, 0);
     } catch {
       this.ac = null;

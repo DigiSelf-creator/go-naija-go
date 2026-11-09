@@ -3,6 +3,8 @@
  * The audio starts only after the player's first tap or key (browsers require it),
  * and nothing plays while sound is off.
  */
+import { audioCtor, playSilence, wake } from './audio-unlock';
+
 export type SoundName =
   | 'jump'
   | 'airJump'
@@ -327,19 +329,39 @@ export class Sound {
   private ac: AudioContext | null = null;
   enabled = true;
 
-  /** Call from a tap or key handler. Creates or wakes the audio the first time. */
+  /**
+   * Call from every tap, touch end, click or key (see audio-unlock.ts): creates the audio the
+   * first time and wakes it whenever it is not running. Cheap when it already runs.
+   */
   unlock(): void {
     try {
       if (!this.ac) {
-        const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        const Ctor = audioCtor();
         if (!Ctor) return;
         this.ac = new Ctor();
       }
-      if (this.ac.state === 'suspended') void this.ac.resume().catch(() => {});
+      const ac = this.ac;
+      if (ac.state === 'running' && this.opened) return;
+      wake(ac);
+      // iOS: a sound started inside the gesture opens audio for the page.
+      playSilence(ac);
+      this.opened = true;
     } catch {
       this.ac = null; // no sound, the game still runs
     }
   }
+
+  /** The page shows again (app switch, screen lock): try to wake the audio without a tap. */
+  wake(): void {
+    if (this.ac) wake(this.ac);
+  }
+
+  /** True while sounds can be heard (the context runs). */
+  get running(): boolean {
+    return this.ac?.state === 'running';
+  }
+
+  private opened = false;
 
   get started(): boolean {
     return this.ac !== null;
