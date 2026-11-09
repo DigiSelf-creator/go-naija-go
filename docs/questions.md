@@ -1,5 +1,24 @@
 # Open questions for the product owner
 
+## Tp, 9 Nov 2026 (third message): handover notes
+
+**Lead note.** Work moves off Tp's company Mac to the GitHub repo DigiSelf-creator/go-naija-go (branch `local-build`). Cloud sessions continue from there.
+
+Confirmed by Tp:
+- N1 to N4 (Naira): all as po recommended. Coins are worth 10 kobo, 100 kobo = ₦1, money shows as "80 kobo" / "₦3.40", old bests x10 with the purse starting at ₦0, and ₦ falls back to "N".
+- S1 a (respect the silent switch). City choice 1 (city loop). City choice 10: "Build up Lagos. Get Nigeria working."
+
+Tp's story, in their words (for po and designer to shape into T1 to T4 and the intro):
+- "Light shone on a group of people and they proceeded to a continent named Africa. On the western part they found a set of people and resources that ensured all will be sustainable and secured the region by creating the wheel....."
+- Lead's flag for po: "a group … proceeded to Africa and found a set of people" can read as outsiders arriving and finding the people already there (a colonial picture). Suggest keeping the light and the wheel but making the people of West Africa the makers. For example: "Long ago, light shone on West Africa. Its people and its rich land made the Wheel, so everyone could share, stay safe and keep going." Tp to choose.
+
+Still open: T1 to T4 and the intro version, city choices 2 to 9, and reconciling PR #1 ("Go Naija Go" rename and brief changes) with this work.
+
+Tp's new game ideas (9 Nov), for designer, art and gamedev in the cloud:
+1. Something to swing on (Tp said crates; designer proposes our own swing object).
+2. While corn works, a corn tune of our own plays over everything until it ends (never Mario's star music).
+3. Each street gets soft city noise (buses, okadas, market) under the music, still orderly.
+
 ## po acceptance, 9 Nov 2026: O music
 
 **po note (read this first).** Accepted: O (music), branch gamedev/s2-o2-music at b2c21d5. Waiting for Tp: nothing new; one ruling below Tp may overturn (recommend: keep it). Blocks: nothing. pm: merge O2, then P1.
