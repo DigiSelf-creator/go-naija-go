@@ -111,8 +111,11 @@ function startGame(): void {
   // phone). It schedules its own notes on a 25 ms timer, 0.1 s ahead: the game never waits.
   const music = new Music();
   const director = new MusicDirector(music);
+  /** True inside startRun: the old run's state must not pick a tune; the new run picks it at the end. */
+  let startingRun = false;
   /** Music follows what shows now: the screen, the street, the well room, hall hits, a hidden page. */
   function syncMusic(): void {
+    if (startingRun) return;
     const run = game.run;
     director.update({
       screen: menus.current ?? (playing ? 'play' : null),
@@ -166,6 +169,7 @@ function startGame(): void {
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
   function startRun(at: TapPoint | null, to: Where = where): void {
     where = to;
+    startingRun = true;
     director.restart();
     const lagos = progress.state(LAGOS);
     startTap = at ? { ...at, t: performance.now() } : null;
@@ -183,6 +187,7 @@ function startGame(): void {
     hud.show(true);
     buttons.show(true, game.level.manual);
     loop.resume();
+    startingRun = false;
     syncMusic();
     if (portrait.matches || document.hidden) pause();
   }

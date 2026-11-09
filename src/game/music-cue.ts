@@ -99,6 +99,8 @@ export class MusicDirector {
   }
 
   update(s: MusicScene): void {
+    // Between screens (a run starting): change nothing, not even the hold; the next update knows.
+    if (s.screen === null) return;
     const cue = musicCue(s);
     const held = musicHeld(s);
     if (cue !== 'keep') {
