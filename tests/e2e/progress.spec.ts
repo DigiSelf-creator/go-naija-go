@@ -222,7 +222,7 @@ test('Pause rebuilt: words, focus, P and Escape, Sound and Music switches, Stree
   expect(await page.evaluate(() => [localStorage.getItem('gidi-sound'), localStorage.getItem('gidi-music')])).toEqual(['false', 'false']);
   await card.getByRole('button', { name: 'Keep playing' }).tap();
   await expect(page.locator('.hud-sound')).toHaveAttribute('aria-label', 'Sound: off');
-  // Music off stays off after a reload (the player itself comes with O2).
+  // Music off stays off after a reload (the player itself: music.spec.ts).
   await page.reload();
   await expect(page.getByRole('button', { name: 'Music: off' })).toBeVisible();
   await page.getByRole('button', { name: 'Play', exact: true }).tap();
