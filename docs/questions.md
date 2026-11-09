@@ -1,5 +1,97 @@
 # Open questions for the product owner
 
+## po note, 9 Nov 2026 (cloud, read this first): one main, PR #1, and the intro
+
+Accepted: nothing new (no built work came in).
+Settled: the intro story (T1 to T4), reported by the lead from Tp, below. One check with Tp before building.
+Waiting for Tp: R1 to R10 (PR #1 against the built game), city choices 2 to 9, and a yes to the merge plan. Recommendation: the first option in each.
+Blocks: the name (R1) blocks only the title and page name. Nothing else stops P1 and P2.
+
+### Intro story: answered by Tp, 9 Nov 2026 (reported by the lead)
+
+Tp's words: "I accepted your proposal on the intro." That is the lead's rewrite: the people of West Africa make the Wheel themselves; no outside group arrives and finds them.
+- T1: the people made the Wheel. No faith words.
+- T2: "the Stoppers", made-up troubles, never people.
+- T3: "the Wheel Hero".
+- T4: 6 still frames, "Skip" from the first frame, plays once, then "Watch the story" in Settings.
+
+Captions for designer (po's recommended set, caption 1 replaced by Tp's chosen opening):
+1. "Long ago, light shone on West Africa. Its people and its rich land made the Wheel, so everyone could share, stay safe and keep going."
+2. "More people need more roads, more light and more buses."
+3. "Nigeria's Wheel keeps it all moving. The Wheel was made for everyone."
+4. "But the Stoppers want it stuck: traffic, potholes, power cuts and red tape."
+5. "Nigeria called a hero to keep the Wheel turning: the Wheel Hero. That hero is you."
+6. "Your journey starts now. Build up Lagos. Get Nigeria working." Button "Let's go"
+
+po flag for designer: the old caption 1 said Lagos grows and people keep coming. Without it, caption 2 ("More people...") comes from nowhere. Suggested caption 2: "The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses." Caption 1 is long for 320 x 240; designer may split it over two lines, never cut its words.
+
+**Check with Tp before building:** is this how you read your answer, and is the new caption 2 all right?
+
+Line for Tp to paste into docs/decisions.md:
+25. The intro story: the people of West Africa made the Wheel for everyone; the Stoppers (traffic, potholes, power cuts, red tape) want it stuck; the player is the Wheel Hero. Six skippable frames before the first hero build. (T1 to T4)
+
+### PR #1 against the built game (R1 to R10)
+
+Full list of differences: docs/pr1-compare.md. First option is po's pick.
+
+**R1. What is the game called?** You chose "Gbese!" on the Mac (6 Nov, Q1), and the game shows it. PR #1, made the same day in your project thread, says "Go Naija Go", and the repo is named go-naija-go.
+- a) Go Naija Go. Best case: matches the repo, the Pages link and the "Get Nigeria working" story; warm and easy in every part of Nigeria.
+- b) Gbese!. Best case: short and already built. But "gbese" means debt in Yoruba, so it reads as one group's word and an odd fit for a building game.
+- c) Something else.
+Why a): it matches the link players will see and fits the Wheel story. A one-setting change (GAME_NAME, page title, manifest). Blocks: title and page name only.
+
+**R2. Unity Drum or Wheel?** PR #1's story is the Unity Drum, broken in six pieces by Mister Red Tape. The built game has the Nigeria wheel, and you just chose the Wheel intro.
+- a) The Wheel. Drop the Drum story. Mister Red Tape stays the Abuja boss, as one of the Stoppers.
+- b) Both: the Wheel, and each boss holds a glowing cog piece (PR #1's "see the prize" idea, as a cog).
+- c) The Drum instead.
+Why a): your intro answer already picks the Wheel. b) is a nice later add for the boss halls; designer can pitch it.
+
+**R3. Pepper fufu.** PR #1: a version 1 power-up, 8 balls thrown with an action button. City choices 5 and 8 (open): throws only while a throw food works, fufu and egusi plug potholes, after slice 3.
+- a) City choice 8 a: fufu and egusi, a ball that rolls and plugs potholes, after slice 3, with an action button then.
+- b) PR #1's fufu (8 throwing balls) in slice 3.
+- c) No fufu yet.
+Why a): it fixes a problem instead of hitting things, and it fits the city loop. It is the first Igbo-home food, so it matters for R5.
+
+**R4. Herder's staff (sanda).** PR #1: a version 1 tool (swing, vault, takes a hit). Not in the built game.
+- a) Yes, after slice 3, named "Herder's staff (sanda)", checked by Hausa and Fulani speakers first, used only to clear and vault, never against an animal.
+- b) Yes, in slice 3.
+- c) Not now.
+Why a): it gives the north its first tool and a fun vault, but herding is sensitive; it needs speakers' checks before it ships.
+
+**R5. Equal shares for Hausa, Igbo and Yoruba.** PR #1 puts this in CLAUDE.md rule 4 and the brief. The built game has three Lagos streets and amala.
+- a) Yes, as a rule, kept over each update: the next foods and tools are pepper fufu (R3) and the staff (R4), and the next regions are north and east before more of the west. Other groups join over time.
+- b) Yes, and rush fufu and staff into slice 3.
+- c) Keep the softer rule "every part of Nigeria".
+Why a): the rule is right, and keeping it over the next updates is honest about what one Lagos world can hold.
+
+**R6. Falling in a pothole.** PR #1: climb out just before that pothole, and a warning sign and cone before every pothole. Built: back to the bus stop or start; cones only on big pits.
+- a) Keep the bus stop restart; add a small warning sign before each wide pothole. Gentle mode climbs out just before the pothole.
+- b) Always climb out just before the pothole (PR #1).
+- c) Keep it as built.
+Why a): the streets are tuned for "3 tries or fewer" with today's rule; b) would make them too easy. a) is kind to gentle players and adds the warning PR #1 asked for.
+
+**R7. "Lives" or "hearts", "Gentle" or "Easy"?**
+- a) Keep "lives" and "Gentle mode" as built. b) "Hearts" and "Easy mode" (PR #1).
+Why a): built, tested, and "gentle" judges no one (po, 6 Nov).
+
+**R8. Worlds.** PR #1's world list (market, north / east / west worlds of equal size with their own instruments, the Flood boss) against the built plan (regions of states, the wheel, the Lagos city loop).
+- a) Keep the built plan; add PR #1's equal north / east / west worlds, instruments and the Flood as the plan for later regions.
+- b) Use PR #1's list instead.
+Why a): it keeps both. Nothing changes in slice 3.
+
+**R9. Art level.** PR #1: "high detail, final art needs a human artist". Built: drawn in code by the art agent.
+- a) Keep drawing in code for the test; plan a human artist (paid or volunteer) before a public launch. Linked to city choice 9 (Blender test).
+- b) Find a human artist now.
+- c) Code art only.
+Why a): code art keeps the game tiny and the test moving; a real artist is the biggest step up before launch.
+
+**R10. The closing line.** PR #1 keeps "Remember: a wrong premise often leads to a misleading conclusion." in CLAUDE.md rule 8 and the brief. You said on 7 Nov it is not in the game.
+- a) Not in the game, as you said. When PR #1 is closed, its rule 8 and brief Done when 9 are dropped. Please also remove Done when 8 from the brief.
+- b) Put it back.
+Why a): your 7 Nov answer.
+
+**Merge plan (needs your yes):** see "How to get one main" in docs/pr1-compare.md. In short: the cloud branch already holds main's history joined to the built game. With your yes, we merge it into main (the game goes to Pages), then bring in the PR #1 parts you choose in R1 to R10, then close PR #1.
+
 ## Tp, 9 Nov 2026 (third message): handover notes
 
 **Lead note.** Work moves off Tp's company Mac to the GitHub repo DigiSelf-creator/go-naija-go (branch `local-build`). Cloud sessions continue from there.
