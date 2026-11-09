@@ -1,5 +1,11 @@
 # Open questions for the product owner
 
+## po note, 8 Nov 2026, night (read this first): N accepted
+
+Accepted: N (saving, Streets cards, Nigeria's wheel), branch gamedev/s2-n2-progress at 1ab6bca, after qa's N3 retest passed. See "po acceptance, 8 Nov 2026: N2" under Slice 2.
+Waiting for Tp: nothing new. Only pasting lines 5, 6, the "wrong premise" line and 7 to 21 into docs/decisions.md. Recommendation: paste them as written.
+Moved on: one hint fix to P2 polish; one storage edge case to later; two edge cases need no action. po added one line under P2 in docs/plan.md (pm owns plan.md; pm, please keep or reword it).
+
 ## po note, 8 Nov 2026, evening (read this first): N2 open choices ruled
 
 Accepted: nothing new. N is not accepted yet (N4 waits for gamedev's one change below and qa's re-check).
@@ -67,6 +73,29 @@ Blocks: nothing. The made-up names stay until designer's names pass po.
 Outcome, 8 Nov 2026: Tp chose the names directly (Alausa, Computer Village, Ikeja), so they are decided. po checked them against this rule: Computer Village and Ikeja pass (reasoned, from design S2.6). Alausa does not pass rule 2 on its own, because no one is sure it is not a family name; Tp chose it knowing that, which overrides the rule for this one name. Rule 1's spread (mainland and island) was also set aside by Tp, who asked for names around Ikeja and Alausa.
 
 ## Slice 2 requests from Tp, 7 Nov 2026
+
+### po acceptance, 8 Nov 2026: N2
+
+**Verdict: accepted.** Branch gamedev/s2-n2-progress at 1ab6bca. Ready to merge.
+
+Why (reported by qa, N3 retest at 1ab6bca: PASS):
+- 597 of 597 unit tests and 133 of 133 e2e. The hall's worst frame rate is 56.4 fps at 4x CPU. First load is 316.2 KB, well under brief "Done when" 5 (under 3 MB). Offline, reloads, 320 x 240, and corrupt, blocked and full storage all passed at 5fffa90.
+- The N3 bug is fixed. Pausing during the hall's kind finish no longer loses the win, even with a reload mid-finish. Pause still works on streets, in the well room and in the hall before the third hit. It does nothing on cards or in the bus finish (po M4 rule).
+- Ruling (d) holds. A win uses the parcel up and a lost try keeps it. A new parcel found after the win shields the next hall try. There is never more than one.
+- Brief "Done when" 1, 5, 6 and 7 still hold. Saves stay on the phone, with no accounts, network calls, trackers or photo access (CLAUDE.md rule 5). qa's originality and no-real-people checks passed.
+
+Verified by po: the fix commits read as qa says. `Run.inPlay` is false in the hall once the boss is beaten. `bossDefeat` saves the hall win. `mergeFinish` writes `parcel: false` on a hall win (src/game/run.ts, src/main.ts, src/game/progress.ts).
+
+qa's two notes:
+1. **"Done ✓" and "You have a garri parcel." together on the hall card: confirmed fine.** Ruling (b) covers this. The line shows only after the player finds a new parcel on a street replay, and then it is true: the parcel shields the next hall try. No change.
+2. **"PEEP! High honks fly high. Stay low on the floor." can stay up to 3.5 s into the kind finish: goes to P2 polish.** It is not new (it was the same before N2) and it is not wrong, only out of place for a few seconds. Reopening an accepted branch for it would cost a full qa round. Fix as qa says: call `toast.hide()` on `bossDefeat` in src/main.ts. Check it in P3.
+
+Open from N3 (all low):
+- **A tab left open shows old cards until reload: no action.** The merge keeps the best of both copies, so nothing is lost. A reload shows the truth. This is reasoned from the merge rule, and qa reports the same.
+- **Clearing site data mid-run, then the open tab writes its copy back: no action.** The player's own progress goes back onto the player's own phone, and nothing leaves it. A player who clears data and then keeps playing in the same tab gets a game that keeps working. That is the kinder result (opinion).
+- **A phone where every write fails hides the saved look: later, after slice 2.** It comes from the storage.ts probe, not N2, and it is rare. On such a phone nothing can be saved anyway, and the game still plays. Fix later so the look chosen this visit still shows in memory. Not a blocker for slice 2.
+
+plan.md: po added one line under P2 for the hint fix and the later storage item. pm owns plan.md and may reword or move it. pm, please also mark N done after the merge.
 
 ### po ruling, 8 Nov 2026: N2 open choices (from gamedev N2, confirmed in the build by qa N3)
 
