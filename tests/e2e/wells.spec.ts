@@ -392,8 +392,9 @@ test.describe('the HUD row and the well button on narrow phones (qa L3)', () => 
         // The food slots in HUD order: garri (shield), corn (fast), amala (strong).
         const [garri, corn, amala] = document.querySelectorAll<HTMLElement>('.hud-food:not(.hud-parcel) .hud-text');
         garri!.innerHTML = '<span class="hud-word">Shield</span>';
-        corn!.innerHTML = '<span class="hud-word">Fast </span>6';
-        amala!.innerHTML = '<span class="hud-word">Strong </span>7';
+        // The widest counts: corn starts at 12 s and amala at 14 s.
+        corn!.innerHTML = '<span class="hud-word">Fast </span>12';
+        amala!.innerHTML = '<span class="hud-word">Strong </span>14';
         window.dispatchEvent(new Event('resize'));
       });
       await page.waitForTimeout(50);

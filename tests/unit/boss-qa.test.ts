@@ -78,7 +78,8 @@ describe('qa break it in the hall', () => {
     run.power.amala = RULES.amalaSteps;
     Object.assign(run.hero, { x: 300 });
     const ev: { e: RunEvent; step: number }[] = [];
-    for (let i = 0; i < 60 * 12; i++) for (const e of run.step(DT)) ev.push({ e, step: run.steps });
+    // Amala, then 5 s more for the throws to hurt again.
+    for (let i = 0; i < RULES.amalaSteps + 60 * 5; i++) for (const e of run.step(DT)) ev.push({ e, step: run.steps });
     const smashes = ev.filter((x) => x.e.type === 'smash');
     expect(smashes.length).toBeGreaterThanOrEqual(1);
     expect(run.boss!.hits).toBe(0);

@@ -23,8 +23,9 @@ export const RULES = {
   hurtSafeSteps: secs(1.7),
   /** Blinking safety after the shield takes a hit. */
   shieldSafeSteps: secs(1.2),
-  cornSteps: secs(6),
-  amalaSteps: secs(7),
+  /** Twice the first 6 s and 7 s after Tp's iPhone test: they wore off too fast. */
+  cornSteps: secs(12),
+  amalaSteps: secs(14),
   /** Timed foods warn this long before they end. */
   warnSteps: secs(2),
   smashKobo: 2,
