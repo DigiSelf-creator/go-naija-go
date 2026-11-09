@@ -356,6 +356,11 @@ export class Sound {
     if (this.ac) wake(this.ac);
   }
 
+  /** The AudioContext once the first tap made it (the music shares it), else null. */
+  get context(): AudioContext | null {
+    return this.ac;
+  }
+
   /** True while sounds can be heard (the context runs). */
   get running(): boolean {
     return this.ac?.state === 'running';

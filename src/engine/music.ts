@@ -189,6 +189,11 @@ export class Music {
     return this.current;
   }
 
+  /** Held by pause() (Pause card, hidden page) until resume(). */
+  get held(): boolean {
+    return this.paused;
+  }
+
   get tempoStep(): number {
     return this.pendingTempo ?? this.tempo;
   }

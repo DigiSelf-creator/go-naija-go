@@ -8,6 +8,8 @@ import street3Data from './data/levels/lagos-3.json';
 import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
 import { Sound } from './engine/sound';
+import { Music } from './engine/music';
+import { MusicDirector } from './game/music-cue';
 import { listenForAudioGestures } from './engine/audio-unlock';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
@@ -105,6 +107,21 @@ function startGame(): void {
     game.still = reduceMotion.matches;
   });
   const sound = new Sound();
+  // O2, S2.9: the music player shares the sound's AudioContext (one context is lighter on a
+  // phone). It schedules its own notes on a 25 ms timer, 0.1 s ahead: the game never waits.
+  const music = new Music();
+  const director = new MusicDirector(music);
+  /** Music follows what shows now: the screen, the street, the well room, hall hits, a hidden page. */
+  function syncMusic(): void {
+    const run = game.run;
+    director.update({
+      screen: menus.current ?? (playing ? 'play' : null),
+      where,
+      below: run.below,
+      hits: run.boss?.hits ?? 0,
+      hidden: document.hidden,
+    });
+  }
 
   const loop = new FixedLoop({
     update: (dt) => game.update(dt),
@@ -149,6 +166,7 @@ function startGame(): void {
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
   function startRun(at: TapPoint | null, to: Where = where): void {
     where = to;
+    director.restart();
     const lagos = progress.state(LAGOS);
     startTap = at ? { ...at, t: performance.now() } : null;
     menus.show(null);
@@ -165,6 +183,7 @@ function startGame(): void {
     hud.show(true);
     buttons.show(true, game.level.manual);
     loop.resume();
+    syncMusic();
     if (portrait.matches || document.hidden) pause();
   }
   /** Leaves the run (saving nothing from it) for the title, Streets or Nigeria's wheel. */
@@ -203,7 +222,10 @@ function startGame(): void {
     },
     soundChanged: (on) => {
       sound.enabled = on;
+      director.switches(on, menus.music);
     },
+    musicChanged: (on) => director.switches(menus.sound, on),
+    screenChanged: () => syncMusic(),
     progress: () => ({
       lagos: progress.state(LAGOS),
       names: streets.map((l) => l.name),
@@ -217,6 +239,7 @@ function startGame(): void {
     pause: () => pause(),
     toggleSound: () => {
       sound.enabled = menus.toggleSound();
+      director.switches(sound.enabled, menus.music);
       hud.update(game.run, sound.enabled);
     },
   });
@@ -253,6 +276,7 @@ function startGame(): void {
   buttons.onChange = placeBar;
   placeBar();
   sound.enabled = menus.sound;
+  director.switches(menus.sound, menus.music);
   menus.touchWords = () => buttons.touch;
 
   const W = WORDS.toast;
@@ -414,10 +438,15 @@ function startGame(): void {
         menus.showWin({ kobo: game.run.kobo, lives: game.run.lives });
         break;
     }
+    // The well room, back up, a hall hit: the tune follows (cheap when nothing changed).
+    if (e.type === 'room' || e.type === 'wellBack' || e.type === 'bossHit' || e.type === 'bossDefeat') syncMusic();
   };
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pause();
+    // S2.9 rule 4: no music while the page is hidden; on the way back it carries on from the
+    // same bar (in a run it waits for "Keep playing").
+    syncMusic();
   });
   // Both: the resize event can arrive a frame before the media query change event.
   const checkUpright = (): void => {
@@ -430,6 +459,11 @@ function startGame(): void {
   // from Pause. They do nothing in the finish or on any other card. On the wheel's list,
   // Escape closes the list (menus.ts).
   window.addEventListener('keydown', (e) => {
+    // S2.2 Keys: M switches the music on or off, anywhere.
+    if (e.code === 'KeyM' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      menus.toggleMusic();
+      return;
+    }
     const act = pauseKeyAction(e.code, e.repeat, menus.current, playing && !game.paused && inPlay());
     if (!act) return;
     e.preventDefault();
@@ -437,14 +471,28 @@ function startGame(): void {
     else resume();
   });
 
+  let musicAttached = false;
   // Sound may start only after the player's first tap or key. iOS Safari counts only the end of
   // a touch (or a click or key) as the tap that can start audio, and stops it on an app switch
   // or screen lock, so every tap tries, for as long as the game is open (audio-unlock.ts).
   listenForAudioGestures(
     window,
     document,
-    () => sound.unlock(),
-    () => sound.wake(),
+    () => {
+      sound.unlock();
+      // The same tap starts the music (iOS lets only a tap start audio). Music shares the
+      // sound's context once it exists; unlock() then starts the tune asked for so far.
+      const ac = sound.context;
+      if (ac && !musicAttached) {
+        music.attach(ac);
+        musicAttached = true;
+      }
+      if (musicAttached) music.unlock();
+    },
+    () => {
+      sound.wake();
+      if (musicAttached) music.unlock();
+    },
   );
 
   const controls = new Controls(
@@ -624,6 +672,10 @@ function startGame(): void {
     },
     get sound() {
       return { enabled: sound.enabled, started: sound.started };
+    },
+    get music() {
+      // O2: the Music switch, whether music may sound (Music and Sound both on), the tune asked for.
+      return { on: menus.music, audible: music.enabled, place: music.place, tempo: music.tempoStep, held: music.held, started: musicAttached };
     },
     get hintBar() {
       // The hint bar as laid out now, CSS px, and whether its words fit uncut (S2.2).
@@ -865,6 +917,14 @@ declare global {
       /** Where the hero stands across the screen, 0 to 1. */
       readonly heroScreenX: number;
       readonly sound: { readonly enabled: boolean; readonly started: boolean };
+      readonly music: {
+        readonly on: boolean;
+        readonly audible: boolean;
+        readonly place: string | null;
+        readonly tempo: number;
+        readonly held: boolean;
+        readonly started: boolean;
+      };
       /** The "BUS PARK" board's drawn box on screen, CSS px; null when the level has no bus park. */
       readonly busBoard: { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
     };
