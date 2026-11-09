@@ -383,3 +383,80 @@ test('a broken progress copy: Play starts street 1, nothing breaks, the copy is 
   await expect(page.locator('.street-card.locked')).toHaveCount(3);
   expect(errors).toEqual([]);
 });
+
+test('qa N3: in the hall finish P, Escape, the Pause button, an app switch and the phone upright open nothing; the win is saved at the third hit and kept over a reload mid-finish', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = watchErrors(page);
+  await openSaved(page, READY_FOR_HALL);
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await page.getByRole('dialog', { name: 'Lagos' }).locator('[data-where="hall"]').tap();
+  await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
+  const pad = await touchPad(page);
+  await playHall(page, pad);
+  await pad.done();
+  const at = await hallSnap(page);
+  expect(at.b!.defeated).toBe(true);
+  expect(at.r.phase).toBe('arena'); // the kind finish is playing
+  // Saved at the third hit, before the Win screen.
+  expect(await saved(page)).toMatchObject({ v: 1, states: { lagos: { hall: { done: true }, parcel: true, streets: { 3: { done: true, best: 98 } } } } });
+
+  const card = page.getByRole('dialog', { name: 'Paused' });
+  const stillPlaying = async (why: string) => {
+    await page.waitForTimeout(150);
+    const s = await hallSnap(page);
+    expect(s.paused, why).toBe(false);
+    expect(s.screen, why).toBe('play');
+    await expect(card).toBeHidden();
+  };
+  await page.keyboard.press('KeyP');
+  await stillPlaying('P');
+  await page.keyboard.press('Escape');
+  await stillPlaying('Escape');
+  await page.locator('.hud-pause').tap();
+  await stillPlaying('the Pause button');
+  // An app switch: the tab says it is hidden.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await stillPlaying('app switch');
+  // The phone turned upright and back.
+  const wide = page.viewportSize()!;
+  await page.setViewportSize({ width: wide.height, height: wide.width });
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => window.__game!.paused), 'upright').toBe(false);
+  await page.setViewportSize(wide);
+  await stillPlaying('back sideways');
+
+  // Reload mid-finish: the hall stays done.
+  const b = (await hallSnap(page)).b!;
+  expect(b.defeated).toBe(true);
+  expect(b.modeTime).toBeLessThan(6);
+  await page.reload();
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  const streets = page.getByRole('dialog', { name: 'Lagos' });
+  await expect(streets.locator('[data-where="hall"]')).toContainText('Done ✓');
+  expect(await saved(page)).toMatchObject({ states: { lagos: { hall: { done: true } } } });
+  expect(errors).toEqual([]);
+});
+
+test('qa N3: the hall finish never loses the win when it plays on to the Win screen either', async ({ page }) => {
+  test.setTimeout(240_000);
+  await openSaved(page, READY_FOR_HALL);
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await page.getByRole('dialog', { name: 'Lagos' }).locator('[data-where="hall"]').tap();
+  await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
+  const pad = await touchPad(page);
+  await playHall(page, pad);
+  await pad.done();
+  // Pressed again and again through the finish: Pause never opens, the Win screen comes.
+  for (let i = 0; i < 8 && (await page.evaluate(() => window.__game!.screen)) === 'play'; i++) {
+    await page.keyboard.press(i % 2 ? 'Escape' : 'KeyP');
+    expect(await page.evaluate(() => window.__game!.paused)).toBe(false);
+    await page.waitForTimeout(250);
+  }
+  await waitForWin(page);
+  expect(await saved(page)).toMatchObject({ states: { lagos: { hall: { done: true } } } });
+});
