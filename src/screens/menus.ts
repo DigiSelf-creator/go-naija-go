@@ -80,6 +80,10 @@ export interface MenuHooks {
   leave(to: LeaveTo): void;
   /** The Sound switch changed (title or pause). */
   soundChanged(on: boolean): void;
+  /** The Music switch changed (title, pause or the M key). */
+  musicChanged(on: boolean): void;
+  /** A screen opened or closed (null: back to play, or nothing). Music follows it (O2). */
+  screenChanged?(screen: MenuScreen): void;
   progress(): ProgressView;
   playSound(name: MenuSound): void;
   /** The player asked for less motion: the wheel's cogs stand still (S2.11). */
@@ -159,8 +163,22 @@ export class Menus {
     return this.settings.sound;
   }
 
-  /** The Music switch (S2.9 rule 5). The player itself comes with O2; this only remembers it. */
+  /** The Music switch (S2.9 rule 5), remembered as gidi-music. */
   get music(): boolean {
+    return this.settings.music;
+  }
+
+  /** The Music switch and the M key: flips it, saves it, and updates any switch on screen. */
+  toggleMusic(): boolean {
+    this.settings.music = !this.settings.music;
+    saveSettings(this.store, this.settings);
+    const w = WORDS.title;
+    for (const sw of this.layer.querySelectorAll<HTMLElement>('.music-switch')) {
+      const label = sw.querySelector('span');
+      if (label) label.textContent = this.settings.music ? w.musicOn : w.musicOff;
+      sw.classList.toggle('is-off', !this.settings.music);
+    }
+    this.hooks.musicChanged(this.settings.music);
     return this.settings.music;
   }
 
@@ -209,6 +227,7 @@ export class Menus {
     this.layer.replaceChildren();
     this.layer.hidden = screen === null;
     this.layer.classList.toggle('full', screen === 'wheel');
+    this.hooks.screenChanged?.(screen);
     let card: HTMLElement | null = null;
     if (screen === 'title') card = this.title();
     if (screen === 'builder') card = this.builder();
@@ -267,16 +286,11 @@ export class Menus {
     return sw;
   }
 
-  /** "Music: on" / "Music: off" with the note icon (title and pause). Only remembered until O2. */
+  /** "Music: on" / "Music: off" with the note icon (title and pause). */
   private musicSwitch(): HTMLButtonElement {
     const w = WORDS.title;
     const label = h('span', {}, this.settings.music ? w.musicOn : w.musicOff);
-    const sw = this.guarded('', 'minor music-switch', () => {
-      this.settings.music = !this.settings.music;
-      saveSettings(this.store, this.settings);
-      label.textContent = this.settings.music ? w.musicOn : w.musicOff;
-      sw.classList.toggle('is-off', !this.settings.music);
-    });
+    const sw = this.guarded('', 'minor music-switch', () => this.toggleMusic());
     sw.innerHTML = MUSIC_SVG;
     sw.append(label);
     sw.classList.toggle('is-off', !this.settings.music);
