@@ -125,9 +125,8 @@ function startGame(): void {
   // Pause when the tab is hidden or the phone turns upright (the "turn sideways" note shows).
   const portrait = window.matchMedia('(orientation: portrait)');
 
-  /** The street, the well and its room, or the hall fight is being played (not game over or won). */
-  const PLAY_PHASES: ReadonlySet<RunPhase> = new Set(['run', 'arena', 'wellDown', 'roomIn', 'room', 'wellUp']);
-  const inPlay = (): boolean => PLAY_PHASES.has(game.run.phase);
+  /** The street, the well and its room, or the hall fight is being played (not a finish, game over or won). */
+  const inPlay = (): boolean => game.run.inPlay;
 
   /** Pause the run and show the pause screen (button, app switch, or phone upright). */
   function pause(): void {
@@ -388,6 +387,10 @@ function startGame(): void {
         if (e.highHonks) toast.show(W.highHonks, HINT_MS);
         break;
       case 'bossDefeat':
+        // S2.8: the hall is won at the third hit. Saved now, so leaving or reloading during the
+        // 6 s kind finish never loses it (qa N3). 'win' saves the same again (merge, never lower).
+        progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo });
+        break;
       case 'dust':
         break;
       case 'hallClear':

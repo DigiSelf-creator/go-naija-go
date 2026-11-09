@@ -5,7 +5,7 @@
  *                                     "parcel": true, "hall": { "done": false, "best": 0 } } } }
  *
  * Rules:
- * - Written only when a street is finished (bus boarded), when the hall is won, and when the
+ * - Written only when a street is finished (bus boarded), when the hall is won (at the third hit), and when the
  *   parcel is saved (it is saved with the street it was carried off). Never mid-street.
  * - Merge, never overwrite: unknown states and unknown fields in the saved copy are kept as
  *   they are, so later regions and later versions add to it safely.
