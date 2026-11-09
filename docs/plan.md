@@ -216,6 +216,8 @@ N1 scope (art, one branch): (1) Streets card look: card frame, padlock, tick, wi
 | P3 | qa | Full e2e of "slice 2 done" on the phone profile by touch and at 4x CPU; offline second visit; R8 originality and no-real-people review of every new picture, sound and tune; break tests. Added from po K4: (a) real first-timers (Tp first) clear each street in 3 tries or fewer, and in the hall meet at least 2 throws in each phase, see a high honk before the third hit, win the first time in about 30 to 60 s, and clear it in 3 tries or fewer; if not, designer tunes in this order: big pits 170 to 160, then one hazard fewer in street 3's group at 3700 to 4250; (b) listen to the drum and well sounds for originality; (c) offline on the second visit checked by hand; (d) turn the phone and switch apps on streets 2 and 3; keyboard play on streets 2 and 3 | P2 fixes merged | All pass; three-line report |
 | P4 | po | Accept slice 2 against "slice 2 done" | P3 | Acceptance note in docs/questions.md |
 
+Added by po N4 (pm owns this file; one line): P2 polish, gamedev: call `toast.hide()` on `bossDefeat` (src/main.ts) so the "PEEP!" hint never shows in the hall's kind finish; P3 checks it. Later, after slice 2: when every storage write fails, still show the look picked this visit (src/storage.ts probe).
+
 ### Order and what runs at the same time
 
 | Step | gamedev (one at a time) | art (can run alongside) | qa and po |
