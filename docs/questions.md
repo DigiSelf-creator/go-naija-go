@@ -1,6 +1,12 @@
 # Open questions for the product owner
 
-## po note, 8 Nov 2026, later (read this first): Q22 street names fully answered
+## po note, 8 Nov 2026, evening (read this first): N2 open choices ruled
+
+Accepted: nothing new. N is not accepted yet (N4 waits for gamedev's one change below and qa's re-check).
+Ruled: gamedev's six N2 open choices (a) to (f), see "po ruling, 8 Nov 2026: N2 open choices" under Slice 2. Five stay as built; one changes: the garri parcel is used up when Go-Slow Hall is won (decision line 18, Q23).
+Waiting for Tp: nothing new. Only pasting lines 5, 6, the "wrong premise" line and 7 to 21 into docs/decisions.md. Recommendation: paste them as written.
+
+## po note, 8 Nov 2026, later: Q22 street names fully answered
 
 Accepted: nothing new to accept in this note. No code has changed yet; the names go in with N2.
 Answered: Q22 is fully answered. Tp confirmed the street names in chat on 8 Nov 2026, choosing the recommended option: Street 1 (home) **Alausa**, Street 2 (market) **Computer Village**, Street 3 (bus park) **Ikeja**. The backups (Ogba, Opebi, Ojota) are not used. Earlier the same day Tp chose the cleared line "{street name} is moving again, thanks to you! You got {kobo} kobo." (already decided in docs/design.md S2.10).
@@ -61,6 +67,23 @@ Blocks: nothing. The made-up names stay until designer's names pass po.
 Outcome, 8 Nov 2026: Tp chose the names directly (Alausa, Computer Village, Ikeja), so they are decided. po checked them against this rule: Computer Village and Ikeja pass (reasoned, from design S2.6). Alausa does not pass rule 2 on its own, because no one is sure it is not a family name; Tp chose it knowing that, which overrides the rule for this one name. Rule 1's spread (mainland and island) was also set aside by Tp, who asked for names around Ikeja and Alausa.
 
 ## Slice 2 requests from Tp, 7 Nov 2026
+
+### po ruling, 8 Nov 2026: N2 open choices (from gamedev N2, confirmed in the build by qa N3)
+
+Not an acceptance. Branch gamedev/s2-n2-progress. Sources: decisions 1 to 4 and lines 7 to 21 above (Tp, 8 Nov: "All answers are Ok"), design S2.5, S2.6, S2.8, S2.10, S2.11, plan N2. No question for Tp.
+
+- **(a) Hall card says "Done ✓" with no Best line: keep.** The hall has no kobo (po M4 note, S2.10 Win row), so "Best: 0 kobo" would be a zero at the big moment. Words: "Done ✓". designer: S2.10 Streets row, add "(hall: "Done ✓")" after the done line.
+- **(b) Hall card with a parcel saved: keep.** Lines: "Go-Slow Hall" (bold), the status line, then "You have a garri parcel." The hall card has no small "Street n" line, so nothing is lost. After the hall is won the parcel is used up (d), so the line beside "Done ✓" shows only if the player picks up a new parcel on a street replay, and then it is true: it will shield the next hall try.
+- **(c) Street cards in three lines at every size: keep.** Plan N2 (h) asks for three lines; one layout is one thing to build and test (the same reason as the wheel fit rule, S2.8), and the bold place name reads better than a long one-line label (opinion). Words per card: "Street 2" (small), "Computer Village" (bold), the status line. designer: S2.6 "Fit at 320 px", change "Wider screens show "Street 2: Computer Village" on one line, as before." to "Every size uses the same three lines." and the S2.10 Streets row to match.
+- **(d) Parcel stays saved after the hall win: change.** Decision line 18 (Q23): "It starts every Go-Slow Hall try with the shield on, until the hall is cleared." So winning the hall uses it up: write `parcel: false` with `hall.done: true` in the same save. A lost hall try keeps it (every try until cleared). After that, a street replay can find a new parcel in the well room (S2.5 gift rule 6 shows the parcel again once none is saved), which shields the next hall replay; still one at a time, never stacked. No new words: the hall card's "You have a garri parcel." simply goes away on the win. Tests: unit, hall win clears the parcel and keeps unknown fields (merge); e2e, win with a parcel, reload, the hall card has no parcel line and the next hall try starts with no shield.
+- **(e) Wheel "Back" goes to where the wheel was opened from: keep.** From the title, back to the title; from Streets, back to Streets; from the Win card, to Streets (S2.10 flow). A player who opens the wheel from the title may have no street done or no hero, so Streets would be the wrong place (S2.10 says Streets is for a player with a street done). designer: S2.8 last list line and the S2.10 flow line, "Back goes to the screen that opened the wheel; from the Win card, to Streets."
+- **(f) Cog ratchet and bell each time the wheel opens from the Win card, also with reduced motion: keep.** Reduced motion stops movement, not sound (S2.11 item 6: no wheel spin, tick and name stay); the Sound switch silences it (S2.11 item 2). A replay win is still a win and earns the same cheer (opinion). It plays only from the Win card, never when the wheel opens from the title or Streets.
+
+Who does what:
+- gamedev: (d) only, with its tests. Nothing else changes.
+- designer: the S2.6, S2.8 and S2.10 wording in (a), (c) and (e), and S2.5 gift rule 5: add "until the hall is won; the win uses it up."
+- pm: add (d) to N2's fix line in docs/plan.md.
+- qa: re-check (d) in the N3 follow-up; (a), (b), (c), (e), (f) stand as tested.
 
 ### po acceptance note, 8 Nov 2026: slice 2 piece M (M4)
 
