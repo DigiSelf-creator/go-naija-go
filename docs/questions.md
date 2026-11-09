@@ -1,6 +1,149 @@
 # Open questions for the product owner
 
-## po note, 9 Nov 2026, later (read this first): quick fixes accepted
+## po acceptance, 9 Nov 2026: O music
+
+**po note (read this first).** Accepted: O (music), branch gamedev/s2-o2-music at b2c21d5. Waiting for Tp: nothing new; one ruling below Tp may overturn (recommend: keep it). Blocks: nothing. pm: merge O2, then P1.
+
+**Verdict: accepted.** qa O3 passed it with no bugs (reported): unit 633/633, e2e 137/137, worst 56.5 fps at 4x CPU with music on or off, first load 330.2 KB (limit 3 MB). po checked in the code (verified): each place gets the S2.9 tune (menus, streets 108/112/116, well, hall 128/134/140 stepping at the next bar after a hit, cleared and win once, game over silent); Pause, a hidden page and the phone turned upright hold the tune and carry on from the same bar; "Music: on / off" sits on the title and Pause, M toggles it, `gidi-music` remembers it. This meets O2's done-when, R1 (confirmed by Tp, 8 Nov) and the slice 2 goal "hears music with its own on/off switch". No network, no trackers, nothing to download (brief "Done when" 5 and 6).
+
+**Ruling 1, Sound and Music (po ruling, Tp may overturn).** Keep gamedev's choice: music plays only when Sound and Music are both on.
+- Why (reasoned): in play the HUD has one quiet button, Sound (S2.10 HUD). A teen who taps it when a teacher walks in or a sibling is asleep expects the game to go quiet. If music kept playing, that button would not do its job.
+- R1 still holds: Music is its own switch. Music off stops the tunes and keeps the sound effects.
+- The Music switch keeps showing the player's own choice ("Music: on") while Sound is off, so the tune comes back by itself when Sound comes back. Accepted as is.
+- Proposed wording for designer, S2.9 rule 5 (design.md, not Tp's files): "Sound off makes the game quiet, music too. Music off stops only the tunes. Each switch shows its own setting."
+
+**Ruling 2, the two 5-note fragments: wait for the P3 listen, no change now.** qa reasoned from the note data and did not listen (reported).
+- E G E D C: a major key with a different rhythm, mid-phrase. The riff it brushes is minor, starts on a repeated note and is known by its rhythm (reasoned).
+- D C E G C: the same steps as the end of a famous phone ringtone, but a different rhythm, mid-phrase (reasoned).
+- S2.9 bans following a known tune's opening; neither is an opening, and five common notes alone do not make a song (opinion). If a listener in P3 hears either song, art moves one note in that spot; it is a data change in src/art/tunes.ts, so it cannot hold up slice 2.
+
+**For pm to add to P3 (po asks; pm owns plan.md):**
+1. A human listen to every tune, the two fragments first. If either sounds like the known song, art changes one note there.
+2. On a real iPhone: the silent switch silences music too (Tp chose S1 a; confirmed line 22), and a call mid-level holds the tune and brings it back on the same bar.
+3. Street 3 really plays faster than street 1 (116 BPM, measured or by ear).
+4. Sound off in play makes everything quiet, then Sound on brings the music back if Music is on (Ruling 1).
+
+## Tp, 9 Nov 2026 (second message)
+
+Tp's words, in short: respect the switch; sound works, no music yet; GitHub access is back; kobo becomes Naira (100 kobo = ₦1), more Naira builds more city; "Build up Lagos"; an intro story about Lagos growing and the Wheel Hero.
+
+**po note (read this first).**
+Accepted: nothing new (no built work came in).
+Settled: S1, city choice 1 and city choice 10 (lines below). Tp also hears game sound on the iPhone now (reported by Tp), so the quick fix works on a real phone.
+Waiting for Tp: N1 to N4 (Naira), T1 to T4 (story, hero name, intro). Recommendation: the first option in each.
+Still open from "City direction": choices 2 to 9 (end of this block).
+Blocks: nothing today. Naira and the intro go into slice 3. designer can draft both with the recommended answers; nothing is built until Tp says yes.
+
+### Confirmed lines for Tp to paste into docs/decisions.md
+
+22. On iPhone the silent switch wins: in silent mode the game makes no sound. The Pause screen shows, on iPhones only, next to Sound: "No sound? Turn off silent mode on your phone." (S1, a)
+23. The game becomes a city loop: the Lagos city screen is home, challenges earn money, money fixes and builds the city, and it never ends. (City choice 1, a; Tp's story, 9 Nov)
+24. The title line is "Build up Lagos. Get Nigeria working." (City choice 10, a)
+
+No decision needed: no music yet is expected; gamedev is building the music (O2) now.
+GitHub access is back: noted for pm and gamedev (hosting, brief "Tech" 6). No product choice.
+
+### Naira: what changes
+
+Today (verified in code): a run counts kobo, 1 per coin. HUD "Kobo 87". Cleared line "...You got {kobo} kobo." Game over "You got {kobo} kobo." Streets card "Best: {best} kobo". The save `gidi-progress` keeps only a `best` per street. There is no saved purse yet, so no spending money has to move over.
+
+po's plain rule (recommended):
+- You pick up kobo coins in a run. 100 kobo make ₦1.
+- One way to show money everywhere (HUD, cards, city): under 100 kobo, "80 kobo". From 100 kobo up: "₦3.40", "₦12", "₦1,250".
+- The game stores whole kobo only. ₦ is only how it is shown, so nothing is ever rounded away.
+- A run's kobo goes into the city purse when you take it home. No exchange step: 340 kobo simply is ₦3.40.
+- Fixes cost Naira. Win prizes are in Naira.
+- Game money is never sold for real money and never turns into real naira (CLAUDE.md rule 5; brief "Money (not in version 1)").
+
+**N1. How big is a coin?** Today a street run gives about 60 to 150 coins.
+- a) Each coin is 10 kobo. A run gives about ₦6 to ₦15, plus a ₦5 win prize. Fixes cost ₦10 to ₦30; the hall pays ₦15. Best case: kobo rolls into a new Naira every 10 coins, and a fix still takes one or two wins (city choice 7 a).
+- b) Each coin is 1 kobo, as now. A run gives about ₦1; fixes cost ₦1 to ₦3. Best case: nothing changes in runs.
+- c) 10-kobo coins plus a rare ₦1 coin on harder paths. Best case: a big Naira moment that rewards risk. Needs new art and a design note.
+Why a): b) makes Naira feel tiny, the opposite of what Tp asked. c) is fun but more work; it can come later on top of a).
+
+**N2. What the player sees (exact words, with N1 a).**
+- HUD chip: "₦3.40" (under ₦1: "80 kobo"), with a small pop each time a new Naira is reached.
+- Street cleared: "{street name} is moving again, thanks to you! You got ₦8.70."
+- Game over: "You got 90 kobo. The street is still here. Try again!"
+- Streets card: "Done ✓ Best: ₦8.70"
+- Hall win (once the city is built): "You cleared General Go-Slow with {lives} lives left. You got ₦15 for Lagos."
+- City: counter "₦24.50". Problem card: "Run the street to raise money for the repair." Button "Fix it (₦10)". End-card button "Take it home" (was "Take the kobo home").
+- Fix costs (slice 3): Potholes ₦10, Go-slow bus stop ₦15, Lights out ₦10.
+- Screen readers hear "8 naira 70 kobo", not "naira sign 8 point 7 0".
+Recommend: yes, as written. Other option: keep "Kobo 870" in runs and show ₦ only in the city (best case: no HUD change). po does not pick it: two ways to show one purse confuses a 10 year old.
+Note: pending line 19 says "You got {kobo} kobo." With N2 it reads "You got {money}." under the rule above.
+
+**N3. Old saves.** Only a `best` per street is saved today, at 1 kobo a coin.
+- a) On first load after the change, multiply each saved best by 10 once and mark the save as moved (`v: 2`), so it never happens twice. Merge, never overwrite, as now. The purse starts at ₦0. Best case: old and new bests compare fairly, and no money appears from nothing.
+- b) Keep old bests as they are. Best case: nothing to build; old bests look small next to new runs.
+- c) Also give returning players a welcome gift (say ₦10). Best case: early testers can fix one thing at once.
+Why a): fair and small. Bests are records, never money (docs/city.md, "Kobo" row), so they must not fill the purse.
+
+**N4. The ₦ sign on cheap phones.** ₦ is in Unicode (U+20A6). Android's usual fonts (Roboto, Noto) have it (reasoned, not tested on a phone). Very old phones may show an empty box.
+- a) Use ₦. qa checks the slow-phone profile and one real cheap Android. If any shows a box, show "N" instead ("N3.40"), which Nigerians already write. Best case: the real sign where it works, still clear where it does not.
+- b) Always "N". Best case: never a box.
+- c) Draw our own ₦ in code, like the rest of the art. Best case: the same on every phone; a bit more work.
+
+### The story
+
+Tp's story is strong and fits the game: Lagos grows, people come from everywhere, it needs more roads, light and buses to stay great, and a hero keeps Nigeria's Wheel turning. It matches the wheel already in the game. Four parts clash with our rules, so po proposes wording.
+
+1. "Some group wanted it only for themselves after independence." Players will read this as a real party, elite, tribe or government. That breaks CLAUDE.md rule 3 (no real people, parties or officials) and rule 4 (mock no one). The enemies must be made-up problems with shapes, never people or groups.
+2. "The leaders need more strategy." This points at real government; the Alausa guard (design S2.6) says no word about government anywhere. Proposed: the story says what Lagos needs, and the player builds it.
+3. "The principalities" and "the creator sent" are faith words. "Principalities" comes from one faith's idea of evil spirits; it would make the bosses spirits and the game a faith story. The game is for every faith in Nigeria (rule 4). Proposed: no faith words. "The Creator" stays only if Tp wants it (T1 b).
+4. "He." The player picks male or female (brief "Your hero"). The story says "the hero" or "you".
+
+**T1. Where the Wheel comes from.**
+- a) No faith words, no dates: "The Wheel was made for everyone." "Nigeria called a hero." Best case: every player, of any faith or none, feels it is their story.
+- b) One gentle line: "The Creator gave the Wheel to everyone." Best case: closest to Tp's words; many faiths in Nigeria share the idea of a creator.
+- c) Independence as a happy moment, with no one to blame: "At independence, the Wheel was given to everyone." Best case: real pride in Nigeria's story.
+Why a): it keeps Tp's meaning (the Wheel belongs to all) with nothing to argue about. "Principalities" is in no option.
+
+**T2. Who stops the Wheel?**
+- a) "The Stoppers": made-up troubles with shapes, not people. They are our bosses (General Go-Slow, King Pothole, the Light Taker, Mister Red Tape); greed, waste and delay can be later bosses. Best case: plain, says what they do, keeps Tp's "evils" with no group to point at.
+- b) "The Wahala" (Pidgin for trouble). Best case: warm and Nigerian.
+- c) No group name, just "traffic, potholes, power cuts and red tape". Best case: plainest.
+
+**T3. The hero's name.**
+- a) "the Wheel Hero". Best case: Tp's words, short enough for 320 px.
+- b) "the Wheel Hero of Nigeria". Best case: Tp's full words; long on small screens, so use it once.
+- c) "Keeper of the Wheel". Best case: sounds old and grand.
+
+**T4. Intro captions.** Six still frames drawn in code (well under 50 KB), plain words. "Skip" shows from the first frame; a tap moves on. It plays once, before the hero builder on the first visit, then lives under Settings as "Watch the story". A call or a turned phone pauses it, and that frame starts again. Words are real text, so screen readers read them.
+
+Recommended (T1 a, T2 a, T3 a):
+1. "Lagos never sleeps. Every day, more people come to build a dream here."
+2. "More people need more roads, more light and more buses."
+3. "Nigeria's Wheel keeps it all moving. The Wheel was made for everyone."
+4. "But the Stoppers want it stuck: traffic, potholes, power cuts and red tape."
+5. "Nigeria called a hero to keep the Wheel turning: the Wheel Hero. That hero is you."
+6. "Your journey starts now. Build up Lagos. Get Nigeria working." Button "Let's go"
+
+Variant (T1 b and c, T3 b; closer to Tp's words):
+1. "At independence, the Creator gave Nigeria's Wheel to everyone."
+2. "The Wheel turned, and Lagos grew. People came from every part of Nigeria."
+3. "Lagos needs more roads, more light and more buses to stay great."
+4. "But the Stoppers want the Wheel for themselves: traffic, potholes, power cuts and red tape."
+5. "So a hero was sent: the Wheel Hero of Nigeria. That hero is you."
+6. "Your journey starts now. Build up Lagos. Get Nigeria working." Button "Let's go"
+
+Both are po drafts; designer fits them to 320 x 240 and po checks the final words.
+If Tp agrees, a line for the brief (only Tp edits it): "Story: Nigeria's Wheel was made for everyone. The Stoppers (traffic, potholes, power cuts, red tape) want it stuck. You are the Wheel Hero: build up Lagos, then Nigeria, and keep the Wheel turning."
+
+### City choices still open
+
+Settled now: 1 (a, by Tp's story) and 10 (a). Still open, po's pick in brackets (full options under "City direction (9 Nov 2026)" below):
+- 2. What first (a). The team is already doing a), so Tp only needs to object.
+- 3. Lane run moves by itself (a).
+- 4. Lane run setting and name (a).
+- 5. Food throws (a).
+- 6. Food length (a, 12 s).
+- 7. Money spent on fixes (a). Tp's "more Naira, more money to build the city" says yes to spending; only the detail (no timers, nothing breaks while away) is left.
+- 8. Fufu (a).
+- 9. Blender side test (a).
+Also still waiting: pasting lines 5, 6, the "wrong premise" line, 7 to 21 and the new 22 to 24, plus the "Lines for Tp" at the end of docs/city.md.
+
+## po note, 9 Nov 2026, later: quick fixes accepted
 
 Accepted: the quick fixes (sound on iPhone, longer foods, HUD step 4), branch gamedev/s2-quick-fixes at ff810d3. See "po acceptance, 9 Nov 2026: quick fixes" just below.
 Waiting for Tp: one new sound choice (S1, below). Recommendation: a), keep the silent switch working as it does now and add one plain hint. The 10 city choices and the decisions.md paste still wait too.
@@ -22,7 +165,7 @@ Rulings on qa's follow-ups:
 3. **iPhone silent switch: to Tp, choice S1 below.** Nothing is blocked: the game already respects the switch, which is po's pick.
 4. **Test flake at progress.spec:108: now, qa, a small test-only fix on its own branch** (poll after setViewportSize). Not a game bug and does not block this merge, but a gate that fails at random gets ignored.
 
-## Sound choice (9 Nov 2026), waiting for Tp
+## Sound choice (9 Nov 2026): answered by Tp, a) (see "Tp, 9 Nov 2026 (second message)", line 22)
 
 **S1. iPhone silent switch.** With the silent switch on, iPhones mute the game's sound. First option is po's pick.
 - a) Keep it: the switch wins. Add one line on the pause screen, next to Sound, on iPhones only: "No sound? Turn off silent mode on your phone." Best case: the player stays in charge; no surprise noise in class, church or at night.
@@ -38,7 +181,7 @@ po checked city.md against the brief, decisions, the pending lines 7 to 21 and C
 Waiting for Tp: the 10 choices below. Recommendation: the first option in each. Still waiting too: pasting lines 5, 6, the "wrong premise" line and 7 to 21 into docs/decisions.md.
 Blocks: slice 3 only. O, P and the no-sound fix can go on now.
 
-## City direction (9 Nov 2026), waiting for Tp
+## City direction (9 Nov 2026): 1 and 10 answered (a), 2 to 9 waiting for Tp
 
 Full detail: docs/city.md. First option is po's pick.
 
