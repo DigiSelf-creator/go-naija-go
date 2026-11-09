@@ -19,7 +19,7 @@ const ROOT = join(import.meta.dirname, '..', '..');
 function moduleJs(file: string): string {
   const src = readFileSync(join(ROOT, file), 'utf8');
   const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-  return js.replace(/from '\.\.\/art\/tunes'/g, "from './tunes.js'");
+  return js.replace(/from '\.\.\/art\/tunes'/g, "from './tunes.js'").replace(/from '\.\/audio-unlock'/g, "from './audio-unlock.js'");
 }
 
 /**
@@ -34,6 +34,7 @@ test('music: the street loop rendered offline has no single-sample clicks', asyn
   const files: Record<string, string> = {
     'music.js': moduleJs('src/engine/music.ts'),
     'tunes.js': moduleJs('src/art/tunes.ts'),
+    'audio-unlock.js': moduleJs('src/engine/audio-unlock.ts'),
     'blank.html': '<!doctype html><title>music</title>',
   };
   await page.route('**/__music-test/*', (route) => {
