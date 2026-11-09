@@ -129,7 +129,7 @@ test('the hall from the Streets card with a saved parcel, won: lives left, 1 of 
   await expect(won.getByText("Lagos's cog is turning: 1 of 37.")).toBeVisible();
   await expect(won.getByText(/kobo/)).toHaveCount(0);
   await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeFocused();
-  expect(await saved(page)).toMatchObject({ v: 1, states: { lagos: { hall: { done: true }, parcel: true } } });
+  expect(await saved(page)).toMatchObject({ v: 1, states: { lagos: { hall: { done: true }, parcel: false } } }); // used up (po ruling d)
   await checkCardFits(page, "See Nigeria's wheel", (at) => shotAt(page, `${at}-win`));
   await shootBoth(page, 'win');
 
@@ -398,7 +398,7 @@ test('qa N3: in the hall finish P, Escape, the Pause button, an app switch and t
   expect(at.b!.defeated).toBe(true);
   expect(at.r.phase).toBe('arena'); // the kind finish is playing
   // Saved at the third hit, before the Win screen.
-  expect(await saved(page)).toMatchObject({ v: 1, states: { lagos: { hall: { done: true }, parcel: true, streets: { 3: { done: true, best: 98 } } } } });
+  expect(await saved(page)).toMatchObject({ v: 1, states: { lagos: { hall: { done: true }, parcel: false, streets: { 3: { done: true, best: 98 } } } } });
 
   const card = page.getByRole('dialog', { name: 'Paused' });
   const stillPlaying = async (why: string) => {
@@ -442,12 +442,16 @@ test('qa N3: in the hall finish P, Escape, the Pause button, an app switch and t
   expect(errors).toEqual([]);
 });
 
-test('qa N3: the hall finish never loses the win when it plays on to the Win screen either', async ({ page }) => {
+test('qa N3 and po ruling (d): the finish plays on to the Win screen with the win kept; the parcel is used up, so after a reload the hall card has no parcel line and the next try has no shield', async ({ page }) => {
   test.setTimeout(240_000);
+  const errors = watchErrors(page);
   await openSaved(page, READY_FOR_HALL);
   await page.getByRole('button', { name: 'Play', exact: true }).tap();
-  await page.getByRole('dialog', { name: 'Lagos' }).locator('[data-where="hall"]').tap();
+  const streets = page.getByRole('dialog', { name: 'Lagos' });
+  await expect(streets.locator('[data-where="hall"]')).toContainText('You have a garri parcel.');
+  await streets.locator('[data-where="hall"]').tap();
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
+  await expect.poll(() => page.evaluate(() => window.__game!.run.power.shield)).toBe(true); // the parcel's shield
   const pad = await touchPad(page);
   await playHall(page, pad);
   await pad.done();
@@ -458,5 +462,17 @@ test('qa N3: the hall finish never loses the win when it plays on to the Win scr
     await page.waitForTimeout(250);
   }
   await waitForWin(page);
-  expect(await saved(page)).toMatchObject({ states: { lagos: { hall: { done: true } } } });
+  expect(await saved(page)).toMatchObject({ states: { lagos: { hall: { done: true }, parcel: false } } });
+
+  // A new visit: the hall card is done, with no parcel line; the next hall try has no shield.
+  await page.reload();
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await expect(streets.locator('[data-where="hall"]')).toContainText('Done ✓');
+  await expect(streets.locator('[data-where="hall"]')).not.toContainText('garri parcel');
+  await expect(streets.getByText('You have a garri parcel.')).toHaveCount(0);
+  await streets.locator('[data-where="hall"]').tap();
+  await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
+  await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(10);
+  expect(await page.evaluate(() => window.__game!.run.power.shield)).toBe(false);
+  expect(errors).toEqual([]);
 });

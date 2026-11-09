@@ -388,7 +388,8 @@ function startGame(): void {
         break;
       case 'bossDefeat':
         // S2.8: the hall is won at the third hit. Saved now, so leaving or reloading during the
-        // 6 s kind finish never loses it (qa N3). 'win' saves the same again (merge, never lower).
+        // 6 s kind finish never loses it (qa N3). The same save uses the garri parcel up (po ruling
+        // d). 'win' saves the same again (merge, never lower).
         progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo });
         break;
       case 'dust':

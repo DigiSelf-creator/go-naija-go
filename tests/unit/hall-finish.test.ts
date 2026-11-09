@@ -122,7 +122,7 @@ describe('the hall win is saved at the third hit', () => {
     const after = readState((JSON.parse(data.get('gidi-progress')!) as { states: { lagos: unknown } }).states.lagos);
     expect(after.hall.done).toBe(true);
     expect(new Progress(createStore(() => storage)).state(LAGOS).hall.done).toBe(true);
-    expect(after.parcel).toBe(true);
+    expect(after.parcel).toBe(false); // used up by the win (po ruling d)
     expect(after.streets['3']).toEqual({ done: true, best: 98 });
   });
 

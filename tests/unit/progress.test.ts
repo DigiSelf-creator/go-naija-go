@@ -56,6 +56,42 @@ describe('the save shape (S2.8)', () => {
     expect(readState((s['states'] as Record<string, unknown>)['lagos']).streets['1']).toEqual({ done: true, best: 150 });
   });
 
+  it('po ruling (d): a hall win uses the parcel up in the same save, keeping unknown fields', () => {
+    const before = {
+      v: 1,
+      future: 'keep me',
+      states: {
+        kano: { parcel: true, extra: [1] },
+        lagos: { streets: { 3: { done: true, best: 98, time: 61 } }, parcel: true, hall: { done: false, best: 0, tries: 4 }, note: 'x' },
+      },
+    };
+    const s = mergeFinish(before, { state: 'lagos', hall: true, kobo: 0 });
+    expect(s).toEqual({
+      v: 1,
+      future: 'keep me',
+      states: {
+        kano: { parcel: true, extra: [1] }, // another state's parcel is its own
+        lagos: { streets: { 3: { done: true, best: 98, time: 61 } }, parcel: false, hall: { done: true, best: 0, tries: 4 }, note: 'x' },
+      },
+    });
+    // The 'win' save after the third-hit save changes nothing.
+    expect(mergeFinish(s, { state: 'lagos', hall: true, kobo: 0 })).toEqual(s);
+  });
+
+  it('po ruling (d): a lost hall try saves nothing, so the parcel stays; a new parcel after the win is saved again', () => {
+    const { storage, data } = fakeStorage();
+    const p = new Progress(createStore(() => storage));
+    p.finish({ state: 'lagos', street: 3, kobo: 98, parcel: true });
+    // A lost try writes nothing (no finish), so the next try still has the parcel.
+    expect(new Progress(createStore(() => storage)).state('lagos').parcel).toBe(true);
+    p.finish({ state: 'lagos', hall: true, kobo: 0 });
+    expect(saved(data)).toMatchObject({ states: { lagos: { parcel: false, hall: { done: true } } } });
+    expect(new Progress(createStore(() => storage)).state('lagos').parcel).toBe(false);
+    // Street 2 replayed with a parcel from the well room: saved again for the next hall try.
+    p.finish({ state: 'lagos', street: 2, kobo: 50, parcel: true });
+    expect(new Progress(createStore(() => storage)).state('lagos')).toMatchObject({ parcel: true, hall: { done: true } });
+  });
+
   it('merge, never overwrite: unknown states and fields are kept', () => {
     const later = {
       v: 1,

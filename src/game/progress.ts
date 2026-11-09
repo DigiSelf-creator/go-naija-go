@@ -12,7 +12,10 @@
  * - Broken copy (bad JSON or the wrong shape): the game starts with nothing done and does not
  *   write over it until the player finishes a street (or wins the hall).
  * - Never goes down: a done street stays done, `best` is the most kobo ever finished with, and
- *   a saved parcel stays saved.
+ *   a saved parcel stays saved until the hall is won.
+ * - po ruling (d), decision line 18: winning the hall uses the parcel up. The same save that
+ *   writes hall.done writes parcel: false. A lost hall try keeps it. A parcel found later on a
+ *   street is saved again and gives the next hall try its shield (one at a time, never two).
  * - Storage blocked: the Store keeps it in memory for this visit (src/storage.ts).
  */
 import type { Store } from '../storage';
@@ -92,7 +95,7 @@ export function mergeFinish(saved: Obj | null, f: Finish): Obj {
   };
   if ('hall' in f) {
     st['hall'] = bump(st['hall']);
-    if (st['parcel'] !== true) st['parcel'] = false;
+    st['parcel'] = false; // used up by the win (po ruling d)
   } else {
     const streets: Obj = isObj(st['streets']) ? (st['streets'] as Obj) : {};
     st['streets'] = streets;
