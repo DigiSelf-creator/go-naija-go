@@ -421,6 +421,8 @@ function startGame(): void {
         // 6 s kind finish never loses it (qa N3). The same save uses the garri parcel up (po ruling
         // d). 'win' saves the same again (merge, never lower).
         progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo });
+        // P2 (po N4): no fight hint ("PEEP!") stays up over the kind finish.
+        toast.hide();
         break;
       case 'dust':
         break;

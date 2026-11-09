@@ -130,6 +130,15 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
   await builder.getByRole('button', { name: 'Start running' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
   await watchToasts(page);
+  // P2: at the first frame after the third hit, note the hint bar's words ('' when hidden).
+  await page.evaluate(() => {
+    const w = window as unknown as { __toastAtDefeat?: string };
+    const look = (): void => {
+      if (window.__game!.boss?.defeated) w.__toastAtDefeat = window.__game!.toast;
+      else requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  });
 
   // The hall as it opens (S2.7 t = 0): inside by the left door, the left light lit, the boss words.
   const s0 = await hallSnap(page);
@@ -161,6 +170,8 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
     expect(seen, words).toContain(words);
   }
   expect(seen.indexOf('Green light! The hall is clear!')).toBeLessThan(seen.indexOf('Lagos is switched on!'));
+  // P2: the toast is hidden at the third hit, so no fight hint shows over the kind finish.
+  expect(await page.evaluate(() => (window as unknown as { __toastAtDefeat?: string }).__toastAtDefeat)).toBe('');
   expect(late).toEqual([]);
   expect(errors).toEqual([]);
 
