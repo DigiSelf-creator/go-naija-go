@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GROUND_Y, PHYSICS } from '../../src/engine/physics';
 import { parseLevel, type Level } from '../../src/game/level';
 import { HAZARD_BOX, RULES, Run, type RunEvent } from '../../src/game/run';
+import { WORDS } from '../../src/screens/words';
 
 const DT = 1 / 60;
 
@@ -231,15 +232,26 @@ describe('after a fall (Q14)', () => {
 });
 
 describe('foods (piece D rules)', () => {
-  it('corn: faster for 6 s, warns at 2 s, ticks, then ends', () => {
+  it('corn lasts 12 s and amala 14 s (twice the first 6 s and 7 s); the toasts say so', () => {
+    expect(RULES.cornSteps).toBe(12 * 60);
+    expect(RULES.amalaSteps).toBe(14 * 60);
+    expect(RULES.warnSteps).toBe(2 * 60);
+    expect(WORDS.toast.corn).toContain(`${RULES.cornSteps / 60} seconds`);
+    expect(WORDS.toast.amala).toContain(`${RULES.amalaSteps / 60} seconds`);
+  });
+
+  it('corn: faster for 12 s, warns at 2 s, ticks, then ends', () => {
     const run = new Run(level({ foods: [[100, 272, 'corn']] }));
     const ev = runUntil(run, (r) => r.power.corn > 0);
+    const pickedAt = run.steps;
     expect(ev.find((e) => e.type === 'food')).toMatchObject({ kind: 'corn' });
     run.step(DT);
     expect(run.hero.speed).toBe(PHYSICS.fastRunSpeed);
     const rest = runUntil(run, (r) => r.power.corn === 0);
     expect(types(rest).filter((t) => t !== 'kobo')).toEqual(['wearingOff', 'tick', 'tick', 'powerEnd']);
     expect(run.steps).toBeGreaterThanOrEqual(RULES.cornSteps);
+    // Fast the whole 12 s: picked up, then exactly cornSteps steps later it ends.
+    expect(run.steps - pickedAt).toBe(RULES.cornSteps);
     run.step(DT);
     expect(run.hero.speed).toBe(156);
   });

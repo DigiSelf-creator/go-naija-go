@@ -36,6 +36,7 @@ export class Hud {
   private fitFor = '';
   private level = 0;
   private lastKobo = 0;
+  private digits = '';
   /** Go-Slow Hall: no Kobo chip (po M4 note), and the chips keep clear of the hit circles. */
   private hall = false;
   /**
@@ -116,6 +117,7 @@ export class Hud {
     this.koboWord.textContent = kobo.endsWith(n) ? kobo.slice(0, kobo.length - n.length) : kobo;
     this.koboCount.data = kobo.endsWith(n) ? n : '';
     this.lastKobo = run.kobo;
+    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}`;
     this.parcel.hidden = !run.parcel;
     this.setSlot('garri', p.shield, WORDS.hud.shield, false);
     this.setSlot('corn', p.corn > 0, WORDS.hud.fast(secs(p.corn)), warn(p.corn));
@@ -133,7 +135,8 @@ export class Hud {
   private fit(force: boolean): void {
     if (this.root.hidden) return;
     const shown = [...this.left.children].map((c) => ((c as HTMLElement).hidden ? 0 : 1)).join('');
-    const key = `${shown}|${String(this.lastKobo).length}|${window.innerWidth}|${window.innerHeight}|${this.hall}`;
+    // The food seconds' digits too: a second corn takes 9 back to 12, one digit wider.
+    const key = `${shown}|${String(this.lastKobo).length}|${this.digits}|${window.innerWidth}|${window.innerHeight}|${this.hall}`;
     if (!force && key === this.fitFor) return;
     this.fitFor = key;
     const limit = this.limit();
@@ -167,9 +170,10 @@ export class Hud {
  * The HUD's steps, from roomy to tight (classes on .hud, each adding to the one before;
  * src/screens/screens.css): 1 the parcel, shield and food chips show their icon (and seconds)
  * only, with less padding; 2 smaller words, icons and gaps; 3 (every chip on a 320 px screen)
- * no chip boxes, a coin for the word "Kobo", small icons.
+ * no chip boxes, a coin for the word "Kobo", small icons; 4 smaller still, for two-digit food
+ * seconds with every chip on a 320 px screen.
  */
-export const HUD_TIGHT = ['', 'hud-tight', 'hud-tighter', 'hud-tightest'] as const;
+export const HUD_TIGHT = ['', 'hud-tight', 'hud-tighter', 'hud-tightest', 'hud-tiniest'] as const;
 
 /** The right edge of the last chip showing, CSS px from the screen's left. */
 function rightEdge(left: HTMLElement): number {

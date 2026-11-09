@@ -8,6 +8,7 @@ import street3Data from './data/levels/lagos-3.json';
 import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
 import { Sound } from './engine/sound';
+import { listenForAudioGestures } from './engine/audio-unlock';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel, type Level } from './game/level';
@@ -436,10 +437,15 @@ function startGame(): void {
     else resume();
   });
 
-  // Sound may start only after the player's first tap or key.
-  const unlock = (): void => sound.unlock();
-  window.addEventListener('pointerdown', unlock, true);
-  window.addEventListener('keydown', unlock, true);
+  // Sound may start only after the player's first tap or key. iOS Safari counts only the end of
+  // a touch (or a click or key) as the tap that can start audio, and stops it on an app switch
+  // or screen lock, so every tap tries, for as long as the game is open (audio-unlock.ts).
+  listenForAudioGestures(
+    window,
+    document,
+    () => sound.unlock(),
+    () => sound.wake(),
+  );
 
   const controls = new Controls(
     {

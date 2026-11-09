@@ -547,6 +547,21 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+/* Step 4: as step 3, smaller still, for two-digit food seconds (corn 12 s, amala 14 s) with
+   every chip on a 320 px screen. Sound and Pause keep their size. */
+.hud-tiniest {
+  gap: 3px;
+  padding-left: max(4px, var(--safe-left));
+  padding-right: max(4px, var(--safe-right));
+  font-size: 0.8rem;
+}
+.hud-tiniest .hud-left {
+  gap: 2px;
+}
+.hud-tiniest .hud-icon {
+  width: 18px;
+  height: 18px;
+}
 .hud-icon {
   width: 28px;
   height: 28px;
