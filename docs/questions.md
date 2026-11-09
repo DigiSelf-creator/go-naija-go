@@ -1,5 +1,28 @@
 # Open questions for the product owner
 
+## po acceptance, 9 Nov 2026: O music
+
+**po note (read this first).** Accepted: O (music), branch gamedev/s2-o2-music at b2c21d5. Waiting for Tp: nothing new; one ruling below Tp may overturn (recommend: keep it). Blocks: nothing. pm: merge O2, then P1.
+
+**Verdict: accepted.** qa O3 passed it with no bugs (reported): unit 633/633, e2e 137/137, worst 56.5 fps at 4x CPU with music on or off, first load 330.2 KB (limit 3 MB). po checked in the code (verified): each place gets the S2.9 tune (menus, streets 108/112/116, well, hall 128/134/140 stepping at the next bar after a hit, cleared and win once, game over silent); Pause, a hidden page and the phone turned upright hold the tune and carry on from the same bar; "Music: on / off" sits on the title and Pause, M toggles it, `gidi-music` remembers it. This meets O2's done-when, R1 (confirmed by Tp, 8 Nov) and the slice 2 goal "hears music with its own on/off switch". No network, no trackers, nothing to download (brief "Done when" 5 and 6).
+
+**Ruling 1, Sound and Music (po ruling, Tp may overturn).** Keep gamedev's choice: music plays only when Sound and Music are both on.
+- Why (reasoned): in play the HUD has one quiet button, Sound (S2.10 HUD). A teen who taps it when a teacher walks in or a sibling is asleep expects the game to go quiet. If music kept playing, that button would not do its job.
+- R1 still holds: Music is its own switch. Music off stops the tunes and keeps the sound effects.
+- The Music switch keeps showing the player's own choice ("Music: on") while Sound is off, so the tune comes back by itself when Sound comes back. Accepted as is.
+- Proposed wording for designer, S2.9 rule 5 (design.md, not Tp's files): "Sound off makes the game quiet, music too. Music off stops only the tunes. Each switch shows its own setting."
+
+**Ruling 2, the two 5-note fragments: wait for the P3 listen, no change now.** qa reasoned from the note data and did not listen (reported).
+- E G E D C: a major key with a different rhythm, mid-phrase. The riff it brushes is minor, starts on a repeated note and is known by its rhythm (reasoned).
+- D C E G C: the same steps as the end of a famous phone ringtone, but a different rhythm, mid-phrase (reasoned).
+- S2.9 bans following a known tune's opening; neither is an opening, and five common notes alone do not make a song (opinion). If a listener in P3 hears either song, art moves one note in that spot; it is a data change in src/art/tunes.ts, so it cannot hold up slice 2.
+
+**For pm to add to P3 (po asks; pm owns plan.md):**
+1. A human listen to every tune, the two fragments first. If either sounds like the known song, art changes one note there.
+2. On a real iPhone: the silent switch silences music too (Tp chose S1 a; confirmed line 22), and a call mid-level holds the tune and brings it back on the same bar.
+3. Street 3 really plays faster than street 1 (116 BPM, measured or by ear).
+4. Sound off in play makes everything quiet, then Sound on brings the music back if Music is on (Ruling 1).
+
 ## Tp, 9 Nov 2026 (second message)
 
 Tp's words, in short: respect the switch; sound works, no music yet; GitHub access is back; kobo becomes Naira (100 kobo = ₦1), more Naira builds more city; "Build up Lagos"; an intro story about Lagos growing and the Wheel Hero.
