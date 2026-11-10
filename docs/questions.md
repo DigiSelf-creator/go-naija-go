@@ -1,5 +1,24 @@
 # Open questions for the product owner
 
+## Tp, 10 Nov 2026: the lane run gets pickups, chasers and buckets (po note, read this first)
+
+Tp's words, in short: the lane run has power-ups like electricity and technology; what you collect is used to fix Lagos. Enemies chase you; if they catch you, you lose. Goats say "meeh" when hit. Anything you hit gives a value (Naira, light or technology) that goes into its bucket. Like the minions lane run game.
+
+How po reads it (to check with Tp), and the rules it must keep:
+1. **Three buckets: Naira, Power and Tech.** Pickups on the lane run: coins (Naira), a glowing bulb or lightning bolt (Power), a small chip or signal bars (Tech). Each fix in the city needs its own kind: "Lights out" costs Power, "Slow internet" costs Tech, "Potholes" costs Naira. This changes city choice 7 ("any Naira fixes anything"), so it needs Tp's yes.
+2. **Things you hit give value.** Crates, junk piles and old broken signs burst when you run into them or jump on them, and pop out Naira, Power or Tech. Goats are never hurt: you bounce off a goat, it says "meeh" and trots off the road, and a few kobo pop out. Our own sounds and our own pop, never another game's coin or block sound (CLAUDE.md rule 2).
+3. **The chaser is a problem, never a person or an animal.** po's pick: **the Blackout**, a creeping darkness from the Light Taker that switches the street lamps off behind you. Other options: the Go-Slow, a jam of honking cars rolling up behind; or a storm of Red Tape forms. Never police, guards, area boys, a dog or any group (CLAUDE.md rules 3 and 4).
+4. **How you lose.** Instead of lives, the top of the screen shows how far behind the chaser is ("Blackout: 40 m behind"). Bumping into something you should dodge, like a stuck car, makes you stumble and the chaser gets 15 m closer. Power pickups push it back. If it catches you, the run ends, and everything you collected still goes home (losing never takes your pickups). Gentle mode: the chaser starts further back and gains more slowly.
+5. **Change to the designer's guard list.** City.md 2B said "nobody chasing the hero at all", to stay far from Subway Surfers (the guard and dog) and Temple Run (the monster). A creeping Blackout is our own idea, but designer must keep it clearly different: no person, no animal, no monster face, and no "stumble once, caught the second time" rule.
+
+**Waiting for Tp (recommended answer first):**
+- **L1. Buckets:** a) three buckets (Naira, Power, Tech), each fix needs its own kind; b) everything turns into Naira.
+- **L2. The chaser:** a) the Blackout; b) the Go-Slow jam; c) the Red Tape storm.
+- **L3. How you lose:** a) the chaser's distance, closing in when you stumble, and you keep everything you collected; b) lives, as on the streets, plus the chaser.
+- **L4. City view (asked 10 Nov):** a) Lagos from above, like a model town (Tp's castle-game cue); b) the side view first planned. And the challenge road map: yes or no (po: yes).
+
+Next for designer: once Tp answers, rewrite city.md 2B with these, and draw the three pickups and the chaser with art. Nothing is built before that.
+
 ## po note, 9 Nov 2026 (cloud, read this first): one main, PR #1, and the intro
 
 Accepted: nothing new (no built work came in).
