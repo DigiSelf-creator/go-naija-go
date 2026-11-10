@@ -147,7 +147,10 @@ export const WORDS = {
     amalaWearingOff: 'Amala is wearing off!',
     shieldUsed: 'Shield used up!',
     /** S2.7 Go-Slow Hall. */
-    hallStart: 'General Go-Slow is jamming the hall! Jump onto the green light.',
+    hallStart: 'General Go-Slow is jamming the hall! Wait for the green light.',
+    /** S2.14: the first time a light comes on in a try, and the first time one goes dark unhit. */
+    lightOn: 'Green light! Jump on it!',
+    lightMissed: 'Missed it! Wait for the next one.',
     parcelShield: 'Your garri parcel: the shield is on!',
     greenLight: (left: number) => `Green light! ${left} more.`,
     highHonks: 'PEEP! High honks fly high. Stay low on the floor.',
@@ -194,7 +197,7 @@ export const SHORT_TOAST: Readonly<Record<string, string>> = {
   'Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
   'A secret room! Grab the kobo. Stand under the rope to go back up.': 'Secret room! Use the rope to go up.',
   'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
-  'General Go-Slow is jamming the hall! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
+  'General Go-Slow is jamming the hall! Wait for the green light.': 'Go-Slow! Wait for the green light.',
   'PEEP! High honks fly high. Stay low on the floor.': 'PEEP! High honks: stay low.',
 };
 
