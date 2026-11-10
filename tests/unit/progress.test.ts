@@ -36,10 +36,11 @@ describe('the save shape (S2.8)', () => {
     const p = new Progress(createStore(() => storage));
     expect(data.has('gidi-progress')).toBe(false); // nothing written until a finish
     p.finish({ state: 'lagos', street: 1, kobo: 120, parcel: false });
-    expect(saved(data)).toEqual({ v: 1, states: { lagos: { streets: { 1: { done: true, best: 120 } }, parcel: false, hall: { done: false, best: 0 } } } });
+    // Version 2 (slice 3, N3): bests are whole kobo.
+    expect(saved(data)).toEqual({ v: 2, states: { lagos: { streets: { 1: { done: true, best: 120 } }, parcel: false, hall: { done: false, best: 0 } } } });
     p.finish({ state: 'lagos', street: 2, kobo: 113, parcel: true });
     expect(saved(data)).toEqual({
-      v: 1,
+      v: 2,
       states: { lagos: { streets: { 1: { done: true, best: 120 }, 2: { done: true, best: 113 } }, parcel: true, hall: { done: false, best: 0 } } },
     });
     p.finish({ state: 'lagos', hall: true, kobo: 0 });
@@ -66,12 +67,13 @@ describe('the save shape (S2.8)', () => {
       },
     };
     const s = mergeFinish(before, { state: 'lagos', hall: true, kobo: 0 });
+    // Slice 3 (N3 a): a version 1 copy moves to Naira (bests times 10, v: 2) as it is merged.
     expect(s).toEqual({
-      v: 1,
+      v: 2,
       future: 'keep me',
       states: {
         kano: { parcel: true, extra: [1] }, // another state's parcel is its own
-        lagos: { streets: { 3: { done: true, best: 98, time: 61 } }, parcel: false, hall: { done: true, best: 0, tries: 4 }, note: 'x' },
+        lagos: { streets: { 3: { done: true, best: 980, time: 61 } }, parcel: false, hall: { done: true, best: 0, tries: 4 }, note: 'x' },
       },
     });
     // The 'win' save after the third-hit save changes nothing.
@@ -104,12 +106,13 @@ describe('the save shape (S2.8)', () => {
     const { storage, data } = fakeStorage({ 'gidi-progress': JSON.stringify(later) });
     const p = new Progress(createStore(() => storage));
     p.finish({ state: 'lagos', street: 2, kobo: 7, parcel: false });
+    // Slice 3 (N3 a): the version 1 copy was moved to Naira on load (bests times 10, v: 2).
     expect(saved(data)).toEqual({
-      v: 1,
+      v: 2,
       future: 'keep me',
       states: {
-        kano: later.states.kano,
-        lagos: { streets: { 1: { done: true, best: 10, time: 61 }, 2: { done: true, best: 7 } }, parcel: false, hall: { done: false, best: 0 }, note: 'x' },
+        kano: { ...later.states.kano, streets: { 1: { done: true, best: 50, stars: 3 } } },
+        lagos: { streets: { 1: { done: true, best: 100, time: 61 }, 2: { done: true, best: 7 } }, parcel: false, hall: { done: false, best: 0 }, note: 'x' },
       },
     });
     // A later version number is kept, never lowered.
@@ -215,9 +218,9 @@ describe('Streets cards (S2.10)', () => {
     expect(c[3]!.extra).toBeNull();
   });
 
-  it('done streets show their best kobo with a tick; the hall card says when a parcel is saved', () => {
-    const c = streetCards(st({ streets: { 1: { done: true, best: 120 }, 2: { done: true, best: 113 } }, parcel: true }), names);
-    expect(c.map((x) => x.status)).toEqual(['Done ✓ Best: 120 kobo', 'Done ✓ Best: 113 kobo', 'Ready to play', 'Finish street 3 first']);
+  it('done streets show their best money with a tick (N2); the hall card says when a parcel is saved', () => {
+    const c = streetCards(st({ streets: { 1: { done: true, best: 870 }, 2: { done: true, best: 90 } }, parcel: true }), names);
+    expect(c.map((x) => x.status)).toEqual(['Done ✓ Best: \u20a68.70', 'Done ✓ Best: 90 kobo', 'Ready to play', 'Finish street 3 first']);
     expect(c.map((x) => x.state)).toEqual(['done', 'done', 'open', 'locked']);
     expect(c[3]!.extra).toBe('You have a garri parcel.');
   });
