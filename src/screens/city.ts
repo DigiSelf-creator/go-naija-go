@@ -48,9 +48,14 @@ export interface CityScreenHooks {
 
 /** The camera is kept between visits (this page load only). */
 let lastCam: CityCam | null = null;
-/** The painted city, kept while its looks and size stay the same. */
-let painted: { key: string; img: HTMLCanvasElement; scale: number } | null = null;
+/**
+ * The painted city, one picture per zoom step at exactly the screen's pixel size, so a drag is a
+ * plain copy with no scaling. Kept while the looks and the size stay the same.
+ */
+const painted = new Map<string, { img: HTMLCanvasElement; scale: number }>();
 
+/** Most device pixels a CSS px for the map canvas (the pins use the full screen sharpness, up to 2). */
+const MAP_DPR = 1.5;
 const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_PX = 30;
 /** A finger that moves this far is a drag, not a tap. */
@@ -395,20 +400,27 @@ export class CityScreen {
     });
   }
 
-  /** The painted still city for these looks (made again only when a look or the size changes). */
+  /** The painted still city for these looks at this zoom step (made again only when a look or the size changes). */
   private picture(dpr: number): { img: HTMLCanvasElement; scale: number } | null {
-    const want = Math.min(camScale('near', this.view) * dpr, 2048 / CITY_MAP.w);
-    const key = `${this.looks.potholes}|${this.looks.lightsOut}|${this.looks.slowInternet}`;
-    if (painted && painted.key === key && painted.scale >= want * 0.8) return painted;
+    const want = Math.min(camScale(this.cam.zoom, this.view) * dpr, 2048 / CITY_MAP.w);
+    const looks = `${this.looks.potholes}|${this.looks.lightsOut}|${this.looks.slowInternet}`;
+    const key = `${looks}|${this.cam.zoom}`;
+    const have = painted.get(key);
+    if (have && Math.abs(have.scale - want) < 1e-6) return have;
+    // Keep only pictures of the looks shown now (at most one per zoom step).
+    for (const k of painted.keys()) if (!k.startsWith(`${looks}|`)) painted.delete(k);
     const img = makeCityCanvas(this.looks, want);
     if (!img) return null;
-    painted = { key, img, scale: want };
-    return painted;
+    const made = { img, scale: want };
+    painted.set(key, made);
+    return made;
   }
 
   private draw(): void {
     if (this.closed) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // The map at up to 1.5 device pixels a CSS px: sharp enough for the code-drawn town, and a near
+    // picture of a phone screen stays under 2048 px wide, so a drag is a plain copy (cheap phones).
+    const dpr = Math.min(window.devicePixelRatio || 1, MAP_DPR);
     const pw = Math.round(this.view.w * dpr);
     const ph = Math.round(this.view.h * dpr);
     if (this.map.width !== pw) this.map.width = pw;
@@ -421,7 +433,18 @@ export class CityScreen {
     g.fillRect(0, 0, pw, ph);
     const pic = this.picture(dpr);
     const s = camScale(this.cam.zoom, this.view);
-    if (pic) g.drawImage(pic.img, this.cam.x * dpr, this.cam.y * dpr, CITY_MAP.w * s * dpr, CITY_MAP.h * s * dpr);
+    if (pic) {
+      const x = Math.round(this.cam.x * dpr);
+      const y = Math.round(this.cam.y * dpr);
+      // Only the part on screen is copied. At the picture's own size it is a plain copy; capped
+      // (a big screen, near) it is scaled.
+      const k = (s * dpr) / pic.scale;
+      const sx = Math.max(0, -x / k);
+      const sy = Math.max(0, -y / k);
+      const sw = Math.min(pic.img.width - sx, (pw - Math.max(0, x)) / k);
+      const sh = Math.min(pic.img.height - sy, (ph - Math.max(0, y)) / k);
+      if (sw > 0 && sh > 0) g.drawImage(pic.img, sx, sy, sw, sh, Math.max(0, x), Math.max(0, y), sw * k, sh * k);
+    }
     this.placePins();
   }
 }
