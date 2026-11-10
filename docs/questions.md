@@ -11,11 +11,20 @@ How po reads it (to check with Tp), and the rules it must keep:
 4. **How you lose.** Instead of lives, the top of the screen shows how far behind the chaser is ("Blackout: 40 m behind"). Bumping into something you should dodge, like a stuck car, makes you stumble and the chaser gets 15 m closer. Power pickups push it back. If it catches you, the run ends, and everything you collected still goes home (losing never takes your pickups). Gentle mode: the chaser starts further back and gains more slowly.
 5. **Change to the designer's guard list.** City.md 2B said "nobody chasing the hero at all", to stay far from Subway Surfers (the guard and dog) and Temple Run (the monster). A creeping Blackout is our own idea, but designer must keep it clearly different: no person, no animal, no monster face, and no "stumble once, caught the second time" rule.
 
-**Waiting for Tp (recommended answer first):**
+**Waiting for Tp (recommended answer first), L1 to L7:**
 - **L1. Buckets:** a) three buckets (Naira, Power, Tech), each fix needs its own kind; b) everything turns into Naira.
 - **L2. The chaser:** a) the Blackout; b) the Go-Slow jam; c) the Red Tape storm.
 - **L3. How you lose:** a) the chaser's distance, closing in when you stumble, and you keep everything you collected; b) lives, as on the streets, plus the chaser.
 - **L4. City view (asked 10 Nov):** a) Lagos from above, like a model town (Tp's castle-game cue); b) the side view first planned. And the challenge road map: yes or no (po: yes).
+
+**Tp, 10 Nov (later): mission complete, safety, and the boom.** Tp's words, in short: after a successful run we always see the hero walk into that part of the city, "mission complete", and see what the win did to it. Some places have a lot of crime because of the problems; the hero helps the police and the people on a mission to fight crime. It never ends: Lagos booms as a centre of excellence, and we keep fixing to keep it booming.
+
+- **L5. Mission complete walk-in.** po: yes, no problem. After a win: the hero gets off the bus in that part of the city, the heading says "Mission complete!", and the fix plays out around them (tarmac rolls, lamps switch on, people and buses come back). 4 to 6 s, tap to skip. Recommended: a) yes, after every won challenge.
+- **L6. Crime and safety.** po flags three rules. CLAUDE.md rule 3 says bosses are problems, never people, and a criminal is a person. Decision line 19 (waiting to be pasted) and city.md "Words" say no place is shown as dangerous or to blame, and a "high crime" area of Lagos would be read as a real place. Police are a sensitive topic in Nigeria, so real police uniforms, badges or raids would read as real and political. And the game is for young players, so no fighting people.
+  - a) **Safety missions where the enemy is the cause, not people (po's pick).** A part of town goes quiet and unsafe because of problems: dark streets, broken bus stops, no jobs. The boss is a problem with a shape: **"the Shadow"**, which grows where lamps are out and places are empty. The hero, with a made-up neighbourhood Safety Team (our own bright vests, no real badge), switches the lights on, opens a skills hub and a busy market, and the Shadow shrinks away. The area gets a "Safe ✓" badge. Best case: keeps Tp's idea (help the people, make it safe, never ends) with no person as an enemy.
+  - b) Hero helps a made-up Safety Team stop made-up "Grabbers", shown as faceless shadow shapes that drop what they grabbed and run off. Best case: closer to "fight crime". Risk: still reads as chasing people.
+  - c) Real police and criminals. po does not recommend it: it breaks rules 3 and 4, and some players have hard memories with police.
+- **L7. The boom.** po: yes, already the plan (city.md "It never ends"). Add one visible "Lagos is booming" meter: each fix raises it, and at set marks Lagos gets bigger (new buildings, a busier skyline, more people). It never goes down by itself. Recommended: a) yes.
 
 Next for designer: once Tp answers, rewrite city.md 2B with these, and draw the three pickups and the chaser with art. Nothing is built before that.
 
