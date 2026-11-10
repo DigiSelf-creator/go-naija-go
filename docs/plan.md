@@ -291,6 +291,20 @@ Source: docs/questions.md top block "Tp, 10 Nov 2026 (after playing the PR #3 bu
 
 Suggested gamedev order (one at a time): P5, S3a2, P8, P10, S3b2, S3c2, then S3d1, S3e1, S3f2, S3f3. Art can run P6, P7, P9, S3a1, S3b1 side by side (sound tasks one at a time in src/engine/sound.ts).
 
+### B1 to B5: birds, the strong look, the tech suit, the dash, thorny gutters (design S2.16; Tp, 10 Nov)
+
+Added by designer. The street changes sit on top of P5 (S2.14) and P8 (S2.15), so P16 and P17 wait for them.
+
+| id | owner | task | depends on | done when | size |
+|----|-------|------|------------|-----------|------|
+| P13 | art | Amala strong look and the tech suit for every body, hair and outfit; their sounds (S2.16 B2, B3) | none | B2 and B3 qa checks; nothing reads as Mario's grow or star, Iron Man or Mega Man | 8 KB |
+| P14 | gamedev | Hook up B2 and B3: step events, amala blink, suit put-on and break, the hum with Sound, pause and hidden tab | P13 | B2 and B3 done checks | 2 KB |
+| P15 | art | Egret, crow, rubbish pile and bin; gutter, weeds, dried weeds; dash pose, speed lines, breath puffs, cement blocks, dash sign; their sounds (S2.16 B1, B4, B5) | none | gallery shows them; nothing reads as Angry Birds, Flappy Bird, a piranha plant or Sonic | 14 KB |
+| P16 | gamedev | The dash: double tap input, physics, rest, save flag, dash gap pit kind, Gentle blocks (S2.16 B4) | P5, P15 | B4 tests pass | 4 KB |
+| P17 | gamedev | Birds and gutters: hazard kinds, `piles`, `gutters`, fufu meets birds and weeds, the S2.16 street changes, hints, toasts, level tests (S2.16 B1, B5) | P8, P15, P16 | B1 and B5 tests pass; all street rule tests pass | 4 KB |
+| P18 | qa | Test P13 to P17: the S2.16 done checks, phone profile and 4x CPU, first-timers (Tp first) on streets 2 and 3, Normal and Gentle | P13 to P17 | three-line report | |
+| P19 | po | Accept P13 to P17 | P18 | note in docs/questions.md | |
+
 ## Known facts
 
 1. Node 22 via nvm: ~/.nvm/versions/node/v22.19.0.
