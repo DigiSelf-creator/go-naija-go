@@ -47,7 +47,22 @@ export type SoundName =
   // Slice 2: Streets screen and Nigeria's wheel (N1)
   | 'cogRatchet'
   | 'cogBell'
-  | 'lockedTuk';
+  | 'lockedTuk'
+  // P6: the hall light's green time (S2.14 part 3)
+  | 'lightDing'
+  | 'lightTick'
+  | 'lightClunk'
+  // P7: pepper fufu (S2.15)
+  | 'fufuToss'
+  | 'fufuPlop'
+  | 'fufuHop'
+  | 'fufuRoll'
+  | 'fufuPlug'
+  | 'fufuFarPlop'
+  | 'fufuBonk'
+  | 'fufuPff'
+  | 'goatChew'
+  | 'goatMeeh';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -319,6 +334,81 @@ const SOUNDS: Record<SoundName, Recipe> = {
       { f: 400, len: 0.03, wave: 'sine', to: 320, vol: 0.02 },
     ],
     hiss: [{ len: 0.02, lp: 900, vol: 0.03 }],
+  },
+  // P6 (S2.14 part 3). The hall light turns green: a bright two-note agogo hit, high bell then
+  // the low bell a fourth under it, each with its out-of-tune 2.7 partial. Sine only, falling.
+  lightDing: {
+    tones: [
+      { f: 1175, len: 0.14, wave: 'sine', to: 1170, vol: 0.05 },
+      { f: 1175 * 2.7, len: 0.07, wave: 'sine', vol: 0.012 },
+      { f: 880, len: 0.2, wave: 'sine', to: 876, at: 0.09, vol: 0.05 },
+      { f: 880 * 2.7, len: 0.08, wave: 'sine', at: 0.09, vol: 0.012 },
+    ],
+  },
+  // Each blink in the light's last second: a dry wood click, short and level (no pitch run).
+  lightTick: {
+    tones: [{ f: 1900, len: 0.018, wave: 'triangle', to: 1700, vol: 0.045 }],
+    hiss: [{ len: 0.012, hp: 3500, vol: 0.03 }],
+  },
+  // The light goes dark, missed: a low, muted thud, like a heavy switch in a box.
+  lightClunk: {
+    tones: [
+      { f: 150, len: 0.12, wave: 'triangle', to: 85, vol: 0.09 },
+      { f: 300, len: 0.03, wave: 'triangle', to: 220, vol: 0.03 },
+    ],
+    hiss: [{ len: 0.05, lp: 500, vol: 0.05 }],
+  },
+  // P7 (S2.15). Pepper fufu: soft food sounds only. Never a "fwoosh", a crackle, a rising
+  // "pew", or any game's throw or fireball sound.
+  // The toss: a soft breathy "fff" (low hiss) over a barely-there low breath tone.
+  fufuToss: {
+    tones: [{ f: 420, len: 0.08, wave: 'sine', to: 380, vol: 0.006 }],
+    hiss: [{ len: 0.08, lp: 1400, vol: 0.035 }],
+  },
+  // First landing: a "plop", a sine sliding down from 220 to 140 Hz.
+  fufuPlop: { tones: [{ f: 220, len: 0.08, wave: 'sine', to: 140, vol: 0.09 }] },
+  // Each hop after: the same plop, smaller and softer.
+  fufuHop: { tones: [{ f: 200, len: 0.06, wave: 'sine', to: 150, vol: 0.045 }] },
+  // Rolling along the road: a soft low rumble that fades (play once as it starts to roll).
+  fufuRoll: {
+    tones: [{ f: 95, len: 0.25, wave: 'triangle', to: 85, vol: 0.025 }],
+    hiss: [{ len: 0.25, lp: 350, vol: 0.03 }],
+  },
+  // Plugging a pothole: a deeper "plup", then a short soft steam hiss.
+  fufuPlug: {
+    tones: [
+      { f: 170, len: 0.1, wave: 'sine', to: 90, vol: 0.1 },
+      { f: 120, len: 0.06, wave: 'sine', peak: 150, to: 110, at: 0.07, vol: 0.04 },
+    ],
+    hiss: [{ len: 0.28, hp: 2500, at: 0.05, vol: 0.02 }],
+  },
+  // A ball dropping into a big pit: a small, far-off soft plop after a short wait.
+  fufuFarPlop: { tones: [{ f: 260, len: 0.07, wave: 'sine', to: 170, at: 0.18, vol: 0.02 }] },
+  // A tyre or drum knocked off the road: a rubbery "bonk" (bends up a little, then sags).
+  fufuBonk: {
+    tones: [
+      { f: 170, len: 0.13, wave: 'triangle', peak: 240, to: 140, vol: 0.09 },
+      { f: 340, len: 0.05, wave: 'sine', to: 280, vol: 0.025 },
+    ],
+  },
+  // A throw popped in the hall: a soft "pff" (a puff of low hiss and a tiny dull tone).
+  fufuPff: {
+    tones: [{ f: 260, len: 0.06, wave: 'sine', to: 200, vol: 0.025 }],
+    hiss: [{ len: 0.1, lp: 1500, vol: 0.05 }],
+  },
+  // The goat eating a ball: three soft, muffled munches (0.6 s of chewing), level in pitch.
+  goatChew: {
+    tones: [0, 1, 2].map((i): Tone => ({ f: i % 2 ? 230 : 250, len: 0.05, wave: 'triangle', to: 190, at: i * 0.2, vol: 0.04 })),
+    hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.04, lp: 900, at: i * 0.2, vol: 0.03 })),
+  },
+  // Then a happy "meeh": two slightly detuned tones that wobble up and down together.
+  goatMeeh: {
+    tones: [
+      { f: 560, len: 0.08, wave: 'triangle', peak: 600, to: 540, vol: 0.05 },
+      { f: 566, len: 0.08, wave: 'triangle', peak: 606, to: 546, vol: 0.03 },
+      { f: 545, len: 0.22, wave: 'triangle', peak: 590, to: 480, at: 0.09, vol: 0.055 },
+      { f: 551, len: 0.22, wave: 'triangle', peak: 584, to: 486, at: 0.09, vol: 0.03 },
+    ],
   },
 };
 

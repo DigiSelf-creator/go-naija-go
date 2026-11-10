@@ -1,7 +1,7 @@
 /**
- * Slice 3 gallery pages (debug only): ?gallery=16 the six intro frames (and frame 5 with
- * several heroes and the plain outline hero), ?gallery=17 Lagos from above with its pins,
- * ?gallery=18 the three problem spots in every look, the pins, buses and bucket icons.
+ * Slice 3 gallery pages (debug only): ?gallery=17 the six intro frames (and frame 5 with
+ * several heroes and the plain outline hero), ?gallery=18 Lagos from above with its pins,
+ * ?gallery=19 the three problem spots in every look, the pins, buses and bucket icons.
  * Same fixed 960 x 720 layout as the other pages; &t=1.5 holds the time.
  */
 import {

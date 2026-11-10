@@ -1,6 +1,6 @@
 /**
- * Phone buttons (docs/design.md S2.2 "Phone buttons", S2.5 well buttons): Back,
- * Forward, Jump, Go down, Go up. Our own simple shapes: circles with a triangle,
+ * Phone buttons (docs/design.md S2.2 "Phone buttons", S2.5 well buttons, S2.15 Throw): Back,
+ * Forward, Jump, Go down, Go up, Throw. Our own simple shapes: circles with a triangle,
  * a pill with an up chevron above a word, a pill with a bucket and an arrow.
  *
  * One description of each button is turned into either:
@@ -12,13 +12,18 @@
  * 94 percent and the icon turns solid dark. The press shows by shape and size,
  * not colour alone. Each button is drawn in a box 100 units tall.
  */
-export type ControlKind = 'back' | 'forward' | 'jump' | 'down' | 'up';
+export type ControlKind = 'back' | 'forward' | 'jump' | 'down' | 'up' | 'throw';
 
-/** Width of each button when its height is 1 (S2.2: circles D x D, Jump 1.5 D, well pills 2.2 D). */
-export const CONTROL_ASPECT: Record<ControlKind, number> = { back: 1, forward: 1, jump: 1.5, down: 2.2, up: 2.2 };
+/** Width of each button when its height is 1 (S2.2: circles D x D, Jump 1.5 D, well pills 2.2 D; S2.15 Throw a circle T x T). */
+export const CONTROL_ASPECT: Record<ControlKind, number> = { back: 1, forward: 1, jump: 1.5, down: 2.2, up: 2.2, throw: 1 };
 
 /** Words on the buttons that carry words (also their spoken labels). */
-export const CONTROL_WORDS: Record<ControlKind, string> = { back: 'Back', forward: 'Forward', jump: 'Jump', down: 'Go down', up: 'Go up' };
+export const CONTROL_WORDS: Record<ControlKind, string> = { back: 'Back', forward: 'Forward', jump: 'Jump', down: 'Go down', up: 'Go up', throw: 'Throw' };
+
+/** Throw's spoken label (S2.15): "Throw fufu, {n} left". */
+export function throwLabel(n: number): string {
+  return `Throw fufu, ${Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0} left`;
+}
 
 export const CONTROL_LOOK = {
   face: 'rgba(255,255,255,0.35)',
@@ -37,6 +42,7 @@ type Prim =
   | { t: 'pill'; x: number; y: number; w: number; h: number; face: true }
   | { t: 'poly'; pts: readonly (readonly [number, number])[]; closed: boolean; fill: boolean; w: number }
   | { t: 'arc'; cx: number; cy: number; r: number; a0: number; a1: number; w: number }
+  | { t: 'dot'; cx: number; cy: number; r: number; w: number }
   | { t: 'text'; x: number; y: number; size: number; text: string };
 
 /** The parts of one button, in a box (aspect x 100) wide and 100 tall. */
@@ -131,6 +137,39 @@ export function controlParts(kind: ControlKind, label?: string): Prim[] {
       const tx = 92 + (W - 8 - 92) / 2;
       return [{ t: 'pill', x: 4, y: 4, w: W - 8, h: 92, face: true }, ...bucket, ...arrow, { t: 'text', x: tx, y: 52, size: fitSize(text, W - 8 - 100, 30), text }];
     }
+    case 'throw': {
+      // A white fufu ball with two small steam curls and a small forward arrow, the word under it.
+      // Soft round shapes only: no flame, spark or trail.
+      const text = label ?? CONTROL_WORDS.throw;
+      return [
+        { t: 'circle', cx: 50, cy: 50, r: 46, face: true },
+        { t: 'arc', cx: 38, cy: 21, r: 4.5, a0: Math.PI / 2, a1: (Math.PI * 3) / 2, w: 3.5 },
+        { t: 'arc', cx: 50, cy: 18, r: 4.5, a0: -Math.PI / 2, a1: Math.PI / 2, w: 3.5 },
+        { t: 'dot', cx: 44, cy: 42, r: 13, w: 4 },
+        {
+          t: 'poly',
+          pts: [
+            [64, 42],
+            [78, 42],
+          ],
+          closed: false,
+          fill: false,
+          w: 6,
+        },
+        {
+          t: 'poly',
+          pts: [
+            [71, 35],
+            [78, 42],
+            [71, 49],
+          ],
+          closed: false,
+          fill: false,
+          w: 6,
+        },
+        { t: 'text', x: 50, y: 74, size: fitSize(text, 68, 22), text },
+      ];
+    }
   }
 }
 
@@ -183,6 +222,9 @@ export function controlSvg(kind: ControlKind, pressed = false, label?: string): 
         out.push(`<path d="${d}" fill="none" stroke="${iconFill}" stroke-width="${p.w}" stroke-linecap="round"/>`);
         break;
       }
+      case 'dot':
+        out.push(`<circle cx="${p.cx}" cy="${p.cy}" r="${p.r}" fill="${iconFill}" stroke="${pressed ? iconFill : L.iconEdge}" stroke-width="${p.w}"/>`);
+        break;
       case 'text':
         out.push(
           `<text x="${p.x}" y="${p.y}" font-family="sans-serif" font-weight="bold" font-size="${p.size}" text-anchor="middle" dominant-baseline="middle" fill="${iconFill}"` +
@@ -251,6 +293,15 @@ export function drawControl(g: CanvasRenderingContext2D, kind: ControlKind, x: n
         g.beginPath();
         g.arc(p.cx, p.cy, p.r, p.a0, p.a1);
         stroke2(p.w);
+        break;
+      case 'dot':
+        g.beginPath();
+        g.arc(p.cx, p.cy, p.r, 0, Math.PI * 2);
+        g.strokeStyle = pressed ? iconFill : L.iconEdge;
+        g.lineWidth = p.w;
+        g.stroke();
+        g.fillStyle = iconFill;
+        g.fill();
         break;
       case 'text':
         g.font = `bold ${p.size}px sans-serif`;
