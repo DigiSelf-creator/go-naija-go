@@ -1,5 +1,16 @@
 # Open questions for the product owner
 
+## po note, 10 Nov 2026: app stores and saves on iPhone (waiting for Tp)
+
+Tp asked how players get the game and whether saves are kept. Today Gbese! is a web game (brief: version 1 is a free web game), opened from the Pages link. Saves stay on the phone. On iPhone, Safari may clear a site's saves after about 7 days without play unless the game is added to the home screen (Share, then Add to Home Screen); Android Chrome offers "Install app" by itself.
+
+**A1. App stores.**
+- a) Keep the web link for testing now; plan App Store and Google Play versions (the same game wrapped as an app) when the city part is done. Needs an Apple developer account (about $99 a year), a Google Play account (one-time $25), store pictures, a privacy page, and Apple's review. (po's pick)
+- b) Start the store versions now.
+- c) Web only.
+**A2. iPhone home-screen tip.** a) Show a one-time tip on iPhones only, after the first street is finished: "Keep your progress: tap Share, then Add to Home Screen." (po's pick); b) no tip.
+Blocks: nothing now.
+
 ## Tp, 10 Nov 2026: the lane run gets pickups, chasers and buckets (po note, read this first)
 
 **Answered by Tp in chat, 10 Nov 2026: L1 a, L2 a, L3 a, L4 a, L5 a, L6 a, L7 a** (all as po recommended). Three buckets (Naira, Power, Tech); the Blackout chases; stumbles let it close in and you keep what you collected; Lagos seen from above; "Mission complete!" walk-in after every win; the Booming meter; safety missions against the Shadow with a made-up Safety Team, never people as enemies. The challenge road map (part of L4) was not answered on its own; designer drafts it as an option, to confirm with Tp.
