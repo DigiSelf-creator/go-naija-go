@@ -13,7 +13,15 @@ What it means (po, for pm and gamedev):
 Line for Tp to paste into docs/decisions.md:
 39. Gbese! is an app for the Apple App Store and Google Play. The web link is for the team's testing only. (replaces "free web game" in decision 4)
 
-Still open for Tp (po's pick first):
+**Answered by Tp in chat, 10 Nov 2026: A3 a, A4 b, A5 a, A6 a.** Tp's own (or Tp's own company's) store accounts, kept apart from the employer; Google Play and Apple **together** (not po's pick, Google first); a closed invited test (Google Play internal testing and TestFlight) once slice 2 polish is done, public after the city part; everyone 10 and up, not the kids-only section.
+
+Lines for Tp to paste into docs/decisions.md:
+40. Store accounts are Tp's own, kept apart from any employer. Google Play and the App Store launch together. (A3, A4)
+41. First a closed invited test once slice 2 polish passes; public release after the city part. Age group: everyone 10 and up, not the kids-only section. (A5, A6)
+
+What Tp needs to do (no rush; needed before the closed test): create the Apple developer account (developer.apple.com, about $99 a year) and the Google Play developer account (play.google.com/console, one-time $25), in Tp's own name or Tp's own company. Never paste passwords or keys in chat; the lead will explain how to add them safely when the build is ready.
+
+Options asked (kept for the record):
 - **A3. Who owns the store accounts?** a) Tp's own (or Tp's own company's) Apple developer account (about $99 a year) and Google Play account (one-time $25), kept apart from the employer. b) An existing company account.
 - **A4. Which store first?** a) Google Play first (cheaper, faster review, most Nigerian phones are Android), Apple soon after. b) Both together. c) Apple first.
 - **A5. When to release?** a) A closed test (Google Play internal testing and Apple TestFlight, a few invited testers) once slice 2 polish is done; public release after the city part. b) Public as soon as possible.
