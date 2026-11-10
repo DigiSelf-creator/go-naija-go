@@ -2,12 +2,17 @@
  * Every word a player sees on the menu screens, exactly as in docs/design.md
  * (Hero builder, Screens), approved by po. Change words there first, then here.
  */
+import { formatMoney } from '../game/money';
+
 /** The game name is one setting (docs/questions.md Q1). */
 export const GAME_NAME = 'Gbese!';
 
 export const WORDS = {
   title: {
-    tagline: 'Fix the streets. Get Nigeria working.',
+    /** City choice 10 (Tp, 9 Nov 2026). */
+    tagline: 'Build up Lagos. Get Nigeria working.',
+    /** city.md (a): the title's small "Settings" button. */
+    settings: 'Settings',
     makeHero: 'Make your hero',
     /** S2.10: "Play" once a hero is saved (the builder's own button stays "Start running"). */
     start: 'Play',
@@ -67,7 +72,8 @@ export const WORDS = {
   },
   gameOver: {
     heading: 'Out of lives',
-    text: (kobo: number) => `You got ${kobo} kobo. The street is still here. Try again!`,
+    /** N2: money words; `kobo` is whole kobo (10 a coin). */
+    text: (kobo: number) => `You got ${formatMoney(kobo)}. The street is still here. Try again!`,
     /** S2.10 Game over (hall). */
     hallText: 'General Go-Slow is still jamming the hall. Try again!',
     playAgain: 'Play again',
@@ -80,7 +86,8 @@ export const WORDS = {
   /** S2.10 Street cleared, with Tp's line (8 Nov 2026, "Cleared words for real places"). A card line, never a toast. */
   cleared: {
     heading: 'Street cleared!',
-    text: (name: string, kobo: number) => `${name} is moving again, thanks to you! You got ${kobo} kobo.`,
+    /** N2: money words; `kobo` is whole kobo (10 a coin). */
+    text: (name: string, kobo: number) => `${name} is moving again, thanks to you! You got ${formatMoney(kobo)}.`,
     /** Shown when the player got on the bus carrying the garri parcel. */
     parcel: 'Your garri parcel is saved for Go-Slow Hall.',
     next: 'Next street',
@@ -106,7 +113,8 @@ export const WORDS = {
     num: (n: number) => `Street ${n}`,
     /** The whole name on one line, for screen readers and wide cards. */
     full: (n: number, name: string) => `Street ${n}: ${name}`,
-    done: (best: number) => `Done \u2713 Best: ${best} kobo`,
+    /** N2: "Done \u2713 Best: \u20a68.70" (`best` is whole kobo). */
+    done: (best: number) => `Done \u2713 Best: ${formatMoney(best)}`,
     /** The hall has no kobo to collect (po M4 note), so its done line has no "Best". */
     hallDone: 'Done \u2713',
     open: 'Ready to play',
@@ -114,6 +122,79 @@ export const WORDS = {
     parcel: 'You have a garri parcel.',
     wheel: "Nigeria's wheel",
     home: 'Home',
+  },
+  /** city.md (a) Settings: one column of buttons (Sound, Music and Gentle mode use the title's words). */
+  settings: {
+    heading: 'Settings',
+    story: 'Watch the story',
+    back: 'Back',
+  },
+  /** city.md part 5 "The intro" (T1 to T4, confirmed by Tp 9 and 10 Nov 2026). */
+  intro: {
+    /** The dialog's spoken name. */
+    label: 'The story',
+    skip: 'Skip',
+    tapOn: 'Tap to go on',
+    keysOn: 'Press Space to go on',
+    go: "Let's go",
+    captions: [
+      'Long ago, light shone on West Africa. Its people and its rich land made the Wheel, so everyone could share, stay safe and keep going.',
+      'The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses.',
+      "Nigeria's Wheel keeps it all moving. The Wheel was made for everyone.",
+      'But the Stoppers want it stuck: traffic, potholes, power cuts and red tape.',
+      'Nigeria called a hero to keep the Wheel turning: the Wheel Hero. That hero is you.',
+      'Your journey starts now. Build up Lagos. Get Nigeria working.',
+    ],
+  },
+  /** city.md part 5 (b) Lagos from above, and "Screens and words for slice 3". */
+  city: {
+    heading: 'Lagos',
+    /** The map picture's spoken name. */
+    map: 'Lagos from above. Drag to look around.',
+    power: (n: number) => `Power ${n}`,
+    tech: (n: number) => `Tech ${n}`,
+    spokenNaira: (money: string) => `Naira: ${money}`,
+    spokenPower: (n: number) => `Power: ${n}`,
+    spokenTech: (n: number) => `Tech: ${n}`,
+    soundOn: 'Sound: on',
+    soundOff: 'Sound: off',
+    settings: 'Settings',
+    streets: 'Streets',
+    hero: 'Hero',
+    wheel: "Nigeria's wheel",
+    zoomIn: '+',
+    zoomOut: '−',
+    zoomInSpoken: 'Zoom in',
+    zoomOutSpoken: 'Zoom out',
+    /** Screen readers hear pins as "Potholes, problem" or "New road, fixed" (city.md accessibility). */
+    pinProblem: (word: string) => `${word}, problem`,
+    pinReady: (word: string) => `${word}, ready to fix`,
+    pinFixed: (name: string) => `${name}, fixed`,
+    fixedName: { potholes: 'New road', lightsOut: 'Lamps on', slowInternet: 'Fast internet' },
+    fixed: 'Fixed ✓',
+    back: 'Back',
+    cards: {
+      potholes: {
+        line1: 'Potholes on this road.',
+        line2: (money: string) => `Fixing it costs ${money}.`,
+        go: 'Run Alausa',
+        fix: (money: string) => `Fix it (${money})`,
+      },
+      lightsOut: {
+        line1: 'Lamps are out here.',
+        line2: 'Switching them on costs Power 10.',
+        go: 'Lane run',
+        soon: 'Lane run: coming soon',
+        fix: 'Switch on (Power 10)',
+      },
+      slowInternet: {
+        line1: 'The internet is slow here.',
+        line2: 'Fixing it costs Tech 6.',
+        go: 'Lane run',
+        soon: 'Lane run: coming soon',
+        fix: 'Fix it (Tech 6)',
+      },
+    },
   },
   /** S2.8, S2.10 Nigeria's wheel and its "All names" list. */
   wheel: {
