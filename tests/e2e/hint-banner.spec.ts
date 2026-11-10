@@ -218,7 +218,7 @@ for (const [width, height] of [
     expect(log.throwFrames, 'throws showed while words did').toBeGreaterThan(30);
     expect(Object.keys(log.words).length, 'the hall toasts showed').toBeGreaterThanOrEqual(5);
     if (width === 320) {
-      expect(Object.keys(log.words)).toContain('Go-Slow! Jump on the green light.');
+      expect(Object.keys(log.words)).toContain('Go-Slow! Wait for the green light.');
       expect(Object.keys(log.words)).toContain('PEEP! High honks: stay low.');
     } else {
       expect(Object.keys(log.words)).toContain('PEEP! High honks fly high. Stay low on the floor.');
