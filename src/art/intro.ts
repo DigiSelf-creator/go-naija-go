@@ -6,18 +6,18 @@
  * 1. Sunrise over West African land: its people, of every age, make the Wheel together.
  *    The people are the makers; nobody arrives from outside.
  * 2. The Wheel turns and Lagos grows: new buildings, yellow buses and people coming in.
- * 3. The Wheel at the centre of a Nigeria shape, small cogs turning round it.
+ * 3. The Wheel in the middle of Nigeria, in green and white, its border a chain of small cogs.
  * 4. The Stoppers: made-up problem shapes (a jam of cars, a pothole, a dark lamp, a stack of
  *    forms in red tape), each with a grumpy pout. Things, never people, never any group.
  * 5. The player's own hero in front of the glowing Wheel (a plain outline hero if none yet).
  * 6. A yellow bus at a Lagos bus stop in the morning.
  *
- * No faith signs, flags, crests, party colours, real places drawn to look real, or real people.
+ * No faith signs, flags on poles, crests, party colours, real places drawn to look real, or real people.
  * The Wheel has six wooden spokes, a brass hub and brass teeth; no symbol on it.
  *
  * drawIntroFrame fills a w x h area (canvas units): the sky and ground stretch to the edges,
  * and the 320 x 180 picture sits in the middle, as big as fits. Still pictures: `time` only
- * turns the Wheel and its cogs gently; pass 0 (or nothing) for reduced motion.
+ * turns the Wheel and its cogs gently (frame 3: border cogs turn opposite ways to their neighbours); pass 0 (or nothing) for reduced motion.
  */
 import { drawHero, type HeroLook } from './hero';
 import { INK } from './palette';
@@ -467,55 +467,217 @@ function frame2(g: CanvasRenderingContext2D, e: Ext, t: number): void {
 
 // ---------- Frame 3: Nigeria's Wheel ----------
 
-/** A simple Nigeria outline, longitude and latitude, west coast first (drawn our own way). */
+/**
+ * Nigeria's outline, longitude and latitude, clockwise from the west end of the coast (our own
+ * simple drawing): up the Benin side, along the Niger side to the Lake Chad corner, down the
+ * Cameroon side with its eastern bulge, then the coast with the Niger Delta.
+ */
 const NIGERIA: readonly (readonly [number, number])[] = [
-  [2.7, 6.4], [2.75, 7.9], [2.8, 9.1], [3.6, 10.3], [3.6, 11.7], [4.1, 13.5], [5.3, 13.8], [6.5, 13.5],
-  [7.8, 13.3], [9.0, 12.8], [10.6, 13.3], [12.4, 13.1], [13.6, 13.7], [14.2, 12.9], [14.6, 12.0],
-  [14.2, 11.0], [13.6, 10.2], [13.2, 9.0], [12.6, 8.6], [12.2, 8.0], [11.8, 7.1], [11.1, 6.6], [10.6, 7.0],
-  [10.1, 6.9], [9.6, 6.5], [9.2, 6.2], [8.8, 5.6], [8.5, 4.6], [7.5, 4.45], [6.2, 4.3], [5.6, 4.9],
-  [5.0, 5.6], [4.4, 6.3], [3.4, 6.4],
+  [2.7, 6.37], [2.72, 7.0], [2.75, 7.85], [2.78, 9.05], [3.1, 9.45], [3.6, 10.3], [3.83, 10.7], [3.6, 11.7],
+  [3.65, 12.5], [4.1, 13.15], [4.25, 13.48], [5.0, 13.75], [5.6, 13.87], [6.3, 13.65], [6.8, 13.25],
+  [7.4, 13.1], [7.85, 13.33], [8.6, 13.0], [9.6, 12.8], [10.15, 13.25], [10.7, 13.35], [11.5, 13.35],
+  [12.3, 13.1], [12.9, 13.5], [13.63, 13.71], [14.07, 13.08], [14.17, 12.38], [14.65, 12.18], [14.62, 11.55],
+  [14.2, 11.25], [13.65, 10.6], [13.25, 10.05], [13.2, 9.6], [12.85, 8.75], [12.45, 8.6], [12.25, 8.4],
+  [12.05, 7.75], [11.85, 7.1], [11.55, 6.85], [11.1, 6.45], [10.6, 7.0], [10.15, 6.95], [9.8, 6.8],
+  [9.35, 6.35], [8.8, 5.7], [8.6, 4.9], [8.5, 4.6], [7.6, 4.45], [7.0, 4.4], [6.5, 4.3], [6.05, 4.28],
+  [5.6, 4.62], [5.36, 5.35], [5.0, 5.75], [4.6, 6.15], [4.1, 6.4], [3.4, 6.42],
 ];
 
-/** The outline in frame units: k units a degree, top left of the box at (x0, y0). */
-function nigeriaPath(g: CanvasRenderingContext2D, x0: number, y0: number, k: number): void {
-  g.beginPath();
-  NIGERIA.forEach(([lon, lat], i) => {
-    const x = x0 + (lon - 2.6) * k;
-    const y = y0 + (13.9 - lat) * k;
-    if (i === 0) g.moveTo(x, y);
-    else g.lineTo(x, y);
+/** Frame 3's map: k frame units a degree, west edge at x 64, north edge at y 14. */
+const MAP_K = 16;
+const toFrame = ([lon, lat]: readonly [number, number]): [number, number] => [64 + (lon - 2.7) * MAP_K, 14 + (13.9 - lat) * MAP_K];
+/** The outline in frame-3 units (320 x 180). */
+export const NIGERIA_OUTLINE: readonly (readonly [number, number])[] = NIGERIA.map(toFrame);
+/** Where the big Wheel sits on the map (the middle of the land) and its size. */
+export const MAP_WHEEL = { x: 64 + (8.7 - 2.7) * MAP_K, y: 14 + (13.9 - 9.2) * MAP_K, r: 27 } as const;
+
+/** The national colours: green and white. */
+const NG_GREEN = '#008751';
+const NG_WHITE = '#ffffff';
+
+/** One border cog: centre, size, turn way (+1 or -1) and start angle so neighbours' teeth mesh. */
+export interface BorderCog {
+  x: number;
+  y: number;
+  r: number;
+  dir: 1 | -1;
+  phase: number;
+}
+export const BORDER_COG_R = 4.4;
+const COG_TEETH = 8;
+
+/** Distance from (px, py) to the outline, and the nearest point on it. */
+export function nearestOnOutline(px: number, py: number): { d: number; x: number; y: number } {
+  const P = NIGERIA_OUTLINE;
+  let best = { d: Infinity, x: px, y: py };
+  for (let i = 0; i < P.length; i++) {
+    const [ax, ay] = P[i]!;
+    const [bx, by] = P[(i + 1) % P.length]!;
+    const vx = bx - ax;
+    const vy = by - ay;
+    const u = Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy)));
+    const x = ax + u * vx;
+    const y = ay + u * vy;
+    const d = Math.hypot(px - x, py - y);
+    if (d < best.d) best = { d, x, y };
+  }
+  return best;
+}
+
+/** True when (x, y) is inside the outline. */
+export function insideNigeria(x: number, y: number): boolean {
+  const P = NIGERIA_OUTLINE;
+  let inside = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    const [xi, yi] = P[i]!;
+    const [xj, yj] = P[j]!;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Moves (x, y) until it is inside the outline and at least r from it. */
+function pullIn(x: number, y: number, r: number): [number, number] {
+  for (let k = 0; k < 16; k++) {
+    const n = nearestOnOutline(x, y);
+    const inside = insideNigeria(x, y);
+    if (inside && n.d >= r) break;
+    const dx = (x - n.x) / (n.d || 1);
+    const dy = (y - n.y) / (n.d || 1);
+    const push = inside ? r - n.d + 0.02 : -(r + n.d + 0.02);
+    x += dx * push;
+    y += dy * push;
+  }
+  return [x, y];
+}
+
+/** The track the cog centres run on: the outline pulled in by one cog size, in small steps. */
+function cogTrack(r: number): [number, number][] {
+  const P = NIGERIA_OUTLINE;
+  let out: [number, number][] = [];
+  for (let i = 0; i < P.length; i++) {
+    const [ax, ay] = P[i]!;
+    const [bx, by] = P[(i + 1) % P.length]!;
+    const len = Math.hypot(bx - ax, by - ay);
+    const steps = Math.max(1, Math.ceil(len / 0.5));
+    // Clockwise on screen (y down): the land is to the right of the way we walk.
+    const nx = -(by - ay) / len;
+    const ny = (bx - ax) / len;
+    for (let s = 0; s < steps; s++) out.push(pullIn(ax + ((bx - ax) * s) / steps + nx * r, ay + ((by - ay) * s) / steps + ny * r, r));
+  }
+  // Fill any jumps (round inside corners) with more pulled-in points
+  for (let pass = 0; pass < 4; pass++) {
+    const next: [number, number][] = [];
+    out.forEach((p, i) => {
+      const q = out[(i + 1) % out.length]!;
+      next.push(p);
+      if (Math.hypot(q[0] - p[0], q[1] - p[1]) > 0.6) next.push(pullIn((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, r));
+    });
+    out = next;
+  }
+  return out;
+}
+
+/** Cogs along the track, each exactly `gap` from the one before. */
+function placeCogs(track: readonly [number, number][], gap: number): [number, number][] {
+  const out: [number, number][] = [track[0]!];
+  for (let i = 1; i < track.length; i++) {
+    const [lx, ly] = out[out.length - 1]!;
+    const [ax, ay] = track[i - 1]!;
+    const [bx, by] = track[i]!;
+    if (Math.hypot(bx - lx, by - ly) < gap) continue;
+    // Where the step from a to b crosses the circle of size gap round the last cog
+    let lo = 0;
+    let hi = 1;
+    for (let k = 0; k < 20; k++) {
+      const m = (lo + hi) / 2;
+      if (Math.hypot(ax + (bx - ax) * m - lx, ay + (by - ay) * m - ly) < gap) lo = m;
+      else hi = m;
+    }
+    out.push([ax + (bx - ax) * hi, ay + (by - ay) * hi]);
+    i--; // the same step may hold another cog
+  }
+  return out;
+}
+
+let cogCache: BorderCog[] | null = null;
+
+/**
+ * The chain of small cogs that makes Nigeria's border: every cog inside the outline (its teeth
+ * touch the line), each touching the next, an even number so neighbours always turn opposite
+ * ways. Worked out once.
+ */
+export function borderCogs(): readonly BorderCog[] {
+  if (cogCache) return cogCache;
+  const r = BORDER_COG_R;
+  const track = cogTrack(r);
+  let best: [number, number][] = [];
+  let bestErr = Infinity;
+  for (let gap = 1.72 * r; gap <= 1.92 * r; gap += 0.002 * r) {
+    const pts = placeCogs(track, gap).map(([x, y]) => pullIn(x, y, r));
+    if (pts.length % 2 === 1) continue;
+    const a = pts[0]!;
+    const b = pts[pts.length - 1]!;
+    const err = Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1]) - gap);
+    if (err < bestErr) {
+      bestErr = err;
+      best = pts;
+    }
+  }
+  const half = Math.PI / COG_TEETH;
+  const cogs: BorderCog[] = [];
+  best.forEach(([x, y], i) => {
+    let phase = 0;
+    if (i > 0) {
+      // Mesh with the cog before: its tooth sits in a gap of ours, and stays there as both turn.
+      const p = cogs[i - 1]!;
+      const along = Math.atan2(y - p.y, x - p.x);
+      phase = 2 * along + Math.PI - p.phase + half;
+    }
+    cogs.push({ x, y, r, dir: i % 2 === 0 ? 1 : -1, phase });
   });
+  cogCache = cogs;
+  return cogs;
+}
+
+function nigeriaPath(g: CanvasRenderingContext2D): void {
+  g.beginPath();
+  NIGERIA_OUTLINE.forEach(([x, y], i) => (i === 0 ? g.moveTo(x, y) : g.lineTo(x, y)));
   g.closePath();
 }
 
 function frame3(g: CanvasRenderingContext2D, e: Ext, t: number): void {
   grad(g, e, 0, 180, '#bfe6f5', '#fff4d9');
   // Soft light behind the map
-  disc(g, 160, 92, 80, 'rgba(255,236,170,0.5)');
-  const k = 15.5;
-  const x0 = 160 - (12.1 * k) / 2;
-  const y0 = 92 - (9.6 * k) / 2;
+  disc(g, 160, 92, 84, 'rgba(255,236,170,0.5)');
+  // Lake Chad, just past the north-east corner (water, so no cogs)
+  g.fillStyle = '#7cc6e4';
+  g.beginPath();
+  g.ellipse(64 + (14.15 - 2.7) * MAP_K, 14 + (13.9 - 13.35) * MAP_K, 8, 6, -0.4, 0, TAU);
+  g.fill();
   g.save();
   g.translate(2, 3);
-  nigeriaPath(g, x0, y0, k);
+  nigeriaPath(g);
   g.fillStyle = 'rgba(29,26,20,0.15)';
   g.fill();
   g.restore();
-  nigeriaPath(g, x0, y0, k);
-  g.fillStyle = '#f3d9a4';
-  g.fill();
-  g.strokeStyle = '#b9893f';
-  g.lineWidth = 2;
+  // The land in the national colours: green, white, green, side by side
+  g.save();
+  nigeriaPath(g);
+  g.clip();
+  g.fillStyle = NG_GREEN;
+  g.fillRect(60, 10, 200, 165);
+  g.fillStyle = NG_WHITE;
+  g.fillRect(64 + 64, 10, 64, 165);
+  g.restore();
+  nigeriaPath(g);
+  g.strokeStyle = '#1d4a2c';
+  g.lineWidth = 1.2;
+  g.lineJoin = 'round';
   g.stroke();
-  // Small cogs round the map, each joined to the Wheel and turning with it
-  const cx = 160;
-  const cy = 94;
-  const cogs: [number, number][] = [
-    [96, 128], [104, 76], [134, 42], [190, 40], [232, 56], [238, 98], [204, 140], [150, 146], [120, 104], [210, 112],
-  ];
-  for (const [x, y] of cogs) line(g, 'rgba(154,106,18,0.55)', 1.2, [cx, cy, x, y]);
-  cogs.forEach(([x, y], i) => cog(g, x, y, 6, (i % 2 ? -1 : 1) * t * 1.2 + i));
-  drawStoryWheel(g, cx, cy, 30, t * 0.4);
+  // The border: a chain of small cogs, each turning its neighbours the opposite way
+  for (const c of borderCogs()) cog(g, c.x, c.y, c.r, c.phase + c.dir * t * 0.6);
+  drawStoryWheel(g, MAP_WHEEL.x, MAP_WHEEL.y, MAP_WHEEL.r, t * 0.4);
 }
 
 // ---------- Frame 4: the Stoppers ----------

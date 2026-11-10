@@ -28,7 +28,19 @@ import {
   type SpotLooks,
 } from '../../src/art/city';
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS } from '../../src/art/hero';
-import { INTRO_FRAMES, STOPPERS, drawIntroFrame, drawOutlineHero, drawStopper, drawStoryWheel } from '../../src/art/intro';
+import {
+  INTRO_FRAMES,
+  MAP_WHEEL,
+  NIGERIA_OUTLINE,
+  STOPPERS,
+  borderCogs,
+  drawIntroFrame,
+  drawOutlineHero,
+  drawStopper,
+  drawStoryWheel,
+  insideNigeria,
+  nearestOnOutline,
+} from '../../src/art/intro';
 import { recorder } from './recorder';
 
 function clean(paint: (g: CanvasRenderingContext2D) => void): ReturnType<typeof recorder> {
@@ -76,6 +88,57 @@ describe('intro frames', () => {
     expect(STOPPERS).toEqual(['jam', 'pothole', 'darkLamp', 'redTape']);
     for (const k of STOPPERS) clean((g) => drawStopper(g, k, 50, 100, 1.2));
     clean((g) => drawOutlineHero(g));
+  });
+});
+
+describe('intro frame 3: Nigeria with a border of cogs', () => {
+  it('draws at several times and still (time 0, reduced motion), at phone sizes', () => {
+    for (const time of [0, 0.4, 1.7, 9.25, 60]) for (const [w, h] of [[320, 180], [851, 393], [393, 851]] as const) {
+      const r = clean((g) => drawIntroFrame(g, 3, w, h, { time }));
+      expect(r.calls.length).toBeGreaterThan(200);
+      expect(r.texts).toEqual([]);
+    }
+  });
+
+  it('time 0 draws the same picture every time', () => {
+    const a = clean((g) => drawIntroFrame(g, 3, 320, 180, { time: 0 }));
+    const b = clean((g) => drawIntroFrame(g, 3, 320, 180));
+    expect(JSON.stringify(a.calls)).toBe(JSON.stringify(b.calls));
+  });
+
+  it('keeps the map inside the 320 x 180 picture, with a sensible number of points', () => {
+    expect(NIGERIA_OUTLINE.length).toBeGreaterThanOrEqual(30);
+    expect(NIGERIA_OUTLINE.length).toBeLessThanOrEqual(80);
+    for (const [x, y] of NIGERIA_OUTLINE) {
+      expect(x).toBeGreaterThan(4);
+      expect(x).toBeLessThan(316);
+      expect(y).toBeGreaterThan(4);
+      expect(y).toBeLessThan(176);
+    }
+    expect(insideNigeria(MAP_WHEEL.x, MAP_WHEEL.y)).toBe(true);
+    expect(nearestOnOutline(MAP_WHEEL.x, MAP_WHEEL.y).d).toBeGreaterThan(MAP_WHEEL.r);
+  });
+
+  it('every border cog sits inside the outline, touches the next, and turns the other way to it', () => {
+    const cogs = borderCogs();
+    expect(cogs.length).toBeGreaterThan(40);
+    expect(cogs.length % 2).toBe(0);
+    cogs.forEach((c, i) => {
+      expect(insideNigeria(c.x, c.y)).toBe(true);
+      // The teeth reach the line and never past it
+      const d = nearestOnOutline(c.x, c.y).d;
+      expect(d).toBeGreaterThanOrEqual(c.r - 1e-6);
+      expect(d).toBeLessThan(c.r + 1.5);
+      const n = cogs[(i + 1) % cogs.length]!;
+      const gap = Math.hypot(n.x - c.x, n.y - c.y);
+      expect(gap).toBeGreaterThan(c.r * 1.55);
+      expect(gap).toBeLessThan(c.r * 2.05);
+      expect(n.dir).toBe(-c.dir);
+      // Cogs that are not neighbours do not crash into each other
+      cogs.forEach((o, j) => {
+        if (Math.abs(i - j) > 1 && Math.abs(i - j) < cogs.length - 1) expect(Math.hypot(o.x - c.x, o.y - c.y)).toBeGreaterThan(c.r * 1.5);
+      });
+    });
   });
 });
 
