@@ -1,5 +1,12 @@
 # Open questions for the product owner
 
+## po acceptance, 10 Nov 2026: P1 and P2 (code part)
+
+**Verdict: accepted**, branch claude/serene-hopper-ydve2g. qa passed it (reported): tsc clean, unit 672/672, first load 336.6 KB, offline cache check proven by breaking it on purpose; e2e phone-landscape 37/38 and timing 89/91, where the 3 failures fail the same way on the unchanged base 73640ec (older sandbox browser: hall first toast, a late icon request, "installable" in incognito). Perf in the sandbox is slow on the base too (worst 29.3 fps), so it is not a regression; real fps is checked by CI and on a real phone.
+Checked against the brief and Tp's answers: amala and corn 12 s (city choice 6); hazards after corn (design S2.2); the "PEEP!" hint hides at the third hit (po N4); a pothole sign before every wide pothole and Gentle climb-out (R6 a); no words on the sign, nothing copied, nothing mocks anyone (qa's screenshots).
+Still to do in P2: the hall difficulty goal (plan P2). Then P3, with Tp's listen to the tunes.
+Next: with Tp's yes, merge into main; CI runs the full suite on the right browser before the test link updates.
+
 ## Tp, 10 Nov 2026: the game is for the app stores, not the web
 
 Tp's words: "This game is for the stores not web." This changes brief "Tech" and decision 4 ("Version 1 is a free web game"). Only Tp edits those files.
