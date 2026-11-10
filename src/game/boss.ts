@@ -5,6 +5,7 @@
  */
 import type { Platform } from '../engine/physics';
 import { hallLampTimes } from '../art/hall';
+import { goLightTickTimes, GO_LIGHT_END } from '../art/boss';
 import type { BossData, BossPhase, ThrowKind } from './level';
 
 export const BOSS_RULES = {
@@ -19,6 +20,8 @@ export const BOSS_RULES = {
   tyre: { halfW: 10, h: 22 },
   honk: { halfW: 18, h: 20 },
   highHonk: { halfW: 18, h: 20 },
+  /** S2.15: a fufu ball at the jam puts its next throw back this long (once per throw). */
+  jamDelay: 0.5,
 } as const;
 
 const STEPS = 60;
@@ -38,8 +41,17 @@ export type BossMode = 'idle' | 'attack' | 'hit' | 'defeat';
 export type BossEvent =
   | { type: 'bossThrow'; kind: ThrowKind }
   | { type: 'bossHit'; hits: number; left: number }
-  /** The next light comes on after a hit's break. highHonks: this phase brings the first high honks. */
-  | { type: 'bossLight'; lit: number; highHonks: boolean }
+  /**
+   * A phase starts (S2.14): the fight start for phase 0, the end of the break after a hit for the
+   * others. highHonks: this phase brings the first high honks (the "PEEP!" hint shows now).
+   */
+  | { type: 'bossPhase'; phase: number; highHonks: boolean }
+  /** The light turns green (the "ding"). first: the first time a light comes on in this try. */
+  | { type: 'bossLight'; lit: number; first: boolean }
+  /** One blink in the light's last second (the "tick"). */
+  | { type: 'bossLightTick' }
+  /** The green time ran out unhit: the light goes dark (the "clunk"). first: the first miss in this try. */
+  | { type: 'bossLightOff'; lit: number; first: boolean }
   | { type: 'dust'; x: number; y: number }
   | { type: 'bossDefeat' }
   /** The kind finish: the last car is out ("The hall is clear!"), a roof lamp clicks on, Lagos is switched on, the Win screen. */
@@ -57,8 +69,8 @@ export function throwBox(t: Throw): { l: number; r: number; t: number; b: number
 
 export class BossFight {
   hits = 0;
-  /** Index of the lit light, or -1 while none is lit. */
-  lit = 0;
+  /** Index of the lit light, or -1 while none is lit (S2.14: none at the start). */
+  lit = -1;
   mode: BossMode = 'idle';
   /** What the attack pose is about to throw: high (the high honk) or low (anything else). */
   aim: 'low' | 'high' = 'low';
@@ -70,8 +82,18 @@ export class BossFight {
   /** Step of the third hit, or -1. */
   defeatAt = -1;
   private nextThrowAt: number;
-  private nextLightAt = -1;
+  /** Step when the current phase started (S2.14 light clock), or -1 during a break. */
+  private phaseAt = 0;
+  /** Step of the light's next change (on, or off), or -1 during a break. */
+  private lightNext = -1;
+  /** Step when the light went green (while lit). */
+  private greenAt = -1;
   private patternIdx = 0;
+  private lightsSeen = 0;
+  private missed = 0;
+  /** S2.15: the jam has already been delayed by a ball since its last throw. */
+  private jamPushed = false;
+  private readonly tickSteps = goLightTickTimes().map(steps);
   /** Finish steps (from the third hit) of each roof lamp. */
   private readonly lampSteps = hallLampTimes().map(steps);
 
@@ -80,6 +102,18 @@ export class BossFight {
     private readonly groundY: number,
   ) {
     this.nextThrowAt = steps(data.startDelay);
+    this.lightNext = steps(data.phases[0]!.lightAt);
+  }
+
+  /** Seconds of green left on the lit light (Infinity while none is lit). */
+  get greenLeft(): number {
+    if (this.lit < 0) return Infinity;
+    return Math.max(0, steps(this.phase.greenFor) - (this.steps - this.greenAt)) / STEPS;
+  }
+
+  /** The lit light is in its last second: it blinks (S2.14). */
+  get blinking(): boolean {
+    return this.lit >= 0 && this.greenLeft <= GO_LIGHT_END.warn;
   }
 
   get defeated(): boolean {
@@ -120,13 +154,14 @@ export class BossFight {
       return ev;
     }
     if (this.mode === 'hit' && this.modeTime >= BOSS_RULES.hitLen) this.setMode('idle');
-    if (this.nextLightAt >= 0 && this.steps >= this.nextLightAt) {
-      this.lit = this.hits;
-      this.nextLightAt = -1;
+    if (this.phaseAt < 0 && this.lightNext >= 0 && this.steps >= this.lightNext - steps(this.phase.lightAt)) {
+      // The break after a hit is over: the next phase starts.
+      this.phaseAt = this.steps;
       const before = this.data.phases[this.hits - 1];
       const highHonks = this.phase.pattern.includes('highHonk') && !(before?.pattern.includes('highHonk') ?? false);
-      ev.push({ type: 'bossLight', lit: this.lit, highHonks });
+      ev.push({ type: 'bossPhase', phase: this.hits, highHonks });
     }
+    this.stepLight(ev);
 
     const phase = this.phase;
     const kind = phase.pattern[this.patternIdx % phase.pattern.length]!;
@@ -146,6 +181,7 @@ export class BossFight {
           : { kind, x, y: kind === 'highHonk' ? d.highHonkY : d.honkY, vx: -d.honkSpeed, rot: 0 },
       );
       if (this.mode === 'attack') this.setMode('idle');
+      this.jamPushed = false;
       ev.push({ type: 'bossThrow', kind });
     }
     for (const t of this.throws) {
@@ -180,10 +216,49 @@ export class BossFight {
     this.setMode('hit');
     this.aim = 'low';
     const breakEnd = this.steps + steps(this.data.breakAfterHit);
-    this.nextLightAt = breakEnd;
+    // The next phase starts at the end of the break; its light comes on `lightAt` later.
+    this.phaseAt = -1;
+    this.greenAt = -1;
+    this.lightNext = breakEnd + steps(this.phase.lightAt);
     this.patternIdx = 0;
+    this.jamPushed = false;
     this.nextThrowAt = breakEnd + steps(this.phase.every);
     return ev;
+  }
+
+  /** The light's clock (S2.14 part 1): on at lightAt, green greenFor, dark darkFor, again until hit. */
+  private stepLight(ev: BossEvent[]): void {
+    if (this.phaseAt < 0 || this.lightNext < 0) return;
+    const ph = this.phase;
+    if (this.lit >= 0) {
+      const left = steps(ph.greenFor) - (this.steps - this.greenAt);
+      if (this.tickSteps.includes(left)) ev.push({ type: 'bossLightTick' });
+    }
+    if (this.steps < this.lightNext) return;
+    if (this.lit < 0) {
+      this.lit = this.hits;
+      this.greenAt = this.steps;
+      this.lightNext = this.steps + steps(ph.greenFor);
+      ev.push({ type: 'bossLight', lit: this.lit, first: this.lightsSeen++ === 0 });
+    } else {
+      const was = this.lit;
+      this.lit = -1;
+      this.greenAt = -1;
+      this.lightNext = this.steps + steps(ph.darkFor);
+      ev.push({ type: 'bossLightOff', lit: was, first: this.missed++ === 0 });
+    }
+  }
+
+  /**
+   * S2.15: a fufu ball reached the jam. It shakes and its next throw comes 0.5 s later (once per
+   * throw at most). Never a hit. Returns true when the throw was put back.
+   */
+  pushJam(): boolean {
+    if (this.defeated || this.jamPushed) return false;
+    this.jamPushed = true;
+    this.nextThrowAt += steps(BOSS_RULES.jamDelay);
+    if (this.mode === 'attack') this.setMode('idle');
+    return true;
   }
 
   /** A throw smashed by amala or bounced on: gone. */

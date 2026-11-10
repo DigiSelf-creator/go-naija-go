@@ -481,7 +481,8 @@ export class Game {
     drawHall(g, camX, W, H, finish ? { ...finish, time: t, still } : { doors: hallDoors(boss.mode, boss.modeTime, still), time: t });
     data.lights.forEach((p, i) => {
       const state: GoLightState = i < boss.hits ? 'done' : boss.lit === i ? 'lit' : 'off';
-      drawGoLight(g, p.x, p.y, p.w, state, still ? 0 : t, gy);
+      // S2.14: the last second of green blinks (with reduced motion the arrow hides instead).
+      drawGoLight(g, p.x, p.y, p.w, state, still ? 0 : t, gy, state === 'lit' ? { left: boss.greenLeft, still } : undefined);
     });
     drawBoss(g, data.x, gy, { mode: boss.mode, t: boss.modeTime, hits: boss.hits, time: still ? 0 : t, aim: boss.aim });
     for (const th of boss.throws) {

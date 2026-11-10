@@ -416,9 +416,20 @@ function startGame(): void {
         sound.play('greenHit');
         if (e.left > 0) toast.show(W.greenLight(e.left));
         break;
-      case 'bossLight':
-        // S2.7: before the phase with high honks starts.
+      case 'bossPhase':
+        // S2.14: the "PEEP!" hint shows as the phase with high honks starts.
         if (e.highHonks) toast.show(W.highHonks, HINT_MS);
+        break;
+      case 'bossLight':
+        sound.play('lightDing');
+        if (e.first) toast.show(W.lightOn, HINT_MS);
+        break;
+      case 'bossLightTick':
+        sound.play('lightTick');
+        break;
+      case 'bossLightOff':
+        sound.play('lightClunk');
+        if (e.first) toast.show(W.lightMissed, HINT_MS);
         break;
       case 'bossDefeat':
         // S2.8: the hall is won at the third hit. Saved now, so leaving or reloading during the

@@ -64,16 +64,22 @@ describe('hall loader (S2.6 Level data format, S2.7)', () => {
     expect(l.terrain.ground[0]!.x1).toBeGreaterThan(560);
     // Street speeds (S2.2): walk 90, run 156; corn 120 and 228.
     expect(l).toMatchObject({ walkSpeed: 90, runSpeed: 156, cornWalkSpeed: 120, cornSpeed: 228 });
-    expect(l.boss!.phases.map((p) => p.pattern)).toEqual([['tyre'], ['tyre', 'tyre', 'honk'], ['tyre', 'honk', 'tyre', 'highHonk']]);
+    // S2.14: phase 3 puts the high honk second.
+    expect(l.boss!.phases.map((p) => p.pattern)).toEqual([['tyre'], ['tyre', 'tyre', 'honk'], ['tyre', 'highHonk', 'tyre', 'honk']]);
+    expect(l.boss!.phases.map((p) => [p.lightAt, p.greenFor, p.darkFor])).toEqual([
+      [6.0, 4.0, 4.4],
+      [4.0, 3.5, 3.6],
+      [4.5, 3.0, 2.8],
+    ]);
   });
 
   it('a designer can add a hall with no code change (a new boss pattern is just data)', () => {
     const raw = structuredClone(hallData) as Record<string, unknown> & { boss: Record<string, unknown> };
     raw['id'] = 'test-hall';
     raw.boss['phases'] = [
-      { every: 2.4, speed: 150, pattern: ['tyre'], bpm: 120 },
-      { every: 2.0, speed: 180, pattern: ['tyre', 'honk'], bpm: 126 },
-      { every: 1.6, speed: 200, pattern: ['tyre', 'honk', 'tyre'], bpm: 132 },
+      { every: 2.4, speed: 150, pattern: ['tyre'], bpm: 120, lightAt: 5, greenFor: 4, darkFor: 4 },
+      { every: 2.0, speed: 180, pattern: ['tyre', 'honk'], bpm: 126, lightAt: 4, greenFor: 3.5, darkFor: 4 },
+      { every: 1.6, speed: 200, pattern: ['tyre', 'honk', 'tyre'], bpm: 132, lightAt: 4, greenFor: 3, darkFor: 3.2 },
     ];
     const l = parseLevel(raw);
     expect(l.id).toBe('test-hall');
@@ -94,6 +100,11 @@ describe('hall loader (S2.6 Level data format, S2.7)', () => {
       'boss.phases[0].pattern[0] should be one of tyre, honk, highHonk',
     );
     expect(() => parseLevel(broken({}, { highHonkY: undefined }))).toThrow('boss.highHonkY should be a number');
+    // S2.14: every phase needs its light clock, each above 0.
+    const phases = (k: string, v: unknown) => (hallData.boss.phases as Record<string, unknown>[]).map((p, i) => (i === 1 ? { ...p, [k]: v } : p));
+    expect(() => parseLevel(broken({}, { phases: phases('lightAt', undefined) }))).toThrow('boss.phases[1].lightAt should be a number');
+    expect(() => parseLevel(broken({}, { phases: phases('greenFor', 0) }))).toThrow('boss.phases[1].greenFor should be above 0');
+    expect(() => parseLevel(broken({}, { phases: phases('darkFor', -1) }))).toThrow('boss.phases[1].darkFor should be above 0');
     expect(() => parseLevel(broken({ type: 'room' }))).toThrow('"room" files are read as well rooms, not levels');
   });
 });
