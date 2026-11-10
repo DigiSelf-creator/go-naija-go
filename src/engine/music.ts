@@ -129,6 +129,8 @@ export interface MusicOptions {
   /** For tests: a stand-in for setInterval / clearInterval. */
   setInterval?: (fn: () => void, ms: number) => Timer;
   clearInterval?: (t: Timer) => void;
+  /** The player's own output level instead of MUSIC_GAIN (the corn tune plays at 0.8, S2.9). */
+  gain?: number;
 }
 
 export class Music {
@@ -138,6 +140,11 @@ export class Music {
   private timer: Timer | null = null;
   private readonly setI: (fn: () => void, ms: number) => Timer;
   private readonly clearI: (t: Timer) => void;
+  private readonly gain: number;
+  /** Turn-down (corn: the street tune at 30 percent) or loudness step (the corn count), 0 to 1. */
+  private level = 1;
+  /** A pending tempo change lands on the next 16th, not the next bar line (the corn count). */
+  private tempoNow = false;
 
   private on = true;
   private paused = false;
@@ -157,6 +164,53 @@ export class Music {
   constructor(opts: MusicOptions = {}) {
     this.setI = opts.setInterval ?? ((fn, ms) => setInterval(fn, ms));
     this.clearI = opts.clearInterval ?? ((t) => clearInterval(t));
+    this.gain = opts.gain ?? MUSIC_GAIN;
+  }
+
+  /** The output level asked for now (before the tune's own gain), 0 to 1. */
+  get outLevel(): number {
+    return this.level;
+  }
+
+  /** Turns the whole tune to `level` (0 to 1) over `ramp` seconds; it keeps playing. */
+  setLevel(level: number, ramp = 0.15): void {
+    this.level = level;
+    const ac = this.ac;
+    const out = this.out;
+    if (!ac || !out || !this.tune) return;
+    try {
+      const now = ac.currentTime;
+      out.gain.cancelScheduledValues(now);
+      out.gain.setValueAtTime(out.gain.value, now);
+      out.gain.linearRampToValueAtTime(this.gain * this.tune.gain * level, now + Math.max(0.001, ramp));
+    } catch {
+      /* fine */
+    }
+  }
+
+  /** Plays the place's tune from its first bar at once, even if it is playing (a second corn). */
+  restart(place: MusicPlace, tempo = 0): void {
+    this.current = place;
+    this.tempo = tempo;
+    this.pendingTempo = null;
+    this.tempoNow = false;
+    this.paused = false;
+    this.resumeBar = 0;
+    if (!this.on) return;
+    this.start(place, tempo, 0, 0.02);
+  }
+
+  /** Changes the tempo on the next 16th note (the corn count): only the speed, never the pitch. */
+  setTempoSoon(tempo: number): void {
+    this.setTempo(tempo);
+    if (this.pendingTempo !== null) this.tempoNow = true;
+  }
+
+  /** One agogo note now (the corn count's number), on this player's output. */
+  accent(note = 81): void {
+    const ac = this.ac;
+    if (!ac || !this.out || this.paused || !this.on) return;
+    this.sound({ step: 0, len: 1, notes: [note], inst: 'agogo', vol: 0.9, accent: true }, ac.currentTime + 0.01, 0.1);
   }
 
   /** Use an AudioContext the game already has (one context is lighter on a phone). */
@@ -254,12 +308,12 @@ export class Music {
     if (this.current && this.on) this.start(this.current, this.tempo, this.resumeBar, 0.05);
   }
 
-  /** No music (game over, leaving play). */
-  stop(): void {
+  /** No music (game over, leaving play). The tune fades out over `fade` seconds. */
+  stop(fade = FADE_OUT): void {
     this.current = null;
     this.tune = null;
     this.paused = false;
-    this.halt(FADE_OUT);
+    this.halt(fade);
   }
 
   // ---------------------------------------------------------------- inside
@@ -302,7 +356,7 @@ export class Music {
     if (!ac) return; // unlock() will start it
     try {
       const out = ac.createGain();
-      out.gain.setValueAtTime(MUSIC_GAIN * tune.gain, ac.currentTime);
+      out.gain.setValueAtTime(this.gain * tune.gain * this.level, ac.currentTime);
       out.connect(ac.destination);
       this.out = out;
     } catch {
@@ -322,9 +376,10 @@ export class Music {
     const total = tune.bars * 16;
     while (this.nextTime < until) {
       // Tempo changes and layer changes land on a bar line.
-      if (this.step % 16 === 0 && this.pendingTempo !== null) {
+      if ((this.tempoNow || this.step % 16 === 0) && this.pendingTempo !== null) {
         this.tempo = this.pendingTempo;
         this.pendingTempo = null;
+        this.tempoNow = false;
         this.events = tuneEvents(tune, this.tempo);
         this.cursor = this.events.findIndex((e) => e.step >= this.step);
         if (this.cursor < 0) this.cursor = this.events.length;

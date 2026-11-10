@@ -9,7 +9,7 @@ import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
 import { Sound } from './engine/sound';
 import { Music } from './engine/music';
-import { MusicDirector } from './game/music-cue';
+import { CORN_GAIN, CORN_LOUD, CornDirector, MusicDirector, cornCount } from './game/music-cue';
 import { listenForAudioGestures } from './engine/audio-unlock';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
@@ -22,7 +22,7 @@ import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
 import { LAGOS, Progress, anyDone, switchedOn } from './game/progress';
 import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
-import { Hud, Toast } from './screens/hud';
+import { CornCount, Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
@@ -117,11 +117,51 @@ function startGame(): void {
   // phone). It schedules its own notes on a 25 ms timer, 0.1 s ahead: the game never waits.
   const music = new Music();
   const director = new MusicDirector(music);
+  // S2.9 corn tune: its own player and output (0.8) on the same context, over the street tune.
+  const cornMusic = new Music({ gain: CORN_GAIN });
+  const corn = new CornDirector({
+    start: () => {
+      cornMusic.setLevel(1, 0);
+      cornMusic.restart('corn', 0);
+    },
+    step: (st) => {
+      cornMusic.setTempoSoon(st);
+      cornMusic.setLevel(CORN_LOUD[st] ?? 0.1, 0.15);
+      cornMusic.accent(); // one agogo note on each new number
+    },
+    stop: (fade) => cornMusic.stop(fade),
+    pause: () => cornMusic.pause(),
+    resume: () => cornMusic.resume(),
+    // One setting each: the street (or well) tune and every sound effect.
+    duck: (level, ramp) => {
+      music.setLevel(level, ramp);
+      sound.setEffectsLevel(level, ramp);
+    },
+  });
+  /** The corn ran out by itself (not cut short by a lost life or replaced): "Corn is done". */
+  let cornRanOut = false;
+  /** The corn tune and the 5, 4, 3, 2, 1 follow the corn timer (cheap every frame). */
+  function syncCorn(): void {
+    const run = game.run;
+    const active = playing && where !== 'hall' && (run.phase === 'run' || run.below || run.phase === 'wellDown');
+    corn.update({
+      corn: run.power.corn,
+      active,
+      audible: sound.enabled && menus.music,
+      held: game.paused || document.hidden || menus.current === 'pause',
+    });
+    // The count shows even with Music or Sound off (Tp 3a); it takes the hint bar's place.
+    const n = active ? cornCount(run.power.corn) : 0;
+    count.set(n, cornRanOut);
+    cornRanOut = false;
+    toast.hold(n > 0);
+  }
   /** True inside startRun: the old run's state must not pick a tune; the new run picks it at the end. */
   let startingRun = false;
   /** Music follows what shows now: the screen, the street, the well room, hall hits, a hidden page. */
   function syncMusic(): void {
     if (startingRun) return;
+    syncCorn();
     const run = game.run;
     director.update({
       screen: menus.current ?? (playing ? 'play' : null),
@@ -142,6 +182,7 @@ function startGame(): void {
       }
       placeWellButton();
       placeThrowButton();
+      syncCorn();
     },
   });
 
@@ -256,6 +297,7 @@ function startGame(): void {
     },
   });
   const toast = new Toast(document.body);
+  const count = new CornCount(document.body);
   // po M4 bug 2: in the hall the chips stay left of the hit circles (drawn 32 u each side of the
   // middle, at the top; see drawHitCounter).
   hud.limit = () => (game.run.inHall ? window.innerWidth / 2 - (34 * canvas.getBoundingClientRect().width) / view.width : Infinity);
@@ -284,7 +326,11 @@ function startGame(): void {
     const label = kind === 'down' ? (touch ? WORDS.well.down : WORDS.well.downKeys) : touch ? WORDS.well.up : WORDS.well.upKeys;
     wellButton.update(kind, label, box);
   }
-  const placeBar = (): void => toast.place(barBox(), window.innerHeight);
+  const placeBar = (): void => {
+    const box = barBox();
+    toast.place(box, window.innerHeight);
+    count.place(box, window.innerHeight);
+  };
   /** The Throw button while balls are held (S2.15); the hint bar moves when it comes and goes. */
   function placeThrowButton(): void {
     const was = throwButton.shown;
@@ -390,12 +436,14 @@ function startGame(): void {
         sound.play('checkpoint');
         break;
       case 'wearingOff':
-        toast.show(e.kind === 'corn' ? W.cornWearingOff : W.amalaWearingOff);
+        // S2.9: corn's ending is the 5, 4, 3, 2, 1 count now; amala keeps its toast.
+        if (e.kind === 'amala') toast.show(W.amalaWearingOff);
         break;
       case 'tick':
         sound.play('tick');
         break;
       case 'powerEnd':
+        if (e.kind === 'corn') cornRanOut = true;
         break;
       case 'gameOver':
         sound.play('gameOver');
@@ -555,13 +603,20 @@ function startGame(): void {
       const ac = sound.context;
       if (ac && !musicAttached) {
         music.attach(ac);
+        cornMusic.attach(ac);
         musicAttached = true;
       }
-      if (musicAttached) music.unlock();
+      if (musicAttached) {
+        music.unlock();
+        cornMusic.unlock();
+      }
     },
     () => {
       sound.wake();
-      if (musicAttached) music.unlock();
+      if (musicAttached) {
+        music.unlock();
+        cornMusic.unlock();
+      }
     },
   );
 
@@ -757,6 +812,26 @@ function startGame(): void {
     get music() {
       // O2: the Music switch, whether music may sound (Music and Sound both on), the tune asked for.
       return { on: menus.music, audible: music.enabled, place: music.place, tempo: music.tempoStep, held: music.held, started: musicAttached };
+    },
+    get corn() {
+      // S2.9 corn tune: the count showing, the tune (place, tempo step, loudness), the turn-down
+      // of the street tune and of the effects, and what screen readers were last told.
+      return {
+        count: count.value,
+        countBox: (() => {
+          const r = count.element.getBoundingClientRect();
+          return count.value > 0 ? { x: r.x, y: r.y, w: r.width, h: r.height, font: parseFloat(getComputedStyle(count.element).fontSize) } : null;
+        })(),
+        on: corn.on,
+        step: corn.step,
+        place: cornMusic.place,
+        tempo: cornMusic.tempoStep,
+        level: cornMusic.outLevel,
+        musicLevel: music.outLevel,
+        effectsLevel: sound.effectsLevel,
+        spoken: count.spoken,
+        waiting: toast.pending,
+      };
     },
     get hintBar() {
       // The hint bar as laid out now, CSS px, and whether its words fit uncut (S2.2).
@@ -980,6 +1055,19 @@ declare global {
       readonly toast: string;
       /** The street shows its fixed look (Lagos switched on, S2.8). */
       readonly fixedLook: boolean;
+      readonly corn: {
+        readonly count: number;
+        readonly countBox: { readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly font: number } | null;
+        readonly on: boolean;
+        readonly step: number;
+        readonly place: string | null;
+        readonly tempo: number;
+        readonly level: number;
+        readonly musicLevel: number;
+        readonly effectsLevel: number;
+        readonly spoken: string;
+        readonly waiting: string;
+      };
       /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
       readonly hintBar: {
         readonly words: string;

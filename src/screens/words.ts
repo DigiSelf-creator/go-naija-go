@@ -169,6 +169,11 @@ export const WORDS = {
     fufuHall: 'Fufu! Press {throw} to pop throws.',
     plugged: 'Plugged! Fufu fills potholes.',
   },
+  /** S2.9 corn count: what screen readers hear (once at 5, and at 0). */
+  corn: {
+    endsIn: (n: number) => `Corn ends in ${n} seconds`,
+    done: 'Corn is done',
+  },
   /** S2.13 part 5: the hint after every Gentle mode climb-out, by the kind of pit (35 characters or fewer). */
   climbOut: {
     small: 'Up you come! Try that jump again.',

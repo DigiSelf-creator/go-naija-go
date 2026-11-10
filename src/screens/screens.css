@@ -781,6 +781,49 @@
   border-radius: 50%;
 }
 
+/* The corn count (S2.9): a big 5, 4, 3, 2, 1 with a corn icon, in the hint bar's place (set
+   from hintBarBox). Same yellow bar, dark number. Takes no taps. */
+.corn-count {
+  position: fixed;
+  z-index: 6;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15em;
+  overflow: hidden;
+  padding: 0 8px;
+  border: 1px solid rgba(29, 26, 20, 0.6);
+  border-radius: 10px;
+  background: #f2b300;
+  color: #1d1a14;
+  font: bold 56px/1 'Trebuchet MS', Verdana, sans-serif;
+  pointer-events: none;
+}
+.corn-count[hidden] {
+  display: none;
+}
+.corn-count .count-icon {
+  width: 0.6em;
+  height: 0.6em;
+}
+.corn-count.pop .count-num {
+  animation: count-pop 0.15s ease-out;
+}
+@keyframes count-pop {
+  from {
+    transform: scale(1.3);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corn-count.pop .count-num {
+    animation: none;
+  }
+}
+
 /* Hidden HUD chips (the Kobo chip in Go-Slow Hall). */
 .hud-left > [hidden] {
   display: none !important;

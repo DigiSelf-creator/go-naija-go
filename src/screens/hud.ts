@@ -233,6 +233,10 @@ export class Toast {
   private box: HintBarBox | null = null;
   private cssH = 0;
   private full = '';
+  /** S2.9 corn count: while it shows, a toast that comes due waits, then shows its full time. */
+  private holding = false;
+  private waiting: { words: string; ms: number } | null = null;
+  private shownMs = 0;
 
   constructor(parent: HTMLElement) {
     this.el = h('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
@@ -253,6 +257,11 @@ export class Toast {
   }
 
   show(words: string, ms = 2200): void {
+    if (this.holding) {
+      this.waiting = { words, ms };
+      return;
+    }
+    this.shownMs = ms;
     this.full = words;
     this.setWords(words);
     this.el.classList.add('show');
@@ -263,6 +272,31 @@ export class Toast {
   hide(): void {
     clearTimeout(this.timer);
     this.el.classList.remove('show');
+    this.waiting = null;
+  }
+
+  /**
+   * The corn count takes the bar's place (S2.9): on, the bar hides and any toast showing or
+   * coming due waits; off, the last one waiting shows for its full time.
+   */
+  hold(on: boolean): void {
+    if (on === this.holding) return;
+    if (on) {
+      if (this.el.classList.contains('show')) this.waiting = { words: this.full, ms: this.shownMs };
+      clearTimeout(this.timer);
+      this.el.classList.remove('show');
+      this.holding = true;
+      return;
+    }
+    this.holding = false;
+    const w = this.waiting;
+    this.waiting = null;
+    if (w) this.show(w.words, w.ms);
+  }
+
+  /** The toast waiting for the corn count to end (its words), or ''. */
+  get pending(): string {
+    return this.waiting?.words ?? '';
   }
 
   get text(): string {
@@ -278,5 +312,81 @@ export class Toast {
       this.el.style.fontSize = `${px}px`;
       if (this.el.scrollHeight <= this.el.clientHeight && this.el.scrollWidth <= this.el.clientWidth) break;
     }
+  }
+}
+
+/** S2.9 count number height by bar size row: 40 px under 280 px tall, 56 to 419, 72 from 420. */
+export const COUNT_FONT: Record<HintBarBox['size'], number> = { small: 40, mid: 56, big: 72 };
+
+/**
+ * The corn count (docs/design.md S2.9 "Corn tune"): a big 5, 4, 3, 2, 1 with a small corn icon,
+ * in the hint bar's place, so it never covers anything you play. Each number pops in (130 to 100
+ * percent over 0.15 s; none with reduced motion: screens.css). The numbers are hidden from
+ * screen readers; they hear "Corn ends in 5 seconds" once at 5 and "Corn is done" at 0.
+ */
+export class CornCount {
+  private readonly el: HTMLElement;
+  private readonly num: HTMLElement;
+  private readonly said: HTMLElement;
+  private n = 0;
+  private box: HintBarBox | null = null;
+
+  constructor(parent: HTMLElement) {
+    const icon = h('canvas', { class: 'count-icon', width: '64', height: '64', 'aria-hidden': 'true' });
+    const g = icon.getContext('2d');
+    if (g) {
+      g.scale(64 / 32, 64 / 32);
+      drawFoodIcon(g, 'corn', 16, 16, 0.85);
+    }
+    this.num = h('span', { class: 'count-num' });
+    this.el = h('div', { class: 'corn-count', 'aria-hidden': 'true', hidden: true }, icon, this.num);
+    this.said = h('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+    parent.append(this.el, this.said);
+  }
+
+  /** Same place as the hint bar (from hintBarBox). */
+  place(box: HintBarBox, cssH: number): void {
+    this.box = box;
+    const s = this.el.style;
+    s.left = `${box.x}px`;
+    s.width = `${box.w}px`;
+    s.bottom = `${cssH - box.bottom}px`;
+    const room = Math.max(0, box.bottom - box.top);
+    s.maxHeight = `${room}px`;
+    s.fontSize = `${Math.max(11, Math.min(COUNT_FONT[box.size], room - 6))}px`;
+  }
+
+  /** The number to show (0 hides it). `ended`: the corn ran out (not cut short or replaced). */
+  set(n: number, ended = false): void {
+    if (n === this.n) return;
+    const was = this.n;
+    this.n = n;
+    this.el.hidden = n === 0;
+    if (n > 0) {
+      this.num.textContent = String(n);
+      this.el.classList.remove('pop');
+      void this.el.offsetWidth;
+      this.el.classList.add('pop');
+      if (n === 5) this.said.textContent = WORDS.corn.endsIn(5);
+    } else if (ended && was === 1) {
+      this.said.textContent = WORDS.corn.done;
+    }
+  }
+
+  get value(): number {
+    return this.n;
+  }
+
+  /** What screen readers were last told. */
+  get spoken(): string {
+    return this.said.textContent ?? '';
+  }
+
+  get shownBox(): HintBarBox | null {
+    return this.box;
+  }
+
+  get element(): HTMLElement {
+    return this.el;
   }
 }

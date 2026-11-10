@@ -418,6 +418,44 @@ export const ATTACK = 0.003;
 export class Sound {
   private ac: AudioContext | null = null;
   enabled = true;
+  /**
+   * S2.9 corn tune: every effect goes through this one volume, so the corn tune can turn them all
+   * down together (to 30 percent) and back. Made with the first sound; never an envelope.
+   */
+  private fx: GainNode | null = null;
+  private fxLevel = 1;
+
+  /** The effects volume now asked for (1 = full). */
+  get effectsLevel(): number {
+    return this.fxLevel;
+  }
+
+  /** Turns every sound effect to `level` (0 to 1) over `ramp` seconds. */
+  setEffectsLevel(level: number, ramp = 0.15): void {
+    this.fxLevel = level;
+    const ac = this.ac;
+    const fx = this.fx;
+    if (!ac || !fx) return;
+    try {
+      const now = ac.currentTime;
+      fx.gain.cancelScheduledValues(now);
+      fx.gain.setValueAtTime(fx.gain.value, now);
+      fx.gain.linearRampToValueAtTime(level, now + Math.max(0.001, ramp));
+    } catch {
+      /* fine */
+    }
+  }
+
+  /** The effects volume node (made on first use, at the level asked for). */
+  private bus(ac: AudioContext): AudioNode {
+    if (!this.fx) {
+      const fx = ac.createGain();
+      fx.gain.setValueAtTime(this.fxLevel, ac.currentTime);
+      fx.connect(ac.destination);
+      this.fx = fx;
+    }
+    return this.fx;
+  }
 
   /**
    * Call from every tap, touch end, click or key (see audio-unlock.ts): creates the audio the
@@ -469,6 +507,12 @@ export class Sound {
     if (!this.enabled || !ac || ac.state !== 'running') return;
     const recipe = SOUNDS[name];
     const now = ac.currentTime;
+    let out: AudioNode;
+    try {
+      out = this.bus(ac);
+    } catch {
+      return;
+    }
     try {
       for (const tone of recipe.tones) {
         const t = now + (tone.at ?? 0);
@@ -483,7 +527,7 @@ export class Sound {
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(tone.vol ?? 0.06, t + ATTACK);
         gain.gain.exponentialRampToValueAtTime(0.0001, Math.max(end, t + ATTACK + 0.01));
-        osc.connect(gain).connect(ac.destination);
+        osc.connect(gain).connect(out);
         osc.start(t);
         osc.stop(end + 0.02);
       }
@@ -511,7 +555,7 @@ export class Sound {
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(h.vol ?? 0.04, t + ATTACK);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(h.len, ATTACK + 0.01));
-        src.connect(filter).connect(gain).connect(ac.destination);
+        src.connect(filter).connect(gain).connect(out);
         src.start(t);
         src.stop(t + h.len + 0.02);
       }

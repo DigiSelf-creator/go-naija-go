@@ -201,7 +201,11 @@ describe('every gain envelope fades in from near silence (no ticks)', () => {
       s.unlock();
       s.play(name);
       const envs = gains.filter((g) => g.some((e) => e.kind === 'exp'));
-      expect(envs.length).toBe(gains.length);
+      // S2.9 corn tune: every effect goes through one effects volume (made with the first sound).
+      // It is set once to full and is not an envelope; every other gain is one.
+      const bus = gains.filter((g) => !g.some((e) => e.kind === 'exp'));
+      expect(bus).toEqual([[{ kind: 'set', v: 1, t: 0 }]]);
+      expect(envs.length).toBe(gains.length - 1);
       expect(envs.length).toBeGreaterThan(0);
       checkEnvelopes(envs, name);
       for (const ev of envs) expect(ev[1]!.t - ev[0]!.t).toBeCloseTo(SOUND_ATTACK, 6);
