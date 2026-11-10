@@ -1,6 +1,25 @@
 # Open questions for the product owner
 
-## po note, 10 Nov 2026: app stores and saves on iPhone (waiting for Tp)
+## Tp, 10 Nov 2026: the game is for the app stores, not the web
+
+Tp's words: "This game is for the stores not web." This changes brief "Tech" and decision 4 ("Version 1 is a free web game"). Only Tp edits those files.
+
+What it means (po, for pm and gamedev):
+- The same game is wrapped as an app (for example with Capacitor, a free open tool) for the Apple App Store and Google Play. The game code, art, sound and saves stay as they are. Saves inside an installed app are not cleared by Safari, so the iPhone tip (A2) is no longer needed.
+- The Pages link stays as the team's **test link** only, never shared with players.
+- Still true: free, no accounts, no ads, no trackers, no buying in version 1, small download, works offline, runs on cheap phones.
+- New work (pm to plan): app wrapper and app icons/splash; Android build (can be made in the cloud); iPhone build (needs Apple's tools on a Mac; can be done with a cloud Mac build service or GitHub's Mac build machines, never the company Mac); store pictures and words; a privacy page (we collect nothing); store age rating; each update goes through store review (Apple takes about 1 to 2 days).
+
+Line for Tp to paste into docs/decisions.md:
+39. Gbese! is an app for the Apple App Store and Google Play. The web link is for the team's testing only. (replaces "free web game" in decision 4)
+
+Still open for Tp (po's pick first):
+- **A3. Who owns the store accounts?** a) Tp's own (or Tp's own company's) Apple developer account (about $99 a year) and Google Play account (one-time $25), kept apart from the employer. b) An existing company account.
+- **A4. Which store first?** a) Google Play first (cheaper, faster review, most Nigerian phones are Android), Apple soon after. b) Both together. c) Apple first.
+- **A5. When to release?** a) A closed test (Google Play internal testing and Apple TestFlight, a few invited testers) once slice 2 polish is done; public release after the city part. b) Public as soon as possible.
+- **A6. Age group.** a) Everyone, 10 and up, not in the kids-only section (fewer extra rules, still nothing unsafe for children). b) The kids section (stricter store rules).
+
+## po note, 10 Nov 2026: app stores and saves on iPhone (answered: stores, see above)
 
 Tp asked how players get the game and whether saves are kept. Today Gbese! is a web game (brief: version 1 is a free web game), opened from the Pages link. Saves stay on the phone. On iPhone, Safari may clear a site's saves after about 7 days without play unless the game is added to the home screen (Share, then Add to Home Screen); Android Chrome offers "Install app" by itself.
 
