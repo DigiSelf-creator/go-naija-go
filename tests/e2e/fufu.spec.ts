@@ -43,6 +43,9 @@ test('street 2 by touch: pick up fufu, Throw beside Jump, its own taps, X too, h
   expect(bar.x + bar.w).toBeLessThanOrEqual(b.x + 5 - 6 + 0.5);
   expect(bar.limits.overThrow).toBe(false);
 
+  // The pop-in plays once, then the class goes, so a press never replays it (qa P11).
+  await expect.poll(() => page.evaluate(() => document.querySelector('.throw-btn')!.classList.contains('pop'))).toBe(false);
+
   // A tap on Throw throws one ball and never jumps.
   const cx = Math.round(b.x + b.w / 2);
   const cy = Math.round(b.y + b.h / 2);
@@ -51,6 +54,13 @@ test('street 2 by touch: pick up fufu, Throw beside Jump, its own taps, X too, h
   expect(await page.evaluate(() => window.__game!.input.jumpHeld)).toBe(0);
   expect(await page.evaluate(() => window.__game!.hero.grounded)).toBe(true);
   expect((await page.evaluate(() => window.__game!.run.balls)).length).toBeGreaterThanOrEqual(1);
+  // Pressed, the drawn button keeps its size (no replayed pop-in from 0.6).
+  const pressed = await page.evaluate(() => {
+    const el = document.querySelector('.throw-btn')!;
+    return { pop: el.classList.contains('pop'), w: el.querySelector('.pad-down')!.getBoundingClientRect().width };
+  });
+  expect(pressed.pop).toBe(false);
+  expect(pressed.w).toBeGreaterThan(b.w * 0.8);
   // Holding does not repeat.
   await page.waitForTimeout(600);
   expect(await fufu(page)).toBe(7);

@@ -410,6 +410,9 @@ export class ThrowButton {
     });
     const up = (): void => this.el.classList.remove('down');
     for (const t of ['pointerup', 'pointercancel', 'pointerleave', 'lostpointercapture']) this.el.addEventListener(t, up);
+    // The pop-in plays once when the button appears. Left on, it would replay each time a press swaps the
+    // up and down pictures (display none to block restarts a CSS animation; qa P11).
+    this.el.addEventListener('animationend', () => this.el.classList.remove('pop'));
     parent.append(this.el);
   }
 
