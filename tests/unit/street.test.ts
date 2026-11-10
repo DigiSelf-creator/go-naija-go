@@ -262,7 +262,12 @@ describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, hints }) => {
     expect(pits.filter((p) => p.w >= 160)).toHaveLength(bigPits);
   });
 
-  it('at least 160 u of clear road before every big pit, and none within 1400 u after a corn', () => {
+  // A corn's reach: the road a full corn run covers (S2.2 big pit rule 3, hazard rule 3), worked
+  // out from the corn time in code (2736 u today) so the next change to it is caught here (S2.13).
+  const reach = (RULES.cornSteps / STEPS_PER_SECOND) * L.cornSpeed;
+  const within = (x: number, c: number, d: number): boolean => x - c >= 0 && x - c <= d;
+
+  it('at least 160 u of clear road before every big pit, and none within one corn reach after a corn', () => {
     const big = pits.filter((q) => q.w >= 160);
     for (const p of big) {
       const from = p.a - 160;
@@ -271,15 +276,21 @@ describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, hints }) => {
       expect(L.crates.some((c) => c.x > from && c.x <= p.a)).toBe(false);
       expect(L.foods.some((f) => f.x > from && f.x <= p.a)).toBe(false);
       expect(L.coins.some((k) => k.y > 250 && k.x > from && k.x <= p.a), 'no road kobo in the run-up').toBe(false);
-      for (const c of corns) expect(p.a - c < 0 || p.a - c > 1400, `big pit at ${p.a}, corn at ${c}`).toBe(true);
+      for (const c of corns) expect(within(p.a, c, reach), `big pit at ${p.a}, corn at ${c}`).toBe(false);
     }
     // The first big pit comes right after the bus stop.
     expect(big[0]!.a).toBeGreaterThan(L.checkpoint);
   });
 
-  it('no tyre or drum within 1370 u after a corn', () => {
+  it('the fast stretch: no tyre or drum in the first half of the corn reach', () => {
     for (const c of corns) {
-      for (const z of L.hazards.filter((q) => q.kind !== 'goat')) expect(z.x - c < 0 || z.x - c > 1370, `${z.kind} at ${z.x}`).toBe(true);
+      for (const z of L.hazards.filter((q) => q.kind !== 'goat')) expect(within(z.x, c, reach / 2), `${z.kind} at ${z.x}, corn at ${c}`).toBe(false);
+    }
+  });
+
+  it('no drum from a corn up to the corn reach + wakeDistance after it', () => {
+    for (const c of corns) {
+      for (const z of L.hazards.filter((q) => q.kind === 'drum')) expect(within(z.x, c, reach + L.wakeDistance), `drum at ${z.x}, corn at ${c}`).toBe(false);
     }
   });
 

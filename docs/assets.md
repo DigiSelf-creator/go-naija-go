@@ -34,6 +34,9 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 | Streets cards (N1): card look for open, done and locked (face, edge, word colours; locked has a dashed edge), a pale little picture behind the words for each card (morning street, market, evening bus park, Go-Slow Hall; grey when locked), done badge (amber disc, white tick), locked badge (grey padlock); music and music-off icons (two joined notes, and a slash) | src/art/cards.ts | Drawn in code, original | No outside licence |
 | Fixed street look (N1): after Lagos is switched on, each street gets tall street lamps lit (morning and market), the bus park's own two lamps lit, a warm glow and a row of small bulbs on every sign board, bunting strung from lamp to lamp, and fresh road paint (smooth dark tar, bright kerb line with a white line under it, longer lane marks). Same layout and holes. Cached at screen pixels (blitLayer) | src/art/fixedLook.ts, src/art/street.ts (drawRoad fresh), src/art/backdrop.ts (fixed flag) | Drawn in code, original | No outside licence |
 | N1 gallery: gallery/n1.html (dev server only, not in the build): ?view=streets the Streets screen mock, ?view=wheel the wheel screen mock, ?view=parts every card look, badge, music icon and the wheel at 0, 1, 13 and 37 working; &still holds the wheel. ?gallery=14 the three streets as now and fixed | src/art/galleryN1.ts, gallery/n1.html, src/art/galleryStreets.ts | Drawn in code, original | No outside licence |
+| Pothole warning sign (P2): a hand-painted yellow wooden board (34 x 24 u, two planks, brush streaks, worn lower edge) on one dark wooden post, 56 u tall, leaning 3 degrees, two nail dots; painted on it a black hole with a ragged brown rim in a road line and a dotted jump, jump again path ending in an arrow. No words. Fresh coat for the fixed look | src/art/sign.ts (drawPotholeSign) | Drawn in code, original | No outside licence |
+| Dust off (P2, Gentle mode climb-out): two frames for every body, facing right: a crouch with the hands up, then the hands patting the knees with a small dust puff off the knee; up, pat, up, pat in 0.4 s. Elders keep the back straighter | src/art/hero.ts (HeroPose.dustOff, dustOffFrame, DUST_OFF_TIME), src/art/dust.ts (drawKneePuff) | Drawn in code, original | No outside licence |
+| P2 gallery page (?gallery=15): the sign before a wide pothole (worn and fresh) and close up, the dust off frames for every body and a live loop | src/art/galleryP2.ts | Drawn in code, original | No outside licence |
 
 ## Originality check
 
@@ -50,6 +53,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - Streets cards (N1): plain rounded cards with our own small street pictures; the badges are a plain tick in a disc and a plain padlock, the music icon is two joined notes. No stars, no "world" or level-select look from any game.
 - Fixed look (N1): ordinary street lamps, bulbs on sign boards and triangle bunting, as on any festive Nigerian street; nothing from a game.
 - Store room: lamp-lit earth, never blue bricks or any game's underground. A dry, plainly magic bonus place: nobody is stuck, nothing suggests climbing into a real well.
+- Pothole sign (P2): a plain wooden board on one post, like a roadside painted board. Not an official road sign: no diamond or triangle, no red ring or border, no reflective look, and no word. Not any game's sign or arrow board. The picture (a hole and a two-hump dotted path) is our own; a unit test checks it draws no text.
 
 ## Pride check (things we chose not to do)
 
@@ -68,6 +72,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 - Computer Village (street 2, N1): the stalls keep their made-up everyday signs (PHONE ACCESSORIES and the rest); the phone stall's picture is a plain phone and cable with no logo, no bitten fruit, no letter mark and no brand colours. No sign or picture about fake phones or cheats. The fixed look adds no writing.
 - Card pictures (N1): every street gets a bright, proud little picture; the locked card is the same picture in grey, never a broken or dirty version.
 - Flag for po: the wheel at the smallest screen (320 x 240) is about 190 px wide, so the state names are about 7 to 8 px tall there, small but all shown, all the same size. At 932 x 430 they are about 14 px. Screen readers get the full list (S2.8). If po or qa find 8 px too small, the fix is in the wheel screen's layout (give the wheel the full card height), not in dropping names.
+- Dust off (P2): after a fall the hero just pats the dust off the knees and gets up, the same calm move for every body. No crying, no limping, no bruise, no dirty face or torn clothes, and nobody laughs. Elders crouch with a straighter back, so they never look hurt or frail. Flag for po: the sign shows the hole, not anyone falling in it, so no player is shown failing.
 - The goat is never hurt: it smiles and trots off. The boss is a problem, not a tribe, job or official, and its defeat is a happy green light.
 
 ## Sound

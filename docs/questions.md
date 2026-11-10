@@ -1,5 +1,89 @@
 # Open questions for the product owner
 
+## po acceptance, 10 Nov 2026: P1 and P2 (code part)
+
+**Verdict: accepted**, branch claude/serene-hopper-ydve2g. qa passed it (reported): tsc clean, unit 672/672, first load 336.6 KB, offline cache check proven by breaking it on purpose; e2e phone-landscape 37/38 and timing 89/91, where the 3 failures fail the same way on the unchanged base 73640ec (older sandbox browser: hall first toast, a late icon request, "installable" in incognito). Perf in the sandbox is slow on the base too (worst 29.3 fps), so it is not a regression; real fps is checked by CI and on a real phone.
+Checked against the brief and Tp's answers: amala and corn 12 s (city choice 6); hazards after corn (design S2.2); the "PEEP!" hint hides at the third hit (po N4); a pothole sign before every wide pothole and Gentle climb-out (R6 a); no words on the sign, nothing copied, nothing mocks anyone (qa's screenshots).
+Still to do in P2: the hall difficulty goal (plan P2). Then P3, with Tp's listen to the tunes.
+Next: with Tp's yes, merge into main; CI runs the full suite on the right browser before the test link updates.
+
+## Tp, 10 Nov 2026: the game is for the app stores, not the web
+
+Tp's words: "This game is for the stores not web." This changes brief "Tech" and decision 4 ("Version 1 is a free web game"). Only Tp edits those files.
+
+What it means (po, for pm and gamedev):
+- The same game is wrapped as an app (for example with Capacitor, a free open tool) for the Apple App Store and Google Play. The game code, art, sound and saves stay as they are. Saves inside an installed app are not cleared by Safari, so the iPhone tip (A2) is no longer needed.
+- The Pages link stays as the team's **test link** only, never shared with players.
+- Still true: free, no accounts, no ads, no trackers, no buying in version 1, small download, works offline, runs on cheap phones.
+- New work (pm to plan): app wrapper and app icons/splash; Android build (can be made in the cloud); iPhone build (needs Apple's tools on a Mac; can be done with a cloud Mac build service or GitHub's Mac build machines, never the company Mac); store pictures and words; a privacy page (we collect nothing); store age rating; each update goes through store review (Apple takes about 1 to 2 days).
+
+Line for Tp to paste into docs/decisions.md:
+39. Gbese! is an app for the Apple App Store and Google Play. The web link is for the team's testing only. (replaces "free web game" in decision 4)
+
+**Answered by Tp in chat, 10 Nov 2026: A3 a, A4 b, A5 a, A6 a.** Tp's own (or Tp's own company's) store accounts, kept apart from the employer; Google Play and Apple **together** (not po's pick, Google first); a closed invited test (Google Play internal testing and TestFlight) once slice 2 polish is done, public after the city part; everyone 10 and up, not the kids-only section.
+
+Lines for Tp to paste into docs/decisions.md:
+40. Store accounts are Tp's own, kept apart from any employer. Google Play and the App Store launch together. (A3, A4)
+41. First a closed invited test once slice 2 polish passes; public release after the city part. Age group: everyone 10 and up, not the kids-only section. (A5, A6)
+
+What Tp needs to do (no rush; needed before the closed test): create the Apple developer account (developer.apple.com, about $99 a year) and the Google Play developer account (play.google.com/console, one-time $25), in Tp's own name or Tp's own company. Never paste passwords or keys in chat; the lead will explain how to add them safely when the build is ready.
+
+Options asked (kept for the record):
+- **A3. Who owns the store accounts?** a) Tp's own (or Tp's own company's) Apple developer account (about $99 a year) and Google Play account (one-time $25), kept apart from the employer. b) An existing company account.
+- **A4. Which store first?** a) Google Play first (cheaper, faster review, most Nigerian phones are Android), Apple soon after. b) Both together. c) Apple first.
+- **A5. When to release?** a) A closed test (Google Play internal testing and Apple TestFlight, a few invited testers) once slice 2 polish is done; public release after the city part. b) Public as soon as possible.
+- **A6. Age group.** a) Everyone, 10 and up, not in the kids-only section (fewer extra rules, still nothing unsafe for children). b) The kids section (stricter store rules).
+
+## po note, 10 Nov 2026: app stores and saves on iPhone (answered: stores, see above)
+
+Tp asked how players get the game and whether saves are kept. Today Gbese! is a web game (brief: version 1 is a free web game), opened from the Pages link. Saves stay on the phone. On iPhone, Safari may clear a site's saves after about 7 days without play unless the game is added to the home screen (Share, then Add to Home Screen); Android Chrome offers "Install app" by itself.
+
+**A1. App stores.**
+- a) Keep the web link for testing now; plan App Store and Google Play versions (the same game wrapped as an app) when the city part is done. Needs an Apple developer account (about $99 a year), a Google Play account (one-time $25), store pictures, a privacy page, and Apple's review. (po's pick)
+- b) Start the store versions now.
+- c) Web only.
+**A2. iPhone home-screen tip.** a) Show a one-time tip on iPhones only, after the first street is finished: "Keep your progress: tap Share, then Add to Home Screen." (po's pick); b) no tip.
+Blocks: nothing now.
+
+## Tp, 10 Nov 2026: the lane run gets pickups, chasers and buckets (po note, read this first)
+
+**Answered by Tp in chat, 10 Nov 2026: L1 a, L2 a, L3 a, L4 a, L5 a, L6 a, L7 a** (all as po recommended). Three buckets (Naira, Power, Tech); the Blackout chases; stumbles let it close in and you keep what you collected; Lagos seen from above; "Mission complete!" walk-in after every win; the Booming meter; safety missions against the Shadow with a made-up Safety Team, never people as enemies. The challenge road map (part of L4) was not answered on its own; designer drafts it as an option, to confirm with Tp.
+
+**Tp, 10 Nov (later): yes to all five city.md questions** (challenge road map replaces the Challenges list; every lost challenge keeps everything; a win pays for its fix at once; the Booming meter replaces the people counter; safety missions after slice 3). Full words at the end of docs/city.md.
+
+Lines for Tp to paste into docs/decisions.md:
+34. The lane run has three buckets: Naira, Power and Tech. Each city fix costs its own kind. Things you bump give values; goats say "meeh" and are never hurt. (L1; replaces city choice 7 "any Naira fixes anything")
+35. In the lane run, the Blackout chases from behind. Stumbles let it close in, Power pushes it back; if it catches you the run ends and you keep what you collected. (L2, L3)
+36. The Lagos city is seen from above, like a model town. After every win the hero walks into that part of the city: "Mission complete!", and the fix plays out. A Booming meter rises with each fix and never goes down by itself. (L4, L5, L7)
+37. Safety missions: the enemy is the Shadow (dark, empty, broken places), never people. The hero helps a made-up Safety Team; no real police, uniforms or badges, and no place shown as dangerous. (L6)
+38. The challenge road map replaces the Challenges list. Losing any challenge keeps everything collected. A win pays for the fix it was played for at once. The Booming meter replaces the people counter. Safety missions come after slice 3.
+
+Tp's words, in short: the lane run has power-ups like electricity and technology; what you collect is used to fix Lagos. Enemies chase you; if they catch you, you lose. Goats say "meeh" when hit. Anything you hit gives a value (Naira, light or technology) that goes into its bucket. Like the minions lane run game.
+
+How po reads it (to check with Tp), and the rules it must keep:
+1. **Three buckets: Naira, Power and Tech.** Pickups on the lane run: coins (Naira), a glowing bulb or lightning bolt (Power), a small chip or signal bars (Tech). Each fix in the city needs its own kind: "Lights out" costs Power, "Slow internet" costs Tech, "Potholes" costs Naira. This changes city choice 7 ("any Naira fixes anything"), so it needs Tp's yes.
+2. **Things you hit give value.** Crates, junk piles and old broken signs burst when you run into them or jump on them, and pop out Naira, Power or Tech. Goats are never hurt: you bounce off a goat, it says "meeh" and trots off the road, and a few kobo pop out. Our own sounds and our own pop, never another game's coin or block sound (CLAUDE.md rule 2).
+3. **The chaser is a problem, never a person or an animal.** po's pick: **the Blackout**, a creeping darkness from the Light Taker that switches the street lamps off behind you. Other options: the Go-Slow, a jam of honking cars rolling up behind; or a storm of Red Tape forms. Never police, guards, area boys, a dog or any group (CLAUDE.md rules 3 and 4).
+4. **How you lose.** Instead of lives, the top of the screen shows how far behind the chaser is ("Blackout: 40 m behind"). Bumping into something you should dodge, like a stuck car, makes you stumble and the chaser gets 15 m closer. Power pickups push it back. If it catches you, the run ends, and everything you collected still goes home (losing never takes your pickups). Gentle mode: the chaser starts further back and gains more slowly.
+5. **Change to the designer's guard list.** City.md 2B said "nobody chasing the hero at all", to stay far from Subway Surfers (the guard and dog) and Temple Run (the monster). A creeping Blackout is our own idea, but designer must keep it clearly different: no person, no animal, no monster face, and no "stumble once, caught the second time" rule.
+
+**Waiting for Tp (recommended answer first), L1 to L7:**
+- **L1. Buckets:** a) three buckets (Naira, Power, Tech), each fix needs its own kind; b) everything turns into Naira.
+- **L2. The chaser:** a) the Blackout; b) the Go-Slow jam; c) the Red Tape storm.
+- **L3. How you lose:** a) the chaser's distance, closing in when you stumble, and you keep everything you collected; b) lives, as on the streets, plus the chaser.
+- **L4. City view (asked 10 Nov):** a) Lagos from above, like a model town (Tp's castle-game cue); b) the side view first planned. And the challenge road map: yes or no (po: yes).
+
+**Tp, 10 Nov (later): mission complete, safety, and the boom.** Tp's words, in short: after a successful run we always see the hero walk into that part of the city, "mission complete", and see what the win did to it. Some places have a lot of crime because of the problems; the hero helps the police and the people on a mission to fight crime. It never ends: Lagos booms as a centre of excellence, and we keep fixing to keep it booming.
+
+- **L5. Mission complete walk-in.** po: yes, no problem. After a win: the hero gets off the bus in that part of the city, the heading says "Mission complete!", and the fix plays out around them (tarmac rolls, lamps switch on, people and buses come back). 4 to 6 s, tap to skip. Recommended: a) yes, after every won challenge.
+- **L6. Crime and safety.** po flags three rules. CLAUDE.md rule 3 says bosses are problems, never people, and a criminal is a person. Decision line 19 (waiting to be pasted) and city.md "Words" say no place is shown as dangerous or to blame, and a "high crime" area of Lagos would be read as a real place. Police are a sensitive topic in Nigeria, so real police uniforms, badges or raids would read as real and political. And the game is for young players, so no fighting people.
+  - a) **Safety missions where the enemy is the cause, not people (po's pick).** A part of town goes quiet and unsafe because of problems: dark streets, broken bus stops, no jobs. The boss is a problem with a shape: **"the Shadow"**, which grows where lamps are out and places are empty. The hero, with a made-up neighbourhood Safety Team (our own bright vests, no real badge), switches the lights on, opens a skills hub and a busy market, and the Shadow shrinks away. The area gets a "Safe ✓" badge. Best case: keeps Tp's idea (help the people, make it safe, never ends) with no person as an enemy.
+  - b) Hero helps a made-up Safety Team stop made-up "Grabbers", shown as faceless shadow shapes that drop what they grabbed and run off. Best case: closer to "fight crime". Risk: still reads as chasing people.
+  - c) Real police and criminals. po does not recommend it: it breaks rules 3 and 4, and some players have hard memories with police.
+- **L7. The boom.** po: yes, already the plan (city.md "It never ends"). Add one visible "Lagos is booming" meter: each fix raises it, and at set marks Lagos gets bigger (new buildings, a busier skyline, more people). It never goes down by itself. Recommended: a) yes.
+
+Next for designer: once Tp answers, rewrite city.md 2B with these, and draw the three pickups and the chaser with art. Nothing is built before that.
+
 ## po note, 9 Nov 2026 (cloud, read this first): one main, PR #1, and the intro
 
 Accepted: nothing new (no built work came in).
@@ -12,11 +96,31 @@ Blocks: the name (R1) blocks only the title and page name. Nothing else stops P1
 - **Merge: yes.** The built game goes onto main (one main). PR #1 stays open until R2 to R10 are answered.
 - **R1 name: Gbese!** Not po's pick (Go Naija Go). The game keeps "Gbese!" as built; the repo name stays go-naija-go. When PR #1's parts come in, "Go Naija Go" is not used as the game name.
 - **Intro: confirmed as Tp reads it, and the new caption 2 is right:** "The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses."
-- **The rest:** Tp answers them one by one, four at a time, in chat.
+- **The rest:** answered one by one in chat, below.
+
+Rounds 1 to 4 (all 10 Nov, tap cards):
+- **R2 story:** settled by the intro answer: the Wheel. The Unity Drum story is dropped; Mister Red Tape stays the Abuja boss, as one of the Stoppers.
+- **R3 / city choice 8, pepper fufu:** a), fufu and egusi, a ball that rolls and plugs potholes, after slice 3, with an action button then.
+- **R4 herder's staff:** c), **not now.** Not po's pick (a, after slice 3). The staff is left out of the plan; the north's first food or tool is chosen later with Hausa and Fulani speakers.
+- **R5 equal shares:** a), yes, as a rule kept over updates. Next foods and tools and the next regions (north and east) keep the balance. Other groups join over time.
+- **R6 potholes:** a), the bus stop restart stays; a small warning sign before each wide pothole; in Gentle mode the hero climbs out just before the pothole.
+- **R7 words:** a), "lives" and "Gentle mode".
+- **R8 worlds:** a), keep the built plan; PR #1's equal north / east / west worlds, their instruments and the Flood are the plan for later regions.
+- **R9 art:** a), code art now; a human artist before a public launch.
+- **R10 closing line:** a), not in the game. Tp to remove Done when 8 from the brief.
+- **City 2:** a), finish slice 2 polish and P3, designer writes slice 3. **City 3:** a), the lane run moves by itself, there only. **City 4:** a), on foot past a go-slow to a bus stop, "Lane run" for now. **City 5:** a), throws only while a throw food works, at problems only. **City 6:** a), 12 s for every food (amala 14 to 12). **City 7:** a), any Naira fixes anything, no timers, never sold for real money. **City 9:** a), code art; Blender side test on one city picture.
+
+Nothing waits for Tp now except pasting the lines into docs/decisions.md and the brief edits.
 
 Lines for Tp to paste into docs/decisions.md:
 26. One main: the built game is merged into main (10 Nov 2026).
 27. The game is called Gbese! (confirms line 5).
+28. The story is the Wheel; the Unity Drum is dropped. (R2)
+29. Fufu and egusi plug potholes, after slice 3. No herder's staff for now. (R3, R4)
+30. Hausa, Igbo and Yoruba get an equal share of foods, tools, worlds, music and helpers over the updates; other groups join over time; bosses belong to no group. (R5)
+31. Pothole falls: back to the bus stop, a warning sign before wide potholes, and in Gentle mode climb out just before the pothole. (R6)
+32. City choices 2 to 9 as po recommended: slice 2 polish first, lane run moves by itself there only, on foot past a go-slow, throws only with a throw food, every food 12 s, Naira spent on fixes with no timers, code art with a Blender side test. (City 2 to 9)
+33. Code art for the test; a human artist before a public launch. North, east and west worlds of equal size come in later regions. (R8, R9)
 
 ### Intro story: answered by Tp, 9 Nov 2026 (reported by the lead)
 

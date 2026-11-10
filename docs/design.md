@@ -93,12 +93,12 @@ Length: start x 80 to arena x 11000 is 70 s at 156 u/s; the boss takes about 25 
 | Second jump | 3300-4500 | 21-28 s | tap again in the air | Safe practice: high stall at 3550 (150 high) over solid road. Then a 150-wide pothole at 3950 with a kobo arc |
 | Hazard | 4500-5600 | 28-35 s | goats and tyres | Goat at 4950 alone. Tyre at 5450 alone, about 3 s later |
 | Bus stop | 5600 | 35 s | checkpoint | Yellow bus and shelter |
-| Food | 5600-11000 | 35-70 s | the three foods | Garri at 5900, then a goat at 6400 to spend the shield on. Corn at 7100: 6 s of fast road with kobo, a 50 pothole and two roofs, no hazards. Mixed bit: tyre 8900, 90 hold pothole at 9200. Amala at 9650: goats and a tyre at 10000, 10300, 10550 to smash |
+| Food | 5600-11000 | 35-70 s | the three foods | Garri at 5900, then a goat at 6400 to spend the shield on. Corn at 7100: 6 s of fast road (slice 1 timing; corn now lasts 12 s, see Power-ups) with kobo, a 50 pothole and two roofs, no hazards. Mixed bit: tyre 8900, 90 hold pothole at 9200. Amala at 9650: goats and a tyre at 10000, 10300, 10550 to smash |
 | Boss | 11000-11560 | 70 s on | General Go-Slow | See Boss |
 
 Foods sit on the road at running height with a short kobo row leading in, so a normal run picks up all three without trying: garri x 5900 (37 s), corn x 7100 (45 s), amala x 9650 (61 s). No pothole within 300 u of a food, so nobody jumps over one by accident.
 
-Food when the boss starts: no timed food is running. Corn ends near x 8470. Amala ends near x 10740, the last hazard it meets is near 10450, and the arena starts at 11000, so amala is over about 1.7 s before the boss. The garri shield has no timer, so an unused shield carries into the fight. That is a fair reward. Timers are never cut at the arena line; the Q6 rule just never comes up in this level.
+Food when the boss starts (slice 1 history, worked out with 6 s corn and 7 s amala): no timed food is running. Corn ends near x 8470. Amala ends near x 10740, the last hazard it meets is near 10450, and the arena starts at 11000, so amala is over about 1.7 s before the boss. The garri shield has no timer, so an unused shield carries into the fight. That is a fair reward. Timers are never cut at the arena line; the Q6 rule just never comes up in this level.
 
 Rules checked against the physics note:
 - Potholes: tap 40, 50, 60 (limit 60); hold 90 (limit 110); second jump 150 (limit 180). Corn-speed pothole is 50.
@@ -117,9 +117,11 @@ All three show an icon, a word and, if timed, seconds left in the HUD. Never col
 
 | Food | Effect | Lasts | Pickup words (toast) | HUD | Hero look | How it ends |
 |---|---|---|---|---|---|---|
-| Roasted corn | Run speed `cornSpeed` (228) instead of `runSpeed` (156), both from the level file | 6 s | "Roasted corn! You run faster for 6 seconds." | corn icon "Fast 6" counting down | speed lines behind | Last 2 s: HUD and hero blink, a soft tick each second, toast "Corn is wearing off!" |
+| Roasted corn | Run speed `cornSpeed` (228) instead of `runSpeed` (156), both from the level file | 12 s | "Roasted corn! You run faster for 12 seconds." | corn icon "Fast 12" counting down | speed lines behind | Last 2 s: HUD and hero blink, a soft tick each second, toast "Corn is wearing off!" |
 | Garri, sugar and epa | Shield takes one hit for you | Until one hit | "Garri, sugar and epa (groundnut)! A shield takes one hit for you." | cup icon "Shield" | a round bubble outline | On a hit: bubble pops, toast "Shield used up!", 1.2 s of blinking safety, no life lost |
-| Amala, gbegiri and ewedu | Smash through goats (they run off unhurt), tyres and boss throws, +2 kobo each | 7 s | "Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through!" | bowl icon "Strong 7" counting down | glowing outline and bigger steps | Last 2 s: blink and tick, toast "Amala is wearing off!" |
+| Amala, gbegiri and ewedu | Smash through goats (they run off unhurt), tyres and boss throws, +2 kobo each | 12 s (was 14; Tp, 10 Nov, city choice 6; gamedev to change) | "Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!" | bowl icon "Strong 12" counting down | glowing outline and bigger steps | Last 2 s: blink and tick, toast "Amala is wearing off!" |
+
+Times (Tp, 10 Nov, city choice 6: every food lasts 12 s): corn 12 s (built), amala 12 s (built as 14 s; gamedev to change `amalaSteps` in src/game/run.ts and both amala strings in src/screens/words.ts, the toast and its short-words key), garri until one hit. The toast words always say the real seconds. Slice 1 history: foods first lasted 6 s and 7 s, then 12 s and 14 s (quick fixes, 9 Nov).
 
 Rules: amala never counts as a boss hit (Q6). No food saves you from a pothole. A second corn or amala restarts its timer; a second garri while shielded gives nothing extra. Goats are never hurt: smashed or bounced, they bleat and trot away.
 
@@ -262,13 +264,18 @@ Pit sizes. Every pit is one of four kinds, and nothing in between, so the player
 Big pit rules:
 1. At least 160 u of flat, clear road straight before every big pit (no pit, no hazard, no crate, no food). 160 u is twice the run-up the hero needs.
 2. Two orange and white cones stand on each lip and a row of coins arcs over the middle, so a big pit never looks like an ordinary pothole. Not colour alone: the cones and the width say it too.
-3. No big pit within 1400 u after a corn (a corn walk can almost clear one; corn lasts 6 s, 6 x 228 = 1368 u).
+3. No big pit within one corn's reach after a corn. A corn's reach is the road a full corn run covers: corn seconds x `cornSpeed` = 12 x 228 = 2736 u (was 1400 u when corn lasted 6 s). Reason: a corn walk can almost clear a big pit, so a big pit inside the corn would teach the wrong jump. Tests work this out from the corn time in code (S2.13).
 4. The first big pit of the game comes right after a bus stop, and a coin arc on solid road just before it shows the shape of a running double jump.
 
 Hazards with a player-moved hero (changes part 1 only where it says so):
 1. Hazards still wake when they are within the larger of `wakeDistance` and (visible width ahead of the hero + 40), and then move left as in part 1. A hero standing still is walked up to; jumping over or onto them still works.
 2. A woken hazard that is more than 200 u left of the camera's left edge, or more than 200 u right of its right edge, is gone for good this play (it comes back only after a lost life, as in part 1).
-3. Closing speed is now at most 312 u/s (drum at 84 meeting a corn run at 228). That is too fast for the 1.5 s rule on a 560 u screen, so: no drum and no tyre within 1370 u after a corn. Goats are fine anywhere.
+3. Hazards and corn (P2, 10 Nov; replaces the old "1370 u" rule, written when corn lasted 6 s). On the narrowest view (560 u, hero at 20 percent, 448 u of road ahead) a hazard comes into view 448 u away. With corn, a tyre closes at 60 + 228 = 288 u/s, so the player gets 1.56 s of warning: that meets the 1.5 s rule. A drum closes at 84 + 228 = 312 u/s: 1.44 s, too short. So, with reach = corn seconds x `cornSpeed` (2736 u):
+   a) The fast stretch: no tyre and no drum in the first half of the reach after a corn (1368 u). The corn starts as a treat: speed, kobo and jumps, nothing to dodge.
+   b) Tyres may stand in the second half of the reach. They give 1.56 s of warning even at corn speed.
+   c) No drum from a corn up to reach + `wakeDistance` after it (2736 + 520 = 3256 u). A drum that far on is still asleep when the corn runs out, so it is never met at corn speed on any screen.
+   d) Goats are fine anywhere.
+   e) A corn stretch always has a warning and room to slow down: "Corn is wearing off!" and the blink in the last 2 s, and there is no auto-run, so letting go stops a corn run in about 20 u (0.19 s).
 
 Walls:
 1. The hero cannot walk left of `startWall` + 7 or right of `end.wall` - 7. Both are drawn: a fence and parked bus at the start, the bus park wall at the end.
@@ -421,9 +428,9 @@ When the bar is under 160 px wide (only screens near 320 x 240), a toast longer 
 
 | Full words (bar 160 px wide or more) | Short words (bar under 160 px) |
 |---|---|
-| Roasted corn! You run faster for 6 seconds. | Roasted corn! You run faster! |
+| Roasted corn! You run faster for 12 seconds. | Roasted corn! You run faster! |
 | Garri, sugar and epa (groundnut)! A shield takes one hit for you. | Garri, sugar and epa! Shield on! |
-| Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through! | Amala, gbegiri and ewedu! Strong! |
+| Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through! | Amala, gbegiri and ewedu! Strong! |
 | General Go-Slow blocks the road! Jump onto the green light. | Go-Slow! Jump on the green light. |
 | A secret room! Grab the kobo. Stand under the rope to go back up. | Secret room! Use the rope to go up. |
 | Your garri parcel: the shield is on! | Garri parcel: shield on! |
@@ -697,7 +704,7 @@ Length: spawn 80 to bus 10600 = 10520 u. 67 s at full run; about 90 s for a firs
 | Bus stop | 4400 | 36 s | checkpoint | "Bus stop! If you fall, you start again here." |
 | Long jump | 4400-5300 | 36-44 s | run-up | "To jump far, run first. Keep holding {forward}." A coin arc on solid road from 4620 to 4824 in the shape of a running double jump (walking gets only half). Clear road 4824 to 5050. "Big pit! Run, jump, then jump again in the air." Big pit 170 wide at 5050, cones on both lips, kobo arc |
 | Hazard | 5300-6400 | 44-53 s | goat, tyre | "Goat! Jump over it, or land on it to bounce." Goat at 5700 alone. "Rolling tyre! Jump over it." Tyre at 6250 alone |
-| Food | 6400-10000 | 53-83 s | the three foods | "This crate has food inside. Knock it!" Garri crate at 6500; goat at 6900 to spend the shield on. Roasted corn on the road at 7300: fast stretch 7300 to 8670 with kobo, a tap pothole 40 at 7800 and roofs at 7600 (with a kobo crate on it), 8100, 8500; no hazards. Mixed: tyre 8900, hold pothole 60 at 9150. Amala on the road at 9530; goat 9850, tyre 10050, goat 10250 to smash |
+| Food | 6400-10000 | 53-83 s | the three foods | "This crate has food inside. Knock it!" Garri crate at 6500; goat at 6900 to spend the shield on. Roasted corn on the road at 7300 (a full corn run lasts to about 10040): fast stretch 7300 to 8670 with kobo, a tap pothole 40 at 7800 and roofs at 7600 (with a kobo crate on it), 8100, 8500; no hazards. Mixed: tyre 8900, hold pothole 60 at 9150. Amala on the road at 9530; goat 9850, tyre 10050, goat 10250 to smash |
 | End | 10450-10600 | 87 s | | "The yellow bus! Get on to finish the street." Bus door 10600 |
 
 Kobo: 165 (153 loose, 12 in crates). Well: none (taught in street 2).
@@ -721,7 +728,7 @@ Length: spawn 80 to bus 11000 = 10920 u. 70 s at full run, about 91 s typical.
 | Bus stop | 5200 | | "Bus stop! If you fall, you start again here." |
 | Big pit | 5450-5970 | | "Big pit! Run first, then jump twice." Clear road 5300 to 5800, big pit 170 at 5800 |
 | Hazards | 6000-7200 | pairs | Goat 6300, tyre 6600, goat 7000 with a roof at 7050 to hop onto |
-| Corn | 7300-8670 | | Corn crate at 7300 (corn drops to the road). Tap potholes 40 at 7700 and 36 at 8200, roofs at 7900 (kobo crate over it) and 8450. No hazards |
+| Corn | 7300-8670 | | Corn crate at 7300 (corn drops to the road; a full corn run lasts to about 10040). Tap potholes 40 at 7700 and 36 at 8200, roofs at 7900 (kobo crate over it) and 8450. No hazards (fast stretch) |
 | Mixed | 8670-9700 | | Tyre 8950, goat 9100, hold pothole 60 at 9300 |
 | Amala | 9700-11000 | | Amala on the road at 9700. Goat 9950, tyre 10100, wide pothole 100 at 10300, goat 10650, tyre 10850. Bus door 11000 |
 
@@ -744,9 +751,9 @@ Length: spawn 420 to bus 11500 = 11080 u. 71 s at full run, about 92 s typical.
 | Big pit 1 | 4600-5470 | | Garri crate at 4900, clear road 5000 to 5300, big pit 170 at 5300 |
 | Between | 5470-6700 | | Goat 5900, drum 6300, roof at 6350 |
 | Big pit 2 | 6700-7170 | | Clear road 6700 to 7000, big pit 170 at 7000 |
-| Corn | 7500-8870 | | Corn crate at 7500. Tap 40 at 8100, hold 60 at 8600, roof at 8300 with a kobo crate. No hazards |
-| Mixed | 8870-9900 | | Tyre 9100, goat 9300, drum 9550, roof at 9700 |
-| Amala | 9950-11500 | | Amala on the road at 9950. Drum 10200, tyre 10350, goat 10500, drum 10650, wide pothole 100 at 10900. Bus door 11500 |
+| Corn | 7500-8870 | | Corn crate at 7500 (a full corn run lasts to about 10240; no drum before 10756). Tap 40 at 8100, hold 60 at 8600, roof at 8300 with a kobo crate. No hazards (fast stretch) |
+| Mixed | 8870-9900 | | Tyre 9100, goat 9300, tyre 9550 (was a drum; P2), roof at 9700 |
+| Amala | 9950-11500 | | Amala on the road at 9950. Tyre 10200 (was a drum; P2), tyre 10350, goat 10500, goat 10650 (was a drum; P2), wide pothole 100 at 10900. Bus door 11500 |
 
 Kobo: 129 (117 loose, 12 in crates), plus 17 in the well room.
 
@@ -759,7 +766,7 @@ An empty, plain oil drum (no writing, no brand) rolling left from the vulcanizer
 | Box | 26 wide x 30 tall, feet on the road |
 | Speed | 84 u/s, rolling left (tyre is 60) |
 | Rules | as the tyre: wakes like any hazard, drops into potholes, land on it to bounce (vy -480), it then rolls into a sparkle (0.3 s); amala smashes it (+2 kobo); any other touch hurts |
-| Placing | never within 1370 u after a corn; at least 200 u from a pit; first one alone with a hint |
+| Placing | never from a corn to reach + `wakeDistance` after it (3256 u; S2.2 hazard rule 3c); at least 200 u from a pit; first one alone with a hint. Street 3's drums: 1800, 4250, 6300 |
 
 Not colour alone: the drum is taller and has ridges, the tyre is round and black with a tread.
 
@@ -790,7 +797,7 @@ Hall file (`type: "hall"`): `width`, `spawnX`, `leftLimit`, `rightLimit`, `groun
 
 Files: src/data/levels/lagos-1.json, lagos-2.json, lagos-3.json, lagos-well.json, lagos-hall.json. w1-l1.json is the slice 1 level; gamedev retires it once lagos-1 and lagos-hall replace it (its tests move to the new files).
 
-A level test should check every rule in this part: pit kinds and widths, run-up before big pits, hazard distances from pits and exit wells, no drum or tyre in a corn stretch, crate heights and spacing, food distances, hints at least 120 u apart, spawn, bus stop, wells and bus door on solid road.
+A level test should check every rule in this part: pit kinds and widths, run-up before big pits, hazard distances from pits and exit wells, the corn rules worked out from the corn time (S2.2 hazard rule 3, big pit rule 3), a warning sign before every pit 90 u or wider, crate heights and spacing, food distances, hints at least 120 u apart, spawn, bus stop, wells and bus door on solid road.
 
 ## S2.7 Go-Slow Hall (R6)
 
@@ -989,12 +996,12 @@ Rules:
 2. Changing place: the old tune fades out in 0.3 s, 0.2 s of quiet, the new tune starts on a bar line.
 3. Music starts only after the first tap or key.
 4. Music stops when the game pauses (pause screen, phone upright, tab hidden, app switched, a call) and carries on from the same bar when play goes on.
-5. "Music: on / off" is its own switch, separate from "Sound: on / off", on the title screen and the pause screen, and the M key. Remembered as `gidi-music`. Music off means no tune anywhere; sound effects follow only the Sound switch.
+5. "Music: on / off" is its own switch, separate from "Sound: on / off", on the title screen and the pause screen, and the M key. Remembered as `gidi-music`. Sound off makes the game quiet, music too. Music off stops only the tunes. Each switch shows its own setting. (po Ruling 1, 9 Nov, as built: a tune plays only when Sound and Music are both on; "Music: on" stays shown while Sound is off, so the tune comes back by itself when Sound comes back.)
 6. The game never waits for music to start. Notes are scheduled 0.1 s ahead, checked every 25 ms.
 
 ## S2.10 Screens and words (slice 2)
 
-Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that open during play ignore taps for their first 0.4 s (part 1). Gentle mode is unchanged: "Gentle mode: 5 lives instead of 3" on the title and game over screens, and it changes only the number of lives.
+Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that open during play ignore taps for their first 0.4 s (part 1). Gentle mode: "Gentle mode: 5 lives instead of 3" on the title and game over screens. It gives 5 lives, and on a street a fall in a pothole puts you back just before that pothole, not at the bus stop (Tp, 10 Nov, R6 a; S2.13). Nothing else changes.
 
 | Screen | Who sees it | One job | Exact words |
 |---|---|---|---|
@@ -1007,8 +1014,8 @@ Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that
 | Pause | A player who pressed pause, left the app, or turned the phone upright | Get back to playing | "Paused". Buttons "Keep playing", "Start again", "Streets", "Home". Switches "Sound: on" / "Sound: off", "Music: on" / "Music: off". Tapping outside the buttons does nothing |
 | Turn phone | A player holding the phone upright in play | Get the phone sideways | "Turn your phone sideways to play." (part 1) |
 | Street cleared | A player who got on the bus | Celebrate, then go on | "Street cleared!" "{street name} is moving again, thanks to you! You got {kobo} kobo." (decided by Tp in chat, 8 Nov 2026; replaces "{street name} is fixed. You got {kobo} kobo.", see "Cleared words for real places" below) If carrying the parcel: "Your garri parcel is saved for Go-Slow Hall." Big button "Next street" (after street 3: "Go to Go-Slow Hall"). Small "Play again", "Streets" |
-| Game over (street) | A player who lost the last life on a street | Try again | "Out of lives". "You got {kobo} kobo. The street is still here. Try again!" Button "Play again". If gentle mode is off: "Want more tries? Gentle mode gives you 5 lives." with the switch. Small "Streets", "Home" |
-| Game over (hall) | A player who lost the last life in the hall | Try again | "Out of lives". "General Go-Slow is still jamming the hall. Try again!" Same buttons and gentle offer as above |
+| Game over (street) | A player who lost the last life on a street | Try again | "Out of lives". "You got {kobo} kobo. The street is still here. Try again!" Button "Play again". If gentle mode is off: "Want more tries? Gentle mode gives you 5 lives, and you climb out of holes." with the switch. Small "Streets", "Home" |
+| Game over (hall) | A player who lost the last life in the hall | Try again | "Out of lives". "General Go-Slow is still jamming the hall. Try again!" Same buttons as above. Gentle offer: "Want more tries? Gentle mode gives you 5 lives." (the hall has no holes) |
 | Win | A player who cleared Go-Slow Hall | Celebrate Lagos switching on | "Lagos is switched on!" "You cleared General Go-Slow with {lives} lives left." ("1 life left" when one. No kobo here: the hall has none to collect, and kobo lives on the Street cleared screen and the Streets cards; po M4 note.) "Lagos's cog is turning: {n} of 37." "More of Nigeria is coming soon." Big button "See Nigeria's wheel". Small "Play again", "Streets" |
 | Credits | Anyone who taps "Credits" | Say who made it | "Credits". "Made by CoachNaz." "Every picture, sound and tune is our own." Button "Back" |
 
@@ -1055,7 +1062,8 @@ Toasts and hints in one place (all also in the level files or in S2.5 and S2.7):
 1. Targets: in-play buttons at least 56 px, menus at least 44 px, 8 px or more apart. The direction and jump touch areas are much bigger than the drawings.
 2. Sound and music each have their own off switch, remembered on the phone.
 3. Never colour alone: pressed buttons shrink, the lit light says "GO" with an arrow, big pits have cones, crates carry picture stamps, the drum and tyre have different shapes, done streets have a tick and words, working cogs turn and carry a tick and a name, the two honks have different shapes and words.
-4. Gentle mode: 5 lives on every street and in the hall. No auto-run (Q18); revisit after testing.
+4. Gentle mode: 5 lives on every street and in the hall, and a pothole fall puts you back just before that pothole (S2.13). No auto-run (Q18); revisit after testing.
+9. Every pothole you must jump twice for (90 u or wider) has a warning sign before it: a picture, not colour alone (S2.13).
 5. No time limits anywhere; the hero waits for the player.
 6. Reduced motion (`prefers-reduced-motion`): the well room camera snaps (no ease), no wheel spin (the tick and name stay), no crate sway, no lamp flicker or rope sway in the room. The street camera keeps its ease, on purpose: the street must scroll to be played at all, the 10 percent follow is the smoothest way to do it, and snapping it would make each look switch (S2.2 Camera, rule 2) throw the whole street about 40 percent of the screen in one frame, which is harder to follow and more jarring than the ease.
 8. Screen readers hear the full HUD words at every HUD step (S2.10, "The HUD row").
@@ -1096,3 +1104,76 @@ Sounds (code-made, short, original):
 14. Locked card tapped: a soft low "tuk" (and the words already say why).
 
 Music (S2.9): menu loop, street loop (three tempos), well loop, hall loop (three tempos with layers), street-cleared jingle, win tune.
+
+## S2.13 P2 polish (designer, 10 Nov 2026): tasks for gamedev and art
+
+Sources: Tp's answers of 10 Nov (city choice 6: every food lasts 12 s; R6 a: potholes) and po's rulings of 9 Nov (quick fixes ruling 1; O music Ruling 1), all in docs/questions.md. Docs only; nothing here is built yet.
+
+### 1. Food times (gamedev)
+
+1. Amala lasts 12 s, not 14 (Tp, 10 Nov, city choice 6). In src/game/run.ts: `amalaSteps: secs(12)`. In src/screens/words.ts: the amala toast and its short-words key both become "Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!". The HUD then counts "Strong 12".
+2. Corn stays 12 s, garri stays until one hit. Toast words always say the real seconds. If a food time ever changes again, its toast changes in the same commit.
+
+### 2. Hazards and corn (gamedev)
+
+Decision: keep the rule's purpose (never meet a hazard you could not see coming), restate it for 12 s corn, and move nothing except three drums in street 3, which become a tyre or a goat at the same x. Tyres at corn speed give 1.56 s of warning on the narrowest screen, which meets the 1.5 s rule; drums give 1.44 s, which does not. Full rule: S2.2, hazard rule 3 a to e, and big pit rule 3.
+
+Changes to src/data/levels/lagos-3.json, `hazards` (x stays the same):
+- ["drum", 9550] becomes ["tyre", 9550]
+- ["drum", 10200] becomes ["tyre", 10200]
+- ["drum", 10650] becomes ["goat", 10650]
+
+Street 3 keeps drums at 1800 (taught alone, with its hint), 4250 and 6300. Streets 1 and 2 do not change: their tyres at 8900 and 8950 sit 1600 and 1650 u after the corn, past the fast stretch (1368 u), and they have no drums. Every big pit comes before its street's corn.
+
+Tests (tests/unit/street.test.ts): stop hard-coding 1370 and 1400. Work the reach out in code: `reach = RULES.cornSteps / STEPS_PER_SECOND * L.cornSpeed` (2736 today). Then check:
+- no big pit from a corn to corn + reach;
+- no tyre or drum from a corn to corn + reach / 2 (the fast stretch);
+- no drum from a corn to corn + reach + `L.wakeDistance`.
+So the next change to the corn time is caught by the tests, not by a player.
+
+### 3. Sound and Music (done in the doc; nothing to build)
+
+S2.9 rule 5 now says: "Sound off makes the game quiet, music too. Music off stops only the tunes. Each switch shows its own setting." This is how it is built (po Ruling 1).
+
+### 4. Pothole warning sign (art, then gamedev)
+
+Tp, 10 Nov, R6 a: a small warning sign before each wide pothole. We put it before every pothole you must jump twice for: every wide pothole (90 to 110 u) and every big pit (170 u, which keeps its cones as well). Tap and hold potholes get no sign.
+
+What it looks like (art; our own style, drawn in code):
+- A hand-painted wooden board on one wooden post, like the painted signs at Lagos roadsides. Not a copy of any official road sign and not of any game's sign. No words, no brand, no flag.
+- Board 34 u wide x 24 u tall, bright yellow from our palette, thick dark ink outline, two small nail dots, leaning about 3 degrees. Post 4 u wide, dark wood. Whole sign 56 u tall: post foot on the back edge of the road (y 300), board top at y 244.
+- Painted on the board: a black hole with a ragged rim, and over it a dotted path that goes up, dips a little, and goes up again (a jump and a second jump), ending in a small arrow to the right.
+- Not colour alone: the hole and the two-hump path say it, in any colour.
+- The fixed look after Lagos is switched on keeps the signs (the board looks freshly painted).
+
+Where it stands (gamedev): worked out from the ground spans in code, no level file change. For every gap 90 u or wider, one sign with its post centre 120 u before the gap's left lip. It is scenery: drawn behind the hero, hazards, kobo, crates and foods, never solid, never hurts. It sits above the road line, so the hint bar (top limit world y 312) never covers it.
+
+Today that gives signs at: street 1: 3880 (wide 100 at 4000), 4930 (big pit at 5050). Street 2: 3480 (wide at 3600), 5680 (big pit at 5800), 10180 (wide at 10300). Street 3: 2580 (wide at 2700), 5180 (big pit at 5300), 6880 (big pit at 7000), 10780 (wide at 10900).
+
+Test: every gap 90 u or wider has exactly one sign 120 u before its left lip; no narrower gap has one; no sign stands in the hall or the well room.
+
+The bus stop restart stays as built for everyone not in Gentle mode.
+
+### 5. Gentle mode: climb out just before the pothole (gamedev, art)
+
+Tp, 10 Nov, R6 a. Gentle mode now gives 5 lives and changes where a pothole fall puts you. Nothing else changes.
+
+Rule (gamedev), only when Gentle mode is on, only on a street:
+1. A fall in any pothole or pit costs one life, as now. At 0 lives it is game over, as now.
+2. The fall plays as built. Then, instead of the bus stop or the start, the hero comes back at the restart point for that pit: 100 u before its left lip, or 160 u before the left lip of a big pit (the run-up a big pit needs). If that point is behind where Normal mode would put you (the bus stop once reached, else the start), use the Normal mode point instead. If the point is not on solid road with 20 u of road on each side, use the middle of the road span that ends at the pit's lip. In today's streets every restart point is on solid road.
+3. The hero stands facing right, still, and the camera jumps there (S2.2 Camera, rule 6). The hero plays a short "dust off" (0.4 s, controls locked; with reduced motion, no dust off, stand at once).
+4. Same reset as any fall, measured from this restart point: food effects end (shield too), foods, food crates and hazards at or past the restart point come back, kobo taken stay taken.
+5. 1.7 s of blinking safety after the climb-out (a Normal mode fall has none), so nothing that comes back can hit you as you arrive.
+6. Reaching the bus stop still counts, as now.
+
+Hint words (in the hint bar, 3.5 s, after every Gentle mode climb-out; all 35 characters or fewer, the same for touch and keys):
+- after a tap or hold pothole: "Up you come! Try that jump again."
+- after a wide pothole: "Up you come! Jump, then jump again."
+- after a big pit: "Up you come! Run, then jump twice."
+- In Gentle mode the bus stop hint "Bus stop! Now you start here." is not true any more, so it says "Bus stop! Halfway there." instead.
+
+Words on screens (gamedev): street Game over offer "Want more tries? Gentle mode gives you 5 lives, and you climb out of holes."; the hall's offer stays "Want more tries? Gentle mode gives you 5 lives." The switch label stays "Gentle mode: 5 lives instead of 3" (Tp, R7 a: "lives" and "Gentle mode"; the layout is already tested at 320 px).
+
+Art: the "dust off" pose for every body (S2.3), facing right: a quick crouch, two pats on the knees, a small dust puff, then stand. Two frames are enough.
+
+Tests: in Gentle mode, a fall in each pit kind brings the hero back at the right restart point, with one life fewer, 1.7 s of safety and the right hint; in Normal mode the bus stop restart is unchanged; with Gentle mode on, game over still comes at 0 lives.

@@ -262,6 +262,7 @@ All confirmed as recommended except Q22 (street names). Kept as history.
 Done: slice 1 A to F and G1. Slice 2 H (85741b9), I (53a659d), J (8636479), K (5ee5f06), L (cc8e594), M (ae69d29): each qa passed and po accepted. Tp answered Q16 to Q25 on 8 Nov.
 Next: N1 (art: Streets cards, wheel, fixed street look, music icons, wheel sounds), then N2 (gamedev: saves, screens, Tp's street names and cleared line, the four M3 bugs, the new Win line, the saved parcel). Then O2, P.
 Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked.
+P2 (designer, 10 Nov): design.md S2.13 has the P2 doc fixes (foods 12 s, corn hazard rule, pothole signs, Gentle mode climb-out) and the tasks for gamedev and art; the hall difficulty part of P2 is still to do.
 Note for Tp: until N2, the Win card says "with 0 kobo" and the parcel is lost when the page closes.
 
 ## Waiting on Tp

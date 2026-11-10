@@ -9,7 +9,7 @@
  * and two-part arms and legs. Poses are angles, blended from key poses, so the
  * run, jump, fall, landing and standing all move like a person.
  */
-import { drawDustPuff, drawSkidScuff } from './dust';
+import { drawDustPuff, drawKneePuff, drawSkidScuff } from './dust';
 import { GLOW, INK, WHITE } from './palette';
 
 /** Lip rose. Every skin draws the same lip shape with a thin outline darker than the skin. */
@@ -210,6 +210,25 @@ export interface HeroPose {
   dust?: number;
   /** Holding the well rope with both hands above the head (going down or up). */
   rope?: boolean;
+  /**
+   * Gentle mode climb-out "dust off" (S2.13 part 5), facing right: 0 to 1 over
+   * DUST_OFF_TIME. Two frames (dustOffFrame): a crouch with the hands up, then the
+   * hands patting the knees, twice, with a small dust puff off the knees. Leave unset
+   * for none; after 1, stand. Wins over the run, walk and stand poses on the ground.
+   */
+  dustOff?: number;
+}
+
+/** Seconds the "dust off" lasts (S2.13 part 5: 0.4 s, controls locked). */
+export const DUST_OFF_TIME = 0.4;
+
+/**
+ * Which of the two dust off frames shows at p (0 to 1): 0 hands up, 1 hands on the
+ * knees (a pat). Up, pat, up, pat: two pats in DUST_OFF_TIME.
+ */
+export function dustOffFrame(p: number): 0 | 1 {
+  const k = Number.isFinite(p) ? Math.min(Math.max(p, 0), 0.999) : 0;
+  return Math.floor(k * 4) % 2 === 1 ? 1 : 0;
 }
 
 /** A walking stride is this share of a running one, so feet never slide. */
@@ -452,6 +471,16 @@ const SKID: Rig = { thigh: [-0.2, 0.78], knee: [0.95, 0.12], foot: [0.1, -0.45],
 /** Holding the well rope: both hands up on the rope, legs together and a little bent. */
 const ROPE: Rig = { thigh: [0.12, 0.3], knee: [0.3, 0.5], foot: [0.35, 0.45], arm: [3.4, 3.35], elbow: [0.45, 0.5], lean: 0, lift: 0, tilt: -0.12 };
 
+/**
+ * Dust off: a low crouch, knees forward. LIFT has the hands up off the knees, PAT has
+ * them down on the knees. Elders keep the back straighter and the head up.
+ */
+const DUST_LEGS = { thigh: [0.75, 1.05] as [number, number], knee: [1.5, 1.75] as [number, number], foot: [0, -0.05] as [number, number], lift: 0 };
+const DUST_LIFT: Rig = { ...DUST_LEGS, arm: [0.75, 0.9], elbow: [1.0, 1.15], lean: 0.48, tilt: 0.02 };
+const DUST_PAT: Rig = { ...DUST_LEGS, arm: [0.55, 0.7], elbow: [0.1, 0.1], lean: 0.54, tilt: 0.12 };
+const DUST_LIFT_TALL: Rig = { ...DUST_LEGS, arm: [0.7, 0.85], elbow: [1.0, 1.15], lean: 0.26, tilt: 0 };
+const DUST_PAT_TALL: Rig = { ...DUST_LEGS, arm: [0.5, 0.62], elbow: [0.06, 0.06], lean: 0.3, tilt: 0.02 };
+
 const JUMP: Rig = { thigh: [0.55, 1.3], knee: [1.9, 2.1], foot: [0.8, 0.7], arm: [2.75, 1.7], elbow: [0.4, 0.8], lean: 0.06, lift: 0, tilt: -0.12 };
 const FALL: Rig = { thigh: [-0.3, 0.42], knee: [0.95, 0.3], foot: [0.7, 0.2], arm: [-1.95, 1.75], elbow: [-0.45, 0.3], lean: -0.02, lift: 0, tilt: 0.05 };
 const CROUCH: Rig = { thigh: [0.5, 0.95], knee: [1.25, 1.6], foot: [0, -0.05], arm: [-0.5, 0.9], elbow: [0.7, 0.9], lean: 0.34, lift: 0, tilt: 0.12 };
@@ -482,9 +511,20 @@ function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
+/** The dust off progress (0 to 1) if the hero is dusting off on the ground, else null. */
+function dustOffOf(pose: HeroPose): number | null {
+  if (pose.inAir || pose.rope || typeof pose.dustOff !== 'number' || !Number.isFinite(pose.dustOff)) return null;
+  return pose.dustOff >= 0 && pose.dustOff < 1 ? pose.dustOff : null;
+}
+
 function rigFor(pose: HeroPose, t: number, reach: number, upright: boolean): Rig {
   let r: Rig;
   if (pose.rope) return ROPE;
+  const dust = dustOffOf(pose);
+  if (dust !== null) {
+    const pat = dustOffFrame(dust) === 1;
+    return upright ? (pat ? DUST_PAT_TALL : DUST_LIFT_TALL) : pat ? DUST_PAT : DUST_LIFT;
+  }
   if (pose.inAir) {
     const k = typeof pose.vy === 'number' && Number.isFinite(pose.vy) ? clamp01((pose.vy + 80) / 300) : 0;
     r = mix(JUMP, FALL, k * k * (3 - 2 * k));
@@ -1287,14 +1327,15 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   const hair = (b.grey ? GREY_HAIRS : HAIRS)[l.hair] ?? HAIRS[0]!;
   const outfit = OUTFITS[l.outfit] ?? OUTFITS[0]!;
   const t = typeof pose.time === 'number' && Number.isFinite(pose.time) ? pose.time : 0;
-  const running = !pose.inAir && !pose.standing;
+  const dustOff = dustOffOf(pose);
+  const running = !pose.inAir && !pose.standing && dustOff === null;
   const phase = Number.isFinite(pose.phase) ? pose.phase : 0;
 
   g.save();
   g.scale(pose.facing === -1 ? -1 : 1, 1);
 
   if (!pose.inAir && typeof pose.dust === 'number') drawDustPuff(g, pose.dust);
-  if (!pose.inAir && !pose.standing && typeof pose.skid === 'number') drawSkidScuff(g, pose.skid, t);
+  if (!pose.inAir && !pose.standing && dustOff === null && typeof pose.skid === 'number') drawSkidScuff(g, pose.skid, t);
 
   if (pose.fast) {
     // Speed lines behind the hero
@@ -1327,7 +1368,7 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
     g.setLineDash([]);
   }
 
-  const land = !pose.inAir && typeof pose.land === 'number' && Number.isFinite(pose.land) ? clamp01(pose.land) : 0;
+  const land = !pose.inAir && dustOff === null && typeof pose.land === 'number' && Number.isFinite(pose.land) ? clamp01(pose.land) : 0;
   if (land > 0) g.scale(1 + land * 0.08, 1 - land * 0.1);
 
   // Shorter legs take slightly bigger swings, so the feet still keep pace with the ground.
@@ -1422,6 +1463,11 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.translate(0, breathe);
   drawArm(g, outfit, skin.base, r.arm[1], r.elbow[1], false, b);
   g.restore();
+
+  // Dust off: a small puff off the knees on each pat, bigger on the second
+  if (dustOff !== null && dustOffFrame(dustOff) === 1) {
+    drawKneePuff(g, 0.7 + legs[1].kx, hipY + legs[1].ky, dustOff >= 0.5 ? 1 : 0.6, (dustOff * 4) % 1);
+  }
 
   g.restore();
 }
