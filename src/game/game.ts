@@ -9,6 +9,7 @@ import { drawHall, drawHallCones, drawHallFront, hallDoors, hallFinishAt } from 
 import { crateAngle, crateLineY, drawCrate, drawCrateLine, koboFanAt, koboFlyAt } from '../art/crate';
 import { drawDrum, drawDrumSmash, drawDrumSparkle } from '../art/drum';
 import { drawHero, WALK_STRIDE, type HeroLook } from '../art/hero';
+import { drawPotholeSign } from '../art/sign';
 import { drawGoat, drawTyre } from '../art/hazards';
 import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
 import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence, END_BUS_BACK, END_BUS_FRONT } from '../art/roadside';
@@ -20,15 +21,14 @@ import { Camera, heroScreenX } from './camera';
 import { CRATE_RULES, type CrateState } from './crates';
 import { featureOn } from './features';
 import type { Level, WellData } from './level';
-import { HAZARD_BOX, Run, STEPS_PER_SECOND, type RunEvent, type RunOptions } from './run';
+import { BIG_PIT, potholeSigns } from './pits';
+import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type RunEvent, type RunOptions } from './run';
 import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
 
 export { heroScreenX };
 /** Honk clouds fade over this last stretch before the hall's left wall, u. */
 const HONK_FADE = 60;
-/** Pits this wide or wider are big pits: cones on both lips (S2.2). */
-const BIG_PIT = 160;
 /**
  * Ground covered by one run cycle (two steps), u. Tuned to the hero's leg swing so a planted
  * foot stays still on the road: during each step the planted ankle moves back about 20 u
@@ -260,6 +260,7 @@ export class Game {
     const vx0 = h0.vx;
     const speed0 = h0.speed;
     const air0 = !h0.grounded;
+    this.run.still = this.still; // a Gentle mode climb-out has no dust off under reduced motion
     const events: GameEvent[] = this.run.step(dt);
     if (h0.manual) events.push(...this.animateMoves(vx0, speed0, air0, dt));
     else this.gait = 'run';
@@ -400,7 +401,7 @@ export class Game {
     g.translate(-camX, 0);
     drawRoad(g, camX, W, level.ground, gy, H, this.fixed);
     // The well in use is drawn with the hero (going down); no arrow while Go down shows.
-    if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still });
+    if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still }, this.fixed);
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
     if (run.crates.length > 0) this.drawCrates(g, run.crates, camX, L, R, lift, true);
     const stop = level.checkpoint;
@@ -527,6 +528,8 @@ export class Game {
       skid,
       ...(rope ? { rope: true } : {}),
       ...(!rope && this.dustAge < DUST_TIME ? { dust: this.dustAge / DUST_TIME } : {}),
+      // Gentle mode climb-out (S2.13 part 5): 0 to 1 while the controls are locked.
+      ...(!rope && this.run.dustOff > 0 ? { dustOff: 1 - this.run.dustOff / RULES.dustOffSteps } : {}),
       time: t,
     });
     g.restore();
@@ -664,11 +667,14 @@ function drawStreetBits(
   H: number,
   time: number,
   wells: { busy: WellData | null; noArrow: WellData | null; still: boolean },
+  fixed = false,
 ): void {
   const gy = level.groundY;
   drawPavement(g, camX, viewW, level.ground, STRIP_Y, H);
   const fx = level.startWall;
   if (fx + 100 > L && fx - 90 < R) drawStartFence(g, fx, gy);
+  // S2.13 part 4: a warning sign before every pothole you must jump twice for (scenery).
+  for (const x of signsOf(level)) if (x + 30 > L && x - 30 < R) drawPotholeSign(g, x, gy, fixed);
   for (let i = 1; i < level.ground.length; i++) {
     const a = level.ground[i - 1]![1];
     const b = level.ground[i]![0];
@@ -683,6 +689,14 @@ function drawStreetBits(
     if (w !== wells.busy && w.x + WELL_REACH > L && w.x - WELL_REACH < R) drawWell(g, w.x, gy, { kind: 'entrance', time: wells.still ? 0 : time, arrow });
     if (w.exitX + WELL_REACH > L && w.exitX - WELL_REACH < R) drawWell(g, w.exitX, gy, { kind: 'exit', time });
   }
+}
+
+/** Pothole sign places by level, worked out once from its road spans. */
+const SIGNS = new WeakMap<Level, readonly number[]>();
+function signsOf(level: Level): readonly number[] {
+  let xs = SIGNS.get(level);
+  if (!xs) SIGNS.set(level, (xs = potholeSigns(level)));
+  return xs;
 }
 
 /** A well's drawing reaches this far either side of its centre (wall, frame and crank). */
