@@ -2,6 +2,14 @@
 
 ## Tp, 10 Nov 2026: the lane run gets pickups, chasers and buckets (po note, read this first)
 
+**Answered by Tp in chat, 10 Nov 2026: L1 a, L2 a, L3 a, L4 a, L5 a, L6 a, L7 a** (all as po recommended). Three buckets (Naira, Power, Tech); the Blackout chases; stumbles let it close in and you keep what you collected; Lagos seen from above; "Mission complete!" walk-in after every win; the Booming meter; safety missions against the Shadow with a made-up Safety Team, never people as enemies. The challenge road map (part of L4) was not answered on its own; designer drafts it as an option, to confirm with Tp.
+
+Lines for Tp to paste into docs/decisions.md:
+34. The lane run has three buckets: Naira, Power and Tech. Each city fix costs its own kind. Things you bump give values; goats say "meeh" and are never hurt. (L1; replaces city choice 7 "any Naira fixes anything")
+35. In the lane run, the Blackout chases from behind. Stumbles let it close in, Power pushes it back; if it catches you the run ends and you keep what you collected. (L2, L3)
+36. The Lagos city is seen from above, like a model town. After every win the hero walks into that part of the city: "Mission complete!", and the fix plays out. A Booming meter rises with each fix and never goes down by itself. (L4, L5, L7)
+37. Safety missions: the enemy is the Shadow (dark, empty, broken places), never people. The hero helps a made-up Safety Team; no real police, uniforms or badges, and no place shown as dangerous. (L6)
+
 Tp's words, in short: the lane run has power-ups like electricity and technology; what you collect is used to fix Lagos. Enemies chase you; if they catch you, you lose. Goats say "meeh" when hit. Anything you hit gives a value (Naira, light or technology) that goes into its bucket. Like the minions lane run game.
 
 How po reads it (to check with Tp), and the rules it must keep:
