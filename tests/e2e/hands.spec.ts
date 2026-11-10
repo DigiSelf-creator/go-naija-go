@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { LEFT, RIGHT, buttonCentres, hands, playStreetByHand, snap } from './hands';
 import { openAndRun, waitOutTapLock } from './helpers';
+import { formatMoney } from '../../src/game/money';
 
 const SHOTS = process.env['S2H_SHOTS'] ?? 'test-results/s2h-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -111,7 +112,7 @@ test('street 1 by hand with two thumbs: walk, run, potholes, the big pit by a ru
   await expect(cleared).toBeVisible({ timeout: 5000 });
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
   expect(kobo).toBeGreaterThanOrEqual(last.r.kobo);
-  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${kobo} kobo.`)).toBeVisible();
+  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${formatMoney(kobo * 10)}.`)).toBeVisible();
   await waitOutTapLock(page);
   await cleared.getByRole('button', { name: 'Next street' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-2');

@@ -15,8 +15,11 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { buttonCentres, hands, LEFT, playStreetByHand, RIGHT, type Hands } from './hands';
 import { HALL_URL, hallSnap, keyPad, playHall, touchPad, waitForWin } from './hall-play';
-import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock, gentleOn, storySeen } from './helpers';
 import { wellBot } from './well-bot';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 const SHOTS = process.env['M2_SHOTS'] ?? 'test-results/m2-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -190,7 +193,7 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
 test('Win screen buttons: Play again starts the hall fresh, after a short tap lock', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto(HALL_URL);
-  await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+  await gentleOn(page); // slice 3: Gentle mode is in Settings
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await startRun(page);
   await playHall(page, await touchPad(page));

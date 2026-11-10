@@ -111,6 +111,60 @@ test('replay from Settings: "Watch the story" plays it, then back to Settings; S
   await expect.poll(() => screenNow(page)).toBe('city');
 });
 
+test('an app switch or a phone turned upright pauses the story; that frame starts again', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Make your hero' }).tap();
+  await expect(story(page)).toBeVisible();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.keyboard.press('Space');
+  await expect(story(page).getByText('Tap to go on')).toBeVisible();
+  const intro = () => page.evaluate(() => window.__game!.intro!);
+  // The tab says it is hidden: paused, the time stops.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(async () => (await intro()).paused).toBe(true);
+  const held = (await intro()).time;
+  await page.waitForTimeout(300);
+  expect((await intro()).time).toBe(held);
+  // A tap while paused does nothing.
+  await story(page).tap({ position: { x: 60, y: 120 } });
+  expect((await intro()).frame).toBe(2);
+  // Back: frame 2 starts again (the hint waits again).
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(async () => (await intro()).paused).toBe(false);
+  const back = await intro();
+  expect(back.frame).toBe(2);
+  expect(back.time).toBeLessThan(1);
+  expect(back.hint).toBe('');
+  // Turned upright: the turn note shows and the story waits.
+  await page.setViewportSize({ width: 393, height: 851 });
+  await expect(page.getByText('Turn your phone sideways to play.')).toBeVisible();
+  await expect.poll(async () => (await intro()).paused).toBe(true);
+  await page.setViewportSize({ width: 851, height: 393 });
+  await expect.poll(async () => (await intro()).paused).toBe(false);
+  expect((await intro()).frame).toBe(2);
+});
+
+test('reduced motion: plain cuts and a still picture (nothing redrawn while it waits)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Make your hero' }).tap();
+  await expect(story(page)).toBeVisible();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.keyboard.press('Space');
+  await expect(story(page).getByText(CAPTIONS[1]!)).toBeVisible();
+  // The picture does not change while the frame waits (the Wheel stands still).
+  const shot = () => page.locator('.intro-pic').screenshot();
+  const a = await shot();
+  await page.waitForTimeout(500);
+  expect((await shot()).equals(a)).toBe(true);
+});
+
 for (const [w, h] of [
   [320, 240],
   [851, 393],

@@ -15,7 +15,10 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand } from './hands';
 import { HALL_URL, playHall, touchPad, waitForWin } from './hall-play';
-import { PAST_DOUBLE_TAP_MS, openAndRun, startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, openAndRun, startRun, gentleOn, storySeen } from './helpers';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 const SHOTS = process.env['S2H_SHOTS'] ?? 'test-results/s2h-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -185,7 +188,7 @@ for (const [width, height] of [
     test.setTimeout(240_000);
     await page.setViewportSize({ width, height });
     await page.goto(HALL_URL);
-    await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+    await gentleOn(page); // slice 3: Gentle mode is in Settings
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
     await startRun(page);
     await page.evaluate(() => {

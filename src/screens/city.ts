@@ -170,7 +170,8 @@ export class CityScreen {
       const word = look === 'ready' ? 'Ready' : SPOT_WORDS[spot];
       const label = fixed ? w.pinFixed(w.fixedName[spot]) : look === 'ready' ? w.pinReady(SPOT_WORDS[spot]) : w.pinProblem(SPOT_WORDS[spot]);
       const el = button('', `city-pin ${look}`, (e) => {
-        if (this.moved > DRAG_PX || this.hooks.ignoreTap(e)) return;
+        // A drag that ended on a pin is not a tap (keys, detail 0, always open it).
+        if ((e.detail > 0 && this.moved > DRAG_PX) || this.hooks.ignoreTap(e)) return;
         this.openCard(spot);
       }, { 'aria-label': label, 'data-spot': spot });
       let pic: HTMLCanvasElement | null = null;

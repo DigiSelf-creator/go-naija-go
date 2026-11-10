@@ -68,6 +68,17 @@ export async function openAndRun(page: Page, url = './'): Promise<void> {
   await startRun(page);
 }
 
+/** Slice 3 (city.md (a)): Gentle mode moved from the title to Settings. Switches it on from the title. */
+export async function gentleOn(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Settings' }).tap();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const sw = settings.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' });
+  await sw.tap();
+  await expect(sw).toHaveAttribute('aria-checked', 'true');
+  await settings.getByRole('button', { name: 'Back' }).tap();
+  await expect(page.getByRole('dialog', { name: 'Settings' })).toHaveCount(0);
+}
+
 /**
  * Slice 3 (city.md (a)): for tests about other screens, mark the intro story as seen before the
  * page loads, so "Make your hero" opens the builder as before. Set only when nothing is saved

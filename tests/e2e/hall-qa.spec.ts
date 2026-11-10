@@ -8,7 +8,10 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { HALL_URL, hallSnap, playHall, touchPad, waitForWin } from './hall-play';
-import { PAST_DOUBLE_TAP_MS, startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun, gentleOn, storySeen } from './helpers';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 const SHOTS = process.env['QA_SHOTS'] ?? 'test-results/qa-shots';
 const M2 = process.env['M2_SHOTS'] ?? 'test-results/m2-shots';
@@ -29,7 +32,7 @@ function watchErrors(page: Page): string[] {
 async function toHall(page: Page, gentle = false): Promise<void> {
   await page.goto(HALL_URL);
   if (gentle) {
-    await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+    await gentleOn(page); // slice 3: Gentle mode is in Settings
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   }
   await startRun(page);
