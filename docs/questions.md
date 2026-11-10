@@ -1,5 +1,26 @@
 # Open questions for the product owner
 
+## Tp, 10 Nov 2026 (later): designer's three choices, and five new ideas
+
+**Answered by Tp: 1 a, 2 a, 3 a.** Fufu plops, hops twice (smaller each time), then rolls; with Music off there is no corn tune but the 5, 4, 3, 2, 1 still shows; players who already have a hero see the intro once on their next Play.
+
+Tp's new ideas, in short, with po's read. CLAUDE.md rule 2 bans copying Mario, so two of them need a safe version (marked).
+- **B1. Birds on street 3.** Because of dirt and rubbish, birds gather and get in the way. Dodge them by throwing fufu, jumping on them, or running into them with the shield on. po: yes, with our rule for animals: birds are never hurt. Fufu: a bird catches the ball and flies off with it. Jump on one: it flaps away. Shield: it gets a fright and flies off. They gather by rubbish piles, so cleaning up is the real fix (a later city fix). Not like Angry Birds, Flappy Bird or any game's bird. Recommended: a) yes, as written; b) birds only fly overhead as scenery.
+- **B2. Amala makes the hero big, and you only go small when hit with no protection.** **po flag: this is Mario's best-known rule** (a power-up makes you big, a hit makes you small). Rule 2 forbids it.
+  - a) (po's pick) Amala stays a 12 s power-up with a strong look: wider shoulders, a warm glow, heavier footsteps, smashing through hazards. No change of size, no lasting big state.
+  - b) The hero grows a little (about 15%) for the 12 s only, then back to normal. Closer to Tp's idea; still a risk.
+  - c) Tp's full idea. po cannot recommend it.
+- **B3. A protection look: a halo or a robot build.** po: a halo is a faith sign (angels, saints), so rule 4 says no. A robot-style **tech suit** fits the game well (it matches the Tech bucket).
+  - a) (po's pick) The garri shield shows as a light tech suit frame around the hero, our own design: no famous robot or superhero look (not Iron Man or Mega Man). It still takes one hit.
+  - b) Keep the round shield bubble as now.
+- **B4. Fast run.** Double tap forward and hold = a fast run for a few seconds, for faster, longer jumps. The two jump taps stay, and holes get wider to need it. po: yes; many runner games have a dash, and ours is our own.
+  - a) (po's pick) A 2.5 s dash, dust and speed lines, then a short rest before the next. Some new wide holes need it; Gentle mode never needs it.
+  - b) No dash.
+- **B5. Gutters with thorn plants that harm you.** Fufu destroys the thorns, or you jump over. **po flag:** a harmful plant coming out of a pipe or hole is Mario's "piranha plant". Ours must never bite, have a mouth, or pop up and down.
+  - a) (po's pick) An open gutter (a wide drain) choked with thorny weeds that stay still. Touching them costs a life. A fufu ball clears them: they wither and the gutter turns to safe ground. Or jump over. Drawn our own way, no "fire".
+  - b) Gutters with no plants.
+Also: Tp says "fufu fireball". In the game it is always a hot fufu ball, never fire (rule 2).
+
 ## Tp, 10 Nov 2026 (after playing the PR #3 build)
 
 Tp's words, in short: it works; it needs to be harder; "I don't see my fufu as my fireballs"; when corn is picked up its sound should be different, fast and louder than every other sound, then wear off slowly 5, 4, 3, 2, 1; and when do we see the city and the journey?
