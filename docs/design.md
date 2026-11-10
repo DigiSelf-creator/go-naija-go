@@ -1001,6 +1001,65 @@ Rules:
 5. "Music: on / off" is its own switch, separate from "Sound: on / off", on the title screen and the pause screen, and the M key. Remembered as `gidi-music`. Sound off makes the game quiet, music too. Music off stops only the tunes. Each switch shows its own setting. (po Ruling 1, 9 Nov, as built: a tune plays only when Sound and Music are both on; "Music: on" stays shown while Sound is off, so the tune comes back by itself when Sound comes back.)
 6. The game never waits for music to start. Notes are scheduled 0.1 s ahead, checked every 25 ms.
 
+### Corn tune (Tp, 10 Nov 2026; designer note)
+
+Source: Tp, 10 Nov: when corn is picked up its sound should be different, fast and louder than every other sound, then wear off slowly, 5, 4, 3, 2, 1 (docs/questions.md top block, item 3).
+
+**What the player hears and sees.** You eat roasted corn: our own fast corn tune starts at once, loud and bright, and the street tune and every sound effect go quiet under it. For the last 5 seconds a big "5, 4, 3, 2, 1" counts down, and with each number the tune gets slower and softer. At 0 it is gone and the street tune comes back up.
+
+The tune (art writes the notes in src/art/tunes.ts, as data, like the others):
+
+| | |
+|---|---|
+| Name | `corn` |
+| Tempo | 144 BPM while the corn is fresh (street tunes are 108 to 116) |
+| Key | G major pentatonic (G, A, B, D, E), the street tunes' key, so the quiet street tune under it never clashes |
+| Chords | G, C, D, G (one bar each), 4 bars, looping (about 6.7 s a loop) |
+| Instruments | highlife guitar pluck plays the lead riff in quick 16th notes; bass on beat 1 and the "and" of 2; agogo bell in a two-note pattern; shekere on every 16th; a talking-drum fill in bar 4 |
+| The riff | our own short highlife riff, 2 bars, answered by a second 2 bars. Common scale notes only |
+| Must not sound like | any game's power-up, star, invincibility or speed music (Mario's star tune first, then Sonic's invincibility and speed shoes, Pac-Man's power pellet and other well-known ones), or any known song. So no bouncy "da da da-da da-da da" star rhythm, no fast rising arpeggio on every beat, no chromatic climb. art adds the openings of those tunes to the check list in tests/unit/music.test.ts if they are not there |
+| Size | note data, under 2 KB |
+
+How loud (rules for gamedev, src/engine/music.ts and src/engine/sound.ts):
+1. The corn tune plays on its own output at 0.8 (sound effects are 1.0, the music is 0.3 today). So it is about 2.7 times as loud as the street tune.
+2. While it plays, the street tune (or the well tune) keeps running underneath but is turned down to 30 percent of its level, and every sound effect is turned down to 30 percent. Turning down takes 0.15 s. (Today effects go straight to the speakers; gamedev adds one effects volume node that every effect goes through, so this is one setting.)
+3. The count's own ticks are part of the corn tune and are not turned down.
+
+The last 5 seconds (the count):
+
+| Corn seconds left | Number on screen | Corn tune tempo | Corn tune loudness | Street tune and effects |
+|---|---|---|---|---|
+| 12 to 5 | none | 144 | 100 percent | 30 percent |
+| 5 | "5" | 128 | 80 percent | 44 percent |
+| 4 | "4" | 112 | 60 percent | 58 percent |
+| 3 | "3" | 96 | 40 percent | 72 percent |
+| 2 | "2" | 80 | 20 percent | 86 percent |
+| 1 | "1" | 72 | 10 percent | 93 percent |
+| 0 | gone | fades to silence in 0.4 s | 0 | back to 100 percent over 0.6 s |
+
+Each step starts on the second the HUD's "Fast" number changes, on the next 16th note of the tune. Only the speed changes, never the pitch (no slowed-tape wobble). One agogo note on each new number, so the count can be heard.
+
+The count on screen:
+1. It shows in the hint bar's place (S2.2, "The hint bar"), so it never covers anything you play. It replaces the old "Corn is wearing off!" toast for corn (amala keeps its toast). A hint or toast that comes due during the count waits until the count ends, then shows for its full 3.5 s.
+2. Each number: a small corn icon and the number, bold, as tall as the bar allows: 40 px on screens under 280 px tall, 56 px on 280 to 419 px, 72 px from 420 px. Same yellow bar, dark number.
+3. Each number pops in (130 percent to 100 percent over 0.15 s). With reduced motion: no pop, the number just changes.
+4. Screen readers: the number boxes are hidden from them; once, at 5, they hear "Corn ends in 5 seconds", and at 0, "Corn is done". No reading of every number.
+5. The HUD's corn chip keeps its own seconds and its blink in the last 2 s, as built.
+
+Other rules:
+1. **Switches (po Ruling 1).** The corn tune is a tune: it plays only when Sound is on and Music is on. Music off: no corn tune and no turning down of the effects; the count still shows. Sound off: everything quiet; the count still shows.
+2. **iPhone silent switch.** We leave it be (as built, src/engine/audio-unlock.ts): with the switch on, nothing is heard, the count still shows. In the store app wrapper the audio must keep obeying the silent switch (gamedev: use the "ambient" audio setting there).
+3. **A second corn** while corn works: the tune starts again from bar 1 at 144 and full loudness, the count hides, the effects stay turned down.
+4. **Pause** (pause screen, phone upright, app switched, a call): the corn tune holds with the corn timer and carries on from the same place, at the same step of the count.
+5. **Lost life during corn:** the corn ends at once, so the tune fades out in 0.3 s with no count, and the street tune and effects come back over 0.3 s.
+6. **Street end during corn:** the corn tune fades out in 0.3 s as the bus jingle starts (S2.6 "The street end").
+7. The corn tune never plays in the hall (there is no corn there).
+
+Tasks:
+- art: the `corn` tune data in src/art/tunes.ts (rules above), and the originality check openings in tests/unit/music.test.ts.
+- gamedev: the effects volume node (src/engine/sound.ts); the corn tune player with the turn-down, tempo and loudness steps, restart, pause and switches (src/engine/music.ts, src/game/music-cue.ts); the count in the hint bar place with the screen reader lines (src/main.ts, src/screens); remove the corn "wearing off" toast (keep amala's).
+- qa done checks: (1) the corn tune is clearly louder than every other sound and they come back after; (2) the 5, 4, 3, 2, 1 shows and the tune slows and fades with it, pitch unchanged; (3) Sound off, Music off and the iPhone silent switch each give no corn tune and the count still shows; (4) a second corn restarts it; pause, lost life and the bus behave as above; (5) the count never covers anything you play, at every qa size; (6) reduced motion: no pop; a screen reader hears two lines only; (7) originality: not like any game's power-up or star music, or any known song.
+
 ## S2.10 Screens and words (slice 2)
 
 Every button at least 44 x 44 px (the in-play buttons at least 56). Screens that open during play ignore taps for their first 0.4 s (part 1). Gentle mode: "Gentle mode: 5 lives instead of 3" on the title and game over screens. It gives 5 lives, and on a street a fall in a pothole puts you back just before that pothole, not at the bus stop (Tp, 10 Nov, R6 a; S2.13). Nothing else changes.
