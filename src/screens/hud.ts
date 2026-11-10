@@ -5,6 +5,7 @@
  */
 import { drawFoodIcon, drawKobo } from '../art/items';
 import { drawParcelIcon } from '../art/wellRoom';
+import { drawFufuIcon } from '../art/fufu';
 import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
 import { h } from './dom';
@@ -29,6 +30,9 @@ export class Hud {
   private readonly slots: Record<Slot, { el: HTMLElement; text: HTMLElement }>;
   /** The garri parcel (S2.5): its icon and "Parcel" next to the kobo while carried. */
   private readonly parcel: HTMLElement;
+  /** S2.15: the fufu chip ("Fufu 8"; tight: the icon and "8"), while balls are held. */
+  private readonly fufu: HTMLElement;
+  private readonly fufuText: HTMLElement;
   private readonly sound: HTMLButtonElement;
   private readonly left: HTMLElement;
   private last = '';
@@ -77,13 +81,21 @@ export class Hud {
       drawParcelIcon(pg, 16, 16, 26);
     }
     this.parcel = h('span', { class: 'hud-food hud-parcel', hidden: true }, parcelIcon, h('span', { class: 'hud-word' }, WORDS.hud.parcel));
+    const fufuIcon = h('canvas', { class: 'hud-icon', width: '56', height: '56', 'aria-hidden': 'true' });
+    const fg = fufuIcon.getContext('2d');
+    if (fg) {
+      fg.scale(56 / 32, 56 / 32);
+      drawFufuIcon(fg, 16, 16, 26);
+    }
+    this.fufuText = h('span', { class: 'hud-text' });
+    this.fufu = h('span', { class: 'hud-food hud-fufu', hidden: true }, fufuIcon, this.fufuText);
     // Both act on the press, so a second finger works while a thumb holds Forward or Jump.
     this.sound = h('button', { type: 'button', class: 'hud-btn hud-sound', 'data-ui': true });
     this.sound.innerHTML = SPEAKER;
     pressOnDown(this.sound, () => hooks.toggleSound());
     const pause = h('button', { type: 'button', class: 'hud-btn hud-pause', 'aria-label': WORDS.hud.pause, 'data-ui': true }, 'II');
     pressOnDown(pause, () => hooks.pause());
-    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el);
+    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el, this.fufu);
     this.root = h('div', { class: 'hud', hidden: true }, this.left, h('div', { class: 'hud-right' }, this.sound, pause));
     parent.append(this.root);
     window.addEventListener('resize', () => this.fit(true));
@@ -104,7 +116,7 @@ export class Hud {
     const p = run.power;
     const secs = (steps: number): number => Math.ceil(steps / STEPS_PER_SECOND);
     const warn = (steps: number): boolean => steps > 0 && steps <= RULES.warnSteps;
-    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn, run.inHall].join('|');
+    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn, run.inHall, run.fufu].join('|');
     if (key === this.last) return;
     this.last = key;
     this.hall = run.inHall;
@@ -117,11 +129,14 @@ export class Hud {
     this.koboWord.textContent = kobo.endsWith(n) ? kobo.slice(0, kobo.length - n.length) : kobo;
     this.koboCount.data = kobo.endsWith(n) ? n : '';
     this.lastKobo = run.kobo;
-    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}`;
+    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}${String(run.fufu).length}`;
     this.parcel.hidden = !run.parcel;
     this.setSlot('garri', p.shield, WORDS.hud.shield, false);
     this.setSlot('corn', p.corn > 0, WORDS.hud.fast(secs(p.corn)), warn(p.corn));
     this.setSlot('amala', p.amala > 0, WORDS.hud.strong(secs(p.amala)), warn(p.amala));
+    this.fufu.hidden = run.fufu <= 0;
+    this.setText(this.fufuText, WORDS.hud.fufu(run.fufu));
+    this.fufu.setAttribute('aria-label', WORDS.hud.fufuSpoken(run.fufu));
     this.sound.classList.toggle('is-off', !soundOn);
     this.sound.setAttribute('aria-label', soundOn ? WORDS.hud.soundOn : WORDS.hud.soundOff);
     this.fit(false);
@@ -154,15 +169,20 @@ export class Hud {
   private setSlot(kind: Slot, on: boolean, words: string, blink: boolean): void {
     const s = this.slots[kind];
     s.el.hidden = !on;
+    this.setText(s.text, words);
+    s.el.classList.toggle('blink', blink);
+  }
+
+  /** A chip's word and number apart, so a tight HUD can show the icon and number only. */
+  private setText(text: HTMLElement, words: string): void {
     // The word and the seconds apart, so a tight HUD can show the icon and seconds only. The
     // word stays in the text (and is read out), only hidden from sight.
     const m = /^(.*?)(\d+)$/.exec(words);
     const word = m ? m[1]! : words;
     const secs = m ? m[2]! : '';
-    if (s.text.textContent !== words) {
-      s.text.replaceChildren(h('span', { class: 'hud-word' }, word), secs);
+    if (text.textContent !== words) {
+      text.replaceChildren(h('span', { class: 'hud-word' }, word), secs);
     }
-    s.el.classList.toggle('blink', blink);
   }
 }
 

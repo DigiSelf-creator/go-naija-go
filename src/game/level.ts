@@ -67,8 +67,9 @@ export interface HallData {
   leftLimit: number;
   rightLimit: number;
 }
-export type FoodKind = 'corn' | 'garri' | 'amala';
-export type CrateContents = 'kobo' | FoodKind;
+export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu';
+/** S2.15: crates may hold fufu later (it needs a crate stamp from art); none do now. */
+export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu'>;
 
 /** A crate hung over the road or a roof (S2.4): centre x, bottom edge y. */
 export interface CrateData {
@@ -140,8 +141,8 @@ const WALL_GAP = 7;
 /** S2.6 street walk speed with roasted corn (the hall file has no speeds; it uses the streets'). */
 const CORN_WALK = 120;
 
-const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala'];
-const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', ...FOOD_KINDS];
+const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu'];
+const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', 'corn', 'garri', 'amala'];
 const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum'];
 
 export function parseLevel(raw: unknown): Level {

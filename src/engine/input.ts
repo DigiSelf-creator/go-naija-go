@@ -32,6 +32,8 @@ export interface ControlHandlers {
    * well Down, S, Enter and E go down; under the room's rope only Enter and E go up.
    */
   onWellKey?(code: string): void;
+  /** S2.15: X throws a fufu ball (one press, one ball; key repeat is ignored). */
+  onThrow?(): void;
 }
 
 /** The left share of the screen that is the direction area; the rest is the jump area. */
@@ -46,6 +48,9 @@ const JUMP_KEYS = new Set(['Space', 'ArrowUp', 'KeyW']);
 export const WELL_KEYS: ReadonlySet<string> = new Set(['ArrowDown', 'KeyS', 'Enter', 'KeyE']);
 /** The well keys that also go up the room's rope (Down and S do nothing there). */
 export const WELL_UP_KEYS: ReadonlySet<string> = new Set(['Enter', 'KeyE']);
+
+/** S2.15 Keys: X throws a fufu ball. */
+export const THROW_KEYS: ReadonlySet<string> = new Set(['KeyX']);
 
 /** S2.2 Keys: P and Escape pause (M, music, comes with O2). */
 export const PAUSE_KEYS: ReadonlySet<string> = new Set(['KeyP', 'Escape']);
@@ -156,6 +161,11 @@ export class Controls {
 
   /** Returns true when the key is a game key (so the page should not scroll or click). */
   keyDown(code: string, repeat: boolean): boolean {
+    if (THROW_KEYS.has(code)) {
+      this.lastKind = 'keys';
+      if (!repeat) this.handlers.onThrow?.();
+      return true;
+    }
     if (WELL_KEYS.has(code)) {
       this.lastKind = 'keys';
       if (!repeat) this.handlers.onWellKey?.(code); // key repeat is ignored

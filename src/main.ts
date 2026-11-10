@@ -21,7 +21,7 @@ import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
 import { LAGOS, Progress, anyDone, switchedOn } from './game/progress';
-import { TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
+import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
 import { Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
@@ -95,7 +95,13 @@ function startGame(): void {
     game.lift = buttons.layout.lift;
   };
   /** The hint bar sits between the buttons shown now (S2.2, "The hint bar"). */
-  const barBox = (): HintBarBox => hintBarBox(window.innerWidth, window.innerHeight, readSafeArea(), buttons.layout, buttons.which);
+  const barBox = (): HintBarBox => hintBarBox(window.innerWidth, window.innerHeight, readSafeArea(), buttons.layout, buttons.which, throwButton.shown);
+  /** S2.15: Throw (button or X): one fufu ball, only while playing. */
+  function throwFufu(): void {
+    if (!playing || game.paused || menus.current || !inPlay()) return;
+    game.throwFufu();
+  }
+  const throwButton = new ThrowButton(document.body, throwFufu);
   onResize.push(placeButtons, () => game.setView(view));
   placeButtons();
   game.setView(view);
@@ -135,6 +141,7 @@ function startGame(): void {
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
       }
       placeWellButton();
+      placeThrowButton();
     },
   });
 
@@ -278,6 +285,13 @@ function startGame(): void {
     wellButton.update(kind, label, box);
   }
   const placeBar = (): void => toast.place(barBox(), window.innerHeight);
+  /** The Throw button while balls are held (S2.15); the hint bar moves when it comes and goes. */
+  function placeThrowButton(): void {
+    const was = throwButton.shown;
+    const show = playing && !game.paused && !menus.current && buttons.shown && game.run.canThrow;
+    throwButton.update(show, game.run.fufu, buttons.layout.throwTouch);
+    if (throwButton.shown !== was) placeBar();
+  }
   buttons.onChange = placeBar;
   placeBar();
   sound.enabled = menus.sound;
@@ -308,7 +322,41 @@ function startGame(): void {
         break;
       case 'food':
         sound.play('food');
-        toast.show(W[e.kind], 3200);
+        // S2.15: fufu's words say which key or button throws.
+        if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
+        else toast.show(W[e.kind], 3200);
+        break;
+      case 'fufuToss':
+        sound.play('fufuToss');
+        break;
+      case 'fufuPlop':
+        sound.play(e.hop ? 'fufuHop' : 'fufuPlop');
+        break;
+      case 'fufuRoll':
+        sound.play('fufuRoll');
+        break;
+      case 'fufuPlug':
+        sound.play('fufuPlug');
+        if (e.first) toast.show(W.plugged, HINT_MS);
+        break;
+      case 'fufuFarPlop':
+        sound.play('fufuFarPlop');
+        break;
+      case 'fufuKnock':
+        sound.play('fufuBonk');
+        break;
+      case 'goatEat':
+        sound.play('goatChew');
+        break;
+      case 'goatMeeh':
+        sound.play('goatMeeh');
+        break;
+      case 'fufuPop':
+      case 'fufuJam':
+        sound.play('fufuPff');
+        break;
+      case 'fufuBowl':
+        sound.play('cratePop');
         break;
       case 'hint':
         toast.show(hintWords(e.words, controls.lastKind), HINT_MS);
@@ -532,6 +580,7 @@ function startGame(): void {
         else game.steer(0);
       },
       // S2.2 Keys: at a well Down, S, Enter or E go down; under the room's rope Enter or E go up.
+      onThrow: () => throwFufu(),
       onWellKey: (code) => {
         if (!playing || game.paused || menus.current) return;
         if (game.run.wellHere) useWell('down');
@@ -597,6 +646,10 @@ function startGame(): void {
         checkpoint: r.checkpointReached,
         safe: r.safe,
         power: { ...r.power },
+        /** S2.15: fufu balls held, balls about, potholes plugged (left lips). */
+        fufu: r.fufu,
+        balls: r.balls.map((b) => ({ x: b.x, y: b.y, mode: b.mode, touches: b.touches })),
+        plugged: r.plugged.map((p) => [p.a, p.b] as const),
         hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, mode: z.mode })),
         /** Kobo picked up one by one (not from crates or smashes). */
         coinsTaken: r.coins.reduce((n, c) => n + (c.taken ? 1 : 0), 0),
@@ -648,6 +701,12 @@ function startGame(): void {
     get below() {
       // Cheap: below the street (the well room shows), for per-frame logs.
       return game.run.below;
+    },
+    get throwButton() {
+      // S2.15: the Throw button on screen now (its touch box, CSS px) and its spoken label, or null.
+      if (!throwButton.shown) return null;
+      const r = throwButton.el.getBoundingClientRect();
+      return { label: throwButton.el.getAttribute('aria-label') ?? '', x: r.x, y: r.y, w: r.width, h: r.height };
     },
     get wellButton() {
       // The Go down / Go up button (S2.5) on screen now: which, its words, its box (CSS px).
@@ -739,6 +798,8 @@ function startGame(): void {
           else if (t.kind === 'honk') add('honk', t.x - 30, t.y - 20, t.x + 30, t.y + 20);
           else add('high honk', t.x - 30, t.y - 15, t.x + 30, t.y + 15);
         }
+        for (const f of r.foods) if (!f.taken) add('food', f.x - 20, f.y - 22, f.x + 20, f.y + 22);
+        for (const q of r.balls) add('fufu ball', q.x - 9, q.y - 14, q.x + 9, q.y + 2);
         const hh = game.hero;
         add('hero', hh.x - 20, hh.y - 58, hh.x + 20, hh.y + 2);
         return out;
@@ -763,6 +824,7 @@ function startGame(): void {
           else add(z.kind, z.x - 18, z.y - 40, z.x + 18, z.y + 4);
         }
       }
+      for (const q of r.balls) if (q.y <= gy + 2) add('fufu ball', q.x - 9, q.y - 14, q.x + 9, q.y + 2);
       for (const c of r.crates) {
         // The crate swings about the point where its rope meets the line, 88 u above its bottom.
         const a = game.crateAngle(c);
@@ -863,6 +925,9 @@ declare global {
         readonly checkpoint: boolean;
         readonly safe: number;
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
+        readonly fufu: number;
+        readonly balls: readonly { readonly x: number; readonly y: number; readonly mode: string; readonly touches: number }[];
+        readonly plugged: readonly (readonly [number, number])[];
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
         readonly coinsTaken: number;
         readonly parcel: boolean;
@@ -908,6 +973,8 @@ declare global {
       };
       /** Below the street: the well room shows (cheap, for per-frame logs). */
       readonly below: boolean;
+      /** The Throw button on screen now (touch box, CSS px) and its spoken label, or null. */
+      readonly throwButton: { readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       /** The Go down / Go up button on screen now (CSS px), or null. */
       readonly wellButton: { readonly kind: 'down' | 'up'; readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       readonly toast: string;

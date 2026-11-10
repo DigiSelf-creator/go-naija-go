@@ -29,6 +29,7 @@
     ],
     "honkY": 236,
     "highHonkY": 170,
-    "honkSpeed": 120
+    "honkSpeed": 120,
+    "fufu": { "x": 120, "afterHit": 1 }
   }
 }

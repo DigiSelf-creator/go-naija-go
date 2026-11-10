@@ -4,7 +4,7 @@
  * button holds its plain and pressed SVG, and CSS shows one by the `down` class. The buttons
  * only show; the touch areas (src/engine/input.ts) are much bigger than the drawings.
  */
-import { CONTROL_WORDS, controlSvg, type ControlKind } from '../art/controls';
+import { CONTROL_WORDS, controlSvg, throwLabel, type ControlKind } from '../art/controls';
 import type { Insets } from '../engine/view';
 import { MIN_WORLD_W, WORLD_H } from '../engine/view';
 import { h } from './dom';
@@ -30,6 +30,13 @@ export interface ButtonLayout {
   back: Box;
   forward: Box;
   jump: Box;
+  /**
+   * S2.15 Throw (shown only while fufu balls are held): a circle max(64, D) across, its right
+   * edge 10 px left of Jump's left edge, same bottom as Jump. `throwTouch` is its touch area:
+   * the drawn circle plus 5 px all round.
+   */
+  throw: Box;
+  throwTouch: Box;
   /** Midpoint between the Back and Forward centres: left of it is Back. */
   midX: number;
   /**
@@ -52,11 +59,21 @@ export function buttonLayout(cssW: number, cssH: number, safe: Insets = { top: 0
   const forward = { x: left + d + 10, y, w: d, h: d };
   const jw = Math.round(1.5 * d);
   const jump = { x: cssW - right - jw, y, w: jw, h: d };
+  const t = Math.max(THROW_MIN, d);
+  const thr = { x: jump.x - THROW_GAP - t, y: y + d - t, w: t, h: t };
+  const throwTouch = { x: thr.x - THROW_PAD, y: thr.y - THROW_PAD, w: t + 2 * THROW_PAD, h: t + 2 * THROW_PAD };
   // World units per CSS px, as fitView picks them (420 u tall, or 480 u across when upright).
   const perPx = Math.max(WORLD_H / cssH, MIN_WORLD_W / cssW);
   const lift = Math.max(0, WORLD_H - STRIP_U - (y - ROAD_GAP) * perPx);
-  return { d, strip, back, forward, jump, midX: left + d + 5, lift };
+  return { d, strip, back, forward, jump, throw: thr, throwTouch, midX: left + d + 5, lift };
 }
+
+/** S2.15 Throw button: smallest size, gap to Jump, touch area margin (CSS px). */
+export const THROW_MIN = 64;
+const THROW_GAP = 10;
+const THROW_PAD = 5;
+/** S2.15: a bar left narrower than this beside Throw keeps its usual place, over the button. */
+export const BAR_MIN_BESIDE_THROW = 96;
 
 /** The world y the hint bar's top never goes above (S2.2 hint bar): 12 u of road front stay in sight. */
 export const BAR_TOP_Y = 312;
@@ -77,25 +94,35 @@ export interface HintBarBox {
   bottom: number;
   /** Word size row of the S2.2 table: under 280 px tall, 280 to 419, 420 and up. */
   size: 'small' | 'mid' | 'big';
+  /** S2.15 narrowest screens: the bar sits over the Throw button (it takes no taps). */
+  overThrow: boolean;
 }
 
 /**
  * Where the hint bar goes (docs/design.md S2.2, "The hint bar"): in the pavement strip, between
  * Forward and Jump, its top no higher than world y 312, its bottom in line with the buttons.
  */
-export function hintBarBox(cssW: number, cssH: number, safe: Insets, layout: ButtonLayout, shown: ButtonsShown): HintBarBox {
+export function hintBarBox(cssW: number, cssH: number, safe: Insets, layout: ButtonLayout, shown: ButtonsShown, throwShown = false): HintBarBox {
   const perPx = Math.max(WORLD_H / cssH, MIN_WORLD_W / cssW);
   const top = (BAR_TOP_Y - layout.lift) / perPx;
   const bottom = cssH - Math.max(cssH >= 280 ? 8 : 4, safe.bottom);
   let x: number;
   let w: number;
+  let overThrow = false;
   if (shown === 'none') {
     w = Math.min(BAR_MAX_W, cssW - 2 * Math.max(24, safe.left, safe.right));
     x = (cssW - w) / 2;
   } else {
-    const right = layout.jump.x - BAR_GAP;
+    let right = layout.jump.x - BAR_GAP;
     // Jump only: the same gap mirrored on the left, so the bar stays centred under the play.
     const left = shown === 'all' ? layout.forward.x + layout.forward.w + BAR_GAP : cssW - right;
+    if (throwShown) {
+      // S2.15: while Throw shows, the bar ends 6 px left of it; if that leaves under 96 px the
+      // bar keeps its usual place and is drawn over Throw.
+      const beside = layout.throw.x - BAR_GAP;
+      if (beside - left >= BAR_MIN_BESIDE_THROW) right = beside;
+      else overThrow = true;
+    }
     x = left;
     w = right - left;
     if (w > BAR_MAX_W) {
@@ -104,7 +131,7 @@ export function hintBarBox(cssW: number, cssH: number, safe: Insets, layout: But
     }
   }
   const size = cssH < 280 ? 'small' : cssH < 420 ? 'mid' : 'big';
-  return { x, w, top, bottom, size };
+  return { x, w, top, bottom, size, overThrow };
 }
 
 /** Both looks of one button: plain, then pressed (CSS shows one). */
@@ -359,5 +386,62 @@ export class WellButton {
   /** The button on screen now: which and its words; null when hidden. */
   get shown(): { kind: WellButtonKind; label: string } | null {
     return this.kind ? { kind: this.kind, label: this.label } : null;
+  }
+}
+
+/**
+ * The Throw button (docs/design.md S2.15): a real button beside Jump, shown only while fufu
+ * balls are held and the phone buttons show. It takes its own taps first (as Pause and Go down):
+ * one press is one ball, holding does not repeat; a mouse click works too. Its box is the touch
+ * area (the drawn circle plus 5 px all round). Spoken: "Throw fufu, 8 left".
+ */
+export class ThrowButton {
+  readonly el: HTMLButtonElement;
+  private count = -1;
+  private placed = '';
+  private visible = false;
+
+  constructor(parent: HTMLElement, onPress: () => void) {
+    this.el = h('button', { type: 'button', class: 'throw-btn', 'data-ui': true, hidden: true });
+    this.el.innerHTML = `<span class="pad-up">${controlSvg('throw', false)}</span><span class="pad-down">${controlSvg('throw', true)}</span>`;
+    pressOnDown(this.el, () => {
+      this.el.classList.add('down');
+      onPress();
+    });
+    const up = (): void => this.el.classList.remove('down');
+    for (const t of ['pointerup', 'pointercancel', 'pointerleave', 'lostpointercapture']) this.el.addEventListener(t, up);
+    parent.append(this.el);
+  }
+
+  /** Shown with n balls (n 0 hides it), at the layout's touch box. Cheap every frame. */
+  update(show: boolean, n: number, box: Box): void {
+    const on = show && n > 0;
+    if (on !== this.visible) {
+      this.visible = on;
+      this.el.hidden = !on;
+      // Pops in over 0.15 s when it appears (none with reduced motion: screens.css).
+      if (on) {
+        this.el.classList.remove('pop');
+        void this.el.offsetWidth;
+        this.el.classList.add('pop');
+      } else this.el.classList.remove('down');
+    }
+    if (n !== this.count) {
+      this.count = n;
+      this.el.setAttribute('aria-label', throwLabel(n));
+    }
+    const at = `${box.x},${box.y},${box.w}`;
+    if (at !== this.placed) {
+      this.placed = at;
+      const s = this.el.style;
+      s.left = `${box.x}px`;
+      s.top = `${box.y}px`;
+      s.width = `${box.w}px`;
+      s.height = `${box.h}px`;
+    }
+  }
+
+  get shown(): boolean {
+    return this.visible;
   }
 }

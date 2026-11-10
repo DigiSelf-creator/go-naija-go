@@ -10,7 +10,10 @@ import { crateAngle, crateLineY, drawCrate, drawCrateLine, koboFanAt, koboFlyAt 
 import { drawDrum, drawDrumSmash, drawDrumSparkle } from '../art/drum';
 import { drawHero, WALK_STRIDE, type HeroLook } from '../art/hero';
 import { drawPotholeSign } from '../art/sign';
-import { drawGoat, drawTyre } from '../art/hazards';
+import { drawGoat, drawGoatEating, drawTyre } from '../art/hazards';
+import { drawFufuBall, drawFufuPlug, drawFufuSettle, drawFufuSteamPuff, drawTyreKnocked, drawDrumKnocked, FUFU } from '../art/fufu';
+import { THROW_TIME } from '../art/hero';
+import { FUFU_RULES, type FufuBall } from './fufu';
 import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
 import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence, END_BUS_BACK, END_BUS_FRONT } from '../art/roadside';
 import { drawBusStop, drawRoad } from '../art/street';
@@ -62,7 +65,7 @@ const TELEPORT = 50;
 const MARGIN = 60;
 
 interface Effect {
-  kind: 'sparkle' | 'pop' | 'dust' | 'drumSparkle' | 'drumSmash';
+  kind: 'sparkle' | 'pop' | 'dust' | 'drumSparkle' | 'drumSmash' | 'steam';
   /** Where it starts (for the drum: the bottom centre of its box, on the road). */
   x: number;
   /** It drifts this way, u/s (a bounced drum rolls on into its sparkle). */
@@ -116,6 +119,8 @@ export class Game {
    * and fresh road paint. Same layout, same play. Set by main.
    */
   fixed = false;
+  /** Clock time the jam last went "pfft" (S2.15: it shakes for 0.3 s). */
+  private jamAt = -Infinity;
   /** Where the HUD kobo counter is on screen, world units from the top left (set by main). */
   koboTarget = { x: 70, y: 22 };
   /** Well rooms by file id (S2.5), set by main before a run starts. */
@@ -217,6 +222,11 @@ export class Game {
     this.run.steer(dir);
   }
 
+  /** Throw a fufu ball (S2.15). False when nothing was thrown. */
+  throwFufu(): boolean {
+    return this.run.throwFufu();
+  }
+
   /** Go down at an entrance well (S2.5). False when the hero is not at one. */
   goDown(): boolean {
     return this.run.goDown();
@@ -287,6 +297,13 @@ export class Game {
         this.effects.push({ kind: 'sparkle', x: e.x, y: e.y, t0: this.clock, len });
       } else if (e.type === 'dust') {
         this.effects.push({ kind: 'dust', x: e.x, y: e.y, t0: this.clock, len: 0.3 });
+      } else if (e.type === 'fufuPlug') {
+        // S2.15: a "plup" and a puff of steam where the ball went in.
+        this.effects.push({ kind: 'steam', x: e.x, y: this.level.groundY - 4, t0: this.clock, len: 0.4 });
+      } else if (e.type === 'fufuBowl') {
+        this.effects.push({ kind: 'sparkle', x: e.x, y: e.y, t0: this.clock, len: 0.4 });
+      } else if (e.type === 'fufuJam') {
+        this.jamAt = this.clock;
       } else if (e.type === 'shieldPop') {
         this.effects.push({ kind: 'pop', x: this.hero.x, y: this.hero.y, t0: this.clock, len: 0.3 });
       }
@@ -400,6 +417,8 @@ export class Game {
     // World space.
     g.translate(-camX, 0);
     drawRoad(g, camX, W, level.ground, gy, H, this.fixed);
+    // S2.15: potholes plugged with fufu, a pale patch level with the road.
+    for (const p of run.plugged) if (p.b > L && p.a < R) drawFufuPlug(g, p.a, p.b, gy, H);
     // The well in use is drawn with the hero (going down); no arrow while Go down shows.
     if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still }, this.fixed);
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
@@ -422,7 +441,12 @@ export class Game {
       g.globalAlpha = 1 - fade; // the street end: hazards fade out
       for (const z of run.hazards) {
         if (z.mode === 'gone' || z.x < L || z.x > R) continue;
-        if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx > 0 ? 1 : -1);
+        if (z.mode === 'eat') drawGoatEating(g, z.x, z.y, z.t / FUFU_RULES.eatSteps, z.face);
+        else if (z.mode === 'knocked') {
+          const k = z.t / FUFU_RULES.knockSteps;
+          if (z.kind === 'drum') drawDrumKnocked(g, z.x, z.y, k, z.rot);
+          else drawTyreKnocked(g, z.x, z.y, k, z.rot);
+        } else if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx > 0 ? 1 : -1);
         else if (z.kind === 'drum') drawDrum(g, z.x, z.y, z.rot, { lines: z.mode === 'move' });
         else drawTyre(g, z.x, z.y, z.rot);
       }
@@ -452,6 +476,7 @@ export class Game {
       this.drawHeroNow(g, false);
     }
     if (run.power.shield) drawShield(g, h.x, h.y, t);
+    this.drawBalls(g, run.balls, L, R);
     if (end && bus && busSeen && atBus) drawEndBus(g, end.x, bus, gy);
 
     this.drawEffects(g);
@@ -484,7 +509,12 @@ export class Game {
       // S2.14: the last second of green blinks (with reduced motion the arrow hides instead).
       drawGoLight(g, p.x, p.y, p.w, state, still ? 0 : t, gy, state === 'lit' ? { left: boss.greenLeft, still } : undefined);
     });
+    // S2.15: the heap shakes for 0.3 s after a fufu ball's "pfft" (not with reduced motion).
+    const shake = !still && t - this.jamAt < 0.3 ? Math.sin((t - this.jamAt) * 80) * 2 : 0;
+    g.translate(shake, 0);
     drawBoss(g, data.x, gy, { mode: boss.mode, t: boss.modeTime, hits: boss.hits, time: still ? 0 : t, aim: boss.aim });
+    g.translate(-shake, 0);
+    for (const f of run.foods) if (!f.taken) drawFood(g, f.kind, f.x, f.y, t);
     for (const th of boss.throws) {
       if (th.kind === 'tyre') {
         drawTyre(g, th.x, th.y, th.rot);
@@ -500,6 +530,7 @@ export class Game {
     const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
     if (!blinkOff) this.drawHeroNow(g, false);
     if (run.power.shield) drawShield(g, run.hero.x, run.hero.y, t);
+    this.drawBalls(g, run.balls, -Infinity, Infinity);
     this.drawEffects(g);
     drawHallFront(g, camX, W, H);
     g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
@@ -531,9 +562,31 @@ export class Game {
       ...(!rope && this.dustAge < DUST_TIME ? { dust: this.dustAge / DUST_TIME } : {}),
       // Gentle mode climb-out (S2.13 part 5): 0 to 1 while the controls are locked.
       ...(!rope && this.run.dustOff > 0 ? { dustOff: 1 - this.run.dustOff / RULES.dustOffSteps } : {}),
+      // S2.15: one 0.15 s arm swing after a throw.
+      ...(!rope && this.run.throwAge < THROW_TIME ? { throwing: this.run.throwAge / THROW_TIME } : {}),
       time: t,
     });
     g.restore();
+  }
+
+  /** S2.15: the fufu balls flying, hopping, rolling, settling, and those a goat is eating. World space. */
+  private drawBalls(g: CanvasRenderingContext2D, balls: readonly FufuBall[], L: number, R: number): void {
+    const t = this.clock;
+    const r = FUFU.ballR;
+    for (const b of balls) {
+      if (b.x < L || b.x > R || b.mode === 'gone') continue;
+      if (b.mode === 'settle') drawFufuSettle(g, b.x, b.y, b.t / FUFU_RULES.settleSteps);
+      else if (b.mode === 'fed') {
+        // Shrinks as the goat eats it.
+        const k = 1 - b.t / FUFU_RULES.eatSteps;
+        if (k <= 0) continue;
+        g.save();
+        g.translate(b.x, b.y);
+        g.scale(k, k);
+        drawFufuBall(g, 0, -r, { steam: false, still: this.still });
+        g.restore();
+      } else drawFufuBall(g, b.x, b.y - r, { squash: b.squash / FUFU_RULES.squashSteps, spin: b.spin, time: t, still: this.still });
+    }
   }
 
   /** Sparkles, pops, dust and drum bits now showing. World space. */
@@ -545,6 +598,7 @@ export class Game {
       else if (f.kind === 'drumSmash') drawDrumSmash(g, f.x, f.y, k);
       else if (f.kind === 'sparkle') drawSparkle(g, f.x, f.y, k);
       else if (f.kind === 'dust') drawDustPop(g, f.x, f.y, k);
+      else if (f.kind === 'steam') drawFufuSteamPuff(g, f.x, f.y, k);
       else drawShieldPop(g, f.x, f.y, k);
     }
   }

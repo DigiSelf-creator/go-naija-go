@@ -726,6 +726,61 @@
   border-radius: 40px;
 }
 
+/* The Throw button (S2.15): a real button beside Jump while fufu balls are held. Its box is
+   the touch area; the drawn circle sits 5 px inside it. Pops in over 0.15 s. */
+.throw-btn {
+  position: fixed;
+  z-index: 5;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.throw-btn[hidden] {
+  display: none;
+}
+.throw-btn > span {
+  position: absolute;
+  inset: 5px;
+}
+.throw-btn svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.throw-btn .pad-down,
+.throw-btn.down .pad-up {
+  display: none;
+}
+.throw-btn.down .pad-down {
+  display: block;
+}
+.throw-btn.pop > span {
+  animation: throw-pop 0.15s ease-out;
+}
+@keyframes throw-pop {
+  from {
+    transform: scale(0.6);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .throw-btn.pop > span {
+    animation: none;
+  }
+}
+.throw-btn:focus-visible {
+  outline: 3px solid #f2b300;
+  outline-offset: -2px;
+  border-radius: 50%;
+}
+
 /* Hidden HUD chips (the Kobo chip in Go-Slow Hall). */
 .hud-left > [hidden] {
   display: none !important;
