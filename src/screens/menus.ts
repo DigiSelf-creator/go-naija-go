@@ -247,12 +247,13 @@ export class Menus {
    * The intro story when it is due (city.md (a)): before the builder on a first visit, once on the
    * next "Play" for a player who already has a hero, and always from Settings. Then `after`.
    */
-  showIntro(from: IntroFrom, after: () => void, by?: MouseEvent): void {
+  showIntro(from: IntroFrom, after: (by?: MouseEvent) => void, by?: MouseEvent): void {
     if (!introDue(introSeen(this.store), from)) {
-      after();
+      // Straight on, with the tap that got here (the next screen ignores its double tap's second half).
+      after(by);
       return;
     }
-    this.afterIntro = after;
+    this.afterIntro = () => after();
     this.show('intro', by);
   }
 
@@ -582,11 +583,11 @@ export class Menus {
             // city.md (a): a player who has a hero but has not seen the story sees it once now.
             this.showIntro('play', () => {
               // S2.3: a slice 1 hero opens the builder once, with the "New!" line.
-              if (isOldSave(this.store)) this.show('builder');
+              if (isOldSave(this.store)) this.show('builder', this.screen === 'intro' ? undefined : e);
               else this.hooks.start(this.screen === 'intro' ? null : at);
             }, e);
           })
-        : button(w.makeHero, 'go', (e) => this.showIntro('makeHero', () => this.show('builder'), e)),
+        : button(w.makeHero, 'go', (e) => this.showIntro('makeHero', (by) => this.show('builder', by), e)),
       h(
         'div',
         { class: 'minor-row' },
