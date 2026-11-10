@@ -329,7 +329,7 @@ export class Menus {
       h('h2', {}, w.heading),
       h('p', {}, this.summary.hall ? w.hallText : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
-      !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, w.gentleOffer), this.gentleSwitch()),
+      !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
         this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),

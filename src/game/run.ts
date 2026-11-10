@@ -10,6 +10,8 @@ import { BossFight, throwBox, type BossEvent } from './boss';
 import { freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import type { FoodKind, HazardKind, Level, WellData } from './level';
+import { pitKind, pitsOf, BIG_PIT, type Pit, type PitKind } from './pits';
+import { GENTLE_HINTS } from '../screens/words';
 import { freshRoom, roomWalls, WELL_RULES, type RoomData, type RoomPlay } from './well';
 import { wellDownAt, wellUpAt } from '../art/well';
 
@@ -61,6 +63,17 @@ export const RULES = {
    * then the boss words this long after (before the first throw's warning at 1.6 s).
    */
   parcelWordsSteps: secs(1.5),
+  /**
+   * S2.13 part 5, Gentle mode on a street: after a pothole fall the hero climbs out this far
+   * before the pit's left lip (a big pit: its run-up), with blinking safety and a short
+   * "dust off" with the controls locked (none with reduced motion).
+   */
+  climbBefore: 100,
+  climbBeforeBig: 160,
+  /** The climb-out point needs this much solid road on each side. */
+  climbRoad: 20,
+  climbSafeSteps: secs(1.7),
+  dustOffSteps: secs(0.4),
 } as const;
 
 /** Size of each hazard's box (half width, height), feet on the road. */
@@ -110,6 +123,8 @@ export type RunEvent =
   | { type: 'hit' }
   | { type: 'shieldPop' }
   | { type: 'fall' }
+  /** Gentle mode (S2.13 part 5): back just before the pit fallen in, after the 'fall'. */
+  | { type: 'climbOut'; kind: PitKind; x: number }
   | { type: 'checkpoint' }
   | { type: 'wearingOff'; kind: 'corn' | 'amala' }
   | { type: 'tick' }
@@ -155,7 +170,7 @@ export interface Power {
 
 /** How a run starts (all optional). */
 export interface RunOptions {
-  /** Gentle mode: 5 lives instead of 3. */
+  /** Gentle mode: 5 lives instead of 3, and on a street a pothole fall climbs out just before it (S2.13). */
   gentle?: boolean;
   /** Well rooms by file id. */
   rooms?: ReadonlyMap<string, RoomData>;
@@ -172,6 +187,12 @@ export class Run {
   hero: Body;
   readonly maxLives: number;
   lives: number;
+  /** Gentle mode (S2.10, S2.13 part 5). */
+  readonly gentle: boolean;
+  /** Reduced motion (set by the game): a Gentle mode climb-out has no dust off. */
+  still = false;
+  /** Steps of the Gentle mode "dust off" left: the controls are locked meanwhile (S2.13). */
+  dustOff = 0;
   kobo = 0;
   phase: RunPhase = 'run';
   spawnX: number;
@@ -211,6 +232,8 @@ export class Run {
   private hopFrom = 0;
   /** Who started the jump that is held now. */
   private holdBy: PressSource | null = null;
+  /** The direction the player holds, even while the controls are locked (walks on after a dust off). */
+  private heldMove: -1 | 0 | 1 = 0;
   /**
    * S2.5: carrying the garri parcel. A lost life keeps it; game over, "Start again" or leaving
    * the street loses it (they make a new Run). Saving it for the state is piece N2's.
@@ -246,7 +269,8 @@ export class Run {
   ) {
     this.rooms = opts.rooms ?? new Map();
     this.parcelSaved = opts.parcelSaved ?? false;
-    this.maxLives = opts.gentle ? RULES.gentleLives : RULES.lives;
+    this.gentle = opts.gentle ?? false;
+    this.maxLives = this.gentle ? RULES.gentleLives : RULES.lives;
     this.lives = this.maxLives;
     this.spawnX = level.spawnX;
     this.terrain = level.boss ? { ...level.terrain, platforms: [...level.terrain.platforms, ...level.boss.lights] } : level.terrain;
@@ -298,6 +322,7 @@ export class Run {
   press(by: PressSource = 'tap'): ReturnType<typeof press> {
     if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches the finish
     if (this.phase !== 'run' && this.phase !== 'arena' && this.phase !== 'room') return null;
+    if (this.dustOff > 0) return null; // dusting off after a Gentle mode climb-out (S2.13)
     const out = press(this.hero);
     if (out) this.holdBy = by;
     return out;
@@ -313,7 +338,8 @@ export class Run {
   /** The direction held on a player-moved street: -1 back, 0 none, 1 forward. */
   steer(move: -1 | 0 | 1): void {
     if (!this.hero.manual) return;
-    const free = this.phase === 'run' || this.phase === 'room' || (this.phase === 'arena' && !this.boss?.defeated);
+    this.heldMove = move;
+    const free = (this.phase === 'run' && this.dustOff === 0) || this.phase === 'room' || (this.phase === 'arena' && !this.boss?.defeated);
     steer(this.hero, free ? move : 0);
   }
 
@@ -338,6 +364,7 @@ export class Run {
     if (this.phase === 'room') return this.roomStep(dt, ev);
     if (this.phase !== 'run') return ev;
     this.steps++;
+    if (this.dustOff > 0 && --this.dustOff === 0) steer(this.hero, this.heldMove); // controls back
     if (this.surfaceSteps < WELL_RULES.surfaceFadeSteps) this.surfaceSteps++;
     this.tickPower(ev);
     const h = this.hero;
@@ -380,7 +407,8 @@ export class Run {
       const due = atStart ? this.steps >= RULES.firstHintSteps : h.x >= hint.x;
       if (due && !this.hintsShown.has(i)) {
         this.hintsShown.add(i);
-        ev.push({ type: 'hint', words: hint.words });
+        // Gentle mode: "Now you start here" is not true at the bus stop any more (S2.13).
+        ev.push({ type: 'hint', words: (this.gentle && GENTLE_HINTS[hint.words]) || hint.words });
       }
     });
 
@@ -853,18 +881,38 @@ export class Run {
       this.gameOver(ev);
       return;
     }
-    // Start again at the bus stop (or the start). Food effects end; foods and hazards
-    // past the restart point come back; kobo already taken stay taken and counted.
+    // Start again at the bus stop (or the start); in Gentle mode on a street, just before the
+    // pit (S2.13 part 5). Food effects end; foods and hazards at or past the restart point come
+    // back; kobo already taken stay taken and counted.
+    const pit = this.gentle && !this.inHall && this.hero.manual ? this.pitAt(this.hero.x) : null;
+    const x = pit ? climbOutX(this.level.ground, pit, this.spawnX) : this.spawnX;
     const { down, move } = this.hero;
-    this.hero = this.newHero(this.spawnX);
+    this.hero = this.newHero(x);
     this.hero.down = down;
+    if (pit) {
+      // Facing right, still, blinking: nothing that comes back can hit the hero as they arrive.
+      this.safe = RULES.climbSafeSteps;
+      this.dustOff = this.still ? 0 : RULES.dustOffSteps;
+      ev.push({ type: 'climbOut', kind: pitKind(pit), x });
+    }
     // Facing right, standing still; a direction still held walks on from here (run timer at 0).
-    this.hero.move = move;
-    for (const f of this.foods) if (f.x >= this.spawnX) f.taken = false;
-    refillCrates(this.crates, this.spawnX);
+    if (this.dustOff === 0) this.hero.move = move;
+    for (const f of this.foods) if (f.x >= x) f.taken = false;
+    refillCrates(this.crates, x);
     this.hazards.forEach((z, i) => {
-      if (z.x0 >= this.spawnX) this.hazards[i] = freshHazard(z.kind, z.x0, this.level.groundY);
+      if (z.x0 >= x) this.hazards[i] = freshHazard(z.kind, z.x0, this.level.groundY);
     });
+  }
+
+  /** The pit the hero fell in: the one under x, else the nearest one. Null if the road has none. */
+  private pitAt(x: number): Pit | null {
+    let best: Pit | null = null;
+    let bestD = Infinity;
+    for (const p of pitsOf(this.level.ground)) {
+      const d = x < p.a ? p.a - x : x > p.b ? x - p.b : 0;
+      if (d < bestD) [best, bestD] = [p, d];
+    }
+    return best;
   }
 
   private gameOver(ev: RunEvent[]): void {
@@ -878,4 +926,19 @@ export class Run {
 
 function freshHazard(kind: HazardKind, x: number, groundY: number): HazardState {
   return { kind, x0: x, x, y: groundY, vx: 0, mode: 'wait', t: 0, rot: 0 };
+}
+
+/**
+ * S2.13 part 5: where Gentle mode puts the hero after falling in `pit`: 100 u before its left
+ * lip (160 u for a big pit, its run-up). Never behind `normal` (the bus stop once reached,
+ * else the start). A point without 20 u of solid road on each side moves to the middle of the
+ * road span that ends at the pit's lip.
+ */
+export function climbOutX(ground: Level['ground'], pit: Pit, normal: number): number {
+  const x = pit.a - (pit.w >= BIG_PIT ? RULES.climbBeforeBig : RULES.climbBefore);
+  if (x < normal) return normal;
+  const r = RULES.climbRoad;
+  if (ground.some(([a, b]) => x - r >= a && x + r <= b)) return x;
+  const span = ground.find(([, b]) => b === pit.a);
+  return span ? Math.max(normal, (span[0] + span[1]) / 2) : normal;
 }

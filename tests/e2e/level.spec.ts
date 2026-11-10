@@ -31,7 +31,7 @@ test('out of lives: game over, then Play again starts the level fresh', async ({
   expect(r.phase).toBe('over');
   expect(r.lives).toBe(0);
   await expect(over.getByText(`You got ${r.kobo} kobo. The street is still here. Try again!`)).toBeVisible();
-  await expect(over.getByText('Want more tries? Gentle mode gives you 5 lives.')).toBeVisible();
+  await expect(over.getByText('Want more tries? Gentle mode gives you 5 lives, and you climb out of holes.')).toBeVisible();
   // Taps meant as jumps do nothing to a stopped run.
   const steps = await page.evaluate(() => window.__game!.steps);
   await page.touchscreen.tap(30, 30);
@@ -55,6 +55,22 @@ test('gentle mode from the title gives 5 lives on the next run', async ({ page }
   await page.getByRole('dialog', { name: 'Make your hero' }).getByRole('button', { name: 'Start running' }).tap();
   expect(await run(page)).toMatchObject({ lives: 5, maxLives: 5 });
   await expect(page.locator('.hud-lives')).toHaveText('♥ 5');
+});
+
+test('gentle mode: a pothole fall climbs out just before it, with a hint (S2.13 part 5)', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto('./');
+  await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+  await page.getByRole('button', { name: 'Make your hero' }).tap();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Make your hero' }).getByRole('button', { name: 'Start running' }).tap();
+  // Hold Forward and never jump: the hero walks into the first pothole (30 u wide, left lip 2450).
+  const h = await holdForward(page);
+  const back = await page.waitForFunction(() => (window.__game!.run.lives === 4 ? window.__game!.hero.x : null), null, { timeout: 30_000 });
+  expect(await back.jsonValue()).toBe(2350); // 100 u before the lip, not back at the start
+  await expect(page.getByText('Up you come! Try that jump again.')).toBeVisible();
+  await expect(page.locator('.hud-lives')).toHaveText('♥ 4');
+  await h.upAll();
 });
 
 test('HUD: lives, kobo going up, a spoken pause button and the sound button', async ({ page }) => {

@@ -68,7 +68,9 @@ export const WORDS = {
     /** S2.10 Game over (hall). */
     hallText: 'General Go-Slow is still jamming the hall. Try again!',
     playAgain: 'Play again',
-    gentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
+    /** S2.13 part 5: a street's offer; the hall's stays the short one. */
+    gentleOffer: 'Want more tries? Gentle mode gives you 5 lives, and you climb out of holes.',
+    hallGentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
     streets: 'Streets',
     home: 'Home',
   },
@@ -157,6 +159,12 @@ export const WORDS = {
     parcel: 'Garri parcel! Shield for the hall.',
     backOnStreet: 'Back on the street!',
   },
+  /** S2.13 part 5: the hint after every Gentle mode climb-out, by the kind of pit (35 characters or fewer). */
+  climbOut: {
+    small: 'Up you come! Try that jump again.',
+    wide: 'Up you come! Jump, then jump again.',
+    big: 'Up you come! Run, then jump twice.',
+  },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
   well: {
     down: 'Go down',
@@ -165,6 +173,14 @@ export const WORDS = {
     upKeys: 'Go up (Enter)',
   },
 } as const;
+
+/**
+ * S2.13 part 5: street hints whose words are not true in Gentle mode, and what they say there
+ * instead (the bus stop is no longer where a fall puts you back).
+ */
+export const GENTLE_HINTS: Readonly<Record<string, string>> = {
+  'Bus stop! Now you start here.': 'Bus stop! Halfway there.',
+};
 
 /** S2.2 hint bar: a toast longer than this shows its short words on a narrow bar. */
 export const SHORT_AT = 35;

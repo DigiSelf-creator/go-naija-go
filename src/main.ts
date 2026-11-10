@@ -334,6 +334,10 @@ function startGame(): void {
         toast.hide();
         sound.play('fall');
         break;
+      case 'climbOut':
+        // Gentle mode (S2.13 part 5): back just before the pit, with a word on the jump it needs.
+        toast.show(WORDS.climbOut[e.kind], HINT_MS);
+        break;
       case 'checkpoint':
         sound.play('checkpoint');
         break;
