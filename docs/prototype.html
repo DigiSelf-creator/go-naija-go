@@ -129,10 +129,12 @@ function drawHero(g,x,y,t,grounded,dir,glow){
 const GROUND=300;
 let ground,plats,coins,items,foes,checkpoint,ARENA,ARENA_W=560;
 function buildLevel(){
+  // gaps are potholes
   const gaps=[[700,770],[1350,1430],[2150,2240],[2950,3030],[3600,3700],[4400,4490],[5100,5190]];
   ground=[];let x0=-400;for(const [a,b] of gaps){ground.push([x0,a]);x0=b;}
   ARENA=5800;ground.push([x0,ARENA+ARENA_W+400]);
-  plats=[[480,230,110],[1000,220,120],[1180,170,90],[1600,215,130],[1900,180,100],[2450,225,120],[2620,170,110],[3250,210,140],[3850,200,110],[4050,150,100],[4700,215,130],[4900,170,90],[5400,210,120],[ARENA+90,230,90],[ARENA+235,180,90],[ARENA+380,230,90]];
+  plats=[[480,230,110],[1000,220,120],[1180,170,90],[1600,215,130],[1900,180,100],[2450,225,120],[2620,170,110],[3250,210,140],[3850,200,110],[4050,150,100],[4700,215,130],[4900,170,90],[5400,210,120],
+         [ARENA+90,230,90],[ARENA+235,180,90],[ARENA+380,230,90]];
   coins=[];const addRow=(x,y,n)=>{for(let i=0;i<n;i++)coins.push({x:x+i*24,y,got:false})};
   addRow(300,270,5);addRow(500,200,4);addRow(705,230,3);addRow(1010,190,5);addRow(1190,140,3);addRow(1360,220,4);
   addRow(1620,185,5);addRow(2160,215,4);addRow(2460,195,5);addRow(2630,140,4);addRow(2960,225,3);addRow(3260,180,6);
@@ -189,11 +191,13 @@ function update(){
   t++;
   const inArena=P.x>ARENA-10;
   if(inArena&&!boss.on&&!boss.beaten){boss.on=true;toast('General Go-Slow blocks the road!');jingle([392,330,262]);}
+  // speed
   let sp=2.6;if(P.speedT>0){sp=3.8;P.speedT--;}if(P.superT>0){P.superT--;}
-  if(boss.on){
+  if(boss.on){ // bounce between arena walls
     if(P.x<ARENA+15)P.dir=1;if(P.x>ARENA+ARENA_W-120)P.dir=-1;
   }
   P.x+=sp*P.dir;
+  // gravity (lighter while holding on the way up)
   P.vy+=(P.hold&&P.vy<0&&down)?0.32:0.62;if(P.vy>12)P.vy=12;
   const prevY=P.y;P.y+=P.vy;
   P.ground=false;
@@ -203,10 +207,14 @@ function update(){
   }
   if(P.y>H+60){fall();return;}
   if(P.inv>0)P.inv--;
+  // checkpoint
   if(!checkpoint.hit&&P.x>checkpoint.x){checkpoint.hit=true;spawnX=checkpoint.x+10;toast('Bus stop reached. Checkpoint!');jingle([523,659,784]);}
+  // coins
   for(const c of coins)if(!c.got&&Math.abs(c.x-P.x)<14&&Math.abs(c.y-(P.y-24))<24){c.got=true;kobo++;beep(988,0.05,'square',1320);}
+  // power-ups
   for(const it of items)if(!it.got&&Math.abs(it.x-P.x)<18&&Math.abs(it.y-(P.y-24))<28){it.got=true;const p=POW[it.k];toast(p.name);jingle([523,659,784,1046]);burst(it.x,it.y,p.col,14);
     if(it.k==='corn')P.speedT=p.dur;if(it.k==='garri')P.shield=true;if(it.k==='amala')P.superT=p.dur;}
+  // foes
   for(const f of foes){if(!f.alive)continue;
     if(Math.abs(f.x-P.x)<W+100){f.x+=f.vx;if(f.k==='tyre')f.rot+=f.vx*0.12;
       if(f.k==='goat'&&!groundAt(f.x-16))f.vx=Math.abs(f.vx);if(f.k==='goat'&&!groundAt(f.x+16))f.vx=-Math.abs(f.vx);
@@ -217,14 +225,17 @@ function update(){
       else if(P.vy>0&&prevY<=f.y-f.h+6){P.vy=-8;P.jumps=1;burst(f.x,f.y-f.h,'#fff',6);beep(400,0.08,'square',700);if(f.k==='goat'){f.vx=-3*Math.sign(P.x-f.x||1);f.alive=false;toast('Meeeh! The goat runs off');}else f.alive=false;}
       else hurt();
     }}
+  // boss
   if(boss.on){boss.anim++;boss.x=ARENA+ARENA_W+20;
     if(--boss.cool<=0){const high=Math.random()<0.3&&boss.hits>0;waves.push({x:boss.x-50,y:high?GROUND-52:GROUND-10,vx:-(2.6+boss.hits*0.6),r:10});boss.cool=Math.max(70,130-boss.hits*25);beep(220,0.18,'sawtooth',180);}
     for(const w of waves){w.x+=w.vx;w.r=10+Math.sin(t*0.3)*2;if(Math.abs(w.x-P.x)<w.r+6&&Math.abs(w.y-(P.y-18))<w.r+16)hurt();}
     waves=waves.filter(w=>w.x>ARENA-40);
   }
   if(boss.beaten){boss.flee+=3;if(boss.flee>260&&state==='play')win();}
+  // particles
   for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.l--;}parts=parts.filter(p=>p.l>0);
   if(shake>0)shake--;
+  // camera
   const target=boss.on?ARENA-20+(ARENA_W-W>0?Math.min(Math.max(P.x-ARENA-W*0.4,0),ARENA_W-W+40):0):P.x-W*0.3;
   cam+=(target-cam)*0.15;
   hud();
@@ -244,30 +255,43 @@ const BCOL=['#e8a33d','#d9534f','#5bc0de','#9b59b6','#f0e68c','#7fb069','#e98a6e
 function draw(){
   const dpr=scale;cx.setTransform(dpr,0,0,dpr,0,0);
   const sx=shake?(Math.random()-.5)*shake:0;
+  // sky
   const sky=cx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#7cc6f2');sky.addColorStop(1,'#f9e3b0');cx.fillStyle=sky;cx.fillRect(0,0,W,H);
   cx.fillStyle='#ffd34d';cx.beginPath();cx.arc(W-80,60,26,0,7);cx.fill();
+  // far skyline
   cx.fillStyle='#9fb7c4';for(let i=-1;i<W/60+2;i++){const bx=i*60-((cam*0.15)%60);const h=60+((i*37+Math.floor(cam*0.15/60)*37)%50+50)%50;cx.fillRect(bx,GROUND-120-h,48,h+60);}
+  // mid shops
   const off=cam*0.5,step=130;
   for(let i=-1;i<W/step+2;i++){const n=Math.floor(off/step)+i,bx=i*step-(off%step);const k=((n%8)+8)%8;
     rr(bx,GROUND-150,112,110,4,BCOL[k]);cx.fillStyle='rgba(0,0,0,.18)';cx.fillRect(bx,GROUND-150,112,8);
     rr(bx+8,GROUND-136,96,20,3,'#fff8e6');cx.fillStyle='#1d1a14';cx.font='bold 10px sans-serif';cx.textAlign='center';cx.fillText(SIGNS[k],bx+56,GROUND-122);
     cx.fillStyle='#3b2f2a';cx.fillRect(bx+14,GROUND-100,28,60);cx.fillStyle='#bfe3f5';cx.fillRect(bx+56,GROUND-104,40,26);}
+  // danfo in background
   const dx=((t*1.4-cam*0.5)%(W+400)+W+400)%(W+400)-200;rr(dx,GROUND-78,92,36,8,'#f6c90e');cx.fillStyle='#1d1a14';cx.fillRect(dx,GROUND-62,92,4);
   cx.fillStyle='#bfe3f5';for(let i=0;i<4;i++)cx.fillRect(dx+8+i*20,GROUND-74,14,10);cx.fillStyle='#222';cx.beginPath();cx.arc(dx+20,GROUND-42,7,0,7);cx.arc(dx+72,GROUND-42,7,0,7);cx.fill();
   cx.save();cx.translate(-cam+sx,0);
+  // road + potholes
   for(const [a,b] of ground){cx.fillStyle='#3c3c3c';cx.fillRect(a,GROUND,b-a,H-GROUND);cx.fillStyle='#d8c27a';cx.fillRect(a,GROUND,b-a,5);
     cx.fillStyle='#f4f1e6';for(let x=Math.ceil(a/60)*60;x<b-30;x+=60)cx.fillRect(x,GROUND+28,30,4);}
+  // gutter edges on gaps
   for(let i=0;i<ground.length-1;i++){const a=ground[i][1],b=ground[i+1][0];cx.fillStyle='#4b3a2a';cx.fillRect(a,GROUND,b-a,H-GROUND);cx.fillStyle='#6d8f8f';cx.fillRect(a,GROUND+40,b-a,H);}
+  // platforms (stall roofs)
   const L=boss.on?LIGHTS()[lightIdx%3]:null;
   for(const p of plats){const [px,py,pw]=p;rr(px,py,pw,12,4,'#b5651d');cx.fillStyle='#e9d8a6';for(let x=px;x<px+pw;x+=16)cx.fillRect(x,py+12,8,6);
     cx.fillStyle='#6b4a2b';cx.fillRect(px+6,py+12,4,GROUND-py-12);cx.fillRect(px+pw-10,py+12,4,GROUND-py-12);
     if(L&&p===L){cx.fillStyle=(t>>4)%2?'#2ecc71':'#a6f5c4';cx.beginPath();cx.arc(px+pw/2,py-10,9,0,7);cx.fill();cx.strokeStyle='#145a32';cx.lineWidth=2;cx.stroke();}}
+  // checkpoint (bus stop)
   cx.fillStyle='#555';cx.fillRect(checkpoint.x,GROUND-70,4,70);rr(checkpoint.x-20,GROUND-86,44,20,4,checkpoint.hit?'#2ecc71':'#e74c3c');cx.fillStyle='#fff';cx.font='bold 9px sans-serif';cx.textAlign='center';cx.fillText('BUS STOP',checkpoint.x+2,GROUND-72);
+  // coins (kobo)
   for(const c of coins)if(!c.got){const w=Math.abs(Math.cos((t+c.x)*0.06))*8+2;cx.fillStyle='#f2b300';cx.beginPath();cx.ellipse(c.x,c.y,w,10,0,0,7);cx.fill();cx.fillStyle='#a87900';if(w>6){cx.font='bold 10px sans-serif';cx.textAlign='center';cx.fillText('k',c.x,c.y+4);}}
+  // power-ups
   for(const it of items)if(!it.got){const bob=Math.sin(t*0.08+it.x)*4;drawFood(it.k,it.x,it.y+bob);}
+  // foes
   for(const f of foes)if(f.alive)(f.k==='goat'?drawGoat:drawTyre)(f);
+  // boss
   if(boss.on||boss.beaten)drawBoss();
   for(const w of waves){cx.strokeStyle='#ff6b6b';cx.lineWidth=3;for(let i=0;i<3;i++){cx.beginPath();cx.arc(w.x+i*7,w.y,w.r-i*3,Math.PI*0.6,Math.PI*1.4);cx.stroke();}cx.fillStyle='#fff';cx.font='bold 9px sans-serif';cx.fillText('POOO!',w.x+8,w.y-14);}
+  // hero
   if(!(P.inv>0&&(t>>2)%2&&P.superT<=0)){
     const glow=P.superT>0?'#7cff8a':(P.speedT>0?'#f2b300':0);
     cx.save();if(P.superT>0){cx.translate(P.x,P.y);cx.scale(1.35,1.35);cx.translate(-P.x,-P.y);}
@@ -276,6 +300,7 @@ function draw(){
   }
   for(const p of parts){cx.globalAlpha=p.l/30;cx.fillStyle=p.col;cx.fillRect(p.x,p.y,4,4);}cx.globalAlpha=1;
   cx.restore();
+  // progress bar
   const prog=Math.min(1,P.x/ARENA);cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(W/2-80,H-14,160,6);cx.fillStyle='#f2b300';cx.fillRect(W/2-80,H-14,160*prog,6);
 }
 function drawFood(k,x,y){
@@ -292,12 +317,15 @@ function drawTyre(f){cx.save();cx.translate(f.x,f.y-11);cx.rotate(f.rot);cx.fill
 function drawBoss(){
   const bx=boss.x+boss.flee,by=GROUND,wob=Math.sin(boss.anim*0.08)*3;
   cx.save();cx.translate(bx,by);
+  // a heap of stuck cars
   const cars=[['#c0392b',-60,0],['#2980b9',-10,0],['#f6c90e',-40,-30],['#7f8c8d',5,-30],['#27ae60',-25,-60]];
   for(const [c,x,y] of cars){rr(x-26,y-26+wob*(y?1:0),52,24,6,c);cx.fillStyle='#bfe3f5';cx.fillRect(x-18,y-22+wob*(y?1:0),14,8);cx.fillRect(x+2,y-22+wob*(y?1:0),14,8);cx.fillStyle='#222';cx.beginPath();cx.arc(x-14,y-2+wob*(y?1:0),5,0,7);cx.arc(x+14,y-2+wob*(y?1:0),5,0,7);cx.fill();}
+  // traffic light head with grumpy face
   rr(-48,-150+wob,40,66,8,'#2d2d2d');
   const lit=boss.beaten?2:0;['#e74c3c','#f1c40f','#2ecc71'].forEach((c,i)=>{cx.fillStyle=i===lit?c:'#555';cx.beginPath();cx.arc(-28,-138+wob+i*20,7,0,7);cx.fill();});
   cx.fillStyle='#fff';cx.fillRect(-64,-170+wob,72,14);cx.fillStyle='#1d1a14';cx.font='bold 9px sans-serif';cx.textAlign='center';cx.fillText('GEN. GO-SLOW',-28,-160+wob);
   if(!boss.beaten){cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.moveTo(-40,-148+wob);cx.lineTo(-33,-144+wob);cx.moveTo(-16,-148+wob);cx.lineTo(-23,-144+wob);cx.stroke();}
+  // hit pips
   for(let i=0;i<3;i++){cx.fillStyle=i<boss.hits?'#2ecc71':'rgba(255,255,255,.5)';cx.beginPath();cx.arc(-44+i*16,-182+wob,5,0,7);cx.fill();}
   cx.restore();
 }
@@ -311,8 +339,10 @@ function startGame(){show('start',false);show('end',false);show('paused',false);
 function togglePause(){if(state==='play'){state='pause';show('paused',true);}else if(state==='pause'){state='play';show('paused',false);}}
 function gameOver(){state='end';$('endTitle').textContent='Out of lives';$('endText').textContent='You collected '+kobo+' kobo. The road is still there. Try again!';show('end',true);}
 function win(){state='end';$('endTitle').textContent='Road cleared!';$('endText').textContent='You beat General Go-Slow with '+kobo+' kobo and '+lives+' lives left. Next stop in the full game: the market.';show('end',true);}
-$('play').onclick=startGame;$('again').onclick=startGame;$('resume').onclick=togglePause;$('restart2').onclick=startGame;$('pause').onclick=togglePause;$('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'×':'♪';};
+$('play').onclick=startGame;$('again').onclick=startGame;$('resume').onclick=togglePause;$('restart2').onclick=startGame;$('pause').onclick=togglePause;
+$('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'×':'♪';};
 
+/* ---------- loop ---------- */
 buildPicker();reset(true);
 let last=performance.now(),acc=0;
 function loop(now){acc+=Math.min(now-last,100);last=now;

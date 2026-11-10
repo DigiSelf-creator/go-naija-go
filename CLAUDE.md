@@ -24,5 +24,5 @@ How work flows:
 5. Privacy first. No accounts in version 1. No photo upload. Saves stay on the phone. No trackers, no ads in version 1.
 6. Light. First load under 3 MB, plays offline after the first visit, runs smoothly on a cheap Android phone.
 7. Plain words a smart 10 year old follows.
-8. The credits and the end of each world show: "Remember: a wrong premise often leads to a misleading conclusion."
+8. Do not put "Remember: a wrong premise often leads to a misleading conclusion." in the game. It belongs to another project; use it only where Tp says it truly fits.
 9. Small commits with clear messages. One task per branch.

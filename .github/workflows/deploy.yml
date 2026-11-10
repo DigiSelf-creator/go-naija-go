@@ -1,0 +1,76 @@
+# Test, build and put Gbese! on GitHub Pages.
+# Runs on every push to main, and by hand from the Actions tab.
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time. A newer push waits; a running deploy is not cut off.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      # Fails the job if the first load is 3 MB or more.
+      - run: npm run check-size
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Phone tests (end to end)
+        run: npx playwright test --project=phone-landscape
+
+      # Real-time play tests, one at a time so a busy runner does not upset their timing.
+      - name: Play tests in real time (end to end)
+        run: npx playwright test --project=timing --no-deps
+
+      # Frame-rate tests. Shared runners are noisy, so a slow run here does not block a deploy.
+      - name: Frame-rate tests (optional)
+        continue-on-error: true
+        run: npx playwright test --project=perf --no-deps
+
+      - name: Keep test results if something failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
+
+      # Build again so the files we ship are a clean build, then hand them to the deploy job.
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

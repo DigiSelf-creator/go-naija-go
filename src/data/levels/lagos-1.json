@@ -1,0 +1,86 @@
+{
+  "schema": 2,
+  "type": "street",
+  "id": "lagos-1",
+  "state": "lagos",
+  "street": 1,
+  "name": "Alausa",
+  "theme": "morning",
+  "schemaNote": "See docs/design.md, Slice 2, Level data format. World units, y grows down, road top 300. ground: [startX, endX] (gaps are pits). platforms: [x, topY, width]. kobo: [x, centreY, count]. foods: [x, centreY, kind]. crates: [centreX, bottomY, contents]. hazards: [kind, x]. wells: entrance x, exit x, room id. hints: [x, words] or [x, words, piece] (a piece from src/game/features.ts, e.g. \"crates\": the hint shows only once that piece is switched on), with {forward} {back} {jump} {down} filled in for touch or keys.",
+  "groundY": 300,
+  "walkSpeed": 90,
+  "runSpeed": 156,
+  "cornWalkSpeed": 120,
+  "cornSpeed": 228,
+  "spawnX": 80,
+  "startWall": 20,
+  "koboSpacing": 24,
+  "wakeDistance": 520,
+  "hazardSpeeds": { "goat": 36, "tyre": 60, "drum": 84 },
+  "ground": [
+    [-400, 2450], [2480, 2750], [2786, 3050], [3090, 3300], [3360, 4000],
+    [4100, 5050], [5220, 7800], [7840, 9150], [9210, 11000]
+  ],
+  "platforms": [
+    [1150, 250, 140],
+    [1650, 190, 120],
+    [3650, 150, 140],
+    [7600, 245, 140],
+    [8100, 200, 120],
+    [8500, 250, 120]
+  ],
+  "kobo": [
+    [300, 276, 5], [560, 276, 5],
+    [880, 215, 4], [1165, 226, 5], [1450, 276, 4], [1665, 166, 4],
+    [2250, 276, 4], [2441, 236, 2], [2600, 276, 3], [2744, 236, 2], [2900, 276, 3], [3046, 236, 2],
+    [3200, 276, 3], [3306, 200, 3],
+    [3500, 276, 3], [3665, 126, 5], [3990, 220, 2], [4030, 170, 2], [4090, 220, 2],
+    [4420, 276, 4],
+    [4620, 220, 2], [4680, 140, 4], [4800, 220, 2],
+    [5090, 170, 2], [5140, 120, 2], [5190, 170, 2],
+    [5400, 276, 4], [6000, 276, 3], [6300, 276, 3], [7000, 276, 4],
+    [7180, 276, 4], [7400, 276, 8], [7615, 221, 5], [7790, 236, 3], [7950, 276, 6],
+    [8115, 176, 4], [8300, 276, 5], [8515, 226, 4],
+    [8750, 276, 3], [9156, 220, 3], [9350, 276, 3], [9410, 276, 4],
+    [10150, 276, 4], [10400, 276, 5]
+  ],
+  "foods": [
+    [7300, 272, "corn"],
+    [9530, 272, "amala"]
+  ],
+  "crates": [
+    [2000, 204, "kobo"],
+    [2150, 204, "kobo"],
+    [6500, 204, "garri"],
+    [7670, 149, "kobo"]
+  ],
+  "hazards": [
+    ["goat", 5700],
+    ["tyre", 6250],
+    ["goat", 6900],
+    ["tyre", 8900],
+    ["goat", 9850],
+    ["tyre", 10050],
+    ["goat", 10250]
+  ],
+  "wells": [],
+  "hints": [
+    [0, "Hold {forward} to walk. Hold on to run."],
+    [700, "Press {jump} to jump."],
+    [1450, "Hold {jump} to jump higher."],
+    [1880, "Crate! Jump up under it.", "crates"],
+    [2350, "Pothole! Jump over it."],
+    [3200, "Wider pothole! Hold {jump}."],
+    [3500, "In the air, press {jump} again."],
+    [3880, "Wide pothole! Jump twice."],
+    [4400, "Bus stop! Now you start here."],
+    [4560, "To jump far, run first."],
+    [4820, "Big pit! Run, then jump twice."],
+    [5350, "Goat! Jump over, or bounce on it."],
+    [5950, "Rolling tyre! Jump over it."],
+    [6380, "Food in this crate! Knock it.", "crates"],
+    [10450, "Yellow bus! Get on to finish."]
+  ],
+  "checkpoint": 4400,
+  "end": { "x": 10600, "wall": 10800 }
+}

@@ -1,0 +1,1236 @@
+/* Menu screens: an HTML layer over the game canvas. Every target is at least 44 x 44 px. */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: max(10px, var(--safe-top)) max(12px, var(--safe-right)) max(10px, var(--safe-bottom)) max(12px, var(--safe-left));
+  background: rgba(10, 20, 12, 0.55);
+  overflow: auto;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.screen[hidden] {
+  display: none;
+}
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 820px;
+  max-height: 100%;
+  overflow: auto;
+  touch-action: pan-y;
+  background: #fffaf0;
+  color: #1d1a14;
+  border-radius: 16px;
+  padding: 12px 18px 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+.card.narrow {
+  max-width: 520px;
+}
+.screen h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #0e7a3e;
+  letter-spacing: 0.5px;
+}
+.screen h2 {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+}
+.screen p {
+  margin: 0.3rem 0 0.5rem;
+  line-height: 1.35;
+}
+.screen .tagline {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-top: 0;
+}
+.screen .small {
+  font-size: 0.85rem;
+  color: #5d574b;
+}
+.go {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  margin: 8px 0 4px;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font: bold 1.15rem 'Trebuchet MS', Verdana, sans-serif;
+  background: #0e7a3e;
+  color: #fff;
+  cursor: pointer;
+}
+.minor-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.minor {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 14px;
+  border: 2px solid #d8cfbd;
+  border-radius: 12px;
+  background: #fff;
+  color: #1d1a14;
+  font: 0.95rem 'Trebuchet MS', Verdana, sans-serif;
+  cursor: pointer;
+}
+.minor[aria-checked='true'] {
+  border: 3px solid #1d1a14;
+  background: #ddf0e3;
+}
+.minor[aria-checked='true']::before {
+  content: '\2713  ';
+  content: '\2713  ' / ''; /* the tick is a picture: not read out, aria-pressed says it */
+  font-weight: bold;
+}
+
+/* Hero builder (design.md S2.3 "Builder layout"). Sideways: two columns. Left: the live
+   preview with the green button under it, always on screen. Right: heading, then the rows
+   (Male or female, Age, Skin, Hair, Outfit); it scrolls by itself when the screen is short.
+   Upright: preview on top, rows below, button at the bottom, the card scrolls. */
+.hero-card {
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  overflow: hidden;
+  padding: 12px 8px 12px 16px;
+}
+.builder {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+}
+.builder-main {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+}
+.builder-main .go {
+  margin: 0;
+  min-height: 56px;
+}
+.builder-wrap {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+/* The rows scroll by themselves. The phone's own scroll bar often hides, so our own bar
+   (.side-bar) shows instead, whenever there is more to scroll. Room on the left for the
+   chosen swatch's outer ring. */
+.builder-side {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 12px 0 5px;
+  scrollbar-width: none;
+}
+.builder-side::-webkit-scrollbar {
+  display: none;
+}
+.side-bar {
+  position: absolute;
+  right: 2px;
+  top: var(--bar-top, 0);
+  width: 5px;
+  height: var(--bar-h, 0);
+  border-radius: 3px;
+  background: #8d877e;
+  pointer-events: none;
+}
+.side-bar[hidden] {
+  display: none;
+}
+/* While more is below: the bottom 24 px fades to the panel colour. */
+.builder-side::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  display: block;
+  height: 24px;
+  margin-top: -24px;
+  background: linear-gradient(rgba(255, 250, 240, 0), #fffaf0);
+  pointer-events: none;
+  visibility: hidden;
+}
+.builder-side.more-below::after {
+  visibility: visible;
+}
+.builder-side .small {
+  margin-bottom: 0;
+}
+.new-note {
+  margin: 0 0 4px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #fff1c2;
+  border: 2px solid #f2b300;
+  font-weight: bold;
+}
+.preview {
+  width: 140px;
+  height: 180px;
+  border-radius: 12px;
+  background: #cfe9f7;
+}
+.choice-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0; /* design.md: 8 px between targets, rows too */
+}
+.choice-row > b {
+  flex: 0 0 64px;
+  font-size: 0.95rem;
+}
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.swatch {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  border: 3px solid #fffaf0;
+  box-shadow: 0 0 0 1px #c9bfa9;
+  cursor: pointer;
+}
+.swatch[aria-pressed='true'] {
+  border: 4px solid #1d1a14;
+  box-shadow: 0 0 0 2px #fffaf0, 0 0 0 4px #1d1a14;
+}
+.swatch[aria-pressed='true']::after {
+  content: '\2713';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font: bold 22px Verdana, sans-serif;
+  text-shadow: 0 0 3px #000, 0 0 2px #000;
+}
+.chip {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 14px;
+  border: 2px solid #d8cfbd;
+  border-radius: 999px;
+  background: #fff;
+  color: #1d1a14;
+  font: 0.95rem 'Trebuchet MS', Verdana, sans-serif;
+  cursor: pointer;
+}
+.chip[aria-pressed='true'] {
+  border: 3px solid #1d1a14;
+  background: #ddf0e3;
+  font-weight: bold;
+}
+.chip[aria-pressed='true']::before {
+  content: '\2713  ';
+  content: '\2713  ' / ''; /* the tick is a picture: not read out, aria-pressed says it */
+}
+.chip:focus-visible,
+.swatch:focus-visible,
+.go:focus-visible,
+.minor:focus-visible {
+  outline: 3px solid #2b59c3;
+  outline-offset: 2px;
+}
+
+/* Sideways, 420 px tall or less: labels above their chips, smaller preview. */
+@media (max-height: 420px) and (orientation: landscape) {
+  .screen h1 {
+    font-size: 1.7rem;
+  }
+  .builder {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 7px;
+  }
+  .preview {
+    width: 120px;
+    height: 150px;
+  }
+  .choice-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin: 6px 0 8px;
+  }
+  .choice-row > b {
+    flex: none;
+  }
+}
+/* Very short (e.g. 320 x 240): left column 104 px, preview 104 x 120, button 104 x 56 with its
+   words on two lines; right column about 182 px. Male or female and Age fit one line each. */
+@media (max-height: 300px) and (orientation: landscape) {
+  .screen:has(.hero-card) {
+    padding: max(6px, var(--safe-top)) max(6px, var(--safe-right)) max(6px, var(--safe-bottom)) max(6px, var(--safe-left));
+  }
+  .hero-card {
+    padding: 8px 4px 8px 8px;
+    border-radius: 12px;
+  }
+  .builder {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 4px;
+  }
+  .preview {
+    width: 104px;
+    height: 120px;
+  }
+  .builder-main .go {
+    padding: 4px 6px;
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+  .builder-side h2 {
+    font-size: 1.15rem;
+    margin-bottom: 2px;
+  }
+  .builder-side .new-note {
+    font-size: 0.85rem;
+    padding: 4px 6px;
+  }
+  .choice-row > b {
+    font-size: 0.85rem;
+  }
+  .builder-side {
+    padding: 0 7px 0 5px;
+  }
+  .side-bar {
+    right: 1px;
+  }
+  .chip {
+    padding: 4px 6px;
+    font-size: 0.82rem;
+  }
+  .chip[aria-pressed='true']::before {
+    content: '\2713';
+    content: '\2713' / '';
+    margin-right: 3px;
+  }
+}
+/* Upright phone: preview on top, rows below, button at the bottom; the card scrolls. */
+@media (orientation: portrait) {
+  .hero-card {
+    overflow: auto;
+    padding: 12px 16px;
+  }
+  .builder,
+  .builder-main,
+  .builder-wrap,
+  .builder-side {
+    display: contents;
+  }
+  .side-bar,
+  .builder-side::after {
+    display: none !important;
+  }
+  .hero-card {
+    flex-direction: column;
+  }
+  .builder-side > h2 {
+    order: 0;
+  }
+  .builder-side > .new-note {
+    order: 1;
+  }
+  .preview {
+    order: 2;
+    margin: 0 auto;
+    width: 120px;
+    height: 150px;
+    flex: none;
+  }
+  .builder-side > .choice-row {
+    order: 3;
+  }
+  .builder-main .go {
+    order: 4;
+    margin-top: 8px;
+    flex: none;
+  }
+  .builder-side > .small {
+    order: 5;
+  }
+  .choice-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .choice-row > b {
+    flex: none;
+  }
+}
+/* Narrow upright screens: smaller preview. */
+@media (max-width: 360px) and (orientation: portrait) {
+  .preview {
+    width: 96px;
+    height: 120px;
+  }
+  .hero-card {
+    padding: 10px 12px;
+  }
+}
+/* Tiny screens that are not short (narrow sideways windows): a smaller preview column. */
+@media (max-width: 560px) and (min-height: 301px) and (orientation: landscape) {
+  .builder {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .preview {
+    width: 104px;
+    height: 120px;
+  }
+  .choice-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .choice-row > b {
+    flex: none;
+  }
+}
+/* Tiny screens: smaller title. */
+@media (max-width: 560px), (max-height: 260px) {
+  .card:not(.hero-card) {
+    padding: 10px 12px;
+  }
+  .screen h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* HUD (in a run). Only the buttons take taps; the rest lets taps through to jump. */
+.hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: max(6px, var(--safe-top)) max(10px, var(--safe-right)) 0 max(10px, var(--safe-left));
+  pointer-events: none;
+  color: #fff;
+  font: bold 1.05rem 'Trebuchet MS', Verdana, sans-serif;
+  text-shadow: 0 2px 0 #000, 0 0 3px #000;
+}
+.hud[hidden] {
+  display: none;
+}
+.hud-left,
+.hud-right {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+}
+.hud-left {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+/* Sound and Pause never wrap: one row, inside the top 56 px (design.md HUD). The left chips
+   step tighter instead (Hud.fit, HUD_TIGHT in hud.ts). */
+.hud-right {
+  flex: none;
+  flex-wrap: nowrap;
+}
+.hud-left > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.32);
+}
+.hud-food[hidden] {
+  display: none !important;
+}
+/* Tight HUD, step 1: the parcel, shield and food chips show their icon (and seconds) only;
+   the word stays for screen readers. */
+.hud-tight .hud-food .hud-word {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.hud-tight .hud-left {
+  gap: 6px;
+}
+.hud-tight .hud-left > span {
+  padding: 0 6px;
+}
+.hud-tight .hud-food {
+  gap: 2px;
+}
+/* Step 2: smaller words, icons and gaps (a 320 px wide screen with every chip). */
+.hud-tighter {
+  gap: 6px;
+  padding-left: max(6px, var(--safe-left));
+  padding-right: max(6px, var(--safe-right));
+  font-size: 0.95rem;
+}
+.hud-tighter .hud-left {
+  gap: 4px;
+}
+.hud-tighter .hud-right {
+  gap: 6px;
+}
+.hud-tighter .hud-left > span {
+  padding: 0 4px;
+}
+.hud-tighter .hud-icon {
+  width: 24px;
+  height: 24px;
+}
+/* Step 3: every chip at once on a 320 px screen. No chip boxes (the words keep their dark
+   edge), a coin for the word "Kobo", small icons. */
+.hud-coin {
+  display: none;
+}
+.hud-tightest {
+  gap: 4px;
+  font-size: 0.9rem;
+}
+.hud-tightest .hud-right {
+  gap: 4px;
+}
+.hud-tightest .hud-left {
+  gap: 3px;
+}
+.hud-tightest .hud-left > span {
+  padding: 0 1px;
+  gap: 1px;
+  background: none;
+}
+.hud-tightest .hud-icon {
+  width: 20px;
+  height: 20px;
+}
+.hud-tightest .hud-coin {
+  display: block;
+}
+.hud-tightest .hud-kobo .hud-word {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Step 4: as step 3, smaller still, for two-digit food seconds (corn 12 s, amala 14 s) with
+   every chip on a 320 px screen. Sound and Pause keep their size. */
+.hud-tiniest {
+  gap: 3px;
+  padding-left: max(4px, var(--safe-left));
+  padding-right: max(4px, var(--safe-right));
+  font-size: 0.8rem;
+}
+.hud-tiniest .hud-left {
+  gap: 2px;
+}
+.hud-tiniest .hud-icon {
+  width: 18px;
+  height: 18px;
+}
+.hud-icon {
+  width: 28px;
+  height: 28px;
+}
+.hud-btn {
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  background: #0e7a3e; /* solid, so it reads over the sun and the sky */
+  color: #fff;
+  font: bold 1rem 'Trebuchet MS', Verdana, sans-serif;
+  cursor: pointer;
+}
+.hud-sound .off {
+  display: none;
+}
+.hud-sound.is-off .off {
+  display: inline;
+}
+.hud-sound.is-off .waves {
+  display: none;
+}
+.blink {
+  animation: hud-blink 0.5s steps(2, start) infinite;
+}
+@keyframes hud-blink {
+  to {
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blink {
+    animation: none;
+    text-decoration: underline;
+  }
+}
+
+/* The hint bar (design.md S2.2): every hint and toast, in the pavement strip between Forward
+   and Jump. Place, width, bottom and the most height it may take are set from hintBarBox
+   (src/screens/controls.ts); its height fits its words. Solid: it only sits on plain pavement.
+   Never takes taps. */
+.toast {
+  position: fixed;
+  z-index: 6;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px 8px;
+  border: 1px solid rgba(29, 26, 20, 0.6);
+  border-radius: 10px;
+  background: #f2b300;
+  color: #1d1a14;
+  font: bold 14px/1.143 'Trebuchet MS', Verdana, sans-serif;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.toast[data-size='small'] {
+  padding: 2px 5px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.05;
+}
+.toast[data-size='big'] {
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 1.1875;
+}
+.toast.show {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
+}
+.go.secondary {
+  background: #5d574b;
+}
+.screen .stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+.screen .stack .go {
+  margin: 0;
+}
+
+/* Phone buttons (S2.2): art's drawings (src/art/controls.ts), plain and pressed. The pressed
+   look (fuller, 94 percent size, icon solid dark) is drawn in the SVG itself. They never take
+   pointer events: the touch areas behind them are much bigger (src/engine/input.ts). */
+.pads {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.pads[hidden],
+.pad[hidden] {
+  display: none;
+}
+.pad {
+  position: absolute;
+  box-sizing: border-box;
+}
+.pad > span {
+  position: absolute;
+  inset: 0;
+}
+.pad svg {
+  display: block;
+}
+.pad .pad-down,
+.pad.down .pad-up {
+  display: none;
+}
+.pad.down .pad-down {
+  display: block;
+}
+
+/* The Go down / Go up button (S2.5): a real button over the well or under the room's rope.
+   Art's pill with a bucket and an arrow; pressed while held. Above the touch areas. */
+.well-btn {
+  position: fixed;
+  z-index: 5;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.well-btn[hidden] {
+  display: none;
+}
+.well-btn > span {
+  position: absolute;
+  inset: 0;
+}
+.well-btn svg {
+  display: block;
+}
+.well-btn .pad-down,
+.well-btn:active .pad-up {
+  display: none;
+}
+.well-btn:active .pad-down {
+  display: block;
+}
+.well-btn:focus-visible {
+  outline: 3px solid #f2b300;
+  outline-offset: 2px;
+  border-radius: 40px;
+}
+
+/* Hidden HUD chips (the Kobo chip in Go-Slow Hall). */
+.hud-left > [hidden] {
+  display: none !important;
+}
+
+/* Words only screen readers hear. */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The Music switch: the note icon (with a slash when off) and its words. */
+.music-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.music-switch svg {
+  flex: none;
+}
+.music-switch .off {
+  display: none;
+}
+.music-switch.is-off .off {
+  display: inline;
+}
+.minor[role='switch'],
+.minor.gentle {
+  white-space: normal;
+}
+
+/* Cards that open in a run (Pause, Game over, Street cleared, Win; S2.10). */
+.actions .go {
+  margin: 8px 0 4px;
+}
+.actions .minor-row {
+  flex-wrap: nowrap;
+}
+.gentle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.gentle-row p.small {
+  flex: 1 1 200px;
+  margin: 0;
+}
+.pause-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+.pause-grid .go {
+  margin: 0;
+  min-height: 48px;
+}
+.pause-card .switches {
+  margin-top: 8px;
+}
+/* po M4 bug 1: short screens (320 x 240, 480 x 200, 640 x 200). Smaller words and gaps so
+   every line and every button shows with no scrolling; buttons stay at least 44 px. */
+@media (max-height: 300px) and (orientation: landscape) {
+  .screen:has(.event),
+  .screen:has(.streets-card) {
+    padding: max(6px, var(--safe-top)) max(8px, var(--safe-right)) max(6px, var(--safe-bottom)) max(8px, var(--safe-left));
+  }
+  .card.event,
+  .card.streets-card {
+    padding: 6px 12px;
+    border-radius: 12px;
+  }
+  .event h2,
+  .streets-card h2 {
+    font-size: 1.1rem;
+    margin: 0 0 2px;
+  }
+  .event p {
+    margin: 2px 0;
+    font-size: 0.85rem;
+    line-height: 1.25;
+  }
+  .event p.small,
+  .streets-card p.small {
+    font-size: 0.78rem;
+    margin: 0;
+  }
+  .event .go {
+    min-height: 44px;
+    padding: 4px 10px;
+    font-size: 1rem;
+  }
+  .event .actions .go {
+    margin: 4px 0 0;
+  }
+  .event .minor,
+  .streets-card .minor {
+    min-height: 44px;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+  }
+  .event .minor-row,
+  .streets-card .minor-row {
+    margin-top: 6px;
+  }
+  .pause-grid {
+    margin-top: 2px;
+  }
+  .pause-grid .go {
+    min-height: 44px;
+  }
+}
+/* Short screens, game over: the gentle offer beside its switch, and "Play again", "Streets" and
+   "Home" in one row (short words, so this fits 320 x 240 too). */
+@media (max-height: 300px) and (orientation: landscape) {
+  .event.over .gentle-row {
+    flex-wrap: nowrap;
+  }
+  .event.over .gentle-row .minor {
+    flex: 0 1 50%;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    line-height: 1.15;
+  }
+  .event.over .actions {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-top: 6px;
+  }
+  .event.over .actions .go {
+    flex: 1 1 auto;
+    width: auto;
+    margin: 0;
+  }
+  .event.over .actions .minor-row {
+    flex: none;
+    margin: 0;
+  }
+}
+/* Short and wide enough (480 x 200, 640 x 200): the big button and the small ones share a row;
+   the four Pause buttons share a row too. */
+@media (max-height: 260px) and (min-width: 440px) and (orientation: landscape) {
+  .event .actions {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-top: 6px;
+  }
+  .event .actions .go {
+    flex: 1 1 auto;
+    width: auto;
+    margin: 0;
+  }
+  .event .actions .minor-row {
+    flex: none;
+    margin: 0;
+  }
+  .pause-grid {
+    grid-template-columns: repeat(4, auto);
+  }
+  .gentle-row {
+    flex-wrap: nowrap;
+  }
+}
+
+/* Streets (S2.6 "Fit at 320 px", S2.10): art N1's card look (src/art/galleryN1.ts CARD_CSS). */
+.streets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 6px 0;
+}
+.street-card {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  min-height: 60px;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 5px 8px;
+  border: 2px solid #1d1a14;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 3px 0 #d8cfbd;
+  color: #1d1a14;
+  text-align: left;
+  font-family: 'Trebuchet MS', Verdana, sans-serif;
+  cursor: pointer;
+}
+.street-card.done {
+  background: #fff3d6;
+  border-color: #b07a1e;
+  box-shadow: 0 3px 0 #e6cf9c;
+}
+.street-card.locked {
+  background: #ecebe7;
+  border: 2px dashed #9a948a;
+  box-shadow: none;
+  color: #4f493f;
+  cursor: default;
+}
+.street-card .art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.street-card .badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+}
+.street-card .num,
+.street-card .name,
+.street-card .status {
+  position: relative;
+  display: block;
+}
+/* The first line sits beside the badge and is as tall as it, so the bold name below always has
+   the card's full width. */
+.street-card .num {
+  font-size: 0.75rem;
+  color: #4f493f;
+  min-height: 20px;
+  line-height: 20px;
+  padding-right: 24px;
+}
+/* A name is never cut with "..." and never runs off the card: it wraps between words and the
+   card grows taller. */
+.street-card .name {
+  font-weight: bold;
+  font-size: 1.05rem;
+  line-height: 1.15;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+.street-card .status {
+  font-size: 0.8rem;
+}
+/* The hall card with "You have a garri parcel.": the name sits beside the badge. */
+.street-card.with-extra .name {
+  padding-right: 24px;
+}
+.street-card:focus-visible {
+  outline: 3px solid #2b59c3;
+  outline-offset: 2px;
+}
+/* Tiny screens (the 2 x 2 grid at 320 x 240): S2.6 "Fit at 320 px". */
+@media (max-width: 480px), (max-height: 300px) {
+  .streets-grid {
+    gap: 6px;
+    margin: 4px 0;
+  }
+  .street-card {
+    min-height: 52px;
+    padding: 3px 6px;
+  }
+  .street-card .badge {
+    width: 18px;
+    height: 18px;
+  }
+  .street-card .num {
+    font-size: 0.7rem;
+    min-height: 16px;
+    line-height: 16px;
+    padding-right: 22px;
+  }
+  .street-card .name {
+    font-size: 0.9rem;
+  }
+  .street-card .status {
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+  .street-card.with-extra .name {
+    padding-right: 22px;
+  }
+}
+@media (max-height: 300px) and (orientation: landscape) {
+  .streets-card h2 {
+    margin: 0;
+  }
+  .streets-grid {
+    margin: 3px 0;
+  }
+  .streets-card .minor-row {
+    margin-top: 4px;
+  }
+}
+/* Short and wide (640 x 200): the four cards in one row. */
+@media (max-height: 260px) and (min-width: 560px) and (orientation: landscape) {
+  .streets-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Nigeria's wheel (S2.8 "The wheel screen on every size"): the cream card fills the screen, the
+   wheel as tall as it, the words in a rail beside it. Places and sizes are set by Menus.wheel
+   (wheelFit in src/screens/streets.ts). The page never scrolls. */
+.screen.full {
+  padding: 0;
+  overflow: hidden;
+}
+.wheel-card {
+  position: fixed;
+  top: var(--safe-top);
+  right: var(--safe-right);
+  bottom: var(--safe-bottom);
+  left: var(--safe-left);
+  width: auto;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+.wheel-box {
+  position: absolute;
+  cursor: pointer;
+}
+.wheel-box svg {
+  display: block;
+}
+.wheel-rail {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  overflow-y: auto;
+}
+.wheel-rail h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.wheel-rail p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.wheel-buttons {
+  display: flex;
+  gap: 8px;
+}
+.wheel-buttons .minor {
+  flex: 1 1 0;
+  min-height: 44px;
+}
+.narrow-only {
+  display: none;
+}
+/* Narrow rail (320 x 240): short words; the long ones stay in the page for screen readers. */
+.narrow-rail .wheel-rail {
+  gap: 8px;
+  text-align: center;
+}
+.narrow-rail .wheel-rail h2 {
+  font-size: 14px;
+  line-height: 1.2;
+}
+.narrow-rail .wide-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.narrow-rail .narrow-only {
+  display: block;
+}
+.narrow-rail .count b {
+  display: block;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.narrow-rail .count span {
+  display: block;
+  font-size: 12px;
+}
+.narrow-rail .wheel-buttons {
+  flex-direction: column;
+}
+.narrow-rail .wheel-buttons .minor {
+  flex: none;
+  width: 100%;
+  padding: 4px 2px;
+  font-size: 13px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.upright .wheel-rail {
+  justify-content: flex-start;
+}
+/* The "All names" list over the whole screen. */
+.names-panel {
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+.list-open .wheel-box,
+.list-open .wheel-rail {
+  display: none;
+}
+.list-open .names-panel {
+  display: block;
+}
+.names-top {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.names-top h2 {
+  margin: 0;
+  font-size: 16px;
+  outline: none;
+}
+.names-top .minor {
+  min-width: 72px;
+}
+.names-wrap {
+  position: absolute;
+  top: 60px;
+  bottom: 8px;
+  left: 12px;
+  right: 12px;
+}
+.names-box {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 12px;
+  scrollbar-width: none;
+}
+.names-box::-webkit-scrollbar {
+  display: none;
+}
+.names-box p {
+  margin: 0 0 6px;
+  font-size: 14px;
+  line-height: 1.3;
+}
+/* A soft fade at the bottom while more is below. */
+.names-box::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  display: block;
+  height: 24px;
+  margin-top: -24px;
+  background: linear-gradient(rgba(255, 250, 240, 0), #fffaf0);
+  pointer-events: none;
+  visibility: hidden;
+}
+.names-box.more-below::after {
+  visibility: visible;
+}
+.names {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  column-width: 100px;
+  column-gap: 8px;
+  font-size: 14px;
+}
+.names li {
+  height: 20px;
+  line-height: 20px;
+  white-space: nowrap;
+  color: #5d574b;
+  break-inside: avoid;
+}
+.names li.on {
+  color: #1d1a14;
+  font-weight: bold;
+}
+.names .tick {
+  display: inline-block;
+  width: 1.1em;
+  visibility: hidden;
+}
+.names li.on .tick {
+  visibility: visible;
+}
+@media (max-height: 260px) {
+  .names-top h2 {
+    font-size: 14px;
+  }
+}
