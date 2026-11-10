@@ -385,7 +385,7 @@ describe('going up (S2.5 Going up)', () => {
     const far = run.hazards.find((z) => z.x0 === 6300)!;
     far.mode = 'move';
     far.x = WELL2.exitX + 301;
-    const sleeping = run.hazards.find((z) => z.x0 === 6600)!;
+    const sleeping = run.hazards.find((z) => z.x0 === 6550)!; // S2.14 moved it from 6600
     sleeping.x = WELL2.exitX + 250; // (the level rule keeps them 400 u away; this tests the rule only)
     goBelow(run);
     goUp(run);

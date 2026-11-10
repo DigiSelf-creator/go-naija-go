@@ -16,6 +16,10 @@ export interface HallFight {
   /** Seconds from the start to the third hit (the Win screen is 6 s later). */
   fightSecs: number;
   presses: number;
+  /** S2.14: throws that came out in each phase before its hit (phases 1 to 3). */
+  throwsPerPhase: number[];
+  /** S2.14: a high honk came out before the third hit. */
+  highHonkBeforeThird: boolean;
 }
 
 export function fightHall(run: Run, jitterMs: number, seed: number, maxSecs = 240): HallFight {
@@ -31,6 +35,8 @@ export function fightHall(run: Run, jitterMs: number, seed: number, maxSecs = 24
   let shieldsUsed = 0;
   let presses = 0;
   let defeatStep = -1;
+  const throwsPerPhase = [0, 0, 0];
+  let highHonkBeforeThird = false;
 
   // What the fingers will do, by step.
   let pressAt = -1;
@@ -98,8 +104,14 @@ export function fightHall(run: Run, jitterMs: number, seed: number, maxSecs = 24
       }
     }
     const before = run.power.shield;
-    run.step(DT);
+    const phaseNow = boss.hits;
+    for (const e of run.step(DT)) {
+      if (e.type === 'bossThrow' && !boss.defeated && phaseNow < 3) {
+        throwsPerPhase[phaseNow]!++;
+        if (e.kind === 'highHonk') highHonkBeforeThird = true;
+      }
+    }
     if (before && !run.power.shield && run.lives > 0) shieldsUsed++;
   }
-  return { won: run.phase === 'won', livesLost: lives0 - run.lives, shieldsUsed, fightSecs: defeatStep >= 0 ? defeatStep / 60 : NaN, presses };
+  return { won: run.phase === 'won', livesLost: lives0 - run.lives, shieldsUsed, fightSecs: defeatStep >= 0 ? defeatStep / 60 : NaN, presses, throwsPerPhase, highHonkBeforeThird };
 }

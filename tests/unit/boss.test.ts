@@ -53,13 +53,26 @@ function wait(run: Run, seconds: number): RunEvent[] {
   return all;
 }
 
+/** S2.14: waits (kept safe) until the next light is green. */
+function waitLit(run: Run): RunEvent[] {
+  const boss = run.boss!;
+  const all: RunEvent[] = [];
+  for (let i = 0; i < 60 * 20 && boss.lit !== boss.hits; i++) {
+    all.push(...run.step(DT));
+    run.safe = 10;
+  }
+  expect(boss.lit).toBe(boss.hits);
+  return all;
+}
+
 /** Into phase `n` (0, 1 or 2): the hits before it landed, the break waited out, the light lit. */
 function toPhase(run: Run, n: number): void {
   const boss = run.boss!;
   for (let i = 0; i < n; i++) {
+    waitLit(run);
     dropOnto(run, L[i]!);
-    wait(run, 1.6);
   }
+  waitLit(run);
   expect(boss.hits).toBe(n);
   expect(boss.lit).toBe(n);
 }
@@ -89,9 +102,9 @@ describe('the hall file (S2.7 layout and phase table)', () => {
 
   it('the phase table: every, tyre speed, pattern, hall music tempo', () => {
     expect(HALL.boss!.phases).toEqual([
-      { every: 2.2, speed: 156, pattern: ['tyre'], bpm: 128 },
-      { every: 1.8, speed: 192, pattern: ['tyre', 'tyre', 'honk'], bpm: 134 },
-      { every: 1.4, speed: 228, pattern: ['tyre', 'honk', 'tyre', 'highHonk'], bpm: 140 },
+      { every: 2.2, speed: 156, pattern: ['tyre'], bpm: 128, lightAt: 6.0, greenFor: 4.0, darkFor: 4.4 },
+      { every: 1.8, speed: 192, pattern: ['tyre', 'tyre', 'honk'], bpm: 134, lightAt: 4.0, greenFor: 3.5, darkFor: 3.6 },
+      { every: 1.4, speed: 228, pattern: ['tyre', 'highHonk', 'tyre', 'honk'], bpm: 140, lightAt: 4.5, greenFor: 3.0, darkFor: 2.8 },
     ]);
   });
 
@@ -110,10 +123,11 @@ describe('the hall file (S2.7 layout and phase table)', () => {
 });
 
 describe('General Go-Slow in the hall', () => {
-  it('starts at once: the hero inside at 50, standing, facing right; the left light lit; the boss words', () => {
+  it('starts at once: the hero inside at 50, standing, facing right; no light lit yet (S2.14); the boss words', () => {
     const run = hall();
     expect(run.hero).toMatchObject({ x: 50, y: 300, grounded: true, dir: 1, vx: 0, manual: true });
-    expect(run.boss!.litLight).toEqual(L[0]);
+    expect(run.boss!.lit).toBe(-1);
+    expect(run.boss!.litLight).toBe(null);
     expect(run.power.shield).toBe(false);
     const ev = steps(run, 1);
     expect(types(ev)).toEqual(['hallStart']);
@@ -173,20 +187,27 @@ describe('General Go-Slow in the hall', () => {
   it('three lit-light hits win: toasts, the finish timeline, the hero stands, taps and directions do nothing', () => {
     const run = hall();
     const boss = run.boss!;
+    expect(waitLit(run).find((e) => e.type === 'bossLight')).toEqual({ type: 'bossLight', lit: 0, first: true });
     const hit1 = dropOnto(run, L[0]!);
     expect(hit1.find((e) => e.type === 'bossHit')).toEqual({ type: 'bossHit', hits: 1, left: 2 });
     expect(run.hero.vy).toBe(PHYSICS.bounceVy); // bounces off the light
     expect(run.hero.airJump).toBe(true); // second jump still there
     expect(boss.lit).toBe(-1); // dark during the break
     expect(boss.mode).toBe('hit');
-    const light2 = wait(run, 1.5);
+    // S2.14: the break (1.5 s), then phase 2 starts; its light comes on 4.0 s later.
+    const break2 = wait(run, 1.5);
+    expect(break2.find((e) => e.type === 'bossPhase')).toEqual({ type: 'bossPhase', phase: 1, highHonks: false });
+    expect(boss.lit).toBe(-1);
+    const light2 = wait(run, 4.0);
     expect(boss.lit).toBe(1);
-    expect(light2.find((e) => e.type === 'bossLight')).toEqual({ type: 'bossLight', lit: 1, highHonks: false });
+    expect(light2.find((e) => e.type === 'bossLight')).toEqual({ type: 'bossLight', lit: 1, first: false });
     const hit2 = dropOnto(run, L[1]!);
     expect(hit2.find((e) => e.type === 'bossHit')).toEqual({ type: 'bossHit', hits: 2, left: 1 });
-    // Before the third phase: the high honk warning comes with the light.
-    const light3 = wait(run, 1.5);
-    expect(light3.find((e) => e.type === 'bossLight')).toEqual({ type: 'bossLight', lit: 2, highHonks: true });
+    // The high honk warning comes as phase 3 starts, before its light.
+    const break3 = wait(run, 1.5);
+    expect(break3.find((e) => e.type === 'bossPhase')).toEqual({ type: 'bossPhase', phase: 2, highHonks: true });
+    const light3 = wait(run, 4.5);
+    expect(light3.find((e) => e.type === 'bossLight')).toEqual({ type: 'bossLight', lit: 2, first: false });
     const hit3 = dropOnto(run, L[2]!);
     expect(types(hit3)).toContain('bossDefeat');
     expect(boss.defeated).toBe(true);
@@ -234,6 +255,7 @@ describe('General Go-Slow in the hall', () => {
     expect(new Set(gaps(p0))).toEqual(new Set([2.2]));
     expect(p0[0]!.speed).toBe(156);
 
+    waitLit(run);
     dropOnto(run, L[0]!);
     const hitAt = boss.steps;
     const p1 = watch(7);
@@ -244,9 +266,11 @@ describe('General Go-Slow in the hall', () => {
     expect(p1[0]!.speed).toBe(192);
     expect(p1.find((x) => x.kind === 'honk')).toMatchObject({ y: 236, speed: 120 });
 
+    waitLit(run);
     dropOnto(run, L[1]!);
     const p2 = watch(8);
-    expect(p2.map((x) => x.kind).slice(0, 4)).toEqual(['tyre', 'honk', 'tyre', 'highHonk']);
+    // S2.14: the high honk now comes second.
+    expect(p2.map((x) => x.kind).slice(0, 4)).toEqual(['tyre', 'highHonk', 'tyre', 'honk']);
     expect(new Set(gaps(p2))).toEqual(new Set([1.4]));
     expect(p2[0]!.speed).toBe(228);
     expect(p2.find((x) => x.kind === 'highHonk')).toMatchObject({ y: 170, speed: 120 });
@@ -255,16 +279,17 @@ describe('General Go-Slow in the hall', () => {
   it('the attack pose aims high before a high honk and low before anything else', () => {
     const run = hall();
     const boss = run.boss!;
-    toPhase(run, 2);
+    toPhase(run, 1);
+    dropOnto(run, L[1]!); // from the second hit: the break, then phase 3's first throws
     const aims: string[] = [];
     let last = boss.mode;
-    for (let i = 0; i < 60 * 6; i++) {
+    for (let i = 0; i < 60 * 8; i++) {
       run.step(DT);
       run.safe = 10;
       if (boss.mode === 'attack' && last !== 'attack') aims.push(boss.aim);
       last = boss.mode;
     }
-    expect(aims.slice(0, 4)).toEqual(['low', 'low', 'low', 'high']);
+    expect(aims.slice(0, 4)).toEqual(['low', 'high', 'low', 'low']);
   });
 
   it('tyres drop into the drain grate and honks fade out at the left wall (x 20)', () => {
@@ -282,7 +307,8 @@ describe('General Go-Slow in the hall', () => {
 
   it('a hit pops every throw into dust, and no throws come during the 1.5 s break', () => {
     const run = hall();
-    wait(run, 4.5);
+    wait(run, 6.0);
+    expect(run.boss!.lit).toBe(0);
     const n = run.boss!.throws.length;
     expect(n).toBeGreaterThan(0);
     const ev = dropOnto(run, L[0]!);
@@ -297,11 +323,16 @@ describe('General Go-Slow in the hall', () => {
     expect(run.hero.on).toEqual(L[1]);
     expect(types(ev)).not.toContain('bossHit');
     expect(run.boss!.hits).toBe(0);
-    expect(run.boss!.lit).toBe(0);
+    expect(run.boss!.lit).toBe(-1);
+    // ...nor on the left light before it comes on (S2.14: none lit at the start).
+    const ev2 = dropOnto(run, L[0]!);
+    expect(types(ev2)).not.toContain('bossHit');
+    expect(run.boss!.hits).toBe(0);
   });
 
   it('landing on the lit light while blinking after a hurt still counts', () => {
     const run = hall();
+    waitLit(run);
     run.safe = RULES.hurtSafeSteps;
     expect(types(dropOnto(run, L[0]!))).toContain('bossHit');
   });

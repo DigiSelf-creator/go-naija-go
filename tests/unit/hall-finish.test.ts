@@ -18,6 +18,12 @@ const HALL = parseLevel(hallData);
 const L = HALL.boss!.lights;
 
 function dropOnto(run: Run, p: { x: number; y: number; w: number }): RunEvent[] {
+  // S2.14: each light comes on a while after its phase starts; wait for it (kept safe).
+  const boss = run.boss!;
+  for (let i = 0; i < 60 * 20 && boss.lit !== boss.hits; i++) {
+    run.step(DT);
+    run.safe = 10;
+  }
   const h = run.hero;
   h.x = p.x + p.w / 2;
   h.y = h.prevY = p.y - 20;

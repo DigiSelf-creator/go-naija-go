@@ -16,12 +16,25 @@ export type HazardKind = 'goat' | 'tyre' | 'drum';
 export type ThrowKind = 'tyre' | 'honk' | 'highHonk';
 export const THROW_KINDS: readonly ThrowKind[] = ['tyre', 'honk', 'highHonk'];
 
-/** One phase of the fight (one per hit taken so far): throw gap (s), tyre speed (u/s), repeating pattern, hall music tempo. */
+/**
+ * One phase of the fight (one per hit taken so far): throw gap (s), tyre speed (u/s), repeating
+ * pattern, hall music tempo, and the light's clock (S2.14 part 1, seconds from the phase start):
+ * it comes on at `lightAt`, stays green `greenFor`, goes dark `darkFor`, and repeats until hit.
+ */
 export interface BossPhase {
   every: number;
   speed: number;
   pattern: readonly ThrowKind[];
   bpm: number;
+  lightAt: number;
+  greenFor: number;
+  darkFor: number;
+}
+
+/** S2.15: the pepper fufu bowl that drops onto the hall floor at x when the break after hit `afterHit` ends. */
+export interface HallFufu {
+  x: number;
+  afterHit: number;
 }
 
 /** Boss rules from the hall file (design.md S2.7). */
@@ -44,6 +57,8 @@ export interface BossData {
   honkY: number;
   highHonkY: number;
   honkSpeed: number;
+  /** S2.15: the fufu bowl drop (once per try), or null. */
+  fufu: HallFufu | null;
 }
 
 /** A hall (S2.7): the hero moves between these limits; the whole hall is `width` wide. */
@@ -300,7 +315,19 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
     const every = num(p['every'], `boss.phases[${i}].every`);
     if (every <= 0) fail(`boss.phases[${i}].every`, 'should be above 0');
-    return { every, speed: num(p['speed'], `boss.phases[${i}].speed`), pattern, bpm: num(p['bpm'], `boss.phases[${i}].bpm`) };
+    const above0 = (k: string): number => {
+      const v = num(p[k], `boss.phases[${i}].${k}`);
+      return v > 0 ? v : fail(`boss.phases[${i}].${k}`, 'should be above 0');
+    };
+    return {
+      every,
+      speed: num(p['speed'], `boss.phases[${i}].speed`),
+      pattern,
+      bpm: num(p['bpm'], `boss.phases[${i}].bpm`),
+      lightAt: above0('lightAt'),
+      greenFor: above0('greenFor'),
+      darkFor: above0('darkFor'),
+    };
   });
   if (lights.length === 0) fail('boss.lights', 'should have at least one light');
   if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
@@ -316,7 +343,16 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     honkY: num(b['honkY'], 'boss.honkY'),
     highHonkY: num(b['highHonkY'], 'boss.highHonkY'),
     honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
+    fufu: null,
   };
+  if (b['fufu'] !== undefined) {
+    const f = obj(b['fufu'], 'boss.fufu');
+    const afterHit = num(f['afterHit'], 'boss.fufu.afterHit');
+    if (!Number.isInteger(afterHit) || afterHit < 1 || afterHit >= lights.length) fail('boss.fufu.afterHit', 'should be a hit number before the last');
+    const x = num(f['x'], 'boss.fufu.x');
+    if (x < hall.leftLimit || x > hall.rightLimit) fail('boss.fufu.x', 'should be between leftLimit and rightLimit');
+    boss.fufu = { x, afterHit };
+  }
   if (boss.throwX <= hall.rightLimit) fail('boss.throwX', 'should be right of the cone line (rightLimit)');
 
   // The floor runs past both walls: there are no pits in a hall.

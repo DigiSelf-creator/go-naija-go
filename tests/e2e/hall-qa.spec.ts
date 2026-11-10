@@ -187,11 +187,11 @@ test('E5 break it in the hall: pause and turn the phone mid-fight, tiny and huge
   const fresh = await hallSnap(page);
   expect(fresh.r).toMatchObject({ phase: 'arena', lives: 3, maxLives: 3, kobo: 0, power: { corn: 0, amala: 0, shield: false } });
   expect(fresh.r.time).toBeLessThan(5);
-  expect(fresh.b).toMatchObject({ hits: 0, lit: 0, defeated: false });
+  expect(fresh.b).toMatchObject({ hits: 0, lit: -1, defeated: false });
   expect(fresh.h.x).toBeLessThan(60 + 156 * 5);
   await expect(page.locator('.hud-lives')).toHaveText('♥ 3');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByText('General Go-Slow is jamming the hall! Jump onto the green light.')).toBeVisible();
+  await expect(page.getByText('General Go-Slow is jamming the hall! Wait for the green light.')).toBeVisible();
 
   expect(late).toEqual([]);
   expect(errors).toEqual([]);
@@ -223,7 +223,7 @@ test('E5 break it: the last life lost in the hall, by touch: hall game over word
   const fresh = await hallSnap(page);
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
   expect(fresh.r).toMatchObject({ phase: 'arena', lives: 3, kobo: 0 });
-  expect(fresh.b).toMatchObject({ hits: 0, lit: 0, defeated: false });
+  expect(fresh.b).toMatchObject({ hits: 0, lit: -1, defeated: false });
   expect(fresh.h.x).toBeLessThan(60);
   // ...and the fight plays again to the win.
   await playHall(page, await touchPad(page));
