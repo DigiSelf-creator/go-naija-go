@@ -10,6 +10,7 @@
  * run, jump, fall, landing and standing all move like a person.
  */
 import { drawDustPuff, drawKneePuff, drawSkidScuff } from './dust';
+import { FUFU } from './fufu';
 import { GLOW, INK, WHITE } from './palette';
 
 /** Lip rose. Every skin draws the same lip shape with a thin outline darker than the skin. */
@@ -217,6 +218,23 @@ export interface HeroPose {
    * for none; after 1, stand. Wins over the run, walk and stand poses on the ground.
    */
   dustOff?: number;
+  /**
+   * Throwing a fufu ball (S2.15), 0 to 1 over THROW_TIME: one arm swing in two frames
+   * (throwFrame). Frame 0 winds the near arm back with the ball in the hand; frame 1 swings
+   * it through, forward on the ground, forward and down in the air ("aims down"). Only the
+   * arms change, so it mixes with running, walking, standing and jumping. Leave unset (or
+   * 1 or more) for none. The rope and the dust off win over it.
+   */
+  throwing?: number;
+}
+
+/** Seconds one throw's arm swing lasts (S2.15: 0.15 s, two frames). */
+export const THROW_TIME = 0.15;
+
+/** Which throw frame shows at p (0 to 1): 0 wind back (ball in hand), 1 swing through. */
+export function throwFrame(p: number): 0 | 1 {
+  const k = Number.isFinite(p) ? Math.min(Math.max(p, 0), 0.999) : 0;
+  return k < 0.5 ? 0 : 1;
 }
 
 /** Seconds the "dust off" lasts (S2.13 part 5: 0.4 s, controls locked). */
@@ -517,7 +535,39 @@ function dustOffOf(pose: HeroPose): number | null {
   return pose.dustOff >= 0 && pose.dustOff < 1 ? pose.dustOff : null;
 }
 
+/** The throw progress (0 to 1) if the hero is throwing, else null. */
+function throwOf(pose: HeroPose): number | null {
+  if (pose.rope || typeof pose.throwing !== 'number' || !Number.isFinite(pose.throwing)) return null;
+  return pose.throwing >= 0 && pose.throwing < 1 ? pose.throwing : null;
+}
+
+/**
+ * The arms of a throw over any body pose. Wind: near arm back and up, the hand by the ear
+ * behind; far arm forward for balance. Swing: near arm through to the front (lower in the
+ * air, aiming down), far arm back.
+ */
+function withThrow(r: Rig, frame: 0 | 1, inAir: boolean): Rig {
+  if (frame === 0) return { ...r, arm: [0.7, -2.3], elbow: [0.8, 0.85], lean: r.lean - 0.04 };
+  return { ...r, arm: [-0.5, inAir ? 1.15 : 1.85], elbow: [0.6, 0.15], lean: r.lean + 0.06 };
+}
+
+/** Where the near hand is (torso frame, before the lean), for the ball held in frame 0. */
+function handAt(arm: number, elbow: number, b: Build): [number, number] {
+  const sx = 0.6;
+  const sy = SHOULDER_Y * b.len;
+  const ex = sx + Math.sin(arm) * UPPER_ARM * b.len;
+  const ey = sy + Math.cos(arm) * UPPER_ARM * b.len;
+  const f = arm + elbow;
+  return [ex + Math.sin(f) * (FOREARM * b.len + 2.4), ey + Math.cos(f) * (FOREARM * b.len + 2.4)];
+}
+
 function rigFor(pose: HeroPose, t: number, reach: number, upright: boolean): Rig {
+  const r = bodyRig(pose, t, reach, upright);
+  const th = throwOf(pose);
+  return th === null || pose.rope || dustOffOf(pose) !== null ? r : withThrow(r, throwFrame(th), pose.inAir);
+}
+
+function bodyRig(pose: HeroPose, t: number, reach: number, upright: boolean): Rig {
   let r: Rig;
   if (pose.rope) return ROPE;
   const dust = dustOffOf(pose);
@@ -1462,6 +1512,18 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   torsoFrame();
   g.translate(0, breathe);
   drawArm(g, outfit, skin.base, r.arm[1], r.elbow[1], false, b);
+  // Throw, frame 0: the fufu ball in the near hand (small, soft white, no steam)
+  const throwing = throwOf(pose);
+  if (throwing !== null && dustOff === null && throwFrame(throwing) === 0) {
+    const [hx, hy] = handAt(r.arm[1], r.elbow[1], b);
+    g.beginPath();
+    g.arc(hx, hy, 2.8, 0, TAU);
+    g.fillStyle = FUFU.white;
+    g.fill();
+    g.strokeStyle = INK;
+    g.lineWidth = LINE;
+    g.stroke();
+  }
   g.restore();
 
   // Dust off: a small puff off the knees on each pat, bigger on the second

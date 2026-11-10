@@ -408,14 +408,57 @@ export function drawDustPop(g: CanvasRenderingContext2D, x: number, y: number, t
 
 export type GoLightState = 'off' | 'lit' | 'done';
 
+/** S2.14 part 3: a green light warns in its last second before it goes dark. */
+export const GO_LIGHT_END = {
+  /** Seconds of green left when the warning starts. */
+  warn: 1.0,
+  /** Blinks a second (never faster). */
+  perSecond: 2,
+} as const;
+
+/**
+ * The end of a green light (S2.14 part 3). left = seconds of green left; still = reduced motion.
+ * Leave it out while the light is not ending.
+ */
+export interface GoLightEnd {
+  left: number;
+  still?: boolean;
+}
+
+/**
+ * In the last GO_LIGHT_END.warn seconds: true while the lamps show (each blink is half lit,
+ * half dark). Always true before the warning, and always true with reduced motion (no blink).
+ */
+export function goLightBlinkOn(left: number, still = false): boolean {
+  if (still || !Number.isFinite(left) || left > GO_LIGHT_END.warn || left <= 0) return true;
+  const into = GO_LIGHT_END.warn - left; // 0 at the start of the warning
+  return Math.floor(into * GO_LIGHT_END.perSecond * 2) % 2 === 1;
+}
+
+/**
+ * Seconds of green left at which to play 'lightTick' (one per blink, as the lamps go dark):
+ * [1.0, 0.5]. With reduced motion the ticks still play at the same times.
+ */
+export function goLightTickTimes(): number[] {
+  const n = Math.round(GO_LIGHT_END.warn * GO_LIGHT_END.perSecond);
+  return Array.from({ length: n }, (_, i) => GO_LIGHT_END.warn - i / GO_LIGHT_END.perSecond);
+}
+
 /**
  * A light platform in the arena. [x, topY, w] as in the level data (x is the left
  * edge). Lit = green lamps PLUS a bouncing down arrow with the word GO, so the
  * meaning never rests on colour alone. Done = the light goes dark (lamps off, the same as
  * an unlit light) with a small grey tick, so only the next lit light reads as the target.
+ *
+ * end (S2.14): pass it while a lit light is in its last second. The lamps blink 2 times a
+ * second and the arrow stops bouncing; with end.still (reduced motion) nothing blinks, the
+ * arrow hides and "GO" stays. A light that went dark again is plain 'off'.
  */
-export function drawGoLight(g: CanvasRenderingContext2D, x: number, topY: number, w: number, state: GoLightState, time: number, groundY = 300): void {
+export function drawGoLight(g: CanvasRenderingContext2D, x: number, topY: number, w: number, state: GoLightState, time: number, groundY = 300, end?: GoLightEnd): void {
   const mid = x + w / 2;
+  const ending = state === 'lit' && end !== undefined && Number.isFinite(end.left) && end.left <= GO_LIGHT_END.warn;
+  const still = ending && end.still === true;
+  const lampsOn = state === 'lit' && (!ending || goLightBlinkOn(end.left, still));
   // Pole
   g.fillStyle = '#6b7480';
   g.fillRect(mid - 3, topY + 14, 6, groundY - topY - 14);
@@ -427,7 +470,7 @@ export function drawGoLight(g: CanvasRenderingContext2D, x: number, topY: number
   g.roundRect(x, topY, w, 14, 5);
   g.fill();
   g.stroke();
-  const lampCol = state === 'lit' ? P.GREEN_GO : P.LIGHT_OFF;
+  const lampCol = lampsOn ? P.GREEN_GO : P.LIGHT_OFF;
   for (let i = 0; i < 3; i++) {
     const lx = x + w * (0.22 + i * 0.28);
     g.fillStyle = lampCol;
@@ -446,8 +489,26 @@ export function drawGoLight(g: CanvasRenderingContext2D, x: number, topY: number
     g.lineTo(mid + 4, topY - 10);
     g.stroke();
   }
+  if (state === 'lit' && still) {
+    // Reduced motion, last second: the arrow hides, the word GO stays (on a small green tag).
+    const by = topY - 18;
+    g.fillStyle = P.GREEN_GO;
+    g.strokeStyle = P.INK;
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.roundRect(mid - 13, by - 8, 26, 16, 5);
+    g.fill();
+    g.stroke();
+    g.fillStyle = P.WHITE;
+    g.font = 'bold 11px sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('GO', mid, by + 0.5);
+    return;
+  }
   if (state === 'lit') {
-    const by = topY - 34 + Math.abs(Math.sin(time * 5)) * -8;
+    // The arrow bounces while the light is fresh and holds still in its last second.
+    const by = topY - 34 + (ending ? 0 : Math.abs(Math.sin(time * 5)) * -8);
     g.fillStyle = P.GREEN_GO;
     g.strokeStyle = P.INK;
     g.lineWidth = 1.5;
