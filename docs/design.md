@@ -1291,3 +1291,139 @@ qa done checks:
 2. Each street still cleared by a first-timer in 3 tries or fewer, Normal mode; Gentle mode climb-outs land on solid road at the new wide potholes.
 3. With reduced motion on, nothing blinks; the light still says when it is ending (the arrow hides, the ticks).
 4. All street rule tests pass; every new wide pothole has its sign.
+
+## S2.15 Pepper fufu, now (designer, 10 Nov 2026)
+
+Source: Tp, 10 Nov ("I don't see my fufu as my fireballs"), taken by po as item 2 in docs/questions.md's top block. This changes only the timing of R3 / city choice 8 (fufu comes now, not after slice 3). Fufu with egusi is the Igbo-home food of version 1 (R5, equal shares): eaten all over Nigeria, shown with pride, never as a joke.
+
+**Hard rule (CLAUDE.md rule 2):** fufu balls are soft, hot food. Never flames, fire, sparks, glow, a burning trail, a "fwoosh" or any fireball look or sound. A fireball power-up is a Mario signature and is banned. The word "fireball" never appears in the game.
+
+### What it does, in one line
+
+Pick up a bowl of pepper fufu: you get 8 hot fufu balls. Press Throw to toss one the way you face. It plops onto the road, hops twice (each hop smaller), then rolls. It knocks tyres and drums off the road, plugs a pothole it falls into, and feeds a goat, which trots away. It never hurts a goat or anyone.
+
+### The food
+
+| | |
+|---|---|
+| Look (art) | A white enamel bowl with a blue rim, three soft white fufu balls in it, a small dish of egusi beside it (yellow-orange with green leaf bits), one small curl of steam. 20 u wide x 16 u tall, on the road like the other foods (centre y 272) |
+| Gives | 8 balls. Most you can hold: 16 (a second bowl while you hold 12 gives 16) |
+| Not timed | Balls stay until thrown. They are not a 12 s food, so no shrinking bar and no corn-style count |
+| Lost a life | Like every food power: your balls go to 0. A fufu bowl at or past the restart point comes back (as all foods do). Potholes you plugged stay plugged (like kobo taken) |
+| Street cleared | Balls are not carried to the next street; each street and each hall try starts with 0 |
+
+### Where the fufu sits (one per street, one in the hall)
+
+| Place | Fufu at | Why there: what to try it on next |
+|---|---|---|
+| Street 1, Alausa | road, x 8700 (in the second half of the corn) | tyre 8900, the wide pothole at 9150 (S2.14), goats at 9850 and 10250. After every lesson, so it never teaches two things at once |
+| Street 2, Computer Village | road, x 4800 (just before the bus stop) | the big pit at 5800 (a ball falls in and nothing happens: big pits are too deep), goat 6300, tyre 6550, the new wide pothole at 6750, goat 7050 |
+| Street 3, Ikeja | road, x 5800 (after big pit 1) | goat 6000, drum 6300, the new wide pothole at 6550, big pit 2 at 7000 (too deep) |
+| Go-Slow Hall | a bowl drops onto the floor at x 120 when the break after hit 1 ends (once per try) | the tyres and honks of phases 2 and 3. Phase 1 stays a pure jumping lesson |
+
+Level data: `foods` adds the kind "fufu" (the street changes are listed in S2.14 part 2). Crates may hold "fufu" later; none do now. Hall file, inside `boss`: `"fufu": { "x": 120, "afterHit": 1 }`.
+
+### The Throw button and the key
+
+| | |
+|---|---|
+| Shape | A circle, size T = max(64, D) CSS px (D as in S2.2 "Phone buttons"). Icon: a white ball with two steam curls and a small forward arrow; the word "Throw" under the icon. Spoken label "Throw fufu, {n} left" |
+| Place | Right thumb, beside Jump: its right edge 10 px left of Jump's left edge, same bottom as Jump. With "Swap sides" (Q24, slice 3) everything mirrors and Throw stays on the inner side of Jump |
+| Shown | Only while you hold 1 or more balls. It pops in over 0.15 s when you pick up fufu (no pop with reduced motion) and hides when the last ball is thrown |
+| Touch | A real button: takes its own taps first (as Pause and Go down). Touch area: the drawn circle plus 5 px all round (never past the 10 px gap's middle). One press = one ball. Holding does not repeat |
+| Look | Like the other buttons: white at 35 percent, 2 px dark outline; pressed: fill 60 percent, 94 percent size, icon turns dark (shape and size, not colour alone) |
+| Key | X. Key repeat is ignored. Mouse: clicking the drawn button works too |
+| Words for hints | New marker {throw}: touch "Throw", keys "X" |
+
+Where the buttons sit on the screens qa tests (CSS px, Throw shown):
+
+| Screen | Jump spans | Throw spans | Hint bar |
+|---|---|---|---|
+| 320 x 240 | 224 to 308 | 150 to 214 | see "Narrowest screens" |
+| 480 x 270 | 370 to 468 | 295 to 360 | 158 to 289 (131 wide) |
+| 568 x 230 | 472 to 556 | 398 to 462 | 140 to 392 |
+| 640 x 200 | 544 to 628 | 470 to 534 | 140 to 464 |
+| 568 x 320 | 437 to 556 | 348 to 427 | 186 to 342 (156 wide: short words) |
+| 667 x 375 | 535 to 655 | 445 to 525 | 188 to 439 |
+| 851 x 393, home bar 21 | 719 to 839 | 629 to 709 | 210 to 623 (413) |
+| 1024 x 768 | 892 to 1012 | 802 to 882 | 480 wide, centred: 252 to 732 |
+
+The hint bar rule (S2.2) gains one line: while Throw is shown, the bar's right side is Throw's left edge - 6 (not Jump's).
+
+Narrowest screens: if that leaves the bar under 96 px wide (of the qa sizes, only 320 x 240), the bar keeps its usual place (Forward + 6 to Jump - 6) and is drawn over the Throw button while a hint or toast shows. Throw still works under it (the bar takes no taps), and its outline shows on both sides of the bar. This is the only time the bar may cover a button; it never covers anything you play.
+
+### How a ball flies
+
+Same units as S2.2: world units, y grows down, 60 steps a second.
+
+| | Number |
+|---|---|
+| Ball | round, 12 u across (radius 6) |
+| Starts at | hero centre + 12 u the way the hero faces; hand height, hero feet - 26 |
+| Thrown on the ground (standing, walking, running, or on a roof) | across: 240 u/s + the hero's own speed that way (if moving that way); up: 180 u/s. At a stand it lands about 86 u ahead |
+| Thrown in the air (Tp: "aims down") | across: 150 u/s + the hero's speed that way; down: 260 u/s. From a jump it hits the road ahead and below |
+| Gravity on the ball | 1400 u/s², falls no faster than 720 u/s |
+| Landing (road or a roof top, from above only, like the hero) | first touch: a squash and a "plop", then it hops up at 45 percent of its landing speed; the second touch the same; after that, or when a hop would be under 40 u/s, it rolls along at the same speed across. So: plop, hop, little hop, roll. Never a run of equal bounces |
+| Rolls for | up to 1.5 s after its first landing, then it settles and sinks into a small puff of steam (0.3 s) |
+| Also gone | 200 u past the edge of the screen; at the start fence, the bus park wall or the bus |
+| How many | one per press; at most one every 0.25 s; at most 3 balls flying or rolling at once (a press with 3 out does nothing) |
+
+### What a ball does
+
+| It meets | What happens |
+|---|---|
+| A pothole 30 to 110 u wide (tap, hold, wide) | The ball falls in and **plugs it**: a "plup", a puff of steam, and the hole becomes a pale, slightly domed fufu patch level with the road. It is solid road for the rest of this play of the street, also after a lost life. The pothole sign stays. One ball fills one pothole |
+| A big pit (170 u) | Too deep. The ball drops away with a far-off soft "plop". Nothing changes (the run-up jump lesson stays) |
+| A tyre or a drum | It is **knocked off the road**: it tips, rolls off the back of the road into the roadside (0.4 s) and is gone for this play. +1 kobo pops out (amala's smash gives +2). The ball is used up |
+| A goat | **Never hit.** A ball that would touch a goat, from any side or from above, stops on the road 16 u in front of the goat (on the hero's side). The goat stops, eats it (0.6 s of chewing), says "meeh" (a small speech bubble with the word, and our own bleat), then trots off the road as built (2.5 s). It cannot hurt you after that |
+| A crate | Balls never open crates. A ball touching a crate's side or bottom drops straight down |
+| Kobo, foods, the hero | Nothing: balls pass by. They never collect anything and never hurt anyone |
+| In the hall: a tyre | The throw is **stunned**: it pops into dust (like the dust at a hit). The ball is used up |
+| In the hall: a low or high honk | It pops ("pff") into dust |
+| In the hall: the jam | The heap goes "pfft" and shakes for 0.3 s, and its next throw comes 0.5 s later (once per throw at most). Never a hit: **only landing on a green light wins** |
+
+People are never in the way of a ball, and the hero never aims at a person: in Gbese! people are scenery on the pavement, never on the road.
+
+### HUD and words
+
+HUD chip (S2.10 "The HUD row"): a fufu ball icon and "Fufu 8"; from step 1 on, the icon and "8". Screen readers: "Fufu balls: 8". Never colour alone: its own icon shape. It sits after the food chips; it comes and goes like them (the HUD fit steps work it out).
+
+Toasts (hint bar, all 35 characters or fewer, so no short words needed; touch or keys words follow the last thing used, as hints do):
+
+| When | Touch | Keys |
+|---|---|---|
+| Picking up fufu on a street | "Pepper fufu! Press Throw to throw." | "Pepper fufu! Press X to throw." |
+| Picking up fufu in the hall | "Fufu! Press Throw to pop throws." | "Fufu! Press X to pop throws." |
+| The first pothole plugged in a play | "Plugged! Fufu fills potholes." | same |
+| A goat eats a ball | (no toast) the "meeh" bubble over the goat | same |
+
+How to play words on the title do not change: the toast teaches it where it is needed.
+
+### Sounds (our own, made in code)
+
+Toss: a soft breathy "fff" (filtered hiss, 0.08 s). Landing: "plop" (a sine sliding from 220 to 140 Hz, 0.08 s); the hops, softer. Plug: a deeper "plup" and a short steam hiss (0.3 s). Tyre or drum knocked: a rubbery "bonk". Goat: "meeh", a short bleat (two slightly detuned tones with a wobble). Honk popped: "pff". Never a "fwoosh", a crackle, a rising "pew", or any game's throw or fireball sound.
+
+### Tasks
+
+gamedev:
+1. src/game/fufu.ts (new, pure rules): ball flight, hops, roll, the meets table above, the 3-at-once and 0.25 s limits. src/game/level.ts: food kind "fufu"; hall `boss.fufu`.
+2. src/game/run.ts: the ball count (8, max 16, 0 on a lost life), throw on X or Throw, plugged potholes (src/game/pits.ts: a plugged gap is solid road and has no Gentle climb-out), tyres and drums knocked off (+1 kobo), goats fed (then run away as built). src/game/boss.ts: balls pop throws; the jam's 0.5 s delay; the bowl drop after hit 1.
+3. Input and layout: X key (src/engine/input.ts); the Throw button, its touch area and the hint bar's new right edge (src/screens/controls.ts `buttonLayout`); the narrowest-screen rule.
+4. HUD chip, toasts, the {throw} marker (src/screens/hud.ts, src/screens/words.ts).
+5. Tests: flight distances (stand throw lands 86 u ahead, within 3 u), two hops then roll, one ball plugs a 100 u pothole and the hero walks over it, a big pit is never plugged, a goat is never hurt and leaves, tyre +1 kobo, 3 at once, count 8/16/0, the button hidden at 0, hall pops, light hits still need a landing.
+
+art:
+1. The fufu bowl food, the ball (round, squash frame on landing, two steam curls, an optional small pepper-red dot on top), the plugged patch, the Throw button icon and the HUD chip icon (src/art/items.ts, src/art/controls.ts). Soft white and cream only; no orange or yellow glow, no trail, no flame shape.
+2. The hero's throw pose for every body (S2.3), on the ground and in the air: one 0.15 s arm swing, two frames.
+3. The goat eating (two frames) and the "meeh" bubble; a tyre and a drum tipping off the road.
+4. The sounds above in src/engine/sound.ts.
+
+Size: under 15 KB for all of it.
+
+qa done checks:
+1. Nothing on screen or in sound could be taken for fire or a fireball (no flame, glow, sparks, trail, crackle or "fwoosh"); qa compares against Mario's fireball by eye and ear and reports.
+2. Throw works by touch (64 px or more at every size, beside Jump) and by X; hidden at 0 balls; screen readers hear "Throw fufu, 8 left".
+3. A goat is never hit in 50 tries from every angle, ground and air; it always eats, says "meeh" and leaves.
+4. A plugged pothole stays solid after a lost life; big pits are never plugged.
+5. The hint bar never overlaps Throw except at the narrowest screens (bar under 96 px), and never covers anything you play.
+6. Each street still cleared by a first-timer in 3 tries or fewer; the hall goal (S2.14) still met with fufu picked up.
