@@ -12,11 +12,31 @@ Blocks: the name (R1) blocks only the title and page name. Nothing else stops P1
 - **Merge: yes.** The built game goes onto main (one main). PR #1 stays open until R2 to R10 are answered.
 - **R1 name: Gbese!** Not po's pick (Go Naija Go). The game keeps "Gbese!" as built; the repo name stays go-naija-go. When PR #1's parts come in, "Go Naija Go" is not used as the game name.
 - **Intro: confirmed as Tp reads it, and the new caption 2 is right:** "The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses."
-- **The rest:** Tp answers them one by one, four at a time, in chat.
+- **The rest:** answered one by one in chat, below.
+
+Rounds 1 to 4 (all 10 Nov, tap cards):
+- **R2 story:** settled by the intro answer: the Wheel. The Unity Drum story is dropped; Mister Red Tape stays the Abuja boss, as one of the Stoppers.
+- **R3 / city choice 8, pepper fufu:** a), fufu and egusi, a ball that rolls and plugs potholes, after slice 3, with an action button then.
+- **R4 herder's staff:** c), **not now.** Not po's pick (a, after slice 3). The staff is left out of the plan; the north's first food or tool is chosen later with Hausa and Fulani speakers.
+- **R5 equal shares:** a), yes, as a rule kept over updates. Next foods and tools and the next regions (north and east) keep the balance. Other groups join over time.
+- **R6 potholes:** a), the bus stop restart stays; a small warning sign before each wide pothole; in Gentle mode the hero climbs out just before the pothole.
+- **R7 words:** a), "lives" and "Gentle mode".
+- **R8 worlds:** a), keep the built plan; PR #1's equal north / east / west worlds, their instruments and the Flood are the plan for later regions.
+- **R9 art:** a), code art now; a human artist before a public launch.
+- **R10 closing line:** a), not in the game. Tp to remove Done when 8 from the brief.
+- **City 2:** a), finish slice 2 polish and P3, designer writes slice 3. **City 3:** a), the lane run moves by itself, there only. **City 4:** a), on foot past a go-slow to a bus stop, "Lane run" for now. **City 5:** a), throws only while a throw food works, at problems only. **City 6:** a), 12 s for every food (amala 14 to 12). **City 7:** a), any Naira fixes anything, no timers, never sold for real money. **City 9:** a), code art; Blender side test on one city picture.
+
+Nothing waits for Tp now except pasting the lines into docs/decisions.md and the brief edits.
 
 Lines for Tp to paste into docs/decisions.md:
 26. One main: the built game is merged into main (10 Nov 2026).
 27. The game is called Gbese! (confirms line 5).
+28. The story is the Wheel; the Unity Drum is dropped. (R2)
+29. Fufu and egusi plug potholes, after slice 3. No herder's staff for now. (R3, R4)
+30. Hausa, Igbo and Yoruba get an equal share of foods, tools, worlds, music and helpers over the updates; other groups join over time; bosses belong to no group. (R5)
+31. Pothole falls: back to the bus stop, a warning sign before wide potholes, and in Gentle mode climb out just before the pothole. (R6)
+32. City choices 2 to 9 as po recommended: slice 2 polish first, lane run moves by itself there only, on foot past a go-slow, throws only with a throw food, every food 12 s, Naira spent on fixes with no timers, code art with a Blender side test. (City 2 to 9)
+33. Code art for the test; a human artist before a public launch. North, east and west worlds of equal size come in later regions. (R8, R9)
 
 ### Intro story: answered by Tp, 9 Nov 2026 (reported by the lead)
 
