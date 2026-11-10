@@ -140,7 +140,7 @@ export const WORDS = {
   toast: {
     corn: 'Roasted corn! You run faster for 12 seconds.',
     garri: 'Garri, sugar and epa (groundnut)! A shield takes one hit for you.',
-    amala: 'Amala, gbegiri and ewedu! Super strong for 14 seconds. Smash through!',
+    amala: 'Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!',
     cornWearingOff: 'Corn is wearing off!',
     amalaWearingOff: 'Amala is wearing off!',
     shieldUsed: 'Shield used up!',
@@ -175,7 +175,7 @@ export const NARROW_BAR = 160;
 export const SHORT_TOAST: Readonly<Record<string, string>> = {
   'Roasted corn! You run faster for 12 seconds.': 'Roasted corn! You run faster!',
   'Garri, sugar and epa (groundnut)! A shield takes one hit for you.': 'Garri, sugar and epa! Shield on!',
-  'Amala, gbegiri and ewedu! Super strong for 14 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
+  'Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
   'A secret room! Grab the kobo. Stand under the rope to go back up.': 'Secret room! Use the rope to go up.',
   'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
   'General Go-Slow is jamming the hall! Jump onto the green light.': 'Go-Slow! Jump on the green light.',

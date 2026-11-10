@@ -232,9 +232,9 @@ describe('after a fall (Q14)', () => {
 });
 
 describe('foods (piece D rules)', () => {
-  it('corn lasts 12 s and amala 14 s (twice the first 6 s and 7 s); the toasts say so', () => {
+  it('corn and amala both last 12 s (Tp, 10 Nov); the toasts say so', () => {
     expect(RULES.cornSteps).toBe(12 * 60);
-    expect(RULES.amalaSteps).toBe(14 * 60);
+    expect(RULES.amalaSteps).toBe(12 * 60);
     expect(RULES.warnSteps).toBe(2 * 60);
     expect(WORDS.toast.corn).toContain(`${RULES.cornSteps / 60} seconds`);
     expect(WORDS.toast.amala).toContain(`${RULES.amalaSteps / 60} seconds`);

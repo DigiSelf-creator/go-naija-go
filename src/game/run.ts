@@ -25,7 +25,7 @@ export const RULES = {
   shieldSafeSteps: secs(1.2),
   /** Twice the first 6 s and 7 s after Tp's iPhone test: they wore off too fast. */
   cornSteps: secs(12),
-  amalaSteps: secs(14),
+  amalaSteps: secs(12),
   /** Timed foods warn this long before they end. */
   warnSteps: secs(2),
   smashKobo: 2,
