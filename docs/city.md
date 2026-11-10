@@ -399,7 +399,7 @@ Slice 3 starts now, beside the slice 2 polish (po's reading of Tp's 10 Nov play,
 | (e) The challenge road | the road of bus stops replaces the Streets list | after (c) |
 | (f) The lane run and the Blackout | the second kind of challenge; pins 2 and 3 can be fixed | designer note first (f0), then art and gamedev |
 
-Size: the first load is 336.6 KB today. Budgets below are for the gzipped first load, code and code-drawn art together. All six together: about +235 KB, so about 570 KB, well under the 1.5 MB slice 3 aim and the 3 MB rule.
+Size: the first load is 336.6 KB today. Budgets below are for the gzipped first load, code and code-drawn art together. All six together: about +216 KB, so about 553 KB, well under the 1.5 MB slice 3 aim and the 3 MB rule.
 
 #### (a) The intro story
 
