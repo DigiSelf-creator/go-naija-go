@@ -64,3 +64,30 @@ export function drawSkidScuff(g: CanvasRenderingContext2D, s: number, time: numb
   }
   g.restore();
 }
+
+/**
+ * Dust off (S2.13 part 5): a small puff knocked off a knee by a pat, centred on the
+ * knee (kx, ky) in the hero's frame. size 0 to 1 (the second pat is bigger),
+ * p = 0 to 1 through this pat (the puff spreads up and out and fades).
+ */
+export function drawKneePuff(g: CanvasRenderingContext2D, kx: number, ky: number, size: number, p: number): void {
+  if (![kx, ky, size, p].every(Number.isFinite)) return;
+  const k = clamp01(p);
+  const s = clamp01(size);
+  g.save();
+  g.globalAlpha = (1 - k * 0.6) * 0.85;
+  g.fillStyle = DUST;
+  g.strokeStyle = DUST_EDGE;
+  g.lineWidth = 0.7;
+  for (const [x, y, r] of [
+    [3, -2, 1.8],
+    [5.5, -4.5, 1.4],
+    [1, -5, 1.2],
+  ] as const) {
+    g.beginPath();
+    g.arc(kx + x * (0.8 + k * 0.6), ky + y * (0.8 + k * 0.6), r * (0.7 + s * 0.6) * (0.8 + k * 0.5), 0, TAU);
+    g.fill();
+    g.stroke();
+  }
+  g.restore();
+}
