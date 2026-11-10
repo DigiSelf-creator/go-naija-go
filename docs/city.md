@@ -2,7 +2,7 @@
 
 Owner: designer. First written 9 Nov 2026 from Tp's words in chat. Updated 10 Nov 2026 with every answer Tp has given since.
 
-**Status.** Most of this plan is now confirmed by Tp. The parts still open are in "Questions for Tp" at the very end, each with a recommended answer. Confirmed answers are written into the sections below; docs/brief.md and docs/decisions.md do not change until Tp pastes the lines (questions.md lines 22 to 37, and "Lines for Tp" at the end here).
+**Status.** Most of this plan is now confirmed by Tp. Every open part was answered by Tp on 10 Nov (see "Questions for Tp" at the end). Confirmed answers are written into the sections below; docs/brief.md and docs/decisions.md do not change until Tp pastes the lines (questions.md lines 22 to 37, and "Lines for Tp" at the end here).
 
 | Confirmed by Tp | Date | Where it is used here |
 |---|---|---|
@@ -424,8 +424,11 @@ Suggestions for Tp to put in docs/brief.md and docs/decisions.md. No agent edits
 
 ## Questions for Tp
 
-1. **The challenge road map: yes or no?** A winding road of Lagos bus stops (done ones ticked, the next glowing, later ones locked, "Fixes until the ferry: 3"), reached by a "Challenge road" button. Recommended: **yes**, and it replaces the plain Challenges list, so it costs little extra and gives a clear path.
-2. **Losing a street run: keep everything, or half?** The lane run keeps everything (L3). The old plan said street runs keep half. Recommended: **keep everything everywhere**: one rule is easier to understand, and losing still costs time and the win prize.
-3. **Does a win pay for the fix you came for by itself?** L5 says the fix plays out after every win. Recommended: **yes**: the win goes home, and if the right bucket now holds enough, that fix is paid at once and Mission complete shows it. Slice 3 is tuned so one win always covers it; later, bigger fixes show "Halfway there" until paid.
-4. **The Booming meter replaces the "new people" counter?** Recommended: **yes**: one number on the city screen is clearer for a 10 year old, and the boom card still says more people are coming.
-5. **When do safety missions come?** Recommended: **after slice 3**, in the slice that adds the second Lagos area, so slice 3 stays small and the Shadow gets its own design note and art first.
+**All five answered by Tp in chat, 10 Nov 2026: yes to every recommendation.**
+1. The challenge road map: **yes**, and it replaces the plain Challenges list.
+2. Losing any challenge keeps **everything** you collected (street runs too, not half).
+3. A win pays for the fix you came for **at once**, so "Mission complete!" always shows it; later, bigger fixes show "Halfway there" until paid.
+4. The Booming meter **replaces** the "new people" counter.
+5. Safety missions come **after slice 3**, in the slice that adds the second Lagos area.
+
+Nothing in this plan waits for Tp now, except pasting the decision lines.
