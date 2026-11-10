@@ -4,6 +4,11 @@
 
 **Answered by Tp: 1 a, 2 a, 3 a.** Fufu plops, hops twice (smaller each time), then rolls; with Music off there is no corn tune but the 5, 4, 3, 2, 1 still shows; players who already have a hero see the intro once on their next Play.
 
+**Answered by Tp in chat, 10 Nov 2026: B1 a, B2 a, B3 a, B4 a, B5 a** (birds on street 3 that are never hurt; amala gives a strong look with no size change; the garri shield shows as our own tech suit; a 2.5 s dash from double tap and hold; open gutters with still thorny weeds that fufu clears). Tp also: the city view angle in art's drawing is OK. Intro frame 3 (the Nigeria shape): use the country's colours (green and white), keep every cog inside the borders, and make the border itself out of cogs/wheels, "the borders are the wheels that make it keep working". (National colours are not party colours, so rule 3 is kept.)
+
+Lines for Tp to paste into docs/decisions.md:
+43. Street 3 has birds by the rubbish; they are never hurt. Amala gives a strong look, never a size change. The garri shield looks like our own tech suit. Double tap and hold forward for a short dash. Open gutters with still thorny weeds; fufu clears them. (B1 to B5)
+
 Tp's new ideas, in short, with po's read. CLAUDE.md rule 2 bans copying Mario, so two of them need a safe version (marked).
 - **B1. Birds on street 3.** Because of dirt and rubbish, birds gather and get in the way. Dodge them by throwing fufu, jumping on them, or running into them with the shield on. po: yes, with our rule for animals: birds are never hurt. Fufu: a bird catches the ball and flies off with it. Jump on one: it flaps away. Shield: it gets a fright and flies off. They gather by rubbish piles, so cleaning up is the real fix (a later city fix). Not like Angry Birds, Flappy Bird or any game's bird. Recommended: a) yes, as written; b) birds only fly overhead as scenery.
 - **B2. Amala makes the hero big, and you only go small when hit with no protection.** **po flag: this is Mario's best-known rule** (a power-up makes you big, a hit makes you small). Rule 2 forbids it.
