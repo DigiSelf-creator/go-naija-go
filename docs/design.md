@@ -1164,7 +1164,7 @@ Rule (gamedev), only when Gentle mode is on, only on a street:
 3. The hero stands facing right, still, and the camera jumps there (S2.2 Camera, rule 6). The hero plays a short "dust off" (0.4 s, controls locked; with reduced motion, no dust off, stand at once).
 4. Same reset as any fall, measured from this restart point: food effects end (shield too), foods, food crates and hazards at or past the restart point come back, kobo taken stay taken.
 5. 1.7 s of blinking safety after the climb-out (a Normal mode fall has none), so nothing that comes back can hit you as you arrive.
-6. The bus stop is still marked as reached, for nothing else changes.
+6. Reaching the bus stop still counts, as now.
 
 Hint words (in the hint bar, 3.5 s, after every Gentle mode climb-out; all 35 characters or fewer, the same for touch and keys):
 - after a tap or hold pothole: "Up you come! Try that jump again."
