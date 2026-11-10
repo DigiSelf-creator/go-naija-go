@@ -7,6 +7,17 @@ Settled: the intro story (T1 to T4), reported by the lead from Tp, below. One ch
 Waiting for Tp: R1 to R10 (PR #1 against the built game), city choices 2 to 9, and a yes to the merge plan. Recommendation: the first option in each.
 Blocks: the name (R1) blocks only the title and page name. Nothing else stops P1 and P2.
 
+### Answered by Tp in chat, 10 Nov 2026 (cloud session, tap cards)
+
+- **Merge: yes.** The built game goes onto main (one main). PR #1 stays open until R2 to R10 are answered.
+- **R1 name: Gbese!** Not po's pick (Go Naija Go). The game keeps "Gbese!" as built; the repo name stays go-naija-go. When PR #1's parts come in, "Go Naija Go" is not used as the game name.
+- **Intro: confirmed as Tp reads it, and the new caption 2 is right:** "The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses."
+- **The rest:** Tp answers them one by one, four at a time, in chat.
+
+Lines for Tp to paste into docs/decisions.md:
+26. One main: the built game is merged into main (10 Nov 2026).
+27. The game is called Gbese! (confirms line 5).
+
 ### Intro story: answered by Tp, 9 Nov 2026 (reported by the lead)
 
 Tp's words: "I accepted your proposal on the intro." That is the lead's rewrite: the people of West Africa make the Wheel themselves; no outside group arrives and finds them.
@@ -25,7 +36,7 @@ Captions for designer (po's recommended set, caption 1 replaced by Tp's chosen o
 
 po flag for designer: the old caption 1 said Lagos grows and people keep coming. Without it, caption 2 ("More people...") comes from nowhere. Suggested caption 2: "The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses." Caption 1 is long for 320 x 240; designer may split it over two lines, never cut its words.
 
-**Check with Tp before building:** is this how you read your answer, and is the new caption 2 all right?
+**Checked with Tp, 10 Nov:** yes, and the new caption 2 is right.
 
 Line for Tp to paste into docs/decisions.md:
 25. The intro story: the people of West Africa made the Wheel for everyone; the Stoppers (traffic, potholes, power cuts, red tape) want it stuck; the player is the Wheel Hero. Six skippable frames before the first hero build. (T1 to T4)
