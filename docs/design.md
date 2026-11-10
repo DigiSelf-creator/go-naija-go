@@ -991,7 +991,7 @@ Rules:
 2. Changing place: the old tune fades out in 0.3 s, 0.2 s of quiet, the new tune starts on a bar line.
 3. Music starts only after the first tap or key.
 4. Music stops when the game pauses (pause screen, phone upright, tab hidden, app switched, a call) and carries on from the same bar when play goes on.
-5. "Music: on / off" is its own switch, separate from "Sound: on / off", on the title screen and the pause screen, and the M key. Remembered as `gidi-music`. Music off means no tune anywhere; sound effects follow only the Sound switch.
+5. "Music: on / off" is its own switch, separate from "Sound: on / off", on the title screen and the pause screen, and the M key. Remembered as `gidi-music`. Sound off makes the game quiet, music too. Music off stops only the tunes. Each switch shows its own setting. (po Ruling 1, 9 Nov, as built: a tune plays only when Sound and Music are both on; "Music: on" stays shown while Sound is off, so the tune comes back by itself when Sound comes back.)
 6. The game never waits for music to start. Notes are scheduled 0.1 s ahead, checked every 25 ms.
 
 ## S2.10 Screens and words (slice 2)
