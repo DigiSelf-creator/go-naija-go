@@ -1,5 +1,18 @@
 # Open questions for the product owner
 
+## Tp, 10 Nov 2026 (after playing the PR #3 build)
+
+Tp's words, in short: it works; it needs to be harder; "I don't see my fufu as my fireballs"; when corn is picked up its sound should be different, fast and louder than every other sound, then wear off slowly 5, 4, 3, 2, 1; and when do we see the city and the journey?
+
+Taken as Tp's instructions (po):
+1. **Harder:** designer tunes the streets and Go-Slow Hall (plan P2 hall goal, plus the streets), keeping Gentle mode kind.
+2. **Fufu now, not after slice 3** (changes R3 a, the timing only): pepper fufu as hot, steaming fufu balls thrown with a new action button, bouncing along the road, knocking problems away and plugging potholes; at problems only, never people; goats are shooed, never hit (city choice 5 a). **No flames, no fire, no fireball look or sound** (CLAUDE.md rule 2: a fireball power-up is a Mario signature).
+3. **Corn tune (Tp's new idea 2):** while corn works, our own fast corn tune plays over everything (other sounds and the street tune duck under it); for the last 5 seconds it slows and fades with a 5, 4, 3, 2, 1 count on screen. Never like any game's power-up music.
+4. **City now:** slice 3 starts now beside the polish: the intro story first, then Lagos from above with its problem pins, then "Mission complete!".
+
+Line for Tp to paste into docs/decisions.md:
+42. Pepper fufu comes now: hot fufu balls thrown with an action button, never fire. While corn works, our own corn tune plays over every other sound and fades 5, 4, 3, 2, 1. Slice 3 (the city) starts now, beside the polish.
+
 ## po acceptance, 10 Nov 2026: P1 and P2 (code part)
 
 **Verdict: accepted**, branch claude/serene-hopper-ydve2g. qa passed it (reported): tsc clean, unit 672/672, first load 336.6 KB, offline cache check proven by breaking it on purpose; e2e phone-landscape 37/38 and timing 89/91, where the 3 failures fail the same way on the unchanged base 73640ec (older sandbox browser: hall first toast, a late icon request, "installable" in incognito). Perf in the sandbox is slow on the base too (worst 29.3 fps), so it is not a regression; real fps is checked by CI and on a real phone.
