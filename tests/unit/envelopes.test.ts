@@ -142,6 +142,7 @@ const ALL_SOUNDS: readonly SoundName[] = [
   'cogBell',
   'lockedTuk',
   'lightDing', 'lightTick', 'lightClunk', 'fufuToss', 'fufuPlop', 'fufuHop', 'fufuRoll', 'fufuPlug', 'fufuFarPlop', 'fufuBonk', 'fufuPff', 'goatChew', 'goatMeeh',
+  'strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'crowKraa', 'egretKrk', 'birdFlap', 'dashStart', 'dashSteps', 'dashReady', 'weedsFsss',
 ];
 
 describe('every gain envelope fades in from near silence (no ticks)', () => {
