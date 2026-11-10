@@ -93,12 +93,12 @@ Length: start x 80 to arena x 11000 is 70 s at 156 u/s; the boss takes about 25 
 | Second jump | 3300-4500 | 21-28 s | tap again in the air | Safe practice: high stall at 3550 (150 high) over solid road. Then a 150-wide pothole at 3950 with a kobo arc |
 | Hazard | 4500-5600 | 28-35 s | goats and tyres | Goat at 4950 alone. Tyre at 5450 alone, about 3 s later |
 | Bus stop | 5600 | 35 s | checkpoint | Yellow bus and shelter |
-| Food | 5600-11000 | 35-70 s | the three foods | Garri at 5900, then a goat at 6400 to spend the shield on. Corn at 7100: 6 s of fast road with kobo, a 50 pothole and two roofs, no hazards. Mixed bit: tyre 8900, 90 hold pothole at 9200. Amala at 9650: goats and a tyre at 10000, 10300, 10550 to smash |
+| Food | 5600-11000 | 35-70 s | the three foods | Garri at 5900, then a goat at 6400 to spend the shield on. Corn at 7100: 6 s of fast road (slice 1 timing; corn now lasts 12 s, see Power-ups) with kobo, a 50 pothole and two roofs, no hazards. Mixed bit: tyre 8900, 90 hold pothole at 9200. Amala at 9650: goats and a tyre at 10000, 10300, 10550 to smash |
 | Boss | 11000-11560 | 70 s on | General Go-Slow | See Boss |
 
 Foods sit on the road at running height with a short kobo row leading in, so a normal run picks up all three without trying: garri x 5900 (37 s), corn x 7100 (45 s), amala x 9650 (61 s). No pothole within 300 u of a food, so nobody jumps over one by accident.
 
-Food when the boss starts: no timed food is running. Corn ends near x 8470. Amala ends near x 10740, the last hazard it meets is near 10450, and the arena starts at 11000, so amala is over about 1.7 s before the boss. The garri shield has no timer, so an unused shield carries into the fight. That is a fair reward. Timers are never cut at the arena line; the Q6 rule just never comes up in this level.
+Food when the boss starts (slice 1 history, worked out with 6 s corn and 7 s amala): no timed food is running. Corn ends near x 8470. Amala ends near x 10740, the last hazard it meets is near 10450, and the arena starts at 11000, so amala is over about 1.7 s before the boss. The garri shield has no timer, so an unused shield carries into the fight. That is a fair reward. Timers are never cut at the arena line; the Q6 rule just never comes up in this level.
 
 Rules checked against the physics note:
 - Potholes: tap 40, 50, 60 (limit 60); hold 90 (limit 110); second jump 150 (limit 180). Corn-speed pothole is 50.
@@ -117,9 +117,11 @@ All three show an icon, a word and, if timed, seconds left in the HUD. Never col
 
 | Food | Effect | Lasts | Pickup words (toast) | HUD | Hero look | How it ends |
 |---|---|---|---|---|---|---|
-| Roasted corn | Run speed `cornSpeed` (228) instead of `runSpeed` (156), both from the level file | 6 s | "Roasted corn! You run faster for 6 seconds." | corn icon "Fast 6" counting down | speed lines behind | Last 2 s: HUD and hero blink, a soft tick each second, toast "Corn is wearing off!" |
+| Roasted corn | Run speed `cornSpeed` (228) instead of `runSpeed` (156), both from the level file | 12 s | "Roasted corn! You run faster for 12 seconds." | corn icon "Fast 12" counting down | speed lines behind | Last 2 s: HUD and hero blink, a soft tick each second, toast "Corn is wearing off!" |
 | Garri, sugar and epa | Shield takes one hit for you | Until one hit | "Garri, sugar and epa (groundnut)! A shield takes one hit for you." | cup icon "Shield" | a round bubble outline | On a hit: bubble pops, toast "Shield used up!", 1.2 s of blinking safety, no life lost |
-| Amala, gbegiri and ewedu | Smash through goats (they run off unhurt), tyres and boss throws, +2 kobo each | 7 s | "Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through!" | bowl icon "Strong 7" counting down | glowing outline and bigger steps | Last 2 s: blink and tick, toast "Amala is wearing off!" |
+| Amala, gbegiri and ewedu | Smash through goats (they run off unhurt), tyres and boss throws, +2 kobo each | 12 s (was 14; Tp, 10 Nov, city choice 6; gamedev to change) | "Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!" | bowl icon "Strong 12" counting down | glowing outline and bigger steps | Last 2 s: blink and tick, toast "Amala is wearing off!" |
+
+Times (Tp, 10 Nov, city choice 6: every food lasts 12 s): corn 12 s (built), amala 12 s (built as 14 s; gamedev to change `amalaSteps` in src/game/run.ts and both amala strings in src/screens/words.ts, the toast and its short-words key), garri until one hit. The toast words always say the real seconds. Slice 1 history: foods first lasted 6 s and 7 s, then 12 s and 14 s (quick fixes, 9 Nov).
 
 Rules: amala never counts as a boss hit (Q6). No food saves you from a pothole. A second corn or amala restarts its timer; a second garri while shielded gives nothing extra. Goats are never hurt: smashed or bounced, they bleat and trot away.
 
@@ -421,9 +423,9 @@ When the bar is under 160 px wide (only screens near 320 x 240), a toast longer 
 
 | Full words (bar 160 px wide or more) | Short words (bar under 160 px) |
 |---|---|
-| Roasted corn! You run faster for 6 seconds. | Roasted corn! You run faster! |
+| Roasted corn! You run faster for 12 seconds. | Roasted corn! You run faster! |
 | Garri, sugar and epa (groundnut)! A shield takes one hit for you. | Garri, sugar and epa! Shield on! |
-| Amala, gbegiri and ewedu! Super strong for 7 seconds. Smash through! | Amala, gbegiri and ewedu! Strong! |
+| Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through! | Amala, gbegiri and ewedu! Strong! |
 | General Go-Slow blocks the road! Jump onto the green light. | Go-Slow! Jump on the green light. |
 | A secret room! Grab the kobo. Stand under the rope to go back up. | Secret room! Use the rope to go up. |
 | Your garri parcel: the shield is on! | Garri parcel: shield on! |
