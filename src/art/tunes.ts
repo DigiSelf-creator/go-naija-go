@@ -266,6 +266,53 @@ export const WIN: Tune = {
   ],
 };
 
-export type MusicPlace = 'menu' | 'street' | 'well' | 'hall' | 'cleared' | 'win';
+// ---------------------------------------------------------------- corn
+// Roasted corn (S2.9 "Corn tune"): fast, loud and bright. G major pentatonic lead over G, C, D, G.
+// Our own 2-bar highlife riff (bars 1 and 2), answered by 2 bars (3 and 4). The riff mostly turns
+// round and falls; no repeated-note "star" rhythm, no rising arpeggio on every beat, no chromatic
+// climb. Tempo steps: 144 while fresh, then 128, 112, 96, 80, 72 for the 5, 4, 3, 2, 1 count
+// (only the speed changes, never the pitch).
 
-export const TUNES: Record<MusicPlace, Tune> = { menu: MENU, street: STREET, well: WELL, hall: HALL, cleared: CLEARED, win: WIN };
+const CORN_CHORDS = ['G', 'C', 'D', 'G'] as const;
+
+/** The notes the corn tune's lead may use: G major pentatonic. */
+export const G_PENTATONIC = ['G', 'A', 'B', 'D', 'E'] as const;
+
+export const CORN: Tune = {
+  name: 'corn',
+  bpm: [144, 128, 112, 96, 80, 72],
+  bars: 4,
+  loop: true,
+  gain: 1,
+  // The lead keeps to G_PENTATONIC; the bass walks the chord roots (C in bar 2), so the check key is G major.
+  key: G_MAJOR,
+  chords: CORN_CHORDS,
+  tracks: [
+    {
+      inst: 'guitar',
+      lead: true,
+      vol: 0.6,
+      bars: [
+        'D5 . B4 A4 B4 . G4 A4 . B4 D5 . E5 . B4 D5',
+        'E5 . G5 E5 D5 . E5 . G4 . A4 B4 . A4 G4 .',
+        'A4 . D5 . A4 B4 D5 . E5 . A4 . B4 D5 . .',
+        'B4 A4 G4 . D4 . E4 G4 . B4 G4 - - . . .',
+      ],
+    },
+    // Bass on beat 1 and the "and" of beat 2.
+    {
+      inst: 'bass',
+      vol: 0.8,
+      bars: byChord({ G: 'G2 - - . . . D3 - . . . . . . . .', C: 'C3 - - . . . G2 - . . . . . . . .', D: 'D3 - - . . . A2 - . . . . . . . .' }, CORN_CHORDS),
+    },
+    // Agogo: a two-note pattern, high then low.
+    { inst: 'agogo', bars: rep('A5 . . . . . E5 . . . A5 . . . E5 .', 4), vol: 0.3 },
+    { inst: 'shekere', bars: rep('X x x x X x x x X x x x X x x x', 4), vol: 0.35 },
+    // A talking-drum fill at the end of bar 4, where the lead rests.
+    { inst: 'drum', bars: ['. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . D3 . D3 G3'], vol: 0.6 },
+  ],
+};
+
+export type MusicPlace = 'menu' | 'street' | 'well' | 'hall' | 'cleared' | 'win' | 'corn';
+
+export const TUNES: Record<MusicPlace, Tune> = { menu: MENU, street: STREET, well: WELL, hall: HALL, cleared: CLEARED, win: WIN, corn: CORN };

@@ -6,7 +6,7 @@
  * on a bar line, pause and resume from the same bar).
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { TUNES, type MusicPlace, type Tune } from '../../src/art/tunes';
+import { CORN, G_PENTATONIC, TUNES, type MusicPlace, type Tune } from '../../src/art/tunes';
 import { LOOKAHEAD, MUSIC_GAIN, Music, midiHz, noteNumber, ringSeconds, stepSeconds, trackEvents, tuneEvents } from '../../src/engine/music';
 
 const PLACES = Object.keys(TUNES) as MusicPlace[];
@@ -126,6 +126,9 @@ const KNOWN: Record<string, string[]> = {
   'course clear run': ['G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'E5'],
   'secret found jingle': ['G5', 'F#5', 'D#5', 'A4', 'G#4', 'E5', 'G#5', 'C6'],
   'item fanfare': ['A4', 'A#4', 'B4', 'C5'],
+  // P9 (S2.9 "Corn tune"): power-up and speed music, checked against the corn tune and every other.
+  'power-up appears run': ['G4', 'B4', 'D5', 'G5', 'B5', 'G#4', 'C5', 'D#5', 'G#5', 'C6', 'A#4', 'D5', 'F5', 'A#5', 'D6'],
+  'maze chase intro': ['B4', 'B5', 'F#5', 'D#5', 'B5', 'F#5', 'D#5', 'C5', 'C6', 'G5', 'E5', 'C6', 'G5', 'E5'],
   // Hymns, anthems and songs widely sung in Nigeria (opening notes only, no words).
   'Amazing Grace': ['D4', 'G4', 'B4', 'G4', 'B4', 'A4', 'G4', 'E4', 'D4'],
   'Michael, Row the Boat Ashore': ['C4', 'E4', 'G4', 'E4', 'G4', 'A4', 'G4'],
@@ -404,5 +407,56 @@ describe('music player', () => {
     expect(() => fresh.play('street')).not.toThrow();
     expect(fresh.place).toBe('street');
     advance(1);
+  });
+});
+
+// ---------------------------------------------------------------- P9: the corn tune
+
+describe('corn tune (S2.9 "Corn tune")', () => {
+  const lead = (): number[] => melody(CORN);
+
+  it('144 BPM fresh, then one tempo step per count number (128, 112, 96, 80, 72); 4 bars G C D G, looping, about 6.7 s', () => {
+    expect(TUNES.corn).toBe(CORN);
+    expect(CORN.bpm).toEqual([144, 128, 112, 96, 80, 72]);
+    expect(CORN.bars).toBe(4);
+    expect(CORN.loop).toBe(true);
+    expect(CORN.chords).toEqual(['G', 'C', 'D', 'G']);
+    expect(CORN.bars * 16 * stepSeconds(CORN, 0)).toBeCloseTo(6.67, 1);
+  });
+
+  it('the band: guitar lead, bass, agogo, shekere on every 16th, a talking-drum fill in bar 4 only', () => {
+    const leads = CORN.tracks.filter((t) => t.lead);
+    expect(leads.map((t) => t.inst)).toEqual(['guitar']);
+    expect(new Set(CORN.tracks.map((t) => t.inst))).toEqual(new Set(['guitar', 'bass', 'agogo', 'shekere', 'drum']));
+    const shake = CORN.tracks.find((t) => t.inst === 'shekere')!;
+    expect(trackEvents(shake).length).toBe(CORN.bars * 16);
+    const drum = CORN.tracks.find((t) => t.inst === 'drum')!;
+    expect(trackEvents(drum).every((e) => e.step >= 48)).toBe(true);
+    expect(trackEvents(drum).length).toBeGreaterThan(0);
+    // Bass on beat 1 and the "and" of 2 in every bar
+    const bass = CORN.tracks.find((t) => t.inst === 'bass')!;
+    expect(trackEvents(bass).map((e) => e.step % 16)).toEqual([0, 6, 0, 6, 0, 6, 0, 6]);
+  });
+
+  it('the lead uses G major pentatonic only, so it never climbs by semitones', () => {
+    for (const n of lead()) expect(G_PENTATONIC as readonly string[]).toContain(PC[n % 12]);
+    for (const d of iv(lead())) expect(Math.abs(d)).not.toBe(1);
+  });
+
+  it('not star or speed music: no note three times in a row, no rising arpeggio of leaps', () => {
+    const mel = lead();
+    for (let i = 0; i + 2 < mel.length; i++) expect(mel[i] === mel[i + 1] && mel[i + 1] === mel[i + 2], `same note at ${i}`).toBe(false);
+    // An arpeggio climb: three leaps of 3 semitones or more in a row, all up.
+    const steps = iv(mel);
+    for (let i = 0; i + 2 < steps.length; i++) expect(steps.slice(i, i + 3).every((d) => d >= 3), `leaps up at ${i}`).toBe(false);
+    // Also across the loop seam
+    const seam = [...mel.slice(-4), ...mel.slice(0, 4)];
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(seam, notes.map((n) => noteNumber(n)!)), `seam close to ${name}`).toBe(false);
+  });
+
+  it('its opening is not any other tune of ours, and the note data stays under 2 KB', () => {
+    const open = (p: MusicPlace): string => iv(melody(TUNES[p]).slice(0, 6)).join(',');
+    for (const p of ['street', 'well', 'hall', 'cleared', 'win'] as const) expect(open('corn')).not.toBe(open(p));
+    expect(JSON.stringify(CORN).length).toBeLessThan(2048);
   });
 });
