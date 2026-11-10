@@ -823,6 +823,8 @@ The lights are one-way platforms all fight long, lit or not (part 1). Unlit: dar
 
 ### The rule and the timeline
 
+**Changed by S2.14 (10 Nov 2026):** no light is lit at the start; each light comes on after two throws and stays green only for a while; phase 3's pattern puts the high honk second. Where S2.14 and this part differ, S2.14 wins.
+
 Same rule as part 1: land on the lit green light from above three times. Order: left, right, middle.
 
 - t = 0: the hero is inside. If the state has a parcel: shield on, toast "Your garri parcel: the shield is on!". Then toast "General Go-Slow is jamming the hall! Jump onto the green light." The left light comes on. The player can move straight away.
@@ -1177,3 +1179,115 @@ Words on screens (gamedev): street Game over offer "Want more tries? Gentle mode
 Art: the "dust off" pose for every body (S2.3), facing right: a quick crouch, two pats on the knees, a small dust puff, then stand. Two frames are enough.
 
 Tests: in Gentle mode, a fall in each pit kind brings the hero back at the right restart point, with one life fewer, 1.7 s of safety and the right hint; in Normal mode the bus stop restart is unchanged; with Gentle mode on, game over still comes at 0 lives.
+
+## S2.14 Harder (designer, 10 Nov 2026: Tp "it needs to be harder")
+
+Source: Tp, 10 Nov, after playing the PR #3 build (docs/questions.md, top block, item 1), and the plan P2 hall goal (po M4). Gentle mode stays kind: 5 lives, and the climb-out on streets (S2.13 part 5). Nothing here changes Gentle mode.
+
+What stays true on every street: every hazard shows at least 1.5 s before it reaches you, the corn rules (S2.2 hazard rule 3 a to e, big pit rule 3), the four pit kinds, hazards at least 200 u from a pit, foods at least 300 u from a pit, a pothole sign before every pit 90 u or wider (S2.13 part 4, worked out in code, so the new wide potholes get signs by themselves).
+
+### 1. Go-Slow Hall: the goal and the two levers
+
+The goal (plan P2): a first-timer meets at least 2 throws in each phase, sees a high honk before the third hit, wins the first time in about 30 to 60 s, and can still clear the hall in 3 tries. Today the left light is lit at once and each next light comes on straight after the 1.5 s break, so a bot wins in 6 to 7 s.
+
+**Lever 1 (plan P2's first lever): each light comes on later.** No light is lit at the start. In every phase the light waits until two throws are out.
+
+**Lever 2: a light stays green only for a while.** If you miss it, it goes dark, then comes back after two more throws. The green time gets shorter after each hit. This is how the fight gets harder after each hit, along with the faster throws already there.
+
+Phase start: the fight start for phase 1; the end of the 1.5 s break for phases 2 and 3. All times below are seconds from the phase start.
+
+| Phase | Light | Throws come out at | Pattern (repeats) | Throw every | Tyre speed | Light comes on at (`lightAt`) | Green for (`greenFor`) | Then dark for (`darkFor`) | Music |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 (before any hit) | left | 2.0, 4.2, 6.4, ... | tyre | 2.2 | 156 | 6.0 | 4.0 | 4.4 | 128 BPM |
+| 2 (after hit 1) | right | 1.8, 3.6, 5.4, ... | tyre, tyre, honk | 1.8 | 192 | 4.0 | 3.5 | 3.6 | 134 BPM |
+| 3 (after hit 2) | middle | 1.4, 2.8, 4.2, 5.6, ... | tyre, **high honk**, tyre, honk | 1.4 | 228 | 4.5 | 3.0 | 2.8 | 140 BPM |
+
+Why these numbers:
+- Phase 1: the first tyre comes out at 2.0 s and reaches a hero near the door at about 4.4 s. The second is out at 4.2 s. The light comes on at 6.0 s, so every player has jumped one tyre and has a second one rolling at them.
+- Phase 2: two tyres are out (1.8 and 3.6 s) when the right light comes on at 4.0 s; the second tyre is passing under it.
+- Phase 3: the pattern now puts the **high honk second** (was fourth). It comes out at 2.8 s and is right over the middle light at about 4.4 s, just as the light comes on at 4.5 s. So every player sees a high honk fly over the middle light before the third hit, and learns to wait for it to pass.
+- A light that goes dark comes back after `darkFor`, which is two throw gaps, so the "two throws first" rule holds for every return too.
+- A perfect player now wins in about 20 s (phase 1 about 6.5 s, break 1.5, phase 2 about 4.6, break 1.5, phase 3 about 5.6). A first-timer who misses one green time in each phase, or loses a life, takes about 30 to 45 s. That is the goal.
+- Still fair: every light is reachable from a walk in under 1 s (S2.7), and the shortest green time is 3.0 s.
+
+What the light shows (never colour alone):
+| Light state | Look | Sound |
+|---|---|---|
+| Dark | grey, no arrow, no word (as built) | |
+| Green | green, a bouncing down arrow, the word "GO" (as built) | a soft "ding" as it comes on |
+| Last 1.0 s of green | blinks 2 times a second (never faster), the arrow stops bouncing | a "tick" each blink |
+| Last 1.0 s, reduced motion on | no blink: the arrow hides, "GO" stays | the ticks |
+| Goes dark (missed) | grey again | a low "clunk" |
+
+Rules: only a landing from above while the light is green counts (as built). Standing on a light when it turns green is not a hit: hop off and land again. A light going dark under the hero does nothing to the hero. A hurt or the shield breaking never moves the light's clock.
+
+Words (all in the hint bar):
+- Start: "General Go-Slow is jamming the hall! Wait for the green light." (replaces "... Jump onto the green light."). Short words: "Go-Slow! Wait for the green light."
+- The first time a light comes on in a try: "Green light! Jump on it!"
+- The first time a green light goes dark unhit in a try: "Missed it! Wait for the next one."
+- As built: "Green light! 2 more.", "Green light! 1 more.", "PEEP! High honks fly high. Stay low on the floor." (now shown at the start of phase 3, 2.8 s before the high honk comes, and hidden at the third hit, po N4).
+
+Gentle mode in the hall: 5 lives, as now. The lights are the same.
+
+If qa's first-timers find it too hard, tune in this order (S2.7's order still comes after these): green time 4.0/3.5/3.0 to 4.5/4.0/3.5; then `lightAt` 6.0/4.0/4.5 to 5.0/3.6/4.5 (keep phase 3, it carries the high honk); then S2.7's list. If it is still too easy (a first win under 25 s): green time 3.5/3.0/2.5.
+
+Exact change to src/data/levels/lagos-hall.json, `boss.phases` (every other field stays):
+```json
+"phases": [
+  { "every": 2.2, "speed": 156, "pattern": ["tyre"], "bpm": 128, "lightAt": 6.0, "greenFor": 4.0, "darkFor": 4.4 },
+  { "every": 1.8, "speed": 192, "pattern": ["tyre", "tyre", "honk"], "bpm": 134, "lightAt": 4.0, "greenFor": 3.5, "darkFor": 3.6 },
+  { "every": 1.4, "speed": 228, "pattern": ["tyre", "highHonk", "tyre", "honk"], "bpm": 140, "lightAt": 4.5, "greenFor": 3.0, "darkFor": 2.8 }
+]
+```
+
+### 2. The streets: one step harder in the second half
+
+Before the bus stop nothing changes on any street: that is where a first-timer learns. After the bus stop: one more wide pothole on each street, one more hazard on each street, and amala in street 1 moved so the rule "food 300 u from a pit" still holds. Pepper fufu (S2.15) is added to each street in the same change.
+
+**Street 1, Alausa (src/data/levels/lagos-1.json).** Kept light: it is the teaching street and must stay "3 tries or fewer".
+| Field | Change |
+|---|---|
+| `ground` | `[9210, 11000]` becomes `[9250, 11000]`: the hold pothole at 9150 (60 wide) becomes a wide pothole (100 wide) |
+| `kobo` | `[9156, 220, 3]` becomes `[9160, 220, 2], [9200, 170, 2], [9240, 220, 2]` (an arc over the wide pothole) |
+| `hazards` | add `["tyre", 7100]` (a goat at 6900 then a tyre: the garri shield has something to save you from) |
+| `foods` | amala `[9530, 272, "amala"]` becomes `[9560, 272, "amala"]`; add `[8700, 272, "fufu"]` (S2.15) |
+
+**Street 2, Computer Village (src/data/levels/lagos-2.json).**
+| Field | Change |
+|---|---|
+| `ground` | `[5970, 7700]` becomes `[5970, 6750], [6850, 7700]` (a new wide pothole, 100, at 6750). `[9360, 10300]` becomes `[9400, 10300]` (the hold pothole at 9300 becomes wide, 100) |
+| `kobo` | `[6800, 276, 3]` becomes `[6760, 220, 2], [6800, 170, 2], [6840, 220, 2]`. `[9306, 200, 3]` becomes `[9310, 220, 2], [9350, 170, 2], [9390, 220, 2]` |
+| `hazards` | `["tyre", 6600]` becomes `["tyre", 6550]`; `["goat", 7000]` becomes `["goat", 7050]` (both 200 u from the new pothole); add `["tyre", 8750]` (in the second half of the corn reach, after 8668: allowed) |
+| `foods` | add `[4800, 272, "fufu"]` (S2.15) |
+
+**Street 3, Ikeja (src/data/levels/lagos-3.json).**
+| Field | Change |
+|---|---|
+| `ground` | `[5470, 7000]` becomes `[5470, 6550], [6650, 7000]` (a new wide pothole, 100, at 6550, between the two big pits; big pit 2 keeps 350 u of clear road before it, more than the 160 it needs) |
+| `kobo` | `[6600, 276, 3]` becomes `[6560, 220, 2], [6600, 170, 2], [6640, 220, 2]` |
+| `hazards` | `["goat", 5900]` becomes `["goat", 6000]` (room to pick up the fufu first); add `["tyre", 9750]` (under the roof at 9700, so you can hop up out of its way) |
+| `foods` | add `[5800, 272, "fufu"]` (S2.15) |
+
+Checked against the rules: every new hazard is at least 200 u from a pit; every food at least 300 u from a pit; no tyre in a fast stretch (street 2's corn crate at 7300, fast to 8668; street 3's at 7500, fast to 8868); no new drum; the big pits keep their run-up. New pothole signs (worked out in code): street 1 at 9030, street 2 at 6630 and 9180, street 3 at 6430. Gentle mode climb-out points (100 u before the lip) are all on solid road: 9050; 6650 and 9200; 6450.
+
+Kobo: each changed arc adds 3. New loose totals: street 1 +3, street 2 +6, street 3 +3.
+
+If qa's first-timers need more than 3 tries on a street, take these back in this order: street 3's tyre at 9750; street 2's tyre at 8750; street 1's tyre at 7100; then the plan P3 order (big pits 170 to 160, one hazard fewer in street 3's group).
+
+### 3. Tasks
+
+gamedev:
+1. Hall: read `lightAt`, `greenFor`, `darkFor` per phase (src/game/level.ts, required numbers above 0). src/game/boss.ts: `lit` starts at -1; the light comes on at phase start + `lightAt`, stays green `greenFor`, goes dark `darkFor`, and repeats until hit. New events `bossLightOff` and a "blink" flag for the last 1.0 s (art and sound use them). New pattern for phase 3. The throw clock is not changed by the light.
+2. Hall words in src/screens/words.ts as in part 1, with the short words added to the hint bar table. The "PEEP!" toast now shows when phase 3 starts (the end of the break after hit 2), not when the middle light comes on.
+3. Street files: the exact changes in part 2. Update the kobo counts and any test that counts hazards or pits (tests/unit/street.test.ts STREETS keeps bigPits 1, 1, 2).
+4. Tests: the light timeline (dark at the start, on at 6.0 s, green 4.0 s, dark 4.4 s, on again); a landing on a dark or blinking-out light; the hall bot (tests/unit/hall-bot.ts) with 120 ms jitter now takes 18 s or more for a clean win and meets 2 or more throws in each phase and a high honk before the third hit; the street rule tests still pass.
+
+art:
+1. The light's last-second blink (2 times a second, the arrow still) and the reduced-motion look (arrow hidden). src/art/hall.ts.
+2. Three short sounds in src/engine/sound.ts, our own: the light's "ding" (a bright two-note agogo hit), the "tick" (a dry wood click), the "clunk" (a low muted thud). Never a game's sound.
+
+qa done checks:
+1. A first-timer (Tp first) in the hall: at least 2 throws met in each phase, a high honk seen before the third hit, first win in 30 to 60 s, cleared in 3 tries or fewer. Bots: a clean win takes 18 s or more.
+2. Each street still cleared by a first-timer in 3 tries or fewer, Normal mode; Gentle mode climb-outs land on solid road at the new wide potholes.
+3. With reduced motion on, nothing blinks; the light still says when it is ending (the arrow hides, the ticks).
+4. All street rule tests pass; every new wide pothole has its sign.
