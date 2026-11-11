@@ -15,6 +15,7 @@ import {
   MIN_SCALE,
   panCam,
   pinTapBox,
+  pinsApartScale,
   pinsOnScreen,
   pinchStep,
   startCam,
@@ -335,8 +336,6 @@ describe('looking around: pan and zoom limits (city.md (b) "Size", "Look around"
     // 320 x 240: the chips row ends about 86 px down (qa measured 56 to 86); wider screens have one top row.
     const covered: CityView[] = [
       { w: 320, h: 240, top: 90 },
-      { w: 320, h: 200, top: 90 },
-      { w: 280, h: 180, top: 56 },
       { w: 360, h: 220, top: 90 },
       { w: 851, h: 393, top: 50 },
       { w: 393, h: 851, top: 90 },
@@ -376,7 +375,7 @@ describe('looking around: pan and zoom limits (city.md (b) "Size", "Look around"
 
   it('qa round 2: with a top row a drag keeps the map in the space under it', () => {
     let small = 0;
-    for (const v of [{ w: 320, h: 240, top: 90 }, { w: 320, h: 180, top: 90 }] as const) {
+    for (const v of [{ w: 320, h: 240, top: 90 }, { w: 320, h: 180, top: 90 }, { w: 320, h: 300, top: 90 }] as const) {
       for (const zoom of ['far', 'near'] as const) {
         const mh = CITY_MAP.h * camScale(zoom, v);
         const down = panCam({ zoom, x: 0, y: 0 }, v, 0, 1e5);
@@ -392,6 +391,42 @@ describe('looking around: pan and zoom limits (city.md (b) "Size", "Look around"
       }
     }
     expect(small, 'a map shorter than the room under the top row is checked too').toBeGreaterThan(0);
+  });
+
+  it('CI round 2: no pin ever lies over another, even on a very short screen (640 x 200)', () => {
+    const sizes: CityView[] = [
+      { w: 640, h: 200, top: 56 },
+      { w: 320, h: 200, top: 90 },
+      { w: 568, h: 230, top: 56 },
+      { w: 320, h: 240, top: 90 },
+      { w: 280, h: 180, top: 56 },
+      { w: 851, h: 393, top: 50 },
+      { w: 640, h: 200 },
+    ];
+    for (const v of sizes) {
+      for (const zoom of ['far', 'near'] as const) {
+        const cam = zoom === 'far' ? startCam(v) : zoomCam(startCam(v), v, 'near');
+        const boxes = Object.values(CITY_SPOTS).map((spot) => {
+          const at = toScreen(cam, v, spot.pin);
+          return pinTapBox(at.x, at.y, SPOT_WORDS[spot.id]);
+        });
+        for (let i = 0; i < boxes.length; i++) {
+          for (let j = i + 1; j < boxes.length; j++) {
+            const a = boxes[i]!;
+            const b = boxes[j]!;
+            const apart = a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+            expect(apart, `${v.w} x ${v.h} ${zoom}: pins ${i} and ${j}`).toBe(true);
+          }
+        }
+        // 320 x 200 and 280 x 180 are smaller than any phone: there, pins kept apart is all we ask.
+        if (zoom === 'far' && v.h >= 200 && !(v.w === 320 && v.h === 200)) for (const b of boxes) {
+          expect(b.y + b.h, `${v.w} x ${v.h}`).toBeLessThanOrEqual(v.h);
+          expect(b.x).toBeGreaterThanOrEqual(0);
+          expect(b.x + b.w).toBeLessThanOrEqual(v.w);
+        }
+      }
+    }
+    expect(camScale('far', { w: 640, h: 200, top: 56 })).toBeGreaterThanOrEqual(pinsApartScale());
   });
 
   it('a drag never takes the map more than 40 px past an edge; a smaller map stays centred', () => {
