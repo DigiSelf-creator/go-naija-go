@@ -1,5 +1,21 @@
 # Open questions for the product owner
 
+## po acceptance, 10 Nov 2026: harder hall and streets, pepper fufu, corn tune (P5, P8, P10)
+
+**Verdict: accepted, with Tp's ear and Tp's first hall play still to come.** qa P11 (reported): tsc clean, unit 794/794, first load 402 KB; e2e phone 41/42 and timing 89/91 (only the 3 known sandbox failures); hall worst 55 fps at 4x CPU. Break tests all fine. By eye: no fire or fireball look, nothing mocks anyone; intro and city art show no real people, brands, party colours or faith signs; the Nigeria shape reads right.
+Fixed after qa: the Throw button replayed its pop-in on every press (lead, d4005b2, with a test that failed before the fix).
+Open, not blocking:
+1. Hall time: bots win in about 21 s, under the 30 to 60 s first-timer goal (bots know to wait for the light). Tp's own first play decides; if under 25 s, designer cuts green time to 3.5 / 3.0 / 2.5 s.
+2. Tp listens (checklist below); the corn tune check list lacks the Sonic invincibility and speed-shoes openings, so Tp's ear clears it.
+3. Designer: the hall bowl lands under the left light, so you step off the light to take it. Small; next design pass.
+4. Perf part-0 step rate is 52 to 54 against 55 on the old code too (sandbox); CI decides.
+
+**Listening checklist for Tp** (on the test link, sound on, silent switch off):
+- Corn tune: street 1, grab the roasted corn (about three quarters along), then stand still for 12 s to hear the 5, 4, 3, 2, 1 slow-down. Does it sound like any game's power-up or star music, or a known song?
+- Hall lights: in Go-Slow Hall wait about 6 s for the ding, then the ticks; don't jump and hear the clunk.
+- Fufu: street 2 bowl (about halfway); throw at the road, a pothole and a tyre.
+- Goat: street 2, throw a fufu ball near the goat: chew and "meeh".
+
 ## Tp, 10 Nov 2026 (later): designer's three choices, and five new ideas
 
 **Answered by Tp: 1 a, 2 a, 3 a.** Fufu plops, hops twice (smaller each time), then rolls; with Music off there is no corn tune but the 5, 4, 3, 2, 1 still shows; players who already have a hero see the intro once on their next Play.
