@@ -2,7 +2,15 @@
  * B3: hero builder on the phone profile, by touch.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS } from './helpers';
+import { PAST_DOUBLE_TAP_MS, skipIntro, storySeen } from './helpers';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
+/**
+ * Slice 3 (city.md (b)): "Play" and "Start running" open Lagos from above. These tests are about
+ * the builder and the run, so ?level=lagos-1 makes them start street 1 straight away, as before.
+ */
+const STREET1 = './?level=lagos-1';
 
 const look = (page: Page) => page.evaluate(() => window.__game!.look);
 
@@ -15,6 +23,8 @@ function watchErrors(page: Page): string[] {
 
 async function pickLook(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Make your hero' }).tap();
+  // Slice 3: the story shows first when it cannot be saved as seen (storage blocked).
+  await skipIntro(page);
   const builder = page.getByRole('dialog', { name: 'Make your hero' });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS); // a chip may sit where the finger was
   await builder.getByRole('button', { name: 'Skin tone 4' }).tap();
@@ -28,8 +38,9 @@ async function pickLook(page: Page): Promise<void> {
 
 test('pick a look, reload: the same look comes back', async ({ page }) => {
   const errors = watchErrors(page);
-  await page.goto('./');
-  await expect(page.getByText('Fix the streets. Get Nigeria working.')).toBeVisible();
+  await page.goto(STREET1);
+  // City choice 10 (slice 3): the new title line.
+  await expect(page.getByText('Build up Lagos. Get Nigeria working.')).toBeVisible();
   await pickLook(page);
   expect(await page.evaluate(() => localStorage.getItem('gidi-look'))).toBe('{"skin":3,"hair":1,"outfit":4,"body":0,"age":1}');
   await page.getByRole('button', { name: 'Start running' }).tap();
@@ -61,7 +72,7 @@ test('storage blocked: the builder still works and the game starts', async ({ pa
     });
   });
   const errors = watchErrors(page);
-  await page.goto('./');
+  await page.goto(STREET1);
   expect(await look(page)).toEqual({ skin: 2, hair: 0, outfit: 0, body: 0, age: 1 }); // default look
   await pickLook(page);
   await page.getByRole('button', { name: 'Start running' }).tap();
@@ -75,7 +86,7 @@ test('storage blocked: the builder still works and the game starts', async ({ pa
 });
 
 test('every menu button is at least 44 x 44 px', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   const sizes = async () =>
     page.evaluate(() =>
       [...document.querySelectorAll<HTMLElement>('.screen button')].map((b) => {
@@ -93,8 +104,8 @@ test('every menu button is at least 44 x 44 px', async ({ page }) => {
   expect(builder.length).toBe(2 + 3 + 5 + 5 + 5 + 1);
 });
 
-test('credits, sound and gentle mode on the title screen', async ({ page }) => {
-  await page.goto('./');
+test('credits and sound on the title screen; gentle mode in Settings (slice 3)', async ({ page }) => {
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Credits' }).tap();
   const credits = page.getByRole('dialog', { name: 'Credits' });
   await expect(credits.getByText('Made by CoachNaz.')).toBeVisible();
@@ -104,22 +115,27 @@ test('credits, sound and gentle mode on the title screen', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Sound: on' }).tap();
   await expect(page.getByRole('button', { name: 'Sound: off' })).toBeVisible();
+  // city.md (a): Gentle mode moved to Settings.
+  await expect(page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Settings' }).tap();
   const gentle = page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' });
   await expect(gentle).toHaveAttribute('aria-checked', 'false');
   await gentle.tap();
   await expect(gentle).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Back' }).tap();
   // A tap on a menu never starts or jumps anything.
   expect(await page.evaluate(() => window.__game!.screen)).toBe('title');
   expect(await page.evaluate(() => window.__game!.steps)).toBe(0);
 
   await page.reload();
   await expect(page.getByRole('button', { name: 'Sound: off' })).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).tap();
   await expect(page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('the builder works with the phone upright', async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 851 });
-  await page.goto('./');
+  await page.goto(STREET1);
   await expect(page.getByText('Turn your phone sideways to play.')).toBeHidden();
   await pickLook(page);
   // Preview sits above the choices when upright.
@@ -133,7 +149,7 @@ test('the builder works with the phone upright', async ({ page }) => {
 });
 
 test('a fast double tap on "Play" does not jump; a tap elsewhere right away does', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":1,"hair":1,"outfit":1,"body":0,"age":1}'));
   await page.reload();
   const box = (await page.getByRole('button', { name: 'Play', exact: true }).boundingBox())!;
@@ -166,7 +182,7 @@ test('a fast double tap on "Play" does not jump; a tap elsewhere right away does
 });
 
 test('Space on a focused builder button presses that button, not a jump', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const afro = page.getByRole('button', { name: 'Afro' });
   await afro.focus();

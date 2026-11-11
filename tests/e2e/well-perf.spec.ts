@@ -6,8 +6,11 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand } from './hands';
-import { PAST_DOUBLE_TAP_MS, startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun, gentleOn, storySeen } from './helpers';
 import { wellBot } from './well-bot';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 const BAR = 45;
 
@@ -24,7 +27,7 @@ test('slowed 4x CPU: street 2 by hand with the well room, at least 45 fps in eve
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('./?level=lagos-2');
-  await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+  await gentleOn(page); // slice 3: Gentle mode is in Settings
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);

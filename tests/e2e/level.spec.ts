@@ -4,7 +4,11 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { LEFT, buttonCentres, hands } from './hands';
-import { PAST_DOUBLE_TAP_MS, openAndRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, openAndRun, gentleOn, storySeen, screenNow } from './helpers';
+import { formatMoney } from '../../src/game/money';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 /** Street 1: a thumb on Forward. */
 async function holdForward(page: Page) {
@@ -30,7 +34,8 @@ test('out of lives: game over, then Play again starts the level fresh', async ({
   const r = await run(page);
   expect(r.phase).toBe('over');
   expect(r.lives).toBe(0);
-  await expect(over.getByText(`You got ${r.kobo} kobo. The street is still here. Try again!`)).toBeVisible();
+  // N2 (slice 3): money words, a coin is 10 kobo.
+  await expect(over.getByText(`You got ${formatMoney(r.kobo * 10)}. The street is still here. Try again!`)).toBeVisible();
   await expect(over.getByText('Want more tries? Gentle mode gives you 5 lives, and you climb out of holes.')).toBeVisible();
   // Taps meant as jumps do nothing to a stopped run.
   const steps = await page.evaluate(() => window.__game!.steps);
@@ -47,9 +52,10 @@ test('out of lives: game over, then Play again starts the level fresh', async ({
   await expect(page.locator('.hud-kobo')).toHaveText(/^Kobo \d+$/);
 });
 
-test('gentle mode from the title gives 5 lives on the next run', async ({ page }) => {
-  await page.goto('./');
-  await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+test('gentle mode from Settings gives 5 lives on the next run', async ({ page }) => {
+  // Slice 3: Gentle mode is in Settings; ?level=lagos-1 starts street 1 from the builder.
+  await page.goto('./?level=lagos-1');
+  await gentleOn(page);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await page.getByRole('dialog', { name: 'Make your hero' }).getByRole('button', { name: 'Start running' }).tap();
@@ -59,8 +65,8 @@ test('gentle mode from the title gives 5 lives on the next run', async ({ page }
 
 test('gentle mode: a pothole fall climbs out just before it, with a hint (S2.13 part 5)', async ({ page }) => {
   test.setTimeout(60_000);
-  await page.goto('./');
-  await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+  await page.goto('./?level=lagos-1');
+  await gentleOn(page);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await page.getByRole('dialog', { name: 'Make your hero' }).getByRole('button', { name: 'Start running' }).tap();
@@ -121,6 +127,7 @@ test('pause screen: Start again and Home', async ({ page }) => {
   await page.getByRole('button', { name: 'Pause' }).tap();
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await card.getByRole('button', { name: 'Home' }).tap();
-  await expect(page.getByRole('heading', { name: 'Gbese!' })).toBeVisible();
+  // Slice 3 (city.md (b)): Home is Lagos from above.
+  await expect.poll(() => screenNow(page)).toBe('city');
   await expect(page.locator('.hud')).toBeHidden();
 });

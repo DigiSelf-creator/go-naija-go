@@ -7,7 +7,10 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { HALL_URL, playHall, touchPad, waitForWin } from './hall-play';
-import { PAST_DOUBLE_TAP_MS, startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun, gentleOn, storySeen } from './helpers';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 const BAR = 45;
 
@@ -27,7 +30,7 @@ test('slowed 4x CPU: Go-Slow Hall by touch, every phase with its throws and the 
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(HALL_URL);
   // Gentle mode, so a missed hop on a slow machine does not end the measurement early.
-  await page.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' }).tap();
+  await gentleOn(page); // slice 3: Gentle mode is in Settings
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);

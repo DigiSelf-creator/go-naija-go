@@ -10,7 +10,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { checkCardFits } from './card-fit';
 import { LEFT, RIGHT, buttonCentres, hands, playStreetByHand } from './hands';
 import { hallSnap, playHall, touchPad, waitForWin } from './hall-play';
-import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock } from './helpers';
+import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock, storySeen, screenNow, cityToStreet1 } from './helpers';
+import { formatMoney } from '../../src/game/money';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 const SHOTS = process.env['N2_SHOTS'] ?? 'test-results/n2-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -45,6 +49,18 @@ async function openSaved(page: Page, progressJson?: string): Promise<void> {
   await expect(page.getByRole('dialog', { name: 'Gbese!' })).toBeVisible();
 }
 
+/**
+ * Slice 3 (city.md (b)): "Play" opens Lagos from above (home); its "Streets" button opens the
+ * Streets cards, as "Play" did once a street was done.
+ */
+async function playToStreets(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Lagos' }).getByRole('button', { name: 'Streets' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('streets');
+}
+
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress') ?? 'null') as unknown);
 const shotAt = async (page: Page, name: string) => page.screenshot({ path: join(SHOTS, `${name}.png`) });
 
@@ -73,10 +89,12 @@ test('street 1 by hand, saved on the bus: the cleared card, Streets, reload, Pla
   const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(cleared).toBeVisible({ timeout: 6000 });
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
-  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${kobo} kobo.`)).toBeVisible();
+  // N2 (slice 3): money words, a coin is 10 kobo.
+  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${formatMoney(kobo * 10)}.`)).toBeVisible();
   await expect(cleared.getByText('Your garri parcel is saved for Go-Slow Hall.')).toHaveCount(0); // no parcel on street 1
   await expect(cleared.getByRole('button', { name: 'Next street' })).toBeFocused();
-  expect(await saved(page)).toEqual({ v: 1, states: { lagos: { streets: { 1: { done: true, best: kobo } }, parcel: false, hall: { done: false, best: 0 } } } });
+  // Version 2 (slice 3, N3): bests are whole kobo.
+  expect(await saved(page)).toEqual({ v: 2, states: { lagos: { streets: { 1: { done: true, best: kobo * 10 } }, parcel: false, hall: { done: false, best: 0 } } } });
   // po M4 bug 1: the cleared card fits the short screens.
   await checkCardFits(page, 'Next street', (at) => shotAt(page, `${at}-cleared-street1`));
 
@@ -86,14 +104,14 @@ test('street 1 by hand, saved on the bus: the cleared card, Streets, reload, Pla
   const streets = page.getByRole('dialog', { name: 'Lagos' });
   await expect(streets).toBeVisible();
   await expect(page.locator('.hud')).toBeHidden();
-  await expect(streets.locator('[data-where="0"]')).toContainText(`Done ✓ Best: ${kobo} kobo`);
+  await expect(streets.locator('[data-where="0"]')).toContainText(`Done ✓ Best: ${formatMoney(kobo * 10)}`);
   await expect(streets.locator('[data-where="1"]')).toContainText('Ready to play');
   await expect(streets.locator('[data-where="2"]')).toContainText('Finish street 2 first');
   await expect(streets.locator('[data-where="hall"]')).toContainText('Finish street 3 first');
 
-  // A new visit: Play opens Streets (a street is done), street 2 plays.
+  // A new visit: Play opens Lagos, then Streets (slice 3); street 2 plays.
   await page.reload();
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   await expect(page.getByRole('dialog', { name: 'Lagos' })).toBeVisible();
   // A locked card does nothing but the tuk.
   await page.locator('[data-where="2"]').tap({ force: true }); // aria-disabled, still tappable
@@ -109,7 +127,7 @@ test('the hall from the Streets card with a saved parcel, won: lives left, 1 of 
   test.setTimeout(240_000);
   const errors = watchErrors(page);
   await openSaved(page, READY_FOR_HALL);
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   const streets = page.getByRole('dialog', { name: 'Lagos' });
   await expect(streets.locator('[data-where="hall"]')).toContainText('Ready to play');
   await expect(streets.locator('[data-where="hall"]')).toContainText('You have a garri parcel.');
@@ -129,7 +147,7 @@ test('the hall from the Streets card with a saved parcel, won: lives left, 1 of 
   await expect(won.getByText("Lagos's cog is turning: 1 of 37.")).toBeVisible();
   await expect(won.getByText(/kobo/)).toHaveCount(0);
   await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeFocused();
-  expect(await saved(page)).toMatchObject({ v: 1, states: { lagos: { hall: { done: true }, parcel: false } } }); // used up (po ruling d)
+  expect(await saved(page)).toMatchObject({ v: 2, states: { lagos: { hall: { done: true }, parcel: false } } }); // used up (po ruling d)
   await checkCardFits(page, "See Nigeria's wheel", (at) => shotAt(page, `${at}-win`));
   await shootBoth(page, 'win');
 
@@ -182,7 +200,7 @@ test('the hall from the Streets card with a saved parcel, won: lives left, 1 of 
 test('Pause rebuilt: words, focus, P and Escape, Sound and Music switches, Streets and Home', async ({ page }) => {
   const errors = watchErrors(page);
   await openSaved(page, SWITCHED_ON);
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   await page.locator('[data-where="2"]').tap({ force: true }); // aria-disabled, still tappable
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(10);
   // P pauses; the card's big button has focus.
@@ -225,10 +243,10 @@ test('Pause rebuilt: words, focus, P and Escape, Sound and Music switches, Stree
   // Music off stays off after a reload (the player itself: music.spec.ts).
   await page.reload();
   await expect(page.getByRole('button', { name: 'Music: off' })).toBeVisible();
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   await page.locator('[data-where="0"]').tap();
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(10);
-  // Streets leaves without saving anything; Home goes to the title.
+  // Streets leaves without saving anything; Home goes to Lagos from above (slice 3).
   const before = await saved(page);
   await page.keyboard.press('Escape');
   await waitOutTapLock(page);
@@ -244,7 +262,7 @@ test('Pause rebuilt: words, focus, P and Escape, Sound and Music switches, Stree
   await page.keyboard.press('KeyP');
   await waitOutTapLock(page);
   await card.getByRole('button', { name: 'Home', exact: true }).tap();
-  await expect(page.getByRole('dialog', { name: 'Gbese!' })).toBeVisible();
+  await expect.poll(() => screenNow(page)).toBe('city');
   expect(errors).toEqual([]);
 });
 
@@ -298,7 +316,7 @@ test('the hall HUD at 320 px: no Kobo chip, the shield chip never covers the hit
   for (const width of [320, 360, 480, 640]) {
     await page.setViewportSize({ width, height: 240 });
     await openSaved(page, READY_FOR_HALL);
-    await page.getByRole('button', { name: 'Play', exact: true }).tap();
+    await playToStreets(page);
     await page.locator('[data-where="hall"]').tap();
     await expect.poll(() => page.evaluate(() => window.__game!.run.power.shield)).toBe(true);
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
@@ -331,7 +349,7 @@ test('game over on a street: the street words, focus, Streets and Home; the card
   await expect(over).toBeVisible({ timeout: 90_000 });
   await h.upAll();
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
-  await expect(over.getByText(`You got ${kobo} kobo. The street is still here. Try again!`)).toBeVisible();
+  await expect(over.getByText(`You got ${formatMoney(kobo * 10)}. The street is still here. Try again!`)).toBeVisible();
   for (const b of ['Play again', 'Streets', 'Home']) await expect(over.getByRole('button', { name: b, exact: true })).toBeVisible();
   await expect(over.getByRole('button', { name: 'Play again' })).toBeFocused();
   // Nothing was saved (no street finished).
@@ -349,7 +367,7 @@ test('game over in the hall: focus on Play again; the card fits short screens', 
   test.setTimeout(150_000);
   const errors = watchErrors(page);
   await openSaved(page, progress({ streets: { 1: { done: true }, 2: { done: true }, 3: { done: true } }, parcel: false }));
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   await page.locator('[data-where="hall"]').tap();
   await expect.poll(() => page.evaluate(() => window.__game!.run.phase)).toBe('arena');
   // Light 1, then stand in the tyres' way until the lives are gone.
@@ -369,10 +387,13 @@ test('game over in the hall: focus on Play again; the card fits short screens', 
   expect(errors).toEqual([]);
 });
 
-test('a broken progress copy: Play starts street 1, nothing breaks, the copy is left alone', async ({ page }) => {
+test('a broken progress copy: Play opens Lagos, street 1 plays, nothing breaks, the copy is left alone', async ({ page }) => {
   const errors = watchErrors(page);
   await openSaved(page, '{"v":1,"states":[');
+  // Slice 3: Play opens Lagos from above; the Potholes card starts street 1.
   await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await cityToStreet1(page);
   await expect.poll(() => page.evaluate(() => window.__game!.screen)).toBe('play');
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('lagos-1');
   expect(await page.evaluate(() => localStorage.getItem('gidi-progress'))).toBe('{"v":1,"states":[');
@@ -388,7 +409,7 @@ test('qa N3: in the hall finish P, Escape, the Pause button, an app switch and t
   test.setTimeout(240_000);
   const errors = watchErrors(page);
   await openSaved(page, READY_FOR_HALL);
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   await page.getByRole('dialog', { name: 'Lagos' }).locator('[data-where="hall"]').tap();
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
   const pad = await touchPad(page);
@@ -398,7 +419,8 @@ test('qa N3: in the hall finish P, Escape, the Pause button, an app switch and t
   expect(at.b!.defeated).toBe(true);
   expect(at.r.phase).toBe('arena'); // the kind finish is playing
   // Saved at the third hit, before the Win screen.
-  expect(await saved(page)).toMatchObject({ v: 1, states: { lagos: { hall: { done: true }, parcel: false, streets: { 3: { done: true, best: 98 } } } } });
+  // Slice 3 (N3 a): the version 1 copy moved to Naira on load (best 98 -> 980, v: 2).
+  expect(await saved(page)).toMatchObject({ v: 2, states: { lagos: { hall: { done: true }, parcel: false, streets: { 3: { done: true, best: 980 } } } } });
 
   const card = page.getByRole('dialog', { name: 'Paused' });
   const stillPlaying = async (why: string) => {
@@ -435,7 +457,7 @@ test('qa N3: in the hall finish P, Escape, the Pause button, an app switch and t
   expect(b.defeated).toBe(true);
   expect(b.modeTime).toBeLessThan(6);
   await page.reload();
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   const streets = page.getByRole('dialog', { name: 'Lagos' });
   await expect(streets.locator('[data-where="hall"]')).toContainText('Done ✓');
   expect(await saved(page)).toMatchObject({ states: { lagos: { hall: { done: true } } } });
@@ -446,7 +468,7 @@ test('qa N3 and po ruling (d): the finish plays on to the Win screen with the wi
   test.setTimeout(240_000);
   const errors = watchErrors(page);
   await openSaved(page, READY_FOR_HALL);
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   const streets = page.getByRole('dialog', { name: 'Lagos' });
   await expect(streets.locator('[data-where="hall"]')).toContainText('You have a garri parcel.');
   await streets.locator('[data-where="hall"]').tap();
@@ -466,7 +488,7 @@ test('qa N3 and po ruling (d): the finish plays on to the Win screen with the wi
 
   // A new visit: the hall card is done, with no parcel line; the next hall try has no shield.
   await page.reload();
-  await page.getByRole('button', { name: 'Play', exact: true }).tap();
+  await playToStreets(page);
   await expect(streets.locator('[data-where="hall"]')).toContainText('Done ✓');
   await expect(streets.locator('[data-where="hall"]')).not.toContainText('garri parcel');
   await expect(streets.getByText('You have a garri parcel.')).toHaveCount(0);
