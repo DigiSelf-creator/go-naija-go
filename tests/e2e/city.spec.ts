@@ -214,6 +214,7 @@ test('qa F1: at 320 x 240 with ₦1,250 the three chips sit on one row and no ch
 for (const [width, height] of [
   [320, 240],
   [393, 851],
+  [851, 393],
 ] as const) {
   test(`qa F2: at ${width} x ${height} all three pins are fully on screen on the first look`, async ({ page }) => {
     await page.setViewportSize({ width, height });
@@ -225,6 +226,17 @@ for (const [width, height] of [
       expect(r.y, spot).toBeGreaterThanOrEqual(0);
       expect(r.x + r.w, spot).toBeLessThanOrEqual(width);
       expect(r.y + r.h, spot).toBeLessThanOrEqual(height);
+    }
+    // qa round 2 (F1 + F2): no pin's sign sits under a counter chip (pin boxes are in map px).
+    const map = (await lagos(page).locator('.city-map').boundingBox())!;
+    const chips = await Promise.all((await lagos(page).locator('.city-chip').all()).map(async (c) => (await c.boundingBox())!));
+    expect(chips).toHaveLength(3);
+    for (const [spot, r] of Object.entries(pins)) {
+      const p = { x: map.x + r.x, y: map.y + r.y, w: r.w, h: r.h };
+      for (const c of chips) {
+        const apart = c.x + c.width <= p.x || p.x + p.w <= c.x || c.y + c.height <= p.y || p.y + p.h <= c.y;
+        expect(apart, `${spot} pin under a chip at ${width} x ${height}`).toBe(true);
+      }
     }
   });
 }
