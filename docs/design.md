@@ -749,7 +749,7 @@ Length: spawn 420 to bus 11500 = 11080 u. 71 s at full run, about 92 s typical.
 | Group | 3400-4500 | three in a row | Roof at 3550, goat 3700, tyre 3950, drum 4250 |
 | Bus stop | 4600 | | "Bus stop! If you fall, you start again here." |
 | Big pit 1 | 4600-5470 | | Garri crate at 4900, clear road 5000 to 5300, big pit 170 at 5300 |
-| Between | 5470-6700 | | Goat 5900, drum 6300, roof at 6350 |
+| Between | 5470-6700 | | Goat 5900, drum 6300, roof at 6350 (built now: goat 6000, drum 6280, long gutter 6306; S2.16 qa round 2) |
 | Big pit 2 | 6700-7170 | | Clear road 6700 to 7000, big pit 170 at 7000 |
 | Corn | 7500-8870 | | Corn crate at 7500 (a full corn run lasts to about 10240; no drum before 10756). Tap 40 at 8100, hold 60 at 8600, roof at 8300 with a kobo crate. No hazards (fast stretch) |
 | Mixed | 8870-9900 | | Tyre 9100, goat 9300, tyre 9550 (was a drum; P2), roof at 9700 |
@@ -766,7 +766,7 @@ An empty, plain oil drum (no writing, no brand) rolling left from the vulcanizer
 | Box | 26 wide x 30 tall, feet on the road |
 | Speed | 84 u/s, rolling left (tyre is 60) |
 | Rules | as the tyre: wakes like any hazard, drops into potholes, land on it to bounce (vy -480), it then rolls into a sparkle (0.3 s); amala smashes it (+2 kobo); any other touch hurts |
-| Placing | never from a corn to reach + `wakeDistance` after it (3256 u; S2.2 hazard rule 3c); at least 200 u from a pit; first one alone with a hint. Street 3's drums: 1800, 4250, 6300 |
+| Placing | never from a corn to reach + `wakeDistance` after it (3256 u; S2.2 hazard rule 3c); at least 200 u from a pit; first one alone with a hint. Street 3's drums: 1800, 4250, 6280 (6300 until S2.16 qa round 2) |
 
 Not colour alone: the drum is taller and has ridges, the tyre is round and black with a tread.
 
@@ -1184,7 +1184,7 @@ Changes to src/data/levels/lagos-3.json, `hazards` (x stays the same):
 - ["drum", 10200] becomes ["tyre", 10200]
 - ["drum", 10650] becomes ["goat", 10650]
 
-Street 3 keeps drums at 1800 (taught alone, with its hint), 4250 and 6300. Streets 1 and 2 do not change: their tyres at 8900 and 8950 sit 1600 and 1650 u after the corn, past the fast stretch (1368 u), and they have no drums. Every big pit comes before its street's corn.
+Street 3 keeps drums at 1800 (taught alone, with its hint), 4250 and 6300 (now 6280: S2.16 qa round 2). Streets 1 and 2 do not change: their tyres at 8900 and 8950 sit 1600 and 1650 u after the corn, past the fast stretch (1368 u), and they have no drums. Every big pit comes before its street's corn.
 
 Tests (tests/unit/street.test.ts): stop hard-coding 1370 and 1400. Work the reach out in code: `reach = RULES.cornSteps / STEPS_PER_SECOND * L.cornSpeed` (2736 today). Then check:
 - no big pit from a corn to corn + reach;
@@ -1377,7 +1377,7 @@ Pick up a bowl of pepper fufu: you get 8 hot fufu balls. Press Throw to toss one
 |---|---|---|
 | Street 1, Alausa | road, x 8700 (in the second half of the corn) | tyre 8900, the wide pothole at 9150 (S2.14), goats at 9850 and 10250. After every lesson, so it never teaches two things at once |
 | Street 2, Computer Village | road, x 4800 (just before the bus stop) | the big pit at 5800 (a ball falls in and nothing happens: big pits are too deep), goat 6300, tyre 6550, the new wide pothole at 6750, goat 7050 |
-| Street 3, Ikeja | road, x 5800 (after big pit 1) | goat 6000, drum 6300, the new wide pothole at 6550, big pit 2 at 7000 (too deep) |
+| Street 3, Ikeja | road, x 5800 (after big pit 1) | goat 6000, drum 6280 (6300 until S2.16 qa round 2), the long gutter at 6306 (S2.16 B5), the new wide pothole at 6550, big pit 2 at 7000 (too deep) |
 | Go-Slow Hall | a bowl drops onto the floor at x 120 when the break after hit 1 ends (once per try) | the tyres and honks of phases 2 and 3. Phase 1 stays a pure jumping lesson |
 
 Level data: `foods` adds the kind "fufu" (the street changes are listed in S2.14 part 2). Crates may hold "fufu" later; none do now. Hall file, inside `boss`: `"fufu": { "x": 120, "afterHit": 1 }`.
@@ -1567,7 +1567,7 @@ Level data: `hazards` gains `["egret", 7400]`, `["crow", 8970]`, `["egret", 1005
 | End | a 0.3 s "shake out" of the arms, stance back to normal. A lost life ends it at once, as now |
 | Hero box | unchanged: 14 x 44. Not one number in the rules changes |
 
-**Not Mario's grow-and-shrink, and not its star (rule 2).** Never bigger or smaller, never a grow or shrink flash, never flashing or rainbow colours, no stars or sparkles around the hero, no change of music or tempo, no rising "power up" notes. A hit while strong does nothing (as built), never a shrink.
+**Not Mario's grow-and-shrink, and not its star (rule 2).** Never bigger or smaller, never a grow or shrink flash, never flashing or rainbow colours, no stars or sparkles around the hero while strong (the short pickup sparkle every food and kobo gets is fine: see qa round 2 ruling 2), no change of music or tempo, no rising "power up" notes. A hit while strong does nothing (as built), never a shrink.
 
 Every body, hair and outfit: the stance moves only the feet and elbows, by the same amount for every body (S2.3 sizes scale it); the glow follows whatever is drawn, hair and headwear included.
 
@@ -1729,10 +1729,10 @@ If first-timers need more than 3 tries at a dash gap, tune in this order: gap 26
 |---|---|---|---|
 | 2, Computer Village | short, 800, 30 (the lesson) | add kobo `[803, 236, 2]`; hint `[650, "Thorny weeds! Jump right over them."]` | The calmest place in the game: the warm-up, after the kobo crate at 600 and before the roof crates. It is the one change before a bus stop in S2.14 to S2.16: the easiest thing to jump, and a touch costs a life without sending you back |
 | 2 | long, 9050, 44 | replaces `["goat", 9100]`; add kobo `[9060, 236, 2]` | 206 u before S2.14's wide pothole (9300); after the fast stretch (ends 8668); amala at 9700 is 606 u away |
-| 3, Ikeja | long, 6150, 44 | add kobo `[6160, 236, 2]` | 350 u after the fufu (5800), so players can try a ball on it; 680 u from big pit 1, 356 u from the wide pothole at 6550; between goat 6000 and drum 6300 |
+| 3, Ikeja | long, 6306, 44 (was 6150; moved in qa round 2, see below) | add kobo `[6316, 236, 2]` | 506 u after the fufu (5800), so players still carry balls to try on it; 836 u from big pit 1, 200 u from the wide pothole at 6550; after goat 6000 and drum 6280 (the drum starts left of it and rolls away from it, so it never rolls over it) |
 | 3 | short, 9300, 30 | replaces `["goat", 9300]`; add kobo `[9303, 236, 2]` | 640 u from the hold pothole (8660); after the fast stretch (8968); amala at 9950 is 620 u away |
 
-Level data: new field `gutters`: `[[left x, width]]`. Street 2: `[[800, 30], [9050, 44]]`. Street 3: `[[6150, 44], [9300, 30]]`. The level test checks every width is 30 or 44 and every spacing rule above.
+Level data: new field `gutters`: `[[left x, width]]`. Street 2: `[[800, 30], [9050, 44]]`. Street 3: `[[6306, 44], [9300, 30]]` (6150 until qa round 2). The level test checks every width is 30 or 44 and every spacing rule above.
 
 **Words.** Hint (street 2, x 650): "Thorny weeds! Jump right over them." (35 characters). Toast the first time weeds dry up in a play: "The weeds dried up! Safe to cross." (34 characters).
 
@@ -1752,3 +1752,43 @@ Level data: new field `gutters`: `[[left x, width]]`. Street 2: `[[800, 30], [90
 | Hints | 4 + 3 = 7 | 2 + 2 = 4 |
 
 If first-timers need more than 3 tries on street 3, take back in this order (before S2.14's list): the crow at 8970; the egret at 10050; the short gutter at 9300.
+
+### qa round 2 rulings (designer, 11 Nov 2026)
+
+qa's round 2 on S2.16 passed B1 to B5 and asked four questions. The answers:
+
+**1. Street 3: the drum rolled over the long gutter. Fixed: both moved a little.**
+
+The problem: the drum started at 6300 and rolled left over the long gutter at 6150. A drum wakes just off the right edge of the screen and meets the hero about 200 u left of where it started, so the hero jumped it at about 6050 and a running held jump came down at about 6170 to 6190: in the weeds. Late-pressing bots lost a life there in 8 of 8 seeds. Not fair: you did the right thing and were punished for it.
+
+The fix (src/data/levels/lagos-3.json):
+
+| Field | Was | Now |
+|---|---|---|
+| `hazards` | `["drum", 6300]` | `["drum", 6280]` |
+| `gutters` | `[6150, 44]` | `[6306, 44]` |
+| `kobo` | `[6160, 236, 2]` | `[6316, 236, 2]` (2 kobo over the gutter, as rule 6) |
+
+Why both: moving only the drum cannot work here. It cannot go later (it must stay 200 u from the wide pothole at 6550) and going earlier crowds it onto the goat at 6000. Moving only the gutter to 6300 or so leaves a double jump over the drum landing in it. So the gutter goes as far right as the rules allow (its right edge 6350 is exactly 200 u from the wide pothole) and the drum steps 20 u back. Now the drum starts left of the gutter and rolls away from it, so it never crosses it.
+
+The rhythm stays the same: fufu 5800, goat 6000, drum (met at about 6050 to 6100), a short breath of road, the long gutter, the roof at 6350, the wide pothole at 6550. The rules still hold: the gutter is 506 u from the fufu (rule 2 needs 300), 836 u from big pit 1 and 200 u from the wide pothole (rule 1); the drum is 270 u from the pothole and 480 u from the fufu. A ball from the fufu can no longer reach the gutter from where you pick it up, but you still carry balls to it (8 balls, to use on the goat and the drum or to save for the weeds), which was the point.
+
+Checked in code (tests/unit/qa-r2-drum-gutter.test.ts): on the real street, on every screen width from 560 u to 909 u (851 x 393 is 909 u), a running tap or a running held jump over the drum, pressed 60 to 120 u before it, never loses a life and always lands at least 40 u before the weeds. On the old layout the same test fails every case. qa's sloppy bots (tests/unit/qa-s216-bots.test.ts) now reach the bus on street 3 with no life lost in all 8 seeds, Normal and Gentle. A nervous double jump over the drum can still come down near the gutter on a narrow screen; that is a choice the player made with the gutter in plain sight 1.5 s ahead, and it costs one life, not a restart.
+
+Gentle mode: nothing special is needed. The gutter is a gutter in Gentle mode too, and the same jumps clear it; the Gentle bots reach the bus in all 8 seeds without dashing.
+
+**2. The amala pickup sparkle is fine.**
+
+The short pickup sparkle (a small cream burst, 0.4 s, drawn where the food was, fading as the hero runs on) is the same for every food and every kobo. It says "you got it", not "you are powered up". B2's rule is about the 12 s of being strong: during that time nothing sparkles, twinkles or circles around the hero, nothing flashes, and nothing changes colour like a rainbow. The pickup sparkle is not around the hero, does not follow the hero, and is gone before the strong look has settled. Keep it, the same as every food. B2's wording now says so. Do not add a second or bigger sparkle for amala.
+
+**3. A mash does not dash. Intended.**
+
+A dash is a double tap and hold. A mash of twelve fast taps is a string of double taps: the first pair starts a dash, the lift straight after it ends the dash (B4: a dash ends when forward is let go), and that starts the 2 s rest. The hold at the end comes inside the rest, so it is a normal run, with the breath puffs by the mouth and, once per play, "Catch your breath! Dash again soon." That fits B4 and is the right lesson: tap twice, then hold. A clean double tap and hold after the rest dashes as usual. Checked in tests/unit/qa-r2-mash.test.ts. No change.
+
+If playtests show many first-timers mashing at the dash hint and getting stuck, the first thing to try (pm to plan, po to accept) is: a dash that lasts under 0.2 s does not start the rest. Not now.
+
+**4. The city map on an upright phone (393 x 851): fine for now, one small follow-up.**
+
+The game is played sideways. The city screen may show upright (it is a menu-like screen), and there it zooms out so all three pins and their words fit across the narrow screen without a drag (city.md part 5 (b), qa F2). That leaves the map in a band across the middle with empty sky above and below. That is OK: every pin, word and button is whole and readable, every button and pin tag is at least 44 px, + and − zoom in, and drag works. Nothing is cut off or hidden.
+
+Follow-up for later (small, pm to plan, not needed for S2.16): on an upright phone, put one line of words, centred in the empty space above the map, 14 px: "Turn your phone sideways to see more of Lagos." (46 characters, one line at 393 px; two lines are fine on narrower phones). It is not shown sideways. Nothing else changes. qa check then: at 393 x 851 and 360 x 800 the line fits with no cut, does not cover the map or the + and − buttons, and screen readers read it once.
