@@ -1538,10 +1538,12 @@ Flying off: up and to the right at 45 degrees, 200 u/s, gone after 1.2 s. From t
 | Bird | x | Pile at | Why there | Checks |
 |---|---|---|---|---|
 | Egret | 7400 | 7420 | The lesson: alone, on clear road after big pit 2, before the corn crate. Hint at 7240 | its patch starts 210 u after big pit 2's far lip (7170) |
-| Crow | 8960 | 8960 | Just after the corn's fast stretch (ends 8868): a hold jump, then tyre 9100 | 300 u from the hold pothole's far lip (8660) |
+| Crow | 8970 | 8970 | Just after the corn's fast stretch (ends 8968, with the corn crate at 7600): a hold jump, then tyre 9100 | 310 u from the hold pothole's far lip (8660) |
 | Egret | 10050 | 10070 | Just after amala (9950): try "amala frightens birds" | far from every pit |
 
-Level data: `hazards` gains `["egret", 7400]`, `["crow", 8960]`, `["egret", 10050]`; `hazardSpeeds` gains `"egret": 30`; new scenery field `piles`: `[7420, 8960, 10070]`.
+Level data: `hazards` gains `["egret", 7400]`, `["crow", 8970]`, `["egret", 10050]`; `hazardSpeeds` gains `"egret": 30`; new scenery field `piles`: `[7420, 8970, 10070]`; `crates` `[7500, 204, "corn"]` becomes `[7600, 204, "corn"]`.
+
+**Moved when built (gamedev, 11 Nov 2026).** As first written, the egret at 7400 stood 100 u from the corn crate at 7500, which breaks the S2.4 rule that a food crate stands at least 200 u from a hazard's start. So the corn crate moved to 7600 (200 u from the egret). That moves the corn's fast stretch end from 8868 to 8968, so the crow and its pile moved from 8960 to 8970, just past it. Corn + reach is now 10336, still short of the dash gap at 10900.
 
 **Words.** Hint `[7240, "Birds! Hop over, or bounce on one."]` (34 characters, touch and keys). No toast for a fright or a fufu catch: the bird's own call says it ("kraa" for the crow, a soft "krk-krk" for the egret).
 
@@ -1656,14 +1658,16 @@ Street 2, Computer Village (src/data/levels/lagos-2.json), changes to the S2.14 
 | Field | Change |
 |---|---|
 | `ground` | S2.14's `[5970, 6750], [6850, 7700]` becomes `[5970, 6700], [6960, 7700]`: S2.14's new wide pothole at 6750 is replaced by a dash gap from 6700 to 6960 |
-| `hazards` | `["goat", 6300]` becomes `["goat", 6200]` (230 u after the big pit's far lip, 5970); S2.14's `["tyre", 6550]` is removed (it stood in the lesson road); S2.14's `["goat", 7050]` becomes `["goat", 7450]` (490 u after the far lip) |
-| `platforms` | `[7050, 240, 140]` becomes `[7430, 240, 140]` (the roof moves with its goat) |
-| `kobo` | remove S2.14's arc `[6760, 220, 2], [6800, 170, 2], [6840, 220, 2]`; `[7065, 216, 5]` becomes `[7445, 216, 5]`; add a road trail `[6420, 276, 3], [6560, 276, 3]` and the dash arc `[6710, 220, 2], [6770, 160, 2], [6830, 130, 2], [6890, 160, 2]` |
+| `hazards` | `["goat", 6300]` becomes `["goat", 6200]` (230 u after the big pit's far lip, 5970); S2.14's `["tyre", 6550]` is removed (it stood in the lesson road); S2.14's `["goat", 7050]` becomes `["goat", 7500]` (540 u after the far lip; 200 u from the corn crate at 7300) |
+| `platforms` | `[7050, 240, 140]` becomes `[7480, 240, 140]` (the roof moves with its goat) |
+| `kobo` | remove S2.14's arc `[6760, 220, 2], [6800, 170, 2], [6840, 220, 2]`; `[7065, 216, 5]` becomes `[7495, 216, 5]`; add a road trail `[6420, 276, 3], [6560, 276, 3]` and the dash arc `[6710, 220, 2], [6770, 160, 2], [6830, 130, 2], [6890, 160, 2]` |
 | `hints` | add `[6300, "Double tap {forward} and hold to dash!"]` and `[6480, "Dash, then jump twice!"]` |
 
 Checks: clear road 6300 to 6700 (400 u; rule 2 needs 320); landing road 6960 to 7260 clear; the corn crate at 7300 is 340 u past the far lip (food rule) and comes after the gap (rule 4); sign at 6580; Gentle blocks 6800 to 6860; climb-out points 6600 and 6830.
 
-Street 3, Ikeja (src/data/levels/lagos-3.json): the wide pothole at 10900 becomes a dash gap. The corn crate is at 7500, so corn + reach is 10236 and the gap is past it (rule 4).
+**Moved when built (gamedev, 11 Nov 2026).** As first written, the goat at 7450 stood 150 u from the corn crate at 7300, which breaks the S2.4 rule that a food crate stands at least 200 u from a hazard's start. So the goat moved to 7500, its roof to 7480 and the roof's kobo to 7495. The numbers above are the built ones.
+
+Street 3, Ikeja (src/data/levels/lagos-3.json): the wide pothole at 10900 becomes a dash gap. The corn crate is at 7600 (moved from 7500, see B1), so corn + reach is 10336 and the gap is past it (rule 4).
 
 | Field | Change |
 |---|---|
@@ -1726,7 +1730,7 @@ If first-timers need more than 3 tries at a dash gap, tune in this order: gap 26
 | 2, Computer Village | short, 800, 30 (the lesson) | add kobo `[803, 236, 2]`; hint `[650, "Thorny weeds! Jump right over them."]` | The calmest place in the game: the warm-up, after the kobo crate at 600 and before the roof crates. It is the one change before a bus stop in S2.14 to S2.16: the easiest thing to jump, and a touch costs a life without sending you back |
 | 2 | long, 9050, 44 | replaces `["goat", 9100]`; add kobo `[9060, 236, 2]` | 206 u before S2.14's wide pothole (9300); after the fast stretch (ends 8668); amala at 9700 is 606 u away |
 | 3, Ikeja | long, 6150, 44 | add kobo `[6160, 236, 2]` | 350 u after the fufu (5800), so players can try a ball on it; 680 u from big pit 1, 356 u from the wide pothole at 6550; between goat 6000 and drum 6300 |
-| 3 | short, 9300, 30 | replaces `["goat", 9300]`; add kobo `[9303, 236, 2]` | 640 u from the hold pothole (8660); after the fast stretch (8868); amala at 9950 is 620 u away |
+| 3 | short, 9300, 30 | replaces `["goat", 9300]`; add kobo `[9303, 236, 2]` | 640 u from the hold pothole (8660); after the fast stretch (8968); amala at 9950 is 620 u away |
 
 Level data: new field `gutters`: `[[left x, width]]`. Street 2: `[[800, 30], [9050, 44]]`. Street 3: `[[6150, 44], [9300, 30]]`. The level test checks every width is 30 or 44 and every spacing rule above.
 
@@ -1747,4 +1751,4 @@ Level data: new field `gutters`: `[[left x, width]]`. Street 2: `[[800, 30], [90
 | Loose kobo | +12 on S2.14 (trail 6, arc 8, gutters 4, minus S2.14's arc 6) | +6 (arc 8 minus 6, gutters 4) |
 | Hints | 4 + 3 = 7 | 2 + 2 = 4 |
 
-If first-timers need more than 3 tries on street 3, take back in this order (before S2.14's list): the crow at 8960; the egret at 10050; the short gutter at 9300.
+If first-timers need more than 3 tries on street 3, take back in this order (before S2.14's list): the crow at 8970; the egret at 10050; the short gutter at 9300.
