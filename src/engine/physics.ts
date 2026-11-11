@@ -43,6 +43,16 @@ export interface PhysicsConfig {
   turnDecel: number;
   /** Speeds up or slows down in the air, u/s². */
   airAccel: number;
+  /** S2.16 B4 the dash: top speed (never above 212: the drum's 1.5 s rule), u/s. */
+  dashSpeed: number;
+  /** Gets up to dash speed at this, u/s². */
+  dashAccel: number;
+  /** After a dash, with forward still held, eases back to run speed at this, u/s². */
+  dashEase: number;
+  /** A dash lasts this many steps while held. */
+  dashSteps: number;
+  /** Then the hero catches their breath this many steps (from the landing if it ended in the air). */
+  dashRestSteps: number;
 }
 
 export const PHYSICS: PhysicsConfig = {
@@ -65,6 +75,11 @@ export const PHYSICS: PhysicsConfig = {
   stopDecel: 1200,
   turnDecel: 1800,
   airAccel: 600,
+  dashSpeed: 210,
+  dashAccel: 1200,
+  dashEase: 300,
+  dashSteps: 150,
+  dashRestSteps: 120,
 };
 
 /** Walk and run speeds for a player-moved hero, u/s (from the level file; corn changes both). */
@@ -143,6 +158,16 @@ export interface Body {
   holding: boolean;
   /** Fell below fallY. */
   fallen: boolean;
+  /** S2.16 B4: steps of dash left (0: not dashing). */
+  dash: number;
+  /** The way the dash goes. */
+  dashDir: -1 | 1;
+  /** Steps of rest left after a dash (no new dash meanwhile). */
+  rest: number;
+  /** The dash ended in the air: the rest starts at the landing. */
+  restAtLanding: boolean;
+  /** Faster than the gait's top after a dash: eases back at dashEase while forward is held. */
+  dashEase: boolean;
 }
 
 export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHYSICS): Body {
@@ -168,6 +193,11 @@ export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHY
     down: false,
     holding: false,
     fallen: false,
+    dash: 0,
+    dashDir: 1,
+    rest: 0,
+    restAtLanding: false,
+    dashEase: false,
   };
 }
 
@@ -194,11 +224,42 @@ export function steer(b: Body, move: -1 | 0 | 1): void {
   b.move = move;
 }
 
-/** Stops dead (a wall, or a lost life): no speed across, run timer back to 0. */
-export function halt(b: Body): void {
+/** Stops dead (a wall, or a lost life): no speed across, run timer back to 0. A dash ends. */
+export function halt(b: Body, cfg: PhysicsConfig = PHYSICS): void {
   b.vx = 0;
   b.speed = 0;
   b.runTime = 0;
+  if (b.dash > 0) endDash(b, cfg);
+  b.dashEase = false;
+}
+
+/** Resting after a dash: a double tap is a normal run. */
+export function resting(b: Body): boolean {
+  return b.rest > 0 || b.restAtLanding;
+}
+
+/**
+ * S2.16 B4: start a dash the way `dir` points. Only a player-moved hero on the ground, a roof or
+ * within coyote time, not dashing already and not resting. Returns true when it started.
+ */
+export function startDash(b: Body, dir: -1 | 1, cfg: PhysicsConfig = PHYSICS): boolean {
+  if (!b.manual || b.fallen || b.dash > 0 || resting(b)) return false;
+  if (!b.grounded && b.coyote <= 0) return false;
+  b.dash = cfg.dashSteps;
+  b.dashDir = dir;
+  b.dashEase = false;
+  // After a dash the run timer counts as full: you are running, not walking.
+  b.runTime = Math.max(b.runTime, cfg.runAfter);
+  return true;
+}
+
+/** The dash ends (time up, forward let go, the other way, a wall, a lost life, controls locked). */
+export function endDash(b: Body, cfg: PhysicsConfig = PHYSICS): void {
+  if (b.dash <= 0) return;
+  b.dash = 0;
+  b.dashEase = true;
+  if (b.grounded) b.rest = cfg.dashRestSteps;
+  else b.restAtLanding = true;
 }
 
 function toward(v: number, target: number, by: number): number {
@@ -214,13 +275,15 @@ function walk(b: Body, dt: number, cfg: PhysicsConfig): void {
     const top = b.runTime >= cfg.runAfter ? runTop : walkTop;
     if (m === 0) v = toward(v, 0, cfg.stopDecel * dt);
     else if (v * m < 0) v = toward(v, 0, cfg.turnDecel * dt); // skid, then walk the other way
+    else if (b.dash > 0) v = Math.min(Math.abs(v) + cfg.dashAccel * dt, cfg.dashSpeed) * m;
     else {
       let s = Math.abs(v);
       if (s < walkTop) s = Math.min(s + cfg.walkAccel * dt, walkTop, top);
       else if (s < top) s = Math.min(s + cfg.runAccel * dt, top);
-      else if (s > top) s = Math.max(top, s - cfg.stopDecel * dt); // corn wore off
+      else if (s > top) s = Math.max(top, s - (b.dashEase ? cfg.dashEase : cfg.stopDecel) * dt); // a dash or corn ended
       v = s * m;
     }
+    if (Math.abs(v) <= top) b.dashEase = false;
   } else if (m !== 0) {
     // A running jump keeps its speed; turned round in the air, walk speed is the top.
     const top = m === b.airDir ? Math.max(walkTop, b.airTop) : walkTop;
@@ -320,8 +383,14 @@ export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig =
   if (b.fallen) return;
 
   if (b.manual) {
+    // S2.16 B4: the dash ends when its way is no longer held, or after dashSteps.
+    if (b.dash > 0 && b.move !== b.dashDir) endDash(b, cfg);
     walk(b, dt, cfg);
     b.x += b.vx * dt;
+    if (b.dash > 0 && --b.dash === 0) {
+      b.dash = 1; // endDash needs it running
+      endDash(b, cfg);
+    }
   } else b.x += b.speed * b.dir * dt;
 
   if (!(b.down && b.holding && b.vy < 0)) b.holding = false;
@@ -355,6 +424,10 @@ export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig =
     }
   }
 
+  if (b.grounded && b.restAtLanding) {
+    b.restAtLanding = false;
+    b.rest = cfg.dashRestSteps;
+  } else if (b.rest > 0 && !b.restAtLanding) b.rest--;
   if (b.grounded) {
     if (!wasGrounded && b.buffer > 0) groundJump(b, cfg); // tapped just before landing
   } else if (wasGrounded) {
