@@ -13,6 +13,7 @@ import {
   clampCam,
   panCam,
   pinTapBox,
+  pinsOnScreen,
   pinchStep,
   startCam,
   toMap,
@@ -304,11 +305,27 @@ describe('looking around: pan and zoom limits (city.md (b) "Size", "Look around"
     { w: 1280, h: 720 },
   ];
 
-  it('far fits the map height; near is 2 times as big; it starts at far', () => {
+  it('far fits the map height (further out on a narrow screen, qa F2); near is 2 times as big; it starts at far', () => {
     for (const v of views) {
-      expect(CITY_MAP.h * camScale('far', v)).toBeCloseTo(v.h);
+      if (v.w / v.h >= 1.5) expect(CITY_MAP.h * camScale('far', v)).toBeCloseTo(v.h);
+      else expect(CITY_MAP.h * camScale('far', v)).toBeLessThanOrEqual(v.h + 1e-9);
       expect(camScale('near', v)).toBeCloseTo(2 * camScale('far', v));
       expect(startCam(v).zoom).toBe('far');
+    }
+  });
+
+  it('qa F2: on the first look all three pins, words included, are fully on screen (320 x 240, 393 x 851 and the rest)', () => {
+    for (const v of views) {
+      const cam = startCam(v);
+      expect(pinsOnScreen(cam, v), `${v.w} x ${v.h}`).toBe(true);
+      const s = camScale(cam.zoom, v);
+      for (const spot of Object.values(CITY_SPOTS)) {
+        const b = pinTapBox(cam.x + spot.pin.x * s, cam.y + spot.pin.y * s, SPOT_WORDS[spot.id]);
+        expect(b.x, `${spot.id} at ${v.w} x ${v.h}`).toBeGreaterThanOrEqual(0);
+        expect(b.x + b.w).toBeLessThanOrEqual(v.w);
+        expect(b.y).toBeGreaterThanOrEqual(0);
+        expect(b.y + b.h).toBeLessThanOrEqual(v.h);
+      }
     }
   });
 

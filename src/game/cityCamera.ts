@@ -6,7 +6,7 @@
  * of the map's top left corner. A map smaller than the screen sits in the middle; a bigger one
  * never leaves the screen by more than EDGE px.
  */
-import { CITY_BLOCKS, CITY_MAP, PIN, pinHitBox, type CityBlock } from '../art/city';
+import { CITY_BLOCKS, CITY_MAP, CITY_SPOTS, PIN, pinHitBox, SPOT_WORDS, type CityBlock } from '../art/city';
 
 export type Zoom = 'far' | 'near';
 
@@ -45,9 +45,33 @@ export interface Box {
   h: number;
 }
 
-/** CSS px per map unit at a zoom step. Far: the map's height fits the screen. */
+/** Pins stay at least this far inside the screen's sides on the first look (CSS px). */
+export const PIN_MARGIN = 8;
+
+/** The pins' map x range and the half widths of their tap areas (word tags) at each end (CSS px). */
+function pinSpan(): { lo: number; hi: number; padLo: number; padHi: number } {
+  const spots = Object.values(CITY_SPOTS).sort((a, b) => a.pin.x - b.pin.x);
+  const first = spots[0]!;
+  const last = spots[spots.length - 1]!;
+  const half = (id: keyof typeof SPOT_WORDS): number => pinTapBox(0, 0, SPOT_WORDS[id]).w / 2;
+  return { lo: first.pin.x, hi: last.pin.x, padLo: half(first.id), padHi: half(last.id) };
+}
+
+/**
+ * CSS px per map unit at a zoom step. Far: the map's height fits the screen; on a narrow screen
+ * (320 x 240, a phone held upright) it goes further out, so all three pins with their words fit
+ * across the first look even when the map sits in the middle (qa F2). Near is 2 times far.
+ */
 export function camScale(zoom: Zoom, v: CityView): number {
-  const far = Math.max(0.05, v.h / CITY_MAP.h);
+  const p = pinSpan();
+  const mid = CITY_MAP.w / 2;
+  const half = v.w / 2;
+  const fits = Math.min(
+    (v.w - p.padLo - p.padHi - 2 * PIN_MARGIN) / (p.hi - p.lo),
+    (half - p.padLo - PIN_MARGIN) / (mid - p.lo),
+    (half - p.padHi - PIN_MARGIN) / (p.hi - mid),
+  );
+  const far = Math.max(0.05, Math.min(v.h / CITY_MAP.h, fits));
   return zoom === 'near' ? far * NEAR_TIMES : far;
 }
 
@@ -65,9 +89,27 @@ export function clampCam(c: CityCam, v: CityView): CityCam {
 /** Where the first look is centred: the middle of the three pins across, the map's middle up and down. */
 export const START_AT = { x: 700, y: CITY_MAP.h / 2 } as const;
 
-/** The first look: far, centred on START_AT. */
+/**
+ * The first look: far, centred on START_AT; on a screen too narrow for that, centred on the
+ * pins with their words, so all three are fully on screen (qa F2).
+ */
 export function startCam(v: CityView): CityCam {
-  return centreOn(START_AT, 'far', v);
+  const cam = centreOn(START_AT, 'far', v);
+  if (pinsOnScreen(cam, v)) return cam;
+  const s = camScale('far', v);
+  const p = pinSpan();
+  const left = p.lo * s - p.padLo;
+  const right = p.hi * s + p.padHi;
+  return clampCam({ zoom: 'far', x: v.w / 2 - (left + right) / 2, y: cam.y }, v);
+}
+
+/** Every pin's tap area (pin and word) is inside the screen. */
+export function pinsOnScreen(c: CityCam, v: CityView): boolean {
+  const s = camScale(c.zoom, v);
+  return Object.values(CITY_SPOTS).every((spot) => {
+    const b = pinTapBox(c.x + spot.pin.x * s, c.y + spot.pin.y * s, SPOT_WORDS[spot.id]);
+    return b.x >= 0 && b.y >= 0 && b.x + b.w <= v.w && b.y + b.h <= v.h;
+  });
 }
 
 export function toScreen(c: CityCam, v: CityView, m: Pt): Pt {
