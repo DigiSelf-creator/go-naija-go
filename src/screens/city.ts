@@ -284,7 +284,11 @@ export class CityScreen {
 
   private measure(): void {
     const r = this.map.getBoundingClientRect();
-    this.view = { w: Math.max(1, r.width), h: Math.max(1, r.height) };
+    // The top row (heading, chips, buttons) lies over the map: down to its bottom edge is covered
+    // space, so the first look puts every pin under it (qa round 2: the chips hid two pins' signs).
+    const top = this.el.querySelector<HTMLElement>('.city-top');
+    const covered = Math.max(top ? top.getBoundingClientRect().bottom : r.top, this.chips.getBoundingClientRect().bottom) - r.top;
+    this.view = { w: Math.max(1, r.width), h: Math.max(1, r.height), top: Math.max(0, covered) };
   }
 
   private readonly onResize = (): void => {

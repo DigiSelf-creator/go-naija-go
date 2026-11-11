@@ -11,6 +11,8 @@ import {
   camScale,
   centreOn,
   clampCam,
+  coveredTop,
+  MIN_SCALE,
   panCam,
   pinTapBox,
   pinsOnScreen,
@@ -327,6 +329,69 @@ describe('looking around: pan and zoom limits (city.md (b) "Size", "Look around"
         expect(b.y + b.h).toBeLessThanOrEqual(v.h);
       }
     }
+  });
+
+  it('qa round 2 (F1 + F2): with the top row covering the screen top, every pin starts fully below it', () => {
+    // 320 x 240: the chips row ends about 86 px down (qa measured 56 to 86); wider screens have one top row.
+    const covered: CityView[] = [
+      { w: 320, h: 240, top: 90 },
+      { w: 320, h: 200, top: 90 },
+      { w: 280, h: 180, top: 56 },
+      { w: 360, h: 220, top: 90 },
+      { w: 851, h: 393, top: 50 },
+      { w: 393, h: 851, top: 90 },
+      { w: 1280, h: 720, top: 56 },
+    ];
+    for (const v of covered) {
+      const cam = startCam(v);
+      expect(cam.zoom).toBe('far');
+      expect(pinsOnScreen(cam, v), `${v.w} x ${v.h} top ${v.top}`).toBe(true);
+      const s = camScale('far', v);
+      expect(s).toBeGreaterThanOrEqual(MIN_SCALE);
+      expect(s).toBeLessThanOrEqual(camScale('far', { w: v.w, h: v.h }) + 1e-9);
+      for (const spot of Object.values(CITY_SPOTS)) {
+        const at = toScreen(cam, v, spot.pin);
+        const b = pinTapBox(at.x, at.y, SPOT_WORDS[spot.id]);
+        expect(b.y, `${spot.id} at ${v.w} x ${v.h}`).toBeGreaterThanOrEqual(v.top!);
+        expect(b.y + b.h).toBeLessThanOrEqual(v.h);
+        expect(b.x).toBeGreaterThanOrEqual(0);
+        expect(b.x + b.w).toBeLessThanOrEqual(v.w);
+      }
+      // The first look is already where a clamp puts it (a resize to the same size does not move it).
+      expect(clampCam(cam, v)).toEqual(cam);
+    }
+  });
+
+  it('qa round 2: a pin under the top row does not count as on screen; with no top row nothing changes', () => {
+    const bare: CityView = { w: 320, h: 240 };
+    const cam = startCam(bare);
+    expect(pinsOnScreen(cam, bare)).toBe(true);
+    // The old first look at 320 x 240 put the Potholes sign under the chips.
+    expect(pinsOnScreen(cam, { ...bare, top: 90 })).toBe(false);
+    expect(coveredTop({ w: 320, h: 240 })).toBe(0);
+    expect(coveredTop({ w: 320, h: 240, top: -5 })).toBe(0);
+    expect(coveredTop({ w: 320, h: 240, top: Number.NaN })).toBe(0);
+    expect(coveredTop({ w: 320, h: 240, top: 500 })).toBe(120);
+  });
+
+  it('qa round 2: with a top row a drag keeps the map in the space under it', () => {
+    let small = 0;
+    for (const v of [{ w: 320, h: 240, top: 90 }, { w: 320, h: 180, top: 90 }] as const) {
+      for (const zoom of ['far', 'near'] as const) {
+        const mh = CITY_MAP.h * camScale(zoom, v);
+        const down = panCam({ zoom, x: 0, y: 0 }, v, 0, 1e5);
+        const up = panCam({ zoom, x: 0, y: 0 }, v, 0, -1e5);
+        if (mh <= v.h - v.top) {
+          small++;
+          expect(up.y).toBeCloseTo(v.top + (v.h - v.top - mh) / 2);
+          expect(down.y + mh).toBeCloseTo(v.h + EDGE);
+        } else {
+          expect(down.y).toBeCloseTo(v.top + EDGE);
+          expect(up.y + mh).toBeCloseTo(v.h - EDGE);
+        }
+      }
+    }
+    expect(small, 'a map shorter than the room under the top row is checked too').toBeGreaterThan(0);
   });
 
   it('a drag never takes the map more than 40 px past an edge; a smaller map stays centred', () => {
