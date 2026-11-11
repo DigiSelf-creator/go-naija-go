@@ -1,5 +1,26 @@
 # Open questions for the product owner
 
+## po acceptance, 11 Nov 2026: round 2 (intro, Lagos city home, F1/F2, S2.16 B1 to B5)
+
+**Verdict: accepted, with Tp's ear and Tp's first play still to come.**
+Reported by qa: round 2 passed everything but F1+F2 at 320 x 240 (money chips covered pins). Reported by the lead: gamedev fixed it in ac5219e (pins now sit below the chips row; unit and e2e tests at 320 x 240, 393 x 851 and 851 x 393; city e2e 13/13). Re-run after all fixes: tsc clean, unit 941/941, S2.16 e2e 2/2, first load about 468 KB (under 3 MB).
+Street 3 unfair spot (drum rolling over the long gutter): designer moved drum to 6280 and gutter to 6306 (884a8a7); sloppy bots now clear street 3 with no life lost in 8 of 8 seeds, Normal and Gentle.
+po check of design.md S2.16 "qa round 2 rulings" (reasoned, against the brief, decisions 43 and CLAUDE.md):
+1. Drum and gutter: fair now, rhythm kept, all spacing rules hold. Our own layout. Fits.
+2. Amala pickup sparkle: fine. It is the same short burst for every food, not a glow around the hero, so B2 (strong look, no size change, nothing like a star power-up) holds.
+3. Mash does not dash: intended, matches B4 (double tap and hold). The hint "Catch your breath! Dash again soon." is plain and warm.
+4. Small upright city map: fine for now; all pins, words and buttons are whole. pm: plan the follow-up line "Turn your phone sideways to see more of Lagos." (plain, fits).
+Nothing copies another game, no real people, nothing mocks anyone; the bird calls and suit hum are our own.
+Not tested yet (open, not blocking the merge): a real phone, the new sounds by ear, Tp's own first plays.
+
+**Waiting for Tp:**
+1. Listen to the new sounds (test link, sound on, silent switch off). po recommends: say yes unless one sounds like a known game or song.
+   - Hum: street 3, eat the garri and run with the tech suit on: a soft low hum.
+   - "kraa" (crow) and "krk-krk" (egret): street 3 birds by the rubbish; throw a fufu ball at one, or bounce on one.
+   - "tak-tak": the dash; on street 2, double tap and hold forward.
+   - "fsss": a fufu ball on the thorny weeds in a gutter, as they wither.
+2. A first-time play: start fresh (new hero), play the intro, the city home, then streets 1 to 3. po recommends: tell us any spot that felt unfair or any word that was hard to follow; and how long Go-Slow Hall took you (under 25 s means the designer cuts green time, as in the 10 Nov note).
+
 ## po, 11 Nov 2026: slice 3 (a) intro and (b) city home after qa
 
 qa (reported): (a) passes; (b) passes on the phone (unit 861/861, first load 456 KB, e2e only the known sandbox failures, city drag 56 to 58 fps at 4x CPU, words exact, money words exact, old saves move once, blocked storage fine). Two fixes sent to gamedev: F1 the money chips overlap the Sound button at 320 x 240; F2 the first city view cuts pins off on narrow screens. Accept after those pass.
