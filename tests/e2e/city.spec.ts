@@ -211,3 +211,20 @@ test('qa F1: at 320 x 240 with ₦1,250 the three chips sit on one row and no ch
   }
 });
 
+for (const [width, height] of [
+  [320, 240],
+  [393, 851],
+] as const) {
+  test(`qa F2: at ${width} x ${height} all three pins are fully on screen on the first look`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await openCity(page);
+    const pins = (await city(page)).pins;
+    expect(Object.keys(pins)).toHaveLength(3);
+    for (const [spot, r] of Object.entries(pins)) {
+      expect(r.x, spot).toBeGreaterThanOrEqual(0);
+      expect(r.y, spot).toBeGreaterThanOrEqual(0);
+      expect(r.x + r.w, spot).toBeLessThanOrEqual(width);
+      expect(r.y + r.h, spot).toBeLessThanOrEqual(height);
+    }
+  });
+}
