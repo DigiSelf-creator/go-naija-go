@@ -77,9 +77,24 @@ export interface HandBotOpts {
 }
 
 /**
+ * S2.16 B4: the left thumb double taps Forward and keeps holding (lift, press, lift, press).
+ * Returns true when a dash started.
+ */
+export async function dashByHand(page: Page, h: Hands): Promise<boolean> {
+  const btn = await buttonCentres(page);
+  await h.up(LEFT);
+  await h.down(LEFT, btn.forward.x, btn.forward.y);
+  await h.up(LEFT);
+  await h.down(LEFT, btn.forward.x, btn.forward.y);
+  return page.evaluate(() => window.__game!.run.dash.dashing);
+}
+
+/**
  * Plays a street by hand with two thumbs: the left thumb holds Forward all the way (so the
- * hero walks, then runs), the right thumb presses Jump: a held jump over potholes and hazards,
- * and for a big pit a held jump right at the lip with a held second jump at the top.
+ * hero walks, then runs), the right thumb presses Jump: a held jump over potholes, hazards and
+ * a gutter's weeds (S2.16 B5), and for a big pit a held jump right at the lip with a held second
+ * jump at the top. Before a dash gap (S2.16 B4), once the dash is on, the left thumb double
+ * taps Forward to dash, and the jump at the lip carries over.
  */
 export async function playStreetByHand(page: Page, h: Hands, opts: HandBotOpts = {}) {
   const level = await page.evaluate(() => window.__game!.level);
@@ -117,6 +132,11 @@ export async function playStreetByHand(page: Page, h: Hands, opts: HandBotOpts =
     }
     if (!hero.grounded) continue;
     if (opts.act && (await opts.act(s, h))) continue;
+    const d = s.r.dash;
+    if (d.on && !d.dashing && !d.resting && s.r.power.corn === 0 && level.gaps.some(([a, b]) => b - a >= 250 && a - hero.x > 60 && a - hero.x < 300)) {
+      await dashByHand(page, h);
+      continue;
+    }
     const big = level.gaps.find(([a, b]) => b - a >= 160 && a - hero.x > -4 && a - hero.x < 10 + hero.speed * 0.03);
     if (big && opts.fallIntoOnce?.(big[0]) && !fellOnce.has(big[0])) {
       fellOnce.add(big[0]);
@@ -129,7 +149,8 @@ export async function playStreetByHand(page: Page, h: Hands, opts: HandBotOpts =
     }
     const gap = big ?? level.gaps.find(([a, b]) => b - a < 160 && a - hero.x > -4 && a - hero.x < 32);
     const hazard = s.r.hazards.find((z) => (z.mode === 'wait' || z.mode === 'move') && z.x - hero.x > 0 && z.x - hero.x < 80);
-    if (gap || hazard) {
+    const weeds = s.r.gutters.find((q) => q.state === 'weeds' && q.x - hero.x > 0 && q.x - hero.x < 30);
+    if (gap || hazard || weeds) {
       if (big) stats.bigPitJumps.push({ x: hero.x, speed: hero.speed });
       await h.down(RIGHT, btn.jump.x, btn.jump.y);
       stats.presses++;

@@ -8,13 +8,16 @@ import { drawBoss, drawDustPop, drawGoLight, drawHighHonk, drawHitCounter, drawH
 import { drawHall, drawHallCones, drawHallFront, hallDoors, hallFinishAt } from '../art/hall';
 import { crateAngle, crateLineY, drawCrate, drawCrateLine, koboFanAt, koboFlyAt } from '../art/crate';
 import { drawDrum, drawDrumSmash, drawDrumSparkle } from '../art/drum';
-import { drawHero, WALK_STRIDE, type HeroLook } from '../art/hero';
-import { drawPotholeSign } from '../art/sign';
+import { drawHero, drawSuitBits, STRONG, SUIT, WALK_STRIDE, type HeroLook, type HeroPose } from '../art/hero';
+import { drawCrow, drawEgret, drawPileKoboPop, drawRubbishPile, type BirdMode } from '../art/birds';
+import { drawCementBlocks, drawGutter, drawWeeds, drawWeedSteam } from '../art/gutter';
+import { drawDustRing, drawStepThump } from '../art/dust';
+import { drawDashSign, drawPotholeSign } from '../art/sign';
 import { drawGoat, drawGoatEating, drawTyre } from '../art/hazards';
 import { drawFufuBall, drawFufuPlug, drawFufuSettle, drawFufuSteamPuff, drawTyreKnocked, drawDrumKnocked, FUFU } from '../art/fufu';
 import { THROW_TIME } from '../art/hero';
 import { FUFU_RULES, type FufuBall } from './fufu';
-import { drawFood, drawKobo, drawShield, drawShieldPop, drawSparkle } from '../art/items';
+import { drawFood, drawKobo, drawSparkle } from '../art/items';
 import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence, END_BUS_BACK, END_BUS_FRONT } from '../art/roadside';
 import { drawBusStop, drawRoad } from '../art/street';
 import { clipWellMouth, drawFade, drawWell, drawWellBack, drawWellFront, wellDownAt } from '../art/well';
@@ -24,8 +27,8 @@ import { Camera, heroScreenX } from './camera';
 import { CRATE_RULES, type CrateState } from './crates';
 import { featureOn } from './features';
 import type { Level, WellData } from './level';
-import { BIG_PIT, potholeSigns } from './pits';
-import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type RunEvent, type RunOptions } from './run';
+import { BIG_PIT, gentleBlocks, roadSigns } from './pits';
+import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type HazardState, type RunEvent, type RunOptions } from './run';
 import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
 
@@ -57,7 +60,17 @@ const SKID_WALK = 0.6;
  * What a step can tell the screen: the rules' events, plus the hero's own moves that only the
  * drawing and sound care about (the start of a run, a skid on a turn from a run).
  */
-export type GameEvent = RunEvent | { type: 'runStart' } | { type: 'skid' };
+export type GameEvent =
+  | RunEvent
+  | { type: 'runStart' }
+  | { type: 'skid' }
+  /** S2.16 B2: with amala, a foot met the ground (at most one every 0.18 s): the "dum" and the thump. */
+  | { type: 'strongStep'; x: number; y: number }
+  /** S2.16 B4: each 0.3 s of a dash on the ground, the fast soft footsteps. */
+  | { type: 'dashSteps' };
+
+/** S2.16 B4: the dash's fast footsteps sound this often, s. */
+export const DASH_STEPS_EVERY = 0.3;
 
 /** A jump in x bigger than this in one step is a respawn or a reset, not running. */
 const TELEPORT = 50;
@@ -65,7 +78,7 @@ const TELEPORT = 50;
 const MARGIN = 60;
 
 interface Effect {
-  kind: 'sparkle' | 'pop' | 'dust' | 'drumSparkle' | 'drumSmash' | 'steam';
+  kind: 'sparkle' | 'dust' | 'drumSparkle' | 'drumSmash' | 'steam' | 'weedSteam' | 'thump' | 'ring' | 'suitBits' | 'pileKobo';
   /** Where it starts (for the drum: the bottom centre of its box, on the road). */
   x: number;
   /** It drifts this way, u/s (a bounced drum rolls on into its sparkle). */
@@ -102,6 +115,16 @@ export class Game {
   skidFacing: 1 | -1 = 1;
   /** Ground move this frame: a walk or a run (player-moved streets; auto-run is always a run). */
   gait: 'walk' | 'run' = 'run';
+  /**
+   * S2.16 B2 and B3 clock times (this.clock): the garri suit went on and broke; amala was picked
+   * up and ran out by itself; the last heavy step; the last dash footsteps.
+   */
+  suitOnAt = -Infinity;
+  suitBreakAt = -Infinity;
+  amalaAt = -Infinity;
+  amalaEndAt = -Infinity;
+  private stepAt = -Infinity;
+  private dashStepAt = -Infinity;
 
   /** The street camera for player-moved levels (S2.2); slice 1 levels follow the old way. */
   private cam: Camera | null = null;
@@ -179,7 +202,7 @@ export class Game {
    * try that starts with the garri shield on (S2.7). parcelSaved: the state already has a saved
    * parcel, so well rooms show 5 kobo instead (S2.5 gift rule 6).
    */
-  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved'> = {}): void {
+  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash'> = {}): void {
     this.level = level;
     this.run = new Run(this.level, { gentle, rooms: this.rooms, ...opts });
     this.newCamera();
@@ -188,6 +211,15 @@ export class Game {
     this.effects = [];
     this.stridePhase = 0;
     this.clearMoves();
+    this.clearLooks();
+    // A hall try with the parcel starts with the suit on: it clicks on at the start.
+    if (this.run.power.shield) this.suitOnAt = this.clock;
+  }
+
+  /** No suit, strong look or dash sounds carried over from another run. */
+  private clearLooks(): void {
+    this.suitOnAt = this.suitBreakAt = this.amalaAt = this.amalaEndAt = -Infinity;
+    this.stepAt = this.dashStepAt = -Infinity;
   }
 
   /** Back to the menus: a fresh, standing hero at the start. */
@@ -200,6 +232,7 @@ export class Game {
     this.effects = [];
     this.stridePhase = 0;
     this.clearMoves();
+    this.clearLooks();
   }
 
   /** No landing squash, dust or skid (a fresh run, or back after a fall). */
@@ -270,11 +303,14 @@ export class Game {
     const vx0 = h0.vx;
     const speed0 = h0.speed;
     const air0 = !h0.grounded;
+    const shield0 = this.run.power.shield;
+    const phase0 = this.stridePhase;
     this.run.still = this.still; // a Gentle mode climb-out has no dust off under reduced motion
     const events: GameEvent[] = this.run.step(dt);
     if (h0.manual) events.push(...this.animateMoves(vx0, speed0, air0, dt));
     else this.gait = 'run';
     this.animateStride(x0, vy0, air0, dt);
+    events.push(...this.looks(shield0, phase0, events));
     if (events.some((e) => e.type === 'fall' || e.type === 'room' || e.type === 'wellBack')) this.clearMoves();
     if (this.run.below) {
       this.roomCamera(events.some((e) => e.type === 'room'), dt);
@@ -305,11 +341,81 @@ export class Game {
       } else if (e.type === 'fufuJam') {
         this.jamAt = this.clock;
       } else if (e.type === 'shieldPop') {
-        this.effects.push({ kind: 'pop', x: this.hero.x, y: this.hero.y, t0: this.clock, len: 0.3 });
+        // S2.16 B3: 0.1 s of crack lines on the plates, then they burst into 10 bits.
+        this.suitBreakAt = this.clock;
+        const len = this.still ? SUIT.breakTimeStill : SUIT.breakTime;
+        this.effects.push({ kind: 'suitBits', x: this.hero.x, y: this.hero.y, t0: this.clock + SUIT.crackTime, len });
+      } else if (e.type === 'pileKobo') {
+        this.effects.push({ kind: 'pileKobo', x: e.x, y: e.y - 10, t0: this.clock, len: 0.5 });
+      } else if (e.type === 'weedsDry') {
+        this.effects.push({ kind: 'weedSteam', x: e.x, y: this.level.groundY, t0: this.clock, len: 0.4 });
+      }
+      if (e.type === 'smash' && this.run.power.amala > 0) {
+        // S2.16 B2: amala's smash raises a 24 u dust ring at the smashed thing's foot.
+        this.effects.push({ kind: 'ring', x: e.x, y: this.level.groundY, t0: this.clock, len: 0.4 });
+      } else if (e.type === 'weedsTrample') {
+        this.effects.push({ kind: 'ring', x: e.x, y: this.level.groundY, t0: this.clock, len: 0.4 });
+      } else if (e.type === 'strongStep') {
+        this.effects.push({ kind: 'thump', x: e.x, y: e.y, t0: this.clock, len: 0.25 });
       }
       this.onEvent(e);
     }
     this.effects = this.effects.filter((f) => this.clock - f.t0 < f.len);
+  }
+
+  /**
+   * S2.16 B2 and B3: what the looks need to know this step: the suit going on (from the feet up),
+   * amala picked up (the arm flex) or running out by itself (the shake out), amala's heavy steps
+   * (a foot meets the ground: twice a run cycle, at most one every 0.18 s) and the dash's fast
+   * footsteps. Returns the sounds these start.
+   */
+  private looks(shield0: boolean, phase0: number, events: readonly GameEvent[]): GameEvent[] {
+    const out: GameEvent[] = [];
+    const run = this.run;
+    const h = this.hero;
+    if (!shield0 && run.power.shield) this.suitOnAt = this.clock;
+    for (const e of events) {
+      if (e.type === 'food' && e.kind === 'amala') this.amalaAt = this.clock;
+      if (e.type === 'powerEnd' && e.kind === 'amala') this.amalaEndAt = this.clock;
+      if (e.type === 'fall' || e.type === 'hit' || e.type === 'gameOver') this.amalaEndAt = -Infinity; // ends at once
+      if (e.type === 'dashStart') this.dashStepAt = this.clock;
+    }
+    // A foot meets the ground as the run cycle passes 0 and 0.5 (one cycle is two steps).
+    const p1 = this.stridePhase;
+    const footDown = h.grounded && h.speed > 0 && (p1 < phase0 || (phase0 < 0.5 && p1 >= 0.5));
+    if (run.power.amala > 0 && footDown && this.clock - this.stepAt >= STRONG.stepGap - 1e-9) {
+      this.stepAt = this.clock;
+      out.push({ type: 'strongStep', x: h.x, y: h.y });
+    }
+    if (h.dash > 0 && h.grounded && this.clock - this.dashStepAt >= DASH_STEPS_EVERY - 1e-9) {
+      this.dashStepAt = this.clock;
+      out.push({ type: 'dashSteps' });
+    }
+    return out;
+  }
+
+  /**
+   * The suit, strong look and dash parts of the hero's pose now (S2.16 B2, B3, B4), for drawHero.
+   */
+  powerPose(): Pick<HeroPose, 'strong' | 'shakeOut' | 'suit' | 'dash' | 'resting' | 'still'> {
+    const run = this.run;
+    const t = this.clock;
+    const out: Pick<HeroPose, 'strong' | 'shakeOut' | 'suit' | 'dash' | 'resting' | 'still'> = { still: this.still };
+    if (run.power.amala > 0) {
+      const flex = (t - this.amalaAt) / STRONG.flexTime;
+      out.strong = { left: run.power.amala / STEPS_PER_SECOND, ...(flex >= 0 && flex < 1 ? { flex } : {}) };
+    } else {
+      const k = (t - this.amalaEndAt) / STRONG.shakeTime;
+      if (k >= 0 && k < 1) out.shakeOut = k;
+    }
+    if (run.power.shield) {
+      const on = (t - this.suitOnAt) / SUIT.putOnTime;
+      out.suit = on >= 0 && on < 1 ? { on } : {};
+    } else if (t - this.suitBreakAt < SUIT.crackTime) out.suit = { crack: true };
+    const h = run.hero;
+    if (h.dash > 0) out.dash = true;
+    else if (run.resting) out.resting = true;
+    return out;
   }
 
   /**
@@ -419,6 +525,12 @@ export class Game {
     drawRoad(g, camX, W, level.ground, gy, H, this.fixed);
     // S2.15: potholes plugged with fufu, a pale patch level with the road.
     for (const p of run.plugged) if (p.b > L && p.a < R) drawFufuPlug(g, p.a, p.b, gy, H);
+    // S2.16 B4 Gentle mode: a stack of cement blocks in every dash gap.
+    if (run.gentle) for (const [a, b] of blocksOf(level)) if (b > L && a < R) drawCementBlocks(g, a, gy, H);
+    // S2.16 B5: the open gutters across the road (the weeds draw with the hazards).
+    for (const q of run.gutters) if (q.x + q.w > L && q.x < R) drawGutter(g, q.x, q.w, gy);
+    // S2.16 B1: the rubbish piles at the back of the road (gone in the fixed look).
+    if (!this.fixed) for (const x of level.piles) if (x + 40 > L && x - 40 < R) drawRubbishPile(g, x, gy);
     // The well in use is drawn with the hero (going down); no arrow while Go down shows.
     if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still }, this.fixed);
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
@@ -436,6 +548,11 @@ export class Game {
 
     for (const c of run.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
     for (const f of run.foods) if (!f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, t);
+    // S2.16 B5: the weeds never move (no time); tyres and drums roll across in front of them.
+    for (const q of run.gutters) {
+      if (q.x + q.w < L || q.x > R) continue;
+      drawWeeds(g, q.x, q.w, gy, q.state, q.state === 'drying' ? q.t / RULES.weedDrySteps : 0);
+    }
     const fade = run.hazardFade;
     if (fade < 1) {
       g.globalAlpha = 1 - fade; // the street end: hazards fade out
@@ -446,14 +563,14 @@ export class Game {
           const k = z.t / FUFU_RULES.knockSteps;
           if (z.kind === 'drum') drawDrumKnocked(g, z.x, z.y, k, z.rot);
           else drawTyreKnocked(g, z.x, z.y, k, z.rot);
-        } else if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx > 0 ? 1 : -1);
+        } else if (z.kind === 'egret' || z.kind === 'crow') this.drawBird(g, z);
+        else if (z.kind === 'goat') drawGoat(g, z.x, z.y, t, z.mode === 'runAway' ? 'runAway' : 'walk', z.mode === 'runAway' || z.vx > 0 ? 1 : -1);
         else if (z.kind === 'drum') drawDrum(g, z.x, z.y, z.rot, { lines: z.mode === 'move' });
         else drawTyre(g, z.x, z.y, z.rot);
       }
       g.globalAlpha = 1;
     }
 
-    const h = run.hero;
     // Getting on: the inside of the open door, then the hero hopping through it, then the bus
     // body around the door. Before that the bus is drawn first, so a hero jumping over it shows.
     if (end && bus && busSeen) {
@@ -475,7 +592,6 @@ export class Game {
     } else if (!blinkOff) {
       this.drawHeroNow(g, false);
     }
-    if (run.power.shield) drawShield(g, h.x, h.y, t);
     this.drawBalls(g, run.balls, L, R);
     if (end && bus && busSeen && atBus) drawEndBus(g, end.x, bus, gy);
 
@@ -529,7 +645,6 @@ export class Game {
     drawHallCones(g, finish?.cones ?? 0);
     const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
     if (!blinkOff) this.drawHeroNow(g, false);
-    if (run.power.shield) drawShield(g, run.hero.x, run.hero.y, t);
     this.drawBalls(g, run.balls, -Infinity, Infinity);
     this.drawEffects(g);
     drawHallFront(g, camX, W, H);
@@ -555,6 +670,7 @@ export class Game {
       facing: skid > 0 ? this.skidFacing : h.dir,
       glow: this.run.power.amala > 0,
       fast: this.run.power.corn > 0,
+      ...this.powerPose(),
       standing: this.idle || ((boss?.defeated ?? false) && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
       gait: walking ? 'walk' : 'run',
       skid,
@@ -589,6 +705,18 @@ export class Game {
     }
   }
 
+  /** S2.16 B1: an egret (pecking, hopping) or a crow (hovering), or either flying off. World space. */
+  private drawBird(g: CanvasRenderingContext2D, z: HazardState): void {
+    const look = { facing: (z.mode === 'flyOff' ? 1 : z.vx > 0 ? 1 : -1) as 1 | -1, fufu: z.fufu, still: this.still };
+    const time = this.still ? 0 : this.clock;
+    if (z.kind === 'crow') {
+      drawCrow(g, z.x, z.y, z.mode === 'flyOff' ? 'fly' : 'hover', time, look);
+      return;
+    }
+    const mode: BirdMode = z.mode === 'flyOff' ? 'fly' : z.mode === 'move' && z.t === 0 ? 'hop' : 'peck';
+    drawEgret(g, z.x, z.y, mode, time, look);
+  }
+
   /** Sparkles, pops, dust and drum bits now showing. World space. */
   private drawEffects(g: CanvasRenderingContext2D): void {
     const t = this.clock;
@@ -599,7 +727,11 @@ export class Game {
       else if (f.kind === 'sparkle') drawSparkle(g, f.x, f.y, k);
       else if (f.kind === 'dust') drawDustPop(g, f.x, f.y, k);
       else if (f.kind === 'steam') drawFufuSteamPuff(g, f.x, f.y, k);
-      else drawShieldPop(g, f.x, f.y, k);
+      else if (f.kind === 'weedSteam') drawWeedSteam(g, f.x, f.y, k);
+      else if (f.kind === 'thump') drawStepThump(g, f.x, f.y, k);
+      else if (f.kind === 'ring') drawDustRing(g, f.x, f.y, k);
+      else if (f.kind === 'pileKobo') drawPileKoboPop(g, f.x, f.y, k, t);
+      else if (f.kind === 'suitBits' && k >= 0) drawSuitBits(g, f.x, f.y, k, this.still);
     }
   }
 
@@ -640,7 +772,6 @@ export class Game {
     drawRoomRope(g, room.exitX, ROOM_ROPE_BUCKET_Y + (up ? h.y - gy : 0), up ? 0 : calm);
     const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
     if (!blinkOff || run.phase !== 'room') this.drawHeroNow(g, run.phase !== 'room');
-    if (run.power.shield) drawShield(g, h.x, h.y, t);
     this.drawEffects(g);
   }
   /** Seconds since a step count of this run (crate swings, lids, kobo fans). */
@@ -729,7 +860,11 @@ function drawStreetBits(
   const fx = level.startWall;
   if (fx + 100 > L && fx - 90 < R) drawStartFence(g, fx, gy);
   // S2.13 part 4: a warning sign before every pothole you must jump twice for (scenery).
-  for (const x of signsOf(level)) if (x + 30 > L && x - 30 < R) drawPotholeSign(g, x, gy, fixed);
+  for (const { x, dash } of signsOf(level)) {
+    if (x + 30 < L || x - 30 > R) continue;
+    if (dash) drawDashSign(g, x, gy, fixed);
+    else drawPotholeSign(g, x, gy, fixed);
+  }
   for (let i = 1; i < level.ground.length; i++) {
     const a = level.ground[i - 1]![1];
     const b = level.ground[i]![0];
@@ -746,11 +881,19 @@ function drawStreetBits(
   }
 }
 
-/** Pothole sign places by level, worked out once from its road spans. */
-const SIGNS = new WeakMap<Level, readonly number[]>();
-function signsOf(level: Level): readonly number[] {
+/** Pothole and dash sign places by level, worked out once from its road spans. */
+const SIGNS = new WeakMap<Level, readonly { x: number; dash: boolean }[]>();
+function signsOf(level: Level): readonly { x: number; dash: boolean }[] {
   let xs = SIGNS.get(level);
-  if (!xs) SIGNS.set(level, (xs = potholeSigns(level)));
+  if (!xs) SIGNS.set(level, (xs = roadSigns(level)));
+  return xs;
+}
+
+/** Gentle mode cement block stacks by level (S2.16 B4), worked out once from its road spans. */
+const BLOCKS = new WeakMap<Level, readonly (readonly [number, number])[]>();
+function blocksOf(level: Level): readonly (readonly [number, number])[] {
+  let xs = BLOCKS.get(level);
+  if (!xs) BLOCKS.set(level, (xs = gentleBlocks(level.ground)));
   return xs;
 }
 

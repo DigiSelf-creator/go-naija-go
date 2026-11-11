@@ -4,7 +4,15 @@
  * that fails in different ways, and no network.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS } from './helpers';
+import { PAST_DOUBLE_TAP_MS, skipIntro, storySeen } from './helpers';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
+/**
+ * Slice 3 (city.md (b)): "Play" and "Start running" open Lagos from above. These tests are about
+ * the builder and the run, so ?level=lagos-1 makes them start street 1 straight away, as before.
+ */
+const STREET1 = './?level=lagos-1';
 
 const look = (page: Page) => page.evaluate(() => window.__game!.look);
 const builderDialog = (page: Page) => page.getByRole('dialog', { name: 'Make your hero' });
@@ -26,17 +34,18 @@ async function lines(page: Page, selector: string): Promise<string[]> {
 }
 
 test('words on the title and builder match docs/design.md exactly', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   expect(await lines(page, '.screen .card')).toEqual([
     'Gbese!',
-    'Fix the streets. Get Nigeria working.',
+    // Slice 3: the title line (city choice 10) and "Settings", which now holds Gentle mode (city.md (a)).
+    'Build up Lagos. Get Nigeria working.',
     'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
     'Make your hero',
     "Nigeria's wheel",
     'Credits',
+    'Settings',
     'Sound: on',
     'Music: on',
-    'Gentle mode: 5 lives instead of 3',
   ]);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const words = (await lines(page, '.screen .card')).join(' | ');
@@ -80,22 +89,22 @@ test('words on the title and builder match docs/design.md exactly', async ({ pag
   await page.reload();
   expect(await lines(page, '.screen .card')).toEqual([
     'Gbese!',
-    'Fix the streets. Get Nigeria working.',
+    'Build up Lagos. Get Nigeria working.',
     'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
     'Play',
     'Change hero',
     "Nigeria's wheel",
     'Credits',
+    'Settings',
     'Sound: on',
     'Music: on',
-    'Gentle mode: 5 lives instead of 3',
   ]);
 });
 
 test('all 125 looks show in the preview by touch, each one different, no errors', async ({ page }) => {
   test.setTimeout(90_000);
   const errors = watchErrors(page);
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
   // Hash the preview after two animation frames, so it shows the new look.
@@ -146,7 +155,7 @@ test('very fast taps on the options: one choice per row, the last tap wins, save
   // A screen tall enough that every option shows without scrolling (the rows scroll on short ones).
   await page.setViewportSize({ width: 900, height: 600 });
   const errors = watchErrors(page);
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS); // so no tap is the second half of a double tap
@@ -191,7 +200,7 @@ test('tap targets: swatches 48 px, chips 44 px tall, all on screen; the pick has
     { width: 568, height: 320 },
   ]) {
     await page.setViewportSize(vp);
-    await page.goto('./');
+    await page.goto(STREET1);
     await page.getByRole('button', { name: 'Make your hero' }).tap();
     const boxes = await page.$$eval('.screen button', (els) =>
       els.map((e) => {
@@ -241,7 +250,7 @@ test('builder targets are at least 8 px apart, upright and sideways', async ({ p
     { width: 568, height: 320 },
   ]) {
     await page.setViewportSize(vp);
-    await page.goto('./');
+    await page.goto(STREET1);
     await page.getByRole('button', { name: 'Make your hero' }).tap();
     const boxes = await page.$$eval('.screen button', (els) =>
       els.map((e) => {
@@ -267,7 +276,7 @@ test('builder targets are at least 8 px apart, upright and sideways', async ({ p
 
 test('builder fits a tiny 320x240 screen: nothing cut off at the side, Start running reachable', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const cut = await page.$$eval('.screen button', (els) =>
     els.filter((e) => e.getBoundingClientRect().right > innerWidth + 0.5).map((e) => e.getAttribute('aria-label') ?? e.textContent),
@@ -293,7 +302,7 @@ test('a fast double tap on "Make your hero" does not pick an option by itself', 
   ]) {
     await page.setViewportSize(vp);
     for (const fx of [0.25, 0.5, 0.75]) {
-      await page.goto('./');
+      await page.goto(STREET1);
       await page.evaluate(() => localStorage.clear());
       await page.reload();
       const box = (await page.getByRole('button', { name: 'Make your hero' }).boundingBox())!;
@@ -311,7 +320,7 @@ test('a fast double tap on "Make your hero" does not pick an option by itself', 
 
 test('the builder keeps the look when the phone turns, both ways', async ({ page }) => {
   const errors = watchErrors(page);
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
   // gamedev (I2): Skin tone 5 now sits where "Make your hero" was; a person's next tap is later than 300 ms.
@@ -340,7 +349,7 @@ test('the builder keeps the look when the phone turns, both ways', async ({ page
 });
 
 test('the run draws the picked look, not the default', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
   await d.getByRole('button', { name: 'Kaftan' }).tap();
@@ -374,7 +383,7 @@ test('storage that fails on write (phone full): the look lasts this visit and th
     };
   });
   const errors = watchErrors(page);
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
   await d.getByRole('button', { name: 'Braids' }).tap();
@@ -403,12 +412,14 @@ test('storage blocked: every visit opens on "Make your hero" and nothing breaks'
   });
   const errors = watchErrors(page);
   for (let visit = 0; visit < 2; visit++) {
-    await page.goto('./');
+    await page.goto(STREET1);
     await expect(page.getByRole('button', { name: 'Make your hero' })).toBeVisible();
     // Settings still toggle for this visit.
     await page.getByRole('button', { name: 'Sound: on' }).tap();
     await expect(page.getByRole('button', { name: 'Sound: off' })).toBeVisible();
     await page.getByRole('button', { name: 'Make your hero' }).tap();
+    // Slice 3: with storage blocked the story cannot be saved as seen, so it shows each visit.
+    await skipIntro(page);
     await builderDialog(page).getByRole('button', { name: 'Afro' }).tap();
     await builderDialog(page).getByRole('button', { name: 'Start running' }).tap();
     await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
@@ -426,7 +437,7 @@ test('broken saves on the phone never break the game', async ({ page }) => {
     ['{"skin":"x","hair":0,"outfit":0}', 'Make your hero'],
     ['{"skin":99,"hair":-1,"outfit":2}', 'Play'],
   ] as const) {
-    await page.goto('./');
+    await page.goto(STREET1);
     await page.evaluate((v) => localStorage.setItem('gidi-look', v), raw);
     await page.reload();
     await expect(page.locator('.screen .go'), raw).toHaveText(title);
@@ -454,7 +465,7 @@ test('no network requests while using the builder, starting and changing hero', 
   context.on('request', (r) => {
     if (loaded) late.push(`${r.method()} ${r.url()}`);
   });
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
@@ -482,7 +493,7 @@ test('the double-tap guard never blocks a real tap: elsewhere at once, or the sa
     { width: 320, height: 240 },
   ]) {
     await page.setViewportSize(vp);
-    await page.goto('./');
+    await page.goto(STREET1);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     const open = (await page.getByRole('button', { name: 'Make your hero' }).boundingBox())!;

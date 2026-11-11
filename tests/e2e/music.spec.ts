@@ -4,7 +4,15 @@
  * `held` (Pause or a hidden page), `started` (the first tap opened the audio).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { waitOutTapLock } from './helpers';
+import { waitOutTapLock, storySeen } from './helpers';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
+/**
+ * Slice 3 (city.md (b)): "Play" and "Start running" open Lagos from above. These tests are about
+ * the builder and the run, so ?level=lagos-1 makes them start street 1 straight away, as before.
+ */
+const STREET1 = './?level=lagos-1';
 
 const LOOK = '{"skin":2,"hair":0,"outfit":0,"body":0,"age":1}';
 
@@ -19,7 +27,7 @@ function watchErrors(page: Page): string[] {
 
 /** Opens the game with a saved hero on the title. */
 async function openSaved(page: Page): Promise<void> {
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.evaluate((look) => localStorage.setItem('gidi-look', look), LOOK);
   await page.reload();
   await expect(page.getByRole('dialog', { name: 'Gbese!' })).toBeVisible();

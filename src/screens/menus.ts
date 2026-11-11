@@ -1,7 +1,8 @@
 /**
  * Menu screens (docs/design.md S2.10): title, hero builder, credits, Streets, Nigeria's wheel,
- * and in a run: pause, game over, Street cleared and Win. An HTML layer over the canvas; one
- * screen shows at a time.
+ * and in a run: pause, game over, Street cleared and Win. Slice 3 (docs/city.md part 5 (a), (b)):
+ * the intro story, Settings, and Lagos from above (the home screen). An HTML layer over the
+ * canvas; one screen shows at a time.
  */
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
 import { cardBadgeSvg, cardSceneSvg, MUSIC_SVG } from '../art/cards';
@@ -20,12 +21,20 @@ import {
   type Settings,
 } from '../game/save';
 import type { StateProgress } from '../game/progress';
+import type { SpotId } from '../art/city';
+import type { CityState } from '../game/city';
+import { introDue, introSeen, markIntroSeen, type IntroFrom } from '../game/intro';
 import type { Store } from '../storage';
+import { CityScreen } from './city';
+import { IntroScreen } from './intro';
 import { button, h } from './dom';
 import { streetCards, wheelFit, type Where } from './streets';
 import { GAME_NAME, WORDS } from './words';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | 'streets' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'streets' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | null;
+
+/** Screens that fill the whole screen (no cream card in the middle). */
+const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city'];
 
 /** Screens that open during play (design.md: Pause, Game over, Street cleared, Win): their buttons ignore taps for 0.4 s. */
 const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'cleared', 'win'];
@@ -60,8 +69,8 @@ export interface ProgressView {
   working: readonly string[];
 }
 
-/** Where a screen in a run sends the player when the run ends. */
-export type LeaveTo = 'title' | 'streets' | 'wheel';
+/** Where a screen in a run sends the player when the run ends ("Home" is the city, slice 3). */
+export type LeaveTo = 'title' | 'streets' | 'wheel' | 'city';
 
 export interface MenuHooks {
   /** "Play" on the title, or "Start running" in the builder. */
@@ -88,6 +97,12 @@ export interface MenuHooks {
   playSound(name: MenuSound): void;
   /** The player asked for less motion: the wheel's cogs stand still (S2.11). */
   stillWanted(): boolean;
+  /** The saved city (city.md (b)): buckets and fixed spots. */
+  city(): CityState;
+  /** A problem card's big button: the challenge that helps (street 1 for Potholes). */
+  runSpot(spot: SpotId, at: TapPoint | null): void;
+  /** A problem card's "Fix it": pays from the bucket and saves. True when paid. */
+  fix(spot: SpotId): boolean;
 }
 
 /** What the game over and win screens show. */
@@ -126,8 +141,16 @@ export class Menus {
   private styled = false;
   /** Builder and the wheel's list: watches a scrolling box, to show the fade while more is below. */
   private sideWatch: ResizeObserver | null = null;
-  /** Where the wheel's "Back" goes: the title if it opened from there, else Streets (S2.10 flow). */
-  private wheelBack: 'title' | 'streets' = 'streets';
+  /** Where the wheel's "Back" goes: where it opened from (S2.10 flow). */
+  private wheelBack: 'title' | 'streets' | 'city' = 'streets';
+  /** Where Settings' "Back" goes: where it opened from. */
+  private settingsBack: 'title' | 'city' = 'title';
+  /** What follows the intro story (the builder, Play, or back to Settings). */
+  private afterIntro: () => void = () => this.show('title');
+  /** Stops the screen that is going away (the intro's drawing, the city's listeners). */
+  private cleanup: (() => void) | null = null;
+  private introScreen: IntroScreen | null = null;
+  private cityScreen: CityScreen | null = null;
   /** Lays out the wheel screen again (on resize while it shows). */
   private refit: (() => void) | null = null;
   /** S2.2: the title shows the touch words when the phone buttons are shown, else the key words. */
@@ -209,12 +232,45 @@ export class Menus {
   }
 
   /** Opens Nigeria's wheel; its "Back" goes to `back`. */
-  showWheel(back: 'title' | 'streets'): void {
+  showWheel(back: 'title' | 'streets' | 'city'): void {
     this.wheelBack = back;
     this.show('wheel');
   }
 
+  /** Opens Settings; its "Back" goes to `back`. */
+  showSettings(back: 'title' | 'city'): void {
+    this.settingsBack = back;
+    this.show('settings');
+  }
+
+  /**
+   * The intro story when it is due (city.md (a)): before the builder on a first visit, once on the
+   * next "Play" for a player who already has a hero, and always from Settings. Then `after`.
+   */
+  showIntro(from: IntroFrom, after: (by?: MouseEvent) => void, by?: MouseEvent): void {
+    if (!introDue(introSeen(this.store), from)) {
+      // Straight on, with the tap that got here (the next screen ignores its double tap's second half).
+      after(by);
+      return;
+    }
+    this.afterIntro = () => after();
+    this.show('intro', by);
+  }
+
+  /** The intro screen showing now (tests), or null. */
+  get intro(): IntroScreen | null {
+    return this.screen === 'intro' ? this.introScreen : null;
+  }
+
+  /** The city screen showing now (tests), or null. */
+  get city(): CityScreen | null {
+    return this.screen === 'city' ? this.cityScreen : null;
+  }
+
   show(screen: MenuScreen, by?: MouseEvent): void {
+    const stop = this.cleanup;
+    this.cleanup = null;
+    stop?.();
     cancelAnimationFrame(this.previewFrame);
     this.sideWatch?.disconnect();
     this.sideWatch = null;
@@ -226,7 +282,7 @@ export class Menus {
     this.lastTap = null;
     this.layer.replaceChildren();
     this.layer.hidden = screen === null;
-    this.layer.classList.toggle('full', screen === 'wheel');
+    this.layer.classList.toggle('full', FULL_SCREENS.includes(screen));
     this.hooks.screenChanged?.(screen);
     let card: HTMLElement | null = null;
     if (screen === 'title') card = this.title();
@@ -238,8 +294,12 @@ export class Menus {
     if (screen === 'gameover') card = this.gameOver();
     if (screen === 'cleared') card = this.streetCleared();
     if (screen === 'win') card = this.win();
+    if (screen === 'intro') card = this.intro_();
+    if (screen === 'settings') card = this.settingsCard();
+    if (screen === 'city') card = this.cityCard();
     if (!card) return;
     this.layer.append(card);
+    if (screen === 'city') this.cityScreen?.start();
     // Set by wheel() just now (TypeScript still thinks it is the null set above).
     (this.refit as (() => void) | null)?.();
     // po M4 bug 4: a card that opens in a run puts focus on its big button, so Space or Enter
@@ -310,7 +370,7 @@ export class Menus {
         this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
         this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
         this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),
-        this.guarded(w.home, 'minor', () => this.hooks.leave('title')),
+        this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
     );
@@ -333,7 +393,7 @@ export class Menus {
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
         this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),
-        this.guarded(w.home, 'minor', () => this.hooks.leave('title')),
+        this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
     );
   }
@@ -408,7 +468,7 @@ export class Menus {
         'div',
         { class: 'minor-row' },
         button(w.wheel, 'minor', () => this.showWheel('streets')),
-        button(w.home, 'minor', () => this.show('title')),
+        button(w.home, 'minor', () => this.show('city')),
       ),
     );
   }
@@ -519,22 +579,88 @@ export class Menus {
       h('p', {}, this.touchWords() ? w.howTo : w.howToKeys),
       saved
         ? button(w.start, 'go', (e) => {
-            // S2.3: a slice 1 hero opens the builder once, with the "New!" line.
-            if (isOldSave(this.store)) this.show('builder', e);
-            else this.hooks.start(tapPoint(e));
+            const at = tapPoint(e);
+            // city.md (a): a player who has a hero but has not seen the story sees it once now.
+            this.showIntro('play', () => {
+              // S2.3: a slice 1 hero opens the builder once, with the "New!" line.
+              if (isOldSave(this.store)) this.show('builder', this.screen === 'intro' ? undefined : e);
+              else this.hooks.start(this.screen === 'intro' ? null : at);
+            }, e);
           })
-        : button(w.makeHero, 'go', (e) => this.show('builder', e)),
+        : button(w.makeHero, 'go', (e) => this.showIntro('makeHero', (by) => this.show('builder', by), e)),
       h(
         'div',
         { class: 'minor-row' },
         saved && button(w.changeHero, 'minor', (e) => this.show('builder', e)),
         button(w.wheel, 'minor', () => this.showWheel('title')),
         button(w.credits, 'minor', () => this.show('credits')),
+        button(w.settings, 'minor', () => this.showSettings('title')),
+        this.soundSwitch(),
+        this.musicSwitch(),
+      ),
+    );
+  }
+
+  /** city.md (a) Settings: one column of buttons, each at least 44 px tall. */
+  private settingsCard(): HTMLElement {
+    const w = WORDS.settings;
+    return h(
+      'div',
+      { class: 'card narrow settings-card', role: 'dialog', 'aria-label': w.heading },
+      h('h2', {}, w.heading),
+      h(
+        'div',
+        { class: 'settings-list' },
         this.soundSwitch(),
         this.musicSwitch(),
         this.gentleSwitch(),
+        button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
+        button(w.back, 'go', () => this.show(this.settingsBack)),
       ),
     );
+  }
+
+  /** city.md (a) The intro story; when it ends or is skipped it is saved as seen. */
+  private intro_(): HTMLElement {
+    const screen = new IntroScreen({
+      look: hasSavedLook(this.store) ? this.look : null,
+      still: () => this.hooks.stillWanted(),
+      touch: () => this.touchWords(),
+      ignoreTap: (e) => this.ignoreTap(e),
+      end: () => {
+        markIntroSeen(this.store);
+        this.afterIntro();
+      },
+    });
+    this.introScreen = screen;
+    this.cleanup = () => screen.close();
+    return screen.el;
+  }
+
+  /** city.md (b) Lagos from above, the home screen. */
+  private cityCard(): HTMLElement {
+    const w = WORDS.city;
+    const sound = this.guarded(this.settings.sound ? w.soundOn : w.soundOff, 'minor', () => {
+      this.settings.sound = !this.settings.sound;
+      saveSettings(this.store, this.settings);
+      sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
+      this.hooks.soundChanged(this.settings.sound);
+    });
+    const screen = new CityScreen({
+      city: () => this.hooks.city(),
+      topRight: [sound, button(w.settings, 'minor', () => this.showSettings('city'))],
+      bottom: [
+        button(w.streets, 'minor', () => this.show('streets')),
+        button(w.hero, 'minor', (e) => this.show('builder', e)),
+        button(w.wheel, 'minor', () => this.showWheel('city')),
+      ],
+      run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
+      fix: (spot) => this.hooks.fix(spot),
+      ignoreTap: (e) => this.ignoreTap(e),
+    });
+    this.cityScreen = screen;
+    this.cleanup = () => screen.close();
+    return screen.el;
   }
 
   private builder(): HTMLElement {

@@ -91,3 +91,73 @@ export function drawKneePuff(g: CanvasRenderingContext2D, kx: number, ky: number
   }
   g.restore();
 }
+
+/**
+ * Dash (S2.16 B4): one small dust puff kicked back from the feet, at (x, y) in the
+ * hero's frame. k 0 to 1 through one puff (a new one every 0.1 s; 0.3 s with reduced motion).
+ */
+export function drawDashPuff(g: CanvasRenderingContext2D, x: number, y: number, k: number): void {
+  if (![x, y, k].every(Number.isFinite) || k >= 1) return;
+  const t = clamp01(k);
+  g.save();
+  g.globalAlpha = (1 - t) * 0.8;
+  g.fillStyle = DUST;
+  g.strokeStyle = DUST_EDGE;
+  g.lineWidth = 0.8;
+  g.beginPath();
+  g.arc(x - t * 10, y - 2 - t * 3, 1.8 + t * 1.8, 0, TAU);
+  g.fill();
+  g.stroke();
+  g.restore();
+}
+
+/**
+ * Amala's heavy step (S2.16 B2): a 6 u dust thump and two small pebbles, where a foot met
+ * the ground. (x, y) is the foot on the road (world space); k 0 to 1 over about 0.25 s.
+ */
+export function drawStepThump(g: CanvasRenderingContext2D, x: number, y: number, k: number): void {
+  if (![x, y, k].every(Number.isFinite) || k >= 1) return;
+  const t = clamp01(k);
+  g.save();
+  g.globalAlpha = (1 - t) * 0.85;
+  g.fillStyle = DUST;
+  g.strokeStyle = DUST_EDGE;
+  g.lineWidth = 0.8;
+  for (const s of [-1, 1]) {
+    g.beginPath();
+    g.ellipse(x + s * (2 + t * 3), y - 1.5 - t * 1.5, 1.6 + t * 1.4, 1.2 + t, 0, 0, TAU);
+    g.fill();
+    g.stroke();
+  }
+  // Two pebbles hop out and land
+  g.fillStyle = '#8a7a64';
+  for (const s of [-1, 1]) {
+    g.beginPath();
+    g.arc(x + s * (3 + t * 5), y - 1 - Math.sin(t * Math.PI) * 4, 0.9, 0, TAU);
+    g.fill();
+  }
+  g.restore();
+}
+
+/**
+ * Amala's smash (S2.16 B2): a 24 u dust ring spreading low along the road round (x, y),
+ * the smashed thing's foot. World space; k 0 to 1 over about 0.4 s.
+ */
+export function drawDustRing(g: CanvasRenderingContext2D, x: number, y: number, k: number): void {
+  if (![x, y, k].every(Number.isFinite) || k >= 1) return;
+  const t = clamp01(k);
+  const r = 6 + t * 6;
+  g.save();
+  g.globalAlpha = (1 - t) * 0.85;
+  g.fillStyle = DUST;
+  g.strokeStyle = DUST_EDGE;
+  g.lineWidth = 0.8;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU;
+    g.beginPath();
+    g.arc(x + Math.cos(a) * r, y - 3 + Math.sin(a) * r * 0.3, 2.2 + t * 1.6, 0, TAU);
+    g.fill();
+    g.stroke();
+  }
+  g.restore();
+}

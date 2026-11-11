@@ -4,7 +4,15 @@
  * "New!" builder for a slice 1 save, and every option by touch and by keys.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS } from './helpers';
+import { PAST_DOUBLE_TAP_MS, storySeen } from './helpers';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
+/**
+ * Slice 3 (city.md (b)): "Play" and "Start running" open Lagos from above. These tests are about
+ * the builder and the run, so ?level=lagos-1 makes them start street 1 straight away, as before.
+ */
+const STREET1 = './?level=lagos-1';
 
 const look = (page: Page) => page.evaluate(() => window.__game!.look);
 const builderDialog = (page: Page) => page.getByRole('dialog', { name: 'Make your hero' });
@@ -55,7 +63,7 @@ for (const vp of [
     const errors = watchErrors(page);
     for (let body = 0; body < 2; body++) {
       for (let age = 0; age < 3; age++) {
-        await page.goto('./');
+        await page.goto(STREET1);
         await page.evaluate(() => localStorage.clear());
         await page.reload();
         await page.getByRole('button', { name: 'Make your hero' }).tap();
@@ -93,7 +101,7 @@ for (const vp of [
 
   test(`${vp.width}x${vp.height}: the rows scroll, the button never does; every option reachable by touch`, async ({ page }) => {
     await page.setViewportSize(vp);
-    await page.goto('./');
+    await page.goto(STREET1);
     await page.getByRole('button', { name: 'Make your hero' }).tap();
     const d = builderDialog(page);
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
@@ -131,7 +139,7 @@ for (const vp of [
 
 test('320x240 layout: preview 104 x 120 and button 104 x 56 on the left, words on two lines', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const p = (await page.locator('canvas.preview').boundingBox())!;
   const b = (await builderDialog(page).getByRole('button', { name: 'Start running' }).boundingBox())!;
@@ -156,7 +164,7 @@ test('320x240 layout: preview 104 x 120 and button 104 x 56 on the left, words o
 });
 
 test('first looks follow Male or female and Age until Hair or Outfit is tapped, then stay', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
@@ -191,7 +199,7 @@ test('first looks follow Male or female and Age until Hair or Outfit is tapped, 
 });
 
 test('the preview and the run draw the chosen body: Elder hair is grey', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   const d = builderDialog(page);
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
@@ -223,7 +231,7 @@ test('the preview and the run draw the chosen body: Elder hair is grey', async (
 
 test('a slice 1 save: the builder opens once with "New!", then never by itself again', async ({ page }) => {
   const errors = watchErrors(page);
-  await page.goto('./');
+  await page.goto(STREET1);
   // Slice 1 shape: skin, hair (Gele), outfit, no body or age.
   await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":1,"hair":3,"outfit":1}'));
   await page.reload();
@@ -265,7 +273,7 @@ test('a slice 1 save: the builder opens once with "New!", then never by itself a
 });
 
 test('a slice 1 save with Start running pressed and nothing changed saves body and age as shown', async ({ page }) => {
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.evaluate(() => localStorage.setItem('gidi-look', '{"skin":4,"hair":1,"outfit":4}'));
   await page.reload();
   await page.getByRole('button', { name: 'Play', exact: true }).tap();
@@ -278,7 +286,7 @@ test('a slice 1 save with Start running pressed and nothing changed saves body a
 
 test('keys only: Tab and Enter or Space reach every option and the button; the pick is announced', async ({ page }) => {
   await page.setViewportSize({ width: 667, height: 375 });
-  await page.goto('./');
+  await page.goto(STREET1);
   await page.getByRole('button', { name: 'Make your hero' }).focus();
   await page.keyboard.press('Enter');
   const d = builderDialog(page);

@@ -34,7 +34,15 @@ export interface ControlHandlers {
   onWellKey?(code: string): void;
   /** S2.15: X throws a fufu ball (one press, one ball; key repeat is ignored). */
   onThrow?(): void;
+  /**
+   * S2.16 B4: a double tap of a direction, still held (tap it, lift, press it again within
+   * 0.25 s). The game decides whether a dash starts.
+   */
+  onDash?(dir: -1 | 1): void;
 }
+
+/** S2.16 B4: the first tap of a double tap is this short or shorter, and the second press comes this soon after it, ms. */
+export const DOUBLE_TAP_MS = 250;
 
 /** The left share of the screen that is the direction area; the rest is the jump area. */
 export const DIR_SHARE = 0.45;
@@ -70,6 +78,9 @@ export function pauseKeyAction(code: string, repeat: boolean, screen: string | n
 interface Finger {
   area: 'dir' | 'jump' | 'none';
   x: number;
+  /** Which side of the direction buttons it went down on, and when (ms). */
+  downDir: Dir;
+  downAt: number;
   /** Let go by a rule (slid off, pause, focus lost): does nothing until lifted. */
   dead: boolean;
   /** Press order: the newest direction wins. */
@@ -88,13 +99,32 @@ export class Controls {
   private current: Dir = 0;
   /** The last thing used: picks the words in hints. */
   lastKind: InputKind;
+  /** Direction keys down: when each went down (ms), for the double tap. */
+  private readonly keyDownAt = new Map<string, number>();
+  /** The last short tap of a direction (finger or key) and when it was lifted (ms). */
+  private lastTap: { dir: Dir; at: number } | null = null;
 
   constructor(
     private readonly handlers: ControlHandlers,
     private readonly areas: () => TouchAreas,
     firstKind: InputKind = 'touch',
+    private readonly now: () => number = () => performance.now(),
   ) {
     this.lastKind = firstKind;
+  }
+
+  /** A short tap of `dir` was lifted now. */
+  private tapped(dir: Dir, downAt: number): void {
+    const t = this.now();
+    this.lastTap = dir !== 0 && t - downAt <= DOUBLE_TAP_MS ? { dir, at: t } : null;
+  }
+
+  /** A new press of `dir`: the second half of a double tap? */
+  private pressed(dir: Dir): void {
+    const last = this.lastTap;
+    this.lastTap = null;
+    if (dir === 0 || !last || last.dir !== dir || this.now() - last.at > DOUBLE_TAP_MS) return;
+    this.handlers.onDash?.(dir);
   }
 
   /** The direction held now. */
@@ -128,9 +158,13 @@ export class Controls {
     if (!a.buttons) area = 'jump'; // no buttons on screen: a press anywhere jumps
     else if (y < TOP_BAR) area = 'none';
     else area = x < a.width * DIR_SHARE ? 'dir' : 'jump';
-    this.fingers.set(id, { area, x, dead: false, order: ++this.order });
+    const downDir: Dir = area === 'dir' ? (x < a.midX ? -1 : 1) : 0;
+    this.fingers.set(id, { area, x, downDir, downAt: this.now(), dead: false, order: ++this.order });
     if (area === 'jump') this.handlers.onJumpPress(id, { x, y });
-    else if (area === 'dir') this.resolve();
+    else if (area === 'dir') {
+      this.resolve();
+      this.pressed(downDir);
+    }
   }
 
   pointerMove(id: number, x: number, y: number): void {
@@ -156,7 +190,12 @@ export class Controls {
     this.fingers.delete(id);
     if (f.dead) return;
     if (f.area === 'jump') this.handlers.onJumpRelease(id);
-    else if (f.area === 'dir') this.resolve();
+    else if (f.area === 'dir') {
+      // A tap counts only if it stayed on the side it went down on (rocking does not count).
+      const upDir: Dir = f.x < this.areas().midX ? -1 : 1;
+      this.tapped(upDir === f.downDir ? f.downDir : 0, f.downAt);
+      this.resolve();
+    }
   }
 
   /** Returns true when the key is a game key (so the page should not scroll or click). */
@@ -177,8 +216,12 @@ export class Controls {
     this.lastKind = 'keys';
     if (repeat || this.deadKeys.has(code)) return true; // key repeat is ignored
     if (dir) {
-      if (!this.dirKeys.has(code)) this.dirKeys.set(code, { dir, order: ++this.order });
-      this.resolve();
+      if (!this.dirKeys.has(code)) {
+        this.dirKeys.set(code, { dir, order: ++this.order });
+        this.keyDownAt.set(code, this.now());
+        this.resolve();
+        this.pressed(dir);
+      } else this.resolve();
     } else if (!this.jumpKeys.has(code)) {
       this.jumpKeys.add(code);
       this.handlers.onJumpPress(code, null);
@@ -188,7 +231,11 @@ export class Controls {
 
   keyUp(code: string): void {
     if (this.deadKeys.delete(code)) return;
-    if (this.dirKeys.delete(code)) this.resolve();
+    const k = this.dirKeys.get(code);
+    if (k && this.dirKeys.delete(code)) {
+      this.tapped(k.dir, this.keyDownAt.get(code) ?? -Infinity);
+      this.resolve();
+    }
     else if (this.jumpKeys.delete(code)) this.handlers.onJumpRelease(code);
   }
 
@@ -209,6 +256,7 @@ export class Controls {
     this.jumpKeys.clear();
     for (const code of this.dirKeys.keys()) this.deadKeys.add(code);
     this.dirKeys.clear();
+    this.lastTap = null;
     this.resolve();
   }
 

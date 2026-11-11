@@ -4,7 +4,9 @@
  */
 /**
  * Keys on the phone (docs/design.md S2.8 "Save shape"): gidi-look (skin, hair, outfit, body, age),
- * gidi-sound, gidi-music, gidi-gentle, gidi-progress.
+ * gidi-sound, gidi-music, gidi-gentle, gidi-progress (with its `city` part, docs/city.md (b); see
+ * src/game/progress.ts and src/game/city.ts), and gidi-intro ("seen" once the intro story has
+ * played or been skipped, docs/city.md (a); src/game/intro.ts).
  */
 const PREFIX = 'gidi-';
 

@@ -10,8 +10,9 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
 import { LEFT, buttonCentres, hands, playStreetByHand, snap, type Snap } from './hands';
-import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock } from './helpers';
+import { PAST_DOUBLE_TAP_MS, dashSaved, startRun, waitOutTapLock, screenNow } from './helpers';
 import { playHall, touchPad, waitForWin } from './hall-play';
+import { formatMoney } from '../../src/game/money';
 
 const SHOTS = process.env['K2_SHOTS'] ?? 'test-results/k2-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -73,7 +74,7 @@ async function clearedScreen(page: Page, name: string, kobo: number, big: string
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 6000 });
   // Tp's line (8 Nov 2026), and "Streets" in place of "Home" (S2.10).
-  await expect(dialog.getByText(`${name} is moving again, thanks to you! You got ${kobo} kobo.`)).toBeVisible();
+  await expect(dialog.getByText(`${name} is moving again, thanks to you! You got ${formatMoney(kobo * 10)}.`)).toBeVisible();
   for (const b of [big, 'Play again', 'Streets']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Home' })).toHaveCount(0);
   // po M4 bug 4: focus on the big button.
@@ -83,6 +84,8 @@ async function clearedScreen(page: Page, name: string, kobo: number, big: string
 }
 
 async function openStreet(page: Page, id: string) {
+  // S2.16 B4: a player on street 3 has passed street 2's dash hint, so the dash is saved on.
+  if (id === 'lagos-3') await dashSaved(page);
   await page.goto(`./?level=${id}`);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
@@ -196,7 +199,7 @@ test('street 3, Ikeja, by hand: back to the secret well, then start to bus with 
   expect(last.r.phase).toBe('bus');
   expect(last.r.checkpoint).toBe(true);
   expect(drumShot).toBe(true);
-  expect(crates.opened).toEqual([700, 850, 1100, 4900, 7500, 8400]);
+  expect(crates.opened).toEqual([700, 850, 1100, 4900, 7600, 8400]);
   expect(crates.foods).toEqual(['garri', 'corn']);
   // Both big pits crossed by run-up jumps.
   expect(stats.bigPitJumps.filter((j) => j.speed >= 156).length).toBeGreaterThanOrEqual(2);
@@ -249,5 +252,6 @@ test('Street cleared: Play again replays the same street from its start; Home go
   await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
   await waitOutTapLock(page);
   await page.getByRole('button', { name: 'Home' }).tap();
-  await expect(page.getByRole('dialog', { name: 'Gbese!' })).toBeVisible();
+  // Slice 3 (city.md (b)): Home is Lagos from above.
+  await expect.poll(() => screenNow(page)).toBe('city');
 });

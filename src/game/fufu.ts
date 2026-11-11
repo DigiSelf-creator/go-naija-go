@@ -9,7 +9,7 @@
  * Fufu balls are soft hot food, never fire (CLAUDE.md rule 2): the rules never say "fireball".
  */
 import { groundAt, type Platform, type Terrain } from '../engine/physics';
-import type { HazardKind } from './level';
+import { isBird, type HazardKind } from './level';
 import type { Pit } from './pits';
 
 const STEPS = 60;
@@ -57,6 +57,10 @@ export const FUFU_RULES = {
   knockSteps: secs(0.4),
   /** +1 kobo for a tyre or drum knocked off (amala's smash gives +2). */
   knockKobo: 1,
+  /** S2.16 B1: a ball this near a bird is caught (the crow in the air, the egret off the road). */
+  birdReach: 12,
+  /** S2.16 B5: the weeds are this tall; a ball that touches them stops there and they dry up. */
+  weedH: 18,
 } as const;
 
 export type BallMode = 'fly' | 'roll' | 'settle' | 'drop' | 'fed' | 'gone';
@@ -140,6 +144,8 @@ export interface BallWorld {
   right: number;
   /** The hero's x: the side a goat is fed from. */
   heroX: number;
+  /** S2.16 B5: gutters whose weeds still stand (left x, width), by index into the level's gutters. */
+  weeds?: readonly { i: number; x: number; w: number }[];
 }
 
 export type BallEvent =
@@ -152,6 +158,10 @@ export type BallEvent =
   | { type: 'fufuFarPlop'; x: number }
   | { type: 'fufuKnock'; target: BallTarget }
   | { type: 'fufuGoat'; target: BallTarget; x: number }
+  /** S2.16 B1: a bird caught the ball and flies off with it. */
+  | { type: 'fufuBird'; target: BallTarget }
+  /** S2.16 B5: the ball stopped in gutter `i`'s weeds: they dry up. */
+  | { type: 'fufuWeeds'; i: number; x: number }
   | { type: 'fufuPop'; index: number }
   | { type: 'fufuJam' }
   | { type: 'fufuSettle'; x: number; y: number };
@@ -255,6 +265,13 @@ function meet(b: FufuBall, w: BallWorld, ev: BallEvent[]): void {
     if (z.mode !== 'wait' && z.mode !== 'move') continue;
     const size = w.hazardBox[z.kind];
     const hb: Box = { l: z.x - size.halfW, r: z.x + size.halfW, t: z.y - size.h, b: z.y };
+    if (isBird(z.kind)) {
+      const d = R.birdReach;
+      if (!overlap(box, { l: hb.l - d, r: hb.r + d, t: hb.t - d, b: hb.b + d })) continue;
+      b.mode = 'gone';
+      ev.push({ type: 'fufuBird', target: z });
+      return;
+    }
     if (z.kind === 'goat') {
       // Never touched: a ball near enough to touch it soon stops on the road in front of it.
       const near: Box = { l: hb.l - R.goatGap, r: hb.r + R.goatGap, t: hb.t - R.goatGap, b: hb.b };
@@ -273,6 +290,16 @@ function meet(b: FufuBall, w: BallWorld, ev: BallEvent[]): void {
       ev.push({ type: 'fufuKnock', target: z });
       return;
     }
+  }
+  for (const q of w.weeds ?? []) {
+    if (!overlap(box, { l: q.x, r: q.x + q.w, t: w.groundY - R.weedH, b: w.groundY })) continue;
+    // Stops there: a puff of steam, and the weeds dry up.
+    b.mode = 'settle';
+    b.t = 0;
+    b.vx = b.vy = 0;
+    b.y = b.prevY = w.groundY;
+    ev.push({ type: 'fufuWeeds', i: q.i, x: b.x });
+    return;
   }
   for (let i = 0; i < w.throws.length; i++) {
     if (overlap(box, w.throws[i]!.box)) {

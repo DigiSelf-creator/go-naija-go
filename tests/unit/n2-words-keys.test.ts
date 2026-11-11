@@ -15,9 +15,9 @@ describe('S2.10 words', () => {
     expect([street1.name, street2.name, street3.name]).toEqual(['Alausa', 'Computer Village', 'Ikeja']);
   });
 
-  it("the cleared line is Tp's line, with the name and the kobo", () => {
-    expect(WORDS.cleared.text('Computer Village', 113)).toBe('Computer Village is moving again, thanks to you! You got 113 kobo.');
-    expect(WORDS.cleared.text('Ikeja', 0)).toBe('Ikeja is moving again, thanks to you! You got 0 kobo.');
+  it("the cleared line is Tp's line, with the name and the money (N2: whole kobo shown as Naira)", () => {
+    expect(WORDS.cleared.text('Computer Village', 1130)).toBe('Computer Village is moving again, thanks to you! You got \u20a611.30.');
+    expect(WORDS.cleared.text('Ikeja', 90)).toBe('Ikeja is moving again, thanks to you! You got 90 kobo.');
     expect(WORDS.cleared.parcel).toBe('Your garri parcel is saved for Go-Slow Hall.');
     expect([WORDS.cleared.playAgain, WORDS.cleared.streets]).toEqual(['Play again', 'Streets']);
     expect('home' in WORDS.cleared).toBe(false);
@@ -36,10 +36,12 @@ describe('S2.10 words', () => {
   it('Pause and game over words', () => {
     const p = WORDS.pause;
     expect([p.heading, p.keepPlaying, p.restart, p.streets, p.home]).toEqual(['Paused', 'Keep playing', 'Start again', 'Streets', 'Home']);
-    expect(WORDS.gameOver.text(12)).toBe('You got 12 kobo. The street is still here. Try again!');
+    // N2: "You got 90 kobo. The street is still here. Try again!"
+    expect(WORDS.gameOver.text(90)).toBe('You got 90 kobo. The street is still here. Try again!');
     expect([WORDS.title.musicOn, WORDS.title.musicOff]).toEqual(['Music: on', 'Music: off']);
     expect(WORDS.title.start).toBe('Play');
-    expect(WORDS.title.tagline).toBe('Fix the streets. Get Nigeria working.');
+    // City choice 10 (Tp, 9 Nov 2026).
+    expect(WORDS.title.tagline).toBe('Build up Lagos. Get Nigeria working.');
     expect(WORDS.toast.parcel).toBe('Garri parcel! Shield for the hall.');
   });
 });

@@ -1332,3 +1332,342 @@
     font-size: 14px;
   }
 }
+
+/* Slice 3 (docs/city.md part 5 (a)): the intro story fills the screen. The picture on top, the
+   caption under it as real text (bold 16 px, 14 px under 280 px tall; long captions wrap, never
+   cut), Skip at the top right (at least 44 x 44 px). */
+.intro-card {
+  position: fixed;
+  top: var(--safe-top);
+  right: var(--safe-right);
+  bottom: var(--safe-bottom);
+  left: var(--safe-left);
+  width: auto;
+  max-width: none;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  background: #fffaf0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.intro-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.intro-pic {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.intro-words {
+  flex: 0 0 auto;
+  padding: 6px 14px 4px;
+  text-align: center;
+}
+.screen .intro-caption {
+  margin: 0 auto;
+  max-width: 640px;
+  font-weight: bold;
+  font-size: 16px;
+  line-height: 1.3;
+}
+.screen .intro-hint {
+  margin: 2px 0 0;
+  min-height: 1.2em;
+  font-size: 13px;
+  color: #5d574b;
+}
+.intro-go {
+  max-width: 320px;
+  margin: 6px auto 2px;
+}
+.intro-go[hidden] {
+  display: none;
+}
+.intro-skip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.92);
+}
+@media (max-height: 280px) {
+  .screen .intro-caption {
+    font-size: 14px;
+  }
+  .intro-words {
+    padding: 4px 10px 2px;
+  }
+  .screen .intro-hint {
+    font-size: 12px;
+  }
+  .intro-go {
+    min-height: 44px;
+    margin: 4px auto 0;
+  }
+}
+
+/* city.md (a) Settings: one column of buttons, each at least 44 px tall, no scroll at 320 x 240. */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.settings-list .minor,
+.settings-list .go {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  justify-content: center;
+}
+@media (max-height: 300px) {
+  .settings-card {
+    padding: 8px 12px;
+  }
+  .screen .settings-card h2 {
+    margin-bottom: 4px;
+    font-size: 1.1rem;
+  }
+  .settings-list {
+    gap: 4px;
+  }
+  .settings-list .go {
+    min-height: 44px;
+    padding: 6px 12px;
+  }
+}
+
+/* city.md (b) Lagos from above: the map fills the screen; counters and buttons sit over it. */
+.city-card {
+  position: fixed;
+  top: var(--safe-top);
+  right: var(--safe-right);
+  bottom: var(--safe-bottom);
+  left: var(--safe-left);
+  width: auto;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  background: #5fb3c9;
+  touch-action: none;
+}
+.city-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+.city-map {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.city-pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.city-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+}
+.city-pin canvas {
+  display: block;
+  animation: city-pin-bob 1s ease-in-out infinite alternate;
+}
+.city-pin:focus-visible {
+  outline: 3px solid #1d1a14;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+@keyframes city-pin-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .city-pin canvas {
+    animation: none;
+  }
+}
+.city-top {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+.city-top > * {
+  pointer-events: auto;
+}
+.screen .city-top h2 {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 250, 240, 0.94);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+.city-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  pointer-events: none;
+}
+.city-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 2px 10px 2px 6px;
+  border: 2px solid #1d1a14;
+  border-radius: 18px;
+  background: #fffaf0;
+  font: bold 15px 'Trebuchet MS', Verdana, sans-serif;
+  white-space: nowrap;
+}
+.city-chip svg {
+  flex: none;
+}
+.city-top-right {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.city-bottom {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  pointer-events: none;
+}
+.city-bottom > * {
+  pointer-events: auto;
+}
+.city-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.city-zoom {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 6px;
+}
+.city-zoom-btn {
+  width: 44px;
+  padding: 0;
+  font-size: 1.4rem;
+  font-weight: bold;
+  line-height: 1;
+}
+.city-card-spot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 8px;
+  background: rgba(10, 20, 12, 0.45);
+  touch-action: pan-y;
+}
+.city-card-spot[hidden] {
+  display: none;
+}
+.screen .city-soon,
+.screen .city-fixed {
+  font-weight: bold;
+  color: #5d574b;
+}
+.screen .city-fixed {
+  color: #13703a;
+}
+@media (max-width: 480px), (max-height: 300px) {
+  .screen .city-top h2 {
+    font-size: 0.95rem;
+    padding: 4px 8px;
+  }
+  .city-chip {
+    min-height: 30px;
+    font-size: 13px;
+    padding: 1px 8px 1px 4px;
+  }
+  /* qa F1: the heading and the top-right buttons on the first row, the three chips on one row
+     under them, so no chip ever sits under Sound or Settings (320 x 240 with ₦1,250). */
+  .city-top {
+    flex-wrap: wrap;
+  }
+  .city-top-right {
+    order: 1;
+    margin-left: auto;
+  }
+  .city-chips {
+    order: 2;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+  }
+  .city-top-right .minor,
+  .city-buttons .minor {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+  }
+  .city-problem {
+    padding: 8px 12px;
+  }
+  .city-problem .go {
+    min-height: 44px;
+    margin: 4px 0 2px;
+  }
+}
+
+/* Settings on a short screen: two columns (Sound | Music, Gentle mode, Watch the story | Back),
+   so every button shows with no scroll at 320 x 240. */
+@media (max-height: 300px) {
+  .settings-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .settings-list .gentle {
+    grid-column: 1 / -1;
+  }
+  .settings-list .minor {
+    min-height: 44px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+}

@@ -9,9 +9,9 @@
  * and two-part arms and legs. Poses are angles, blended from key poses, so the
  * run, jump, fall, landing and standing all move like a person.
  */
-import { drawDustPuff, drawKneePuff, drawSkidScuff } from './dust';
+import { drawDashPuff, drawDustPuff, drawKneePuff, drawSkidScuff } from './dust';
 import { FUFU } from './fufu';
-import { GLOW, INK, WHITE } from './palette';
+import { INK, WHITE } from './palette';
 
 /** Lip rose. Every skin draws the same lip shape with a thin outline darker than the skin. */
 const LIP = '#d9705f';
@@ -226,6 +226,100 @@ export interface HeroPose {
    * 1 or more) for none. The rope and the dust off win over it.
    */
   throwing?: number;
+  /**
+   * Amala's strong look (S2.16 B2): wider stance, elbows out, a warm glow round the whole
+   * hero. `glow: true` alone gives it with the defaults. Never a change of size.
+   */
+  strong?: StrongLook;
+  /** Amala just ended (S2.16 B2): the "shake out" of the arms, 0 to 1 over STRONG.shakeTime. */
+  shakeOut?: number;
+  /** The dash (S2.16 B4): head down, a 12 degree lean, arms pumping, speed lines and dust. */
+  dash?: boolean;
+  /** Catching breath after a dash (S2.16 B4): two small breath puffs by the mouth every 0.5 s. */
+  resting?: boolean;
+  /** The garri tech suit (S2.16 B3): 7 light plates over the hero's own clothes. */
+  suit?: SuitLook;
+  /** Reduced motion: the glow, the suit's hum, the speed lines and the breath puffs hold still. */
+  still?: boolean;
+}
+
+export interface StrongLook {
+  /** Seconds of amala left: the glow blinks 2 times a second in the last 2 s. */
+  left?: number;
+  /** The pick-up arm flex, 0 to 1 over STRONG.flexTime. Leave unset for none. */
+  flex?: number;
+}
+
+export interface SuitLook {
+  /** Put-on, 0 to 1 over SUIT.putOnTime: the plates click on from the feet up. 1 or unset: all on. */
+  on?: number;
+  /** The 0.1 s of white crack lines just before the plates burst (then drawSuitBits). */
+  crack?: boolean;
+}
+
+/** Amala's strong look (S2.16 B2). */
+export const STRONG = {
+  glow: '#c98a3a',
+  /** Glow outline width (u); with reduced motion it thins to padThin in the last 2 s. */
+  pad: 3,
+  padThin: 1,
+  /** Glow see-through: breathes between these once a second; steady `still` with reduced motion. */
+  alphaLow: 0.35,
+  alphaHigh: 0.55,
+  alphaStill: 0.45,
+  /** Last seconds: the glow blinks this many times a second. */
+  blinkFrom: 2,
+  blinkPerSecond: 2,
+  flexTime: 0.3,
+  shakeTime: 0.3,
+  /** At most one heavy step ("dum" and dust thump) this often (s). */
+  stepGap: 0.18,
+} as const;
+
+/** The garri tech suit (S2.16 B3). Cream plates, ink outline, sage seams. */
+export const SUIT = {
+  plate: '#fff8e6',
+  line: '#1d1a14',
+  seam: '#7fc4a4',
+  seamBright: '#d8f6e7',
+  lineW: 1.5,
+  plates: 7,
+  putOnTime: 0.4,
+  crackTime: 0.1,
+  /** The burst: 10 bits fly 20 to 40 u and fade over 0.5 s (reduced motion: fade in place over 0.3 s). */
+  bits: 10,
+  breakTime: 0.5,
+  breakTimeStill: 0.3,
+  /** Seconds between the seams' soft brightening. */
+  humEvery: 2,
+} as const;
+
+/** The dash (S2.16 B4). */
+export const DASH_LOOK = {
+  lean: (12 * Math.PI) / 180,
+  /** A dust puff at the feet this often (s); reduced motion: puffStill. */
+  puff: 0.1,
+  puffStill: 0.3,
+  /** Two breath puffs this often (s) while resting. */
+  breath: 0.5,
+} as const;
+
+/**
+ * The strong glow's see-through now (0 = not drawn this frame): breathes 0.35 to 0.55 once
+ * a second, blinks 2 times a second in the last 2 s; with reduced motion a steady 0.45.
+ */
+export function strongGlowAlpha(time: number, left?: number, still = false): number {
+  const t = Number.isFinite(time) ? time : 0;
+  if (still) return STRONG.alphaStill;
+  const l = typeof left === 'number' && Number.isFinite(left) ? left : Infinity;
+  if (l < STRONG.blinkFrom && Math.floor(l * STRONG.blinkPerSecond * 2) % 2 === 1) return 0;
+  return STRONG.alphaLow + (STRONG.alphaHigh - STRONG.alphaLow) * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
+}
+
+/** The glow's width (u): 3, or 1 in the last 2 s with reduced motion. */
+export function strongGlowPad(left?: number, still = false): number {
+  const l = typeof left === 'number' && Number.isFinite(left) ? left : Infinity;
+  return still && l < STRONG.blinkFrom ? STRONG.padThin : STRONG.pad;
 }
 
 /** Seconds one throw's arm swing lasts (S2.15: 0.15 s, two frames). */
@@ -460,16 +554,15 @@ function loop8(keys: readonly number[], q: number): number {
   return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
 }
 
-function runRig(phase: number, big: boolean, reach: number): Rig {
-  const s = big ? 1.15 : 1;
+function runRig(phase: number, reach: number): Rig {
   const legs = [phase + 0.5, phase];
-  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * s * reach) as [number, number];
+  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * reach) as [number, number];
   const knee = legs.map((q) => loop8(RUN_KNEE, q)) as [number, number];
   const foot = legs.map((q) => loop8(RUN_FOOT, q)) as [number, number];
   // Each arm swings against the leg on its own side, elbows bent, more when forward.
   const arm = thigh.map((a) => -a * 1.05 + 0.08) as [number, number];
   const elbow = arm.map((a) => 1.3 + Math.max(0, a) * 0.45) as [number, number];
-  return { thigh, knee, foot, arm, elbow, lean: 0.16, lift: loop8(RUN_LIFT, phase * 2) * s, tilt: -0.08 };
+  return { thigh, knee, foot, arm, elbow, lean: 0.16, lift: loop8(RUN_LIFT, phase * 2), tilt: -0.08 };
 }
 
 /** Walk: the run's keys made smaller and calmer, back nearly straight, small arm swing. */
@@ -562,9 +655,59 @@ function handAt(arm: number, elbow: number, b: Build): [number, number] {
 }
 
 function rigFor(pose: HeroPose, t: number, reach: number, upright: boolean): Rig {
-  const r = bodyRig(pose, t, reach, upright);
+  let r = bodyRig(pose, t, reach, upright);
+  const busy = pose.rope || dustOffOf(pose) !== null;
+  if (!busy && isStrong(pose)) r = withStrong(r, unit(pose.strong?.flex));
+  const shake = unit(pose.shakeOut);
+  if (!busy && shake !== null) r = withShakeOut(r, shake);
   const th = throwOf(pose);
-  return th === null || pose.rope || dustOffOf(pose) !== null ? r : withThrow(r, throwFrame(th), pose.inAir);
+  return th === null || busy ? r : withThrow(r, throwFrame(th), pose.inAir);
+}
+
+/** A 0 to 1 progress, or null when unset, broken or done. */
+function unit(k: number | undefined): number | null {
+  return typeof k === 'number' && Number.isFinite(k) && k >= 0 && k < 1 ? k : null;
+}
+
+/** Amala's strong look is on (the old `glow` flag or a `strong` look). */
+function isStrong(pose: HeroPose): boolean {
+  return pose.glow === true || (typeof pose.strong === 'object' && pose.strong !== null);
+}
+
+/** Pushes a swing angle further out from straight down (continuous through 0). */
+function spreadOut(a: number, by: number): number {
+  return a + Math.max(-1, Math.min(1, a * 10)) * by;
+}
+
+/**
+ * Strong stance (S2.16 B2): feet about 3 u further apart, elbows about 2 u out, same cycle
+ * and lean. The pick-up flex raises both forearms for 0.3 s while the legs keep going.
+ */
+function withStrong(r: Rig, flex: number | null): Rig {
+  const s: Rig = {
+    ...r,
+    thigh: [spreadOut(r.thigh[0], 0.14), spreadOut(r.thigh[1], 0.14)],
+    arm: [spreadOut(r.arm[0], 0.28), spreadOut(r.arm[1], 0.28)],
+    elbow: [r.elbow[0] + 0.2, r.elbow[1] + 0.2],
+  };
+  if (flex === null) return s;
+  const k = Math.sin(flex * Math.PI);
+  const m = (a: number, b: number): number => a + (b - a) * k;
+  return { ...s, arm: [m(s.arm[0], 1.25), m(s.arm[1], 1.45)], elbow: [m(s.elbow[0], 2.2), m(s.elbow[1], 2.3)] };
+}
+
+/** Amala ends: the arms shake loose by the sides for 0.3 s. */
+function withShakeOut(r: Rig, k: number): Rig {
+  const w = Math.sin(k * Math.PI);
+  const j = Math.sin(k * Math.PI * 8) * 0.22;
+  const m = (a: number, b: number): number => a + (b - a) * w;
+  return { ...r, arm: [m(r.arm[0], -0.1 + j), m(r.arm[1], 0.12 - j)], elbow: [m(r.elbow[0], 0.15), m(r.elbow[1], 0.15)] };
+}
+
+/** The dash: the run cycle with the head down (12 degrees) and the arms pumping harder. */
+function dashRig(phase: number, reach: number): Rig {
+  const r = runRig(phase, reach);
+  return { ...r, arm: [r.arm[0] * 1.2, r.arm[1] * 1.2], elbow: [r.elbow[0] + 0.15, r.elbow[1] + 0.15], lean: DASH_LOOK.lean, tilt: 0.02 };
 }
 
 function bodyRig(pose: HeroPose, t: number, reach: number, upright: boolean): Rig {
@@ -582,7 +725,7 @@ function bodyRig(pose: HeroPose, t: number, reach: number, upright: boolean): Ri
     r = standRig(t);
   } else {
     const ph = Number.isFinite(pose.phase) ? pose.phase : 0;
-    r = pose.gait === 'walk' ? walkRig(ph, reach) : runRig(ph, pose.glow, reach);
+    r = pose.gait === 'walk' ? walkRig(ph, reach) : pose.dash ? dashRig(ph, reach) : runRig(ph, reach);
     const skid = typeof pose.skid === 'number' && Number.isFinite(pose.skid) ? clamp01(pose.skid) : 0;
     if (skid > 0) r = mix(r, SKID, skid);
   }
@@ -1364,13 +1507,28 @@ const GREY_HAIRS: readonly HairOption[] = HAIRS.map((h) =>
   h.id === 'lowcut' || h.id === 'afro' ? { ...h, colour: GREY, accent: GREY_SHADE } : h.id === 'braids' ? { ...h, colour: GREY } : h,
 );
 
-/**
- * Draws the hero with feet centred on (0, 0). Translate first:
- *   g.save(); g.translate(x, y); drawHero(g, look, pose); g.restore();
- * No gradients or shadowBlur, so it is cheap every frame. Every body and age has
- * the same hitbox and moves; only the drawing measures change (Build).
- */
-export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose): void {
+/** Everything one frame of the hero needs, worked out once per draw. */
+interface Frame {
+  skin: SkinOption;
+  b: Build;
+  hair: HairOption;
+  outfit: OutfitOption;
+  t: number;
+  dustOff: number | null;
+  running: boolean;
+  phase: number;
+  land: number;
+  r: Rig;
+  legs: readonly [LegPts, LegPts];
+  hipY: number;
+  breathe: number;
+  swing: number;
+  sway: number;
+  headX: number;
+  headY: number;
+}
+
+function frameOf(look: HeroLook, pose: HeroPose): Frame {
   const l = clampLook(look);
   const skin = SKINS[l.skin] ?? SKINS[0]!;
   const b = BUILDS[bodyOf(look) * AGES.length + ageOf(look)] ?? BUILDS[DEFAULT_AGE]!;
@@ -1380,6 +1538,322 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   const dustOff = dustOffOf(pose);
   const running = !pose.inAir && !pose.standing && dustOff === null;
   const phase = Number.isFinite(pose.phase) ? pose.phase : 0;
+  const land = !pose.inAir && dustOff === null && typeof pose.land === 'number' && Number.isFinite(pose.land) ? clamp01(pose.land) : 0;
+  // Shorter legs take slightly bigger swings, so the feet still keep pace with the ground.
+  const r = rigFor(pose, t, 1 / b.len, b.grey);
+  const legs = [legPts(r.thigh[0], r.knee[0], r.foot[0], b.len), legPts(r.thigh[1], r.knee[1], r.foot[1], b.len)] as const;
+  // Plant the lower foot on the ground, then add flight or jump height.
+  const reach = Math.max(legs[0].ay, legs[1].ay);
+  const hipY = -(reach + ANKLE * b.len) - r.lift * b.len;
+  const breathe = pose.standing ? Math.sin(t * 2.2) * 0.35 : 0;
+  // Cloth and braid swing: follows the stride, lifts in the air.
+  const swing = running ? Math.sin(phase * TAU * 2) * 0.8 + 1.2 : pose.inAir ? 2 : Math.sin(t * 1.3) * 0.3;
+  const sway = running ? Math.sin(phase * TAU * 2 + 1) * 0.8 : pose.inAir ? -1.2 : Math.sin(t * 1.3) * 0.3;
+  const headX = 1.2 * b.sw;
+  const headY = (-TORSO - 6.2) * b.len + breathe;
+  return { skin, b, hair, outfit, t, dustOff, running, phase, land, r, legs, hipY, breathe, swing, sway, headX, headY };
+}
+
+function torsoFrame(g: CanvasRenderingContext2D, f: Frame): void {
+  g.translate(0, f.hipY);
+  g.rotate(f.r.lean);
+}
+
+function headFrame(g: CanvasRenderingContext2D, f: Frame): void {
+  torsoFrame(g, f);
+  g.translate(f.headX, f.headY);
+  g.rotate(f.r.tilt - f.r.lean * 0.5);
+  if (f.b.head !== 1) g.scale(f.b.head, f.b.head);
+}
+
+/** Shoulder, elbow and wrist of one arm in the torso frame (as drawArm places them). */
+function armPts(arm: number, elbow: number, isFar: boolean, b: Build): [number, number, number, number, number, number] {
+  const sx = isFar ? -0.6 : 0.6;
+  const sy = SHOULDER_Y * b.len;
+  const ex = sx + Math.sin(arm) * UPPER_ARM * b.len;
+  const ey = sy + Math.cos(arm) * UPPER_ARM * b.len;
+  const fa = arm + elbow;
+  return [sx, sy, ex, ey, ex + Math.sin(fa) * FOREARM * b.len, ey + Math.cos(fa) * FOREARM * b.len];
+}
+
+/** Adds an ellipse as its own subpath (no joining line). */
+function oval(g: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number, rot = 0): void {
+  g.moveTo(x + Math.cos(rot) * rx, y + Math.sin(rot) * rx);
+  g.ellipse(x, y, rx, ry, rot, 0, TAU);
+}
+
+/**
+ * Amala's warm glow (S2.16 B2): the hero's own shape widened by `pad` u, as one path
+ * filled once behind the hero (no blur, so it stays fast). Follows every body, hair,
+ * headwear and outfit, and the pose.
+ */
+function strongGlow(g: CanvasRenderingContext2D, f: Frame, pad: number, alpha: number): void {
+  const { b, r, legs, hipY, outfit, hair, swing } = f;
+  const w = b.limb;
+  g.beginPath();
+  // Legs and shoes
+  for (const i of [0, 1] as const) {
+    const p = legs[i];
+    const hx = i === 0 ? -0.7 : 0.7;
+    capsule(g, hx, hipY, 2.75 * w + pad, hx + p.kx, hipY + p.ky, 2.1 * w + pad);
+    capsule(g, hx + p.kx, hipY + p.ky, 2.1 * w + pad, hx + p.ax, hipY + p.ay, 1.6 * w + pad);
+    const cx = hx + p.ax + Math.cos(p.footA) * b.len;
+    const cy = hipY + p.ay + (Math.sin(p.footA) + 0.2) * b.len;
+    oval(g, cx, cy, 3.7 * b.len + pad, 2.3 * b.len + pad, p.footA);
+  }
+  // Torso, neck and arms
+  g.save();
+  torsoFrame(g, f);
+  const sw = Math.max(b.sw, b.hw);
+  if (outfit.id === 'agbada') oval(g, 0, 0.5 * b.len, 8.6 * sw + pad, 15.4 * b.len + pad);
+  else if (outfit.id === 'kaftan') oval(g, 0.4, -1 * b.len, 5.4 * sw + pad, 13.8 * b.len + pad);
+  else oval(g, 0.6 * sw, -6.2 * b.len, 4.6 * sw + pad, 8.8 * b.len + pad);
+  capsule(g, 0.2, SHOULDER_Y * b.len, 1.9 * w + pad, f.headX - 0.6, f.headY + 3.6 * b.head, 1.7 * w + pad);
+  for (const i of [0, 1] as const) {
+    const [sx, sy, ex, ey, wx, wy] = armPts(r.arm[i], r.elbow[i], i === 0, b);
+    capsule(g, sx, sy + f.breathe, 2.1 * w + pad, ex, ey + f.breathe, 1.65 * w + pad);
+    capsule(g, ex, ey + f.breathe, 1.65 * w + pad, wx, wy + f.breathe, 1.9 + pad);
+    if (outfit.id === 'agbada') capsule(g, sx - 1.5, sy + 2, 2.6 + pad, (sx + ex) / 2 - 1.5, Math.max(ey, sy + 4 * b.len) + 5 * b.len, 2.6 + pad);
+  }
+  g.restore();
+  // Head, hair and headwear
+  g.save();
+  headFrame(g, f);
+  oval(g, CX + 0.4, CY + 0.6, RX + 1.4 + pad, RY + 0.8 + pad);
+  if (hair.id === 'afro') oval(g, -1.5, -2.6, 8.4 + pad, 7.9 + pad);
+  else if (hair.id === 'gele') oval(g, -3, -5.6, 7.9 + pad, 8 + pad);
+  else if (hair.id === 'braids') capsule(g, -4.4, -1, 2 + pad, -6.2 - swing * 1.3, 11.6, 2 + pad);
+  else if (hair.id === 'headscarf') {
+    oval(g, -4.8, -2, 3.6 + pad, 4 + pad);
+    capsule(g, -5, 2.4, 1.6 + pad, -9.8 - swing * 0.5, 2.4 - swing * 1.4, 1.4 + pad);
+    capsule(g, -5, 3, 1.6 + pad, -8.2 - swing * 0.6, 7.6 - swing, 1.4 + pad);
+  }
+  g.restore();
+  g.globalAlpha = alpha;
+  g.fillStyle = STRONG.glow;
+  g.fill();
+  g.globalAlpha = 1;
+}
+
+/* --------------------------------------------------------------- tech suit */
+
+type SuitPart = 'farShin' | 'nearShin' | 'farArm' | 'nearArm' | 'chest' | 'farShoulder' | 'nearShoulder';
+/** The put-on order: from the feet up. */
+const SUIT_ORDER: readonly SuitPart[] = ['farShin', 'nearShin', 'farArm', 'nearArm', 'chest', 'farShoulder', 'nearShoulder'];
+
+/** How far one plate has clicked on, 0 to 1. */
+function plateOn(pose: HeroPose, part: SuitPart): number {
+  const on = pose.suit?.on;
+  if (pose.still || typeof on !== 'number' || !Number.isFinite(on) || on >= 1) return 1;
+  return clamp01(Math.max(0, on) * SUIT_ORDER.length - SUIT_ORDER.indexOf(part));
+}
+
+/** A rounded oblong (as plain lines and curves, cheap and easy to measure). */
+function rounded(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  g.moveTo(x + r, y);
+  g.lineTo(x + w - r, y);
+  g.quadraticCurveTo(x + w, y, x + w, y + r);
+  g.lineTo(x + w, y + h - r);
+  g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  g.lineTo(x + r, y + h);
+  g.quadraticCurveTo(x, y + h, x, y + h - r);
+  g.lineTo(x, y + r);
+  g.quadraticCurveTo(x, y, x + r, y);
+  g.closePath();
+}
+
+/** Fill and outline the current plate path, then the seam (and its soft hum light). */
+function plateDone(g: CanvasRenderingContext2D, far: boolean, seam: () => void, hum: number, crack: (() => void) | null): void {
+  g.fillStyle = far ? tone(SUIT.plate, 0.9) : SUIT.plate;
+  g.fill();
+  g.strokeStyle = SUIT.line;
+  g.lineWidth = SUIT.lineW;
+  g.stroke();
+  g.lineCap = 'round';
+  g.beginPath();
+  seam();
+  g.strokeStyle = SUIT.seam;
+  g.lineWidth = 0.9;
+  g.stroke();
+  if (hum > 0.01) {
+    g.globalAlpha = hum;
+    g.strokeStyle = SUIT.seamBright;
+    g.stroke();
+    g.globalAlpha = 1;
+  }
+  if (crack) {
+    g.beginPath();
+    crack();
+    g.strokeStyle = SUIT.line;
+    g.lineWidth = 1.2;
+    g.stroke();
+    g.strokeStyle = WHITE;
+    g.lineWidth = 0.6;
+    g.stroke();
+  }
+}
+
+/** A band round a limb at `at` along (x1, y1) to (x2, y2): half is the limb's radius there. */
+function suitBand(g: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, at: number, half: number, len: number, k: number, far: boolean, hum: number, crack: boolean): void {
+  g.save();
+  g.translate(x1 + (x2 - x1) * at, y1 + (y2 - y1) * at);
+  g.rotate(Math.atan2(y2 - y1, x2 - x1));
+  if (k < 1) g.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
+  const h = half + 1.5;
+  g.beginPath();
+  rounded(g, -len / 2, -h, len, h * 2, 1.4);
+  plateDone(
+    g,
+    far,
+    () => {
+      g.moveTo(0, -h + 1);
+      g.lineTo(0, h - 1);
+    },
+    hum,
+    crack
+      ? () => {
+          g.moveTo(-len / 2 + 0.6, -h + 1.2);
+          g.lineTo(-0.6, -0.4);
+          g.lineTo(0.8, 0.6);
+          g.lineTo(len / 2 - 0.6, h - 1.4);
+        }
+      : null,
+  );
+  g.restore();
+}
+
+/** A shoulder cap: a low dome over the top of the upper arm, turned with the arm. */
+function suitShoulder(g: CanvasRenderingContext2D, sx: number, sy: number, arm: number, w: number, k: number, far: boolean, hum: number, crack: boolean): void {
+  const rc = 2.1 * w + 1.5;
+  g.save();
+  g.translate(sx, sy);
+  g.rotate(-arm);
+  if (k < 1) g.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
+  g.beginPath();
+  g.moveTo(-rc, 1.6);
+  g.quadraticCurveTo(-rc, -rc * 0.75, 0, -rc * 0.8);
+  g.quadraticCurveTo(rc, -rc * 0.75, rc, 1.6);
+  g.quadraticCurveTo(0, 2.8, -rc, 1.6);
+  g.closePath();
+  plateDone(
+    g,
+    far,
+    () => {
+      g.moveTo(-rc + 1.2, 0.4);
+      g.quadraticCurveTo(0, -rc * 0.45, rc - 1.2, 0.4);
+    },
+    hum,
+    crack
+      ? () => {
+          g.moveTo(-rc + 1, -0.6);
+          g.lineTo(0, -1.6);
+          g.lineTo(0.6, 0.8);
+        }
+      : null,
+  );
+  g.restore();
+}
+
+/** The chest plate: a rounded oblong with three short grain lines, on the front of the chest. */
+function suitChest(g: CanvasRenderingContext2D, b: Build, k: number, hum: number, crack: boolean): void {
+  const x0 = 1.6 * b.sw;
+  const x1 = 6.4 * b.sw;
+  const y0 = -12.2 * b.len;
+  const y1 = -5.2 * b.len;
+  g.save();
+  if (k < 1) {
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    g.translate(cx, cy);
+    g.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
+    g.translate(-cx, -cy);
+  }
+  g.beginPath();
+  rounded(g, x0, y0, x1 - x0, y1 - y0, 2.2);
+  plateDone(
+    g,
+    false,
+    () => {
+      // Three short grain lines, like garri
+      for (const [x, y] of [[0.35, 0.32], [0.62, 0.48], [0.4, 0.66]] as const) {
+        const px = x0 + (x1 - x0) * x;
+        const py = y0 + (y1 - y0) * y;
+        g.moveTo(px - 0.8, py + 0.3);
+        g.lineTo(px + 0.8, py - 0.3);
+      }
+    },
+    hum,
+    crack
+      ? () => {
+          g.moveTo(x0 + 1, y0 + 1.4);
+          g.lineTo((x0 + x1) / 2, (y0 + y1) / 2 - 0.5);
+          g.lineTo((x0 + x1) / 2 + 0.8, (y0 + y1) / 2 + 1);
+          g.lineTo(x1 - 1, y1 - 1.2);
+        }
+      : null,
+  );
+  g.restore();
+}
+
+/** The seams' soft hum light now (0 to 1): once every 2 s; none with reduced motion. */
+export function suitHum(time: number, still = false): number {
+  if (still || !Number.isFinite(time)) return 0;
+  const s = Math.sin((time * TAU) / SUIT.humEvery);
+  return s > 0 ? s ** 4 * 0.85 : 0;
+}
+
+/** Draws one part of the suit, in the frame its body part is drawn in. */
+function suitPart(g: CanvasRenderingContext2D, f: Frame, pose: HeroPose, part: SuitPart): void {
+  const k = plateOn(pose, part);
+  if (k <= 0) return;
+  const { b, r, legs, hipY, outfit } = f;
+  const hum = suitHum(f.t, pose.still === true);
+  const crack = pose.suit?.crack === true;
+  const w = b.limb;
+  if (part === 'farShin' || part === 'nearShin') {
+    const p = legs[part === 'farShin' ? 0 : 1];
+    const hx = part === 'farShin' ? -0.7 : 0.7;
+    suitBand(g, hx + p.kx, hipY + p.ky, hx + p.ax, hipY + p.ay, 0.55, 1.85 * w, 4.2 * b.len, k, part === 'farShin', hum, crack);
+    return;
+  }
+  if (part === 'chest') {
+    suitChest(g, b, k, hum, crack);
+    // Two thin frame lines join the shoulder caps to the chest plate
+    if (plateOn(pose, 'farShoulder') > 0 || plateOn(pose, 'nearShoulder') > 0) {
+      const sy = SHOULDER_Y * b.len;
+      g.beginPath();
+      g.moveTo(-0.6 - 1.2, sy + 1.6);
+      g.quadraticCurveTo(0.2, -11.6 * b.len, 2.1 * b.sw, -11.4 * b.len);
+      g.moveTo(0.6 + 2, sy + 1.4);
+      g.quadraticCurveTo(4.8 * b.sw, sy + 0.6, 5.8 * b.sw, -11.6 * b.len);
+      g.strokeStyle = SUIT.seam;
+      g.lineWidth = 1;
+      g.stroke();
+    }
+    return;
+  }
+  const isFar = part === 'farArm' || part === 'farShoulder';
+  const i = isFar ? 0 : 1;
+  const [sx, sy, ex, ey, wx, wy] = armPts(r.arm[i], r.elbow[i], isFar, b);
+  if (part === 'farArm' || part === 'nearArm') {
+    // On the Agbada and Kaftan the band sits at the wrist, over the sleeve
+    const wrist = outfit.id === 'agbada' || outfit.id === 'kaftan';
+    suitBand(g, ex, ey, wx, wy, wrist ? 0.8 : 0.55, 1.5 * w, 3.6 * b.len, k, isFar, hum, crack);
+  } else {
+    suitShoulder(g, sx, sy, r.arm[i], w, k, isFar, hum, crack);
+  }
+}
+
+/**
+ * Draws the hero with feet centred on (0, 0). Translate first:
+ *   g.save(); g.translate(x, y); drawHero(g, look, pose); g.restore();
+ * No gradients or shadowBlur, so it is cheap every frame. Every body and age has
+ * the same hitbox and moves; only the drawing measures change (Build).
+ */
+export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose): void {
+  const f = frameOf(look, pose);
+  const { skin, b, hair, outfit, t, dustOff, running, r, legs, hipY, breathe, headX, headY } = f;
+  const suit = typeof pose.suit === 'object' && pose.suit !== null;
 
   g.save();
   g.scale(pose.facing === -1 ? -1 : 1, 1);
@@ -1387,7 +1861,7 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   if (!pose.inAir && typeof pose.dust === 'number') drawDustPuff(g, pose.dust);
   if (!pose.inAir && !pose.standing && dustOff === null && typeof pose.skid === 'number') drawSkidScuff(g, pose.skid, t);
 
-  if (pose.fast) {
+  if (pose.fast && !pose.dash) {
     // Speed lines behind the hero
     g.strokeStyle = WHITE;
     g.lineCap = 'round';
@@ -1400,75 +1874,66 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
     }
     g.stroke();
   }
-
-  if (pose.glow) {
-    // Amala power: a pulsing golden outline (shape, not just colour)
-    const pulse = 0.5 + 0.5 * Math.sin(t * 10);
-    g.globalAlpha = 0.25 + pulse * 0.15;
-    g.fillStyle = GLOW;
+  if (pose.dash) {
+    // Dash: three white speed lines (18 to 30 u) with a thin ink edge, and a small dust puff at the feet
+    const off = pose.still ? 0 : (t * 60) % 6;
+    g.lineCap = 'round';
     g.beginPath();
-    g.ellipse(0, -26, 17, 31, 0, 0, TAU);
-    g.fill();
-    g.globalAlpha = 1;
-    g.strokeStyle = GLOW;
-    g.lineWidth = 2.5;
-    g.setLineDash([5, 4]);
-    g.lineDashOffset = -t * 30;
+    for (const [y, len] of [[-10, 24], [-24, 30], [-38, 18]] as const) {
+      g.moveTo(-14 - off, y);
+      g.lineTo(-14 - off - len, y);
+    }
+    g.strokeStyle = INK;
+    g.lineWidth = 3.2;
     g.stroke();
-    g.setLineDash([]);
+    g.strokeStyle = WHITE;
+    g.lineWidth = 2;
+    g.stroke();
+    if (!pose.inAir) {
+      const every = pose.still ? DASH_LOOK.puffStill : DASH_LOOK.puff;
+      const k = (t % (every * 2)) / (every * 2);
+      drawDashPuff(g, -6, 0, k);
+      drawDashPuff(g, -6, 0, (k + 0.5) % 1);
+    }
   }
 
-  const land = !pose.inAir && dustOff === null && typeof pose.land === 'number' && Number.isFinite(pose.land) ? clamp01(pose.land) : 0;
-  if (land > 0) g.scale(1 + land * 0.08, 1 - land * 0.1);
+  if (f.land > 0) g.scale(1 + f.land * 0.08, 1 - f.land * 0.1);
 
-  // Shorter legs take slightly bigger swings, so the feet still keep pace with the ground.
-  const r = rigFor(pose, t, 1 / b.len, b.grey);
-  const legs = [legPts(r.thigh[0], r.knee[0], r.foot[0], b.len), legPts(r.thigh[1], r.knee[1], r.foot[1], b.len)] as const;
-  // Plant the lower foot on the ground, then add flight or jump height.
-  const reach = Math.max(legs[0].ay, legs[1].ay);
-  const hipY = -(reach + ANKLE * b.len) - r.lift * b.len;
-  const breathe = pose.standing ? Math.sin(t * 2.2) * 0.35 : 0;
-  // Cloth and braid swing: follows the stride, lifts in the air.
-  const swing = running ? Math.sin(phase * TAU * 2) * 0.8 + 1.2 : pose.inAir ? 2 : Math.sin(t * 1.3) * 0.3;
-  const sway = running ? Math.sin(phase * TAU * 2 + 1) * 0.8 : pose.inAir ? -1.2 : Math.sin(t * 1.3) * 0.3;
-
-  const headX = 1.2 * b.sw;
-  const headY = (-TORSO - 6.2) * b.len + breathe;
-
-  const torsoFrame = (): void => {
-    g.translate(0, hipY);
-    g.rotate(r.lean);
-  };
-  const headFrame = (): void => {
-    torsoFrame();
-    g.translate(headX, headY);
-    g.rotate(r.tilt - r.lean * 0.5);
-    if (b.head !== 1) g.scale(b.head, b.head);
-  };
+  if (isStrong(pose)) {
+    const a = strongGlowAlpha(t, pose.strong?.left, pose.still === true);
+    if (a > 0) strongGlow(g, f, strongGlowPad(pose.strong?.left, pose.still === true), a);
+  }
 
   // 1. Hair behind (afro mass, braids, scarf tails)
   g.save();
-  headFrame();
-  hairBack(g, hair, swing);
+  headFrame(g, f);
+  hairBack(g, hair, f.swing);
   g.restore();
 
   // 2. Far arm
   g.save();
-  torsoFrame();
+  torsoFrame(g, f);
   g.translate(0, breathe);
   drawArm(g, outfit, skin.base, r.arm[0], r.elbow[0], true, b);
+  if (suit) {
+    suitPart(g, f, pose, 'farShoulder');
+    suitPart(g, f, pose, 'farArm');
+  }
   g.restore();
 
   // 3. Legs, far then near
   drawLeg(g, -0.7, hipY, legs[0], outfit, skin.base, true, b);
+  if (suit) suitPart(g, f, pose, 'farShin');
   drawLeg(g, 0.7, hipY, legs[1], outfit, skin.base, false, b);
+  if (suit) suitPart(g, f, pose, 'nearShin');
 
   // 4. Torso, neck, head
   g.save();
-  torsoFrame();
+  torsoFrame(g, f);
   g.save();
   g.translate(0, breathe * 0.5);
-  drawTorso(g, outfit, sway, running ? 1 : 0, b);
+  drawTorso(g, outfit, f.sway, running ? 1 : 0, b);
+  if (suit) suitPart(g, f, pose, 'chest');
   g.restore();
   // Neck
   const neckY = SHOULDER_Y * b.len + breathe;
@@ -1505,13 +1970,18 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
     drawEar(g, skin.base, skin.shade);
     if (b.studs) drawStud(g);
   }
+  if (pose.resting) drawBreath(g, pose.still ? 0.35 : (t % DASH_LOOK.breath) / DASH_LOOK.breath);
   g.restore();
 
   // 5. Near arm, in front of everything
   g.save();
-  torsoFrame();
+  torsoFrame(g, f);
   g.translate(0, breathe);
   drawArm(g, outfit, skin.base, r.arm[1], r.elbow[1], false, b);
+  if (suit) {
+    suitPart(g, f, pose, 'nearShoulder');
+    suitPart(g, f, pose, 'nearArm');
+  }
   // Throw, frame 0: the fufu ball in the near hand (small, soft white, no steam)
   const throwing = throwOf(pose);
   if (throwing !== null && dustOff === null && throwFrame(throwing) === 0) {
@@ -1531,5 +2001,82 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
     drawKneePuff(g, 0.7 + legs[1].kx, hipY + legs[1].ky, dustOff >= 0.5 ? 1 : 0.6, (dustOff * 4) % 1);
   }
 
+  g.restore();
+}
+
+/** Two small breath puffs drifting out from the mouth (head frame), k 0 to 1 through one puff. */
+function drawBreath(g: CanvasRenderingContext2D, k: number): void {
+  g.globalAlpha = (1 - k) * 0.9;
+  g.fillStyle = WHITE;
+  g.strokeStyle = '#7d766a';
+  g.lineWidth = 0.6;
+  for (const [x, y, rr, dx, dy] of [[7.6, 2.4, 1.6, 4, -2.4], [10, 0.8, 1.2, 5, -3.2]] as const) {
+    g.beginPath();
+    g.arc(x + dx * k, y + dy * k, rr * (1 + k * 0.7), 0, TAU);
+    g.fill();
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+/**
+ * Only the tech suit's plates and frame (S2.16 B3), placed as drawHero places them for
+ * this look and pose. For checks and the gallery; the game draws the suit through
+ * `pose.suit` so each plate sits in its own layer.
+ */
+export function drawHeroSuit(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose): void {
+  const f = frameOf(look, pose);
+  g.save();
+  g.scale(pose.facing === -1 ? -1 : 1, 1);
+  if (f.land > 0) g.scale(1 + f.land * 0.08, 1 - f.land * 0.1);
+  for (const part of SUIT_ORDER) {
+    g.save();
+    if (part === 'chest') {
+      torsoFrame(g, f);
+      g.translate(0, f.breathe * 0.5);
+    } else if (part !== 'farShin' && part !== 'nearShin') {
+      torsoFrame(g, f);
+      g.translate(0, f.breathe);
+    }
+    suitPart(g, f, pose, part);
+    g.restore();
+  }
+  g.restore();
+}
+
+/**
+ * The suit bursting (S2.16 B3): 10 cream bits (3 to 5 u) fly out 20 to 40 u from the
+ * hero, drop and fade. (x, y) is the hero's feet; k 0 to 1 over SUIT.breakTime. With
+ * reduced motion (still) the bits fade where they are, k over SUIT.breakTimeStill.
+ * World space; draws nothing after 1.
+ */
+export function drawSuitBits(g: CanvasRenderingContext2D, x: number, y: number, k: number, still = false): void {
+  if (!(k < 1) || !Number.isFinite(x) || !Number.isFinite(y)) return;
+  const t = clamp01(k);
+  g.save();
+  g.globalAlpha = still ? 1 - t : t < 0.4 ? 1 : 1 - (t - 0.4) / 0.6;
+  g.fillStyle = SUIT.plate;
+  g.strokeStyle = SUIT.line;
+  g.lineWidth = 1;
+  for (let i = 0; i < SUIT.bits; i++) {
+    const a = -Math.PI * (0.08 + (i / (SUIT.bits - 1)) * 0.84);
+    const dist = 20 + ((i * 53) % 21);
+    const size = 3 + ((i * 29) % 3);
+    const y0 = -8 - ((i * 17) % 30);
+    const bx = x + Math.cos(a) * (still ? 4 : dist * t);
+    const by = y + y0 + (still ? 0 : Math.sin(a) * dist * 0.6 * t + 60 * t * t);
+    g.save();
+    g.translate(bx, by);
+    g.rotate(still ? i : i + t * 6 * (i % 2 ? 1 : -1));
+    g.beginPath();
+    g.moveTo(-size / 2, -size / 2.5);
+    g.lineTo(size / 2, -size / 2);
+    g.lineTo(size / 2.4, size / 2);
+    g.lineTo(-size / 2, size / 2.6);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    g.restore();
+  }
   g.restore();
 }

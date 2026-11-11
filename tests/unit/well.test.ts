@@ -382,10 +382,10 @@ describe('going up (S2.5 Going up)', () => {
     const near = run.hazards.find((z) => z.x0 === 3250)!;
     near.mode = 'move';
     near.x = WELL2.exitX - 300;
-    const far = run.hazards.find((z) => z.x0 === 6300)!;
+    const far = run.hazards.find((z) => z.x0 === 6200)!; // S2.16 moved it from 6300
     far.mode = 'move';
     far.x = WELL2.exitX + 301;
-    const sleeping = run.hazards.find((z) => z.x0 === 6550)!; // S2.14 moved it from 6600
+    const sleeping = run.hazards.find((z) => z.x0 === 7500)!; // S2.16 took out the tyre at 6550
     sleeping.x = WELL2.exitX + 250; // (the level rule keeps them 400 u away; this tests the rule only)
     goBelow(run);
     goUp(run);
@@ -398,7 +398,7 @@ describe('going up (S2.5 Going up)', () => {
     const run = newRun();
     goBelow(run);
     goUp(run);
-    const z = run.hazards.find((h) => h.x0 === 6300)!;
+    const z = run.hazards.find((h) => h.x0 === 6200)!;
     Object.assign(z, { mode: 'move', x: run.hero.x, vx: 0 });
     steps(run, 10);
     expect(run.lives).toBe(3);
@@ -481,7 +481,7 @@ describe('the room remembers this play; the parcel and lost lives (S2.5 gift rul
     sweepRoom(run);
     goUp(run);
     run.safe = 0;
-    const z = run.hazards.find((h) => h.x0 === 6300)!;
+    const z = run.hazards.find((h) => h.x0 === 6200)!;
     Object.assign(z, { mode: 'move', x: run.hero.x + 2, vx: 0 });
     run.lives = 1; // the last life: game over
     const evs = steps(run, 2);

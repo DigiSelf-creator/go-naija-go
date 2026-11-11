@@ -173,11 +173,13 @@ describe('street 3: the secret well behind the start (S2.2 Camera rule 5, S2.6)'
 });
 
 /**
- * The e2e hand bot's moves, on the rules alone: hold Forward all the way; at a pothole or a
- * hazard close ahead a held jump; for a pit wider than 110 a held second jump at the top.
+ * The e2e hand bot's moves, on the rules alone: hold Forward all the way; at a pothole, a
+ * hazard or a gutter's weeds (S2.16 B5) close ahead a held jump; for a pit wider than 110 a
+ * held second jump at the top; and once the dash is on, a dash (S2.16 B4) on the road before a
+ * dash gap. `dash`: the dash is already on (saved after street 2).
  */
-function handBot(level: Level, maxSteps = 60 * 400): { run: Run; lostAt: number[] } {
-  const run = new Run(level);
+function handBot(level: Level, maxSteps = 60 * 400, dash = false): { run: Run; lostAt: number[] } {
+  const run = new Run(level, { dash });
   const gaps = level.ground.slice(1).map((s, i) => [level.ground[i]![1], s[0]] as const);
   const lostAt: number[] = [];
   run.viewLeft = -Infinity;
@@ -199,10 +201,12 @@ function handBot(level: Level, maxSteps = 60 * 400): { run: Run; lostAt: number[
         second = false;
       }
     } else if (!holding && h.grounded) {
+      if (run.dashOn && !run.dashing && gaps.some(([a, b]) => b - a >= 250 && a - h.x > 0 && a - h.x < 300)) run.dash(1);
       const big = gaps.find(([a, b]) => b - a >= 160 && a - h.x > -4 && a - h.x < 10 + h.speed * 0.03);
       const gap = big ?? gaps.find(([a, b]) => b - a < 160 && a - h.x > -4 && a - h.x < 32);
       const hazard = run.hazards.find((z) => (z.mode === 'wait' || z.mode === 'move') && z.x - h.x > 0 && z.x - h.x < 80);
-      if (gap || hazard) {
+      const weeds = run.gutters.find((q) => q.state === 'weeds' && q.x - h.x > 0 && q.x - h.x < 30);
+      if (gap || hazard || weeds) {
         run.press();
         holding = true;
         second = !!gap && gap[1] - gap[0] > 110;
@@ -218,7 +222,8 @@ function handBot(level: Level, maxSteps = 60 * 400): { run: Run; lostAt: number[
 
 describe('every Lagos street plays from the start to the bus (a two-thumb bot on the rules)', () => {
   it.each([L1, L2, L3])('$id', (L) => {
-    const { run, lostAt } = handBot(L);
+    // Street 3 comes after street 2, where the dash is turned on (and saved).
+    const { run, lostAt } = handBot(L, undefined, L.id === 'lagos-3');
     expect(run.phase, `${L.id}: lost lives at ${lostAt.join(', ')}`).toBe('bus');
     expect(run.lives).toBeGreaterThanOrEqual(2);
     expect(run.checkpointReached).toBe(true);

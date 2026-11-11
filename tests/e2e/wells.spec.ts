@@ -9,9 +9,13 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand, snap } from './hands';
-import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock } from './helpers';
+import { PAST_DOUBLE_TAP_MS, dashSaved, startRun, waitOutTapLock, storySeen } from './helpers';
 import { wellBot } from './well-bot';
 import { checkCardFits } from './card-fit';
+import { formatMoney } from '../../src/game/money';
+
+// Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
+test.beforeEach(({ page }) => storySeen(page));
 
 const SHOTS = process.env['L2_SHOTS'] ?? 'test-results/l2-shots';
 mkdirSync(SHOTS, { recursive: true });
@@ -45,6 +49,7 @@ async function watchBar(page: Page): Promise<void> {
 const barLog = (page: Page) => page.evaluate(() => (window as unknown as { __bar: { frames: number; hits: string[]; words: string[]; button: string[] } }).__bar);
 
 async function openStreet(page: Page, id: string) {
+  if (id === 'lagos-3') await dashSaved(page); // S2.16 B4: on since street 2's dash hint
   await page.goto(`./?level=${id}`);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
@@ -156,11 +161,14 @@ test('street 2 by touch: to the well, Go down, every gift in the room, Go up at 
   const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(cleared).toBeVisible({ timeout: 6000 });
   // N2: the parcel is saved on the bus, and the cleared card says so (S2.10).
-  await expect(cleared.getByText(`Computer Village is moving again, thanks to you! You got ${last.r.kobo} kobo.`)).toBeVisible();
+  await expect(cleared.getByText(`Computer Village is moving again, thanks to you! You got ${formatMoney(last.r.kobo * 10)}.`)).toBeVisible();
   await expect(cleared.getByText('Your garri parcel is saved for Go-Slow Hall.')).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress')!))).toEqual({
-    v: 1,
-    states: { lagos: { streets: { 2: { done: true, best: last.r.kobo } }, parcel: true, hall: { done: false, best: 0 } } },
+    // Version 2 (slice 3, N3): bests are whole kobo, 10 a coin.
+    v: 2,
+    states: { lagos: { streets: { 2: { done: true, best: last.r.kobo * 10 } }, parcel: true, hall: { done: false, best: 0 } } },
+    // S2.16 B4: saved when street 2's dash hint was reached.
+    dash: true,
   });
   // The longest case (Computer Village, the parcel line) fits the short screens (po M4 bug 1).
   await checkCardFits(page, 'Next street', async (at) => {
@@ -247,6 +255,7 @@ test.describe('by keys on a computer', () => {
     test.setTimeout(120_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
+    await dashSaved(page);
     await page.goto('./?level=lagos-3');
     await page.getByRole('button', { name: /^(Make your hero|Play)$/ }).click();
     const builder = page.getByRole('dialog', { name: 'Make your hero' });

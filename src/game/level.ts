@@ -12,7 +12,18 @@
 import { FALL_Y, GAIT, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
 import { FEATURE_NAMES, type Feature } from './features';
 
-export type HazardKind = 'goat' | 'tyre' | 'drum';
+/** S2.16 B1: the egret and the crow are birds by the rubbish (never hurt; they fly off). */
+export type HazardKind = 'goat' | 'tyre' | 'drum' | 'egret' | 'crow';
+export type BirdKind = 'egret' | 'crow';
+export const isBird = (k: HazardKind): k is BirdKind => k === 'egret' || k === 'crow';
+
+/** S2.16 B5: an open gutter across the road with thorny weeds: left x and width (30 or 44). */
+export interface GutterData {
+  x: number;
+  w: number;
+}
+/** The two gutter widths, learnable by eye. */
+export const GUTTER_WIDTHS: readonly number[] = [30, 44];
 export type ThrowKind = 'tyre' | 'honk' | 'highHonk';
 export const THROW_KINDS: readonly ThrowKind[] = ['tyre', 'honk', 'highHonk'];
 
@@ -112,7 +123,8 @@ export interface Level {
   koboSpacing: number;
   /** A hazard starts moving when it is this far ahead of the hero. */
   wakeDistance: number;
-  hazardSpeeds: Record<HazardKind, number>;
+  /** Rolling and walking speeds, u/s; birds: the egret's pacing speed (30 when left out), the crow hovers. */
+  hazardSpeeds: Record<'goat' | 'tyre' | 'drum', number> & Partial<Record<BirdKind, number>>;
   /** Road spans as [startX, endX], for drawing. */
   ground: readonly (readonly [number, number])[];
   terrain: Terrain;
@@ -120,6 +132,12 @@ export interface Level {
   coins: readonly { x: number; y: number }[];
   foods: readonly { x: number; y: number; kind: FoodKind }[];
   hazards: readonly { kind: HazardKind; x: number }[];
+  /** S2.16 B5: open gutters with thorny weeds (none on most levels). */
+  gutters: readonly GutterData[];
+  /** S2.16 B1: rubbish piles (scenery, never solid) by x. */
+  piles: readonly number[];
+  /** S2.16 B4: reaching this x turns the dash on (saved), or null. */
+  dashFrom: number | null;
   /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
   hints: readonly { x: number; words: string; needs?: Feature }[];
   checkpoint: number;
@@ -143,7 +161,9 @@ const CORN_WALK = 120;
 
 const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu'];
 const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', 'corn', 'garri', 'amala'];
-const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum'];
+const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow'];
+/** S2.16 B1: the egret paces its patch at 30 u/s; the crow hovers in place. */
+export const EGRET_SPEED = 30;
 
 export function parseLevel(raw: unknown): Level {
   const id = isObj(raw) && typeof raw['id'] === 'string' ? raw['id'] : '(no id)';
@@ -219,6 +239,15 @@ export function parseLevel(raw: unknown): Level {
 
   const speeds = obj(r['hazardSpeeds'], 'hazardSpeeds');
 
+  const gutters: GutterData[] = (r['gutters'] === undefined ? [] : list(r['gutters'], 'gutters')).map((q, i) => {
+    const [x, w] = tuple(q, `gutters[${i}]`, 2);
+    const g = { x: num(x, `gutters[${i}][0]`), w: num(w, `gutters[${i}][1]`) };
+    if (!GUTTER_WIDTHS.includes(g.w)) fail(`gutters[${i}][1]`, `should be one of ${GUTTER_WIDTHS.join(', ')}`);
+    return g;
+  });
+  const piles = (r['piles'] === undefined ? [] : list(r['piles'], 'piles')).map((x, i) => num(x, `piles[${i}]`));
+  const dashFrom = r['dashFrom'] === undefined ? null : num(r['dashFrom'], 'dashFrom');
+
   const crates: CrateData[] =
     r['crates'] === undefined && schema === 1
       ? []
@@ -267,12 +296,17 @@ export function parseLevel(raw: unknown): Level {
       goat: num(speeds['goat'], 'hazardSpeeds.goat'),
       tyre: tyreSpeed,
       drum: speeds['drum'] === undefined ? tyreSpeed : num(speeds['drum'], 'hazardSpeeds.drum'),
+      // S2.16 B1: only a street with birds names the egret's pacing speed.
+      ...(speeds['egret'] === undefined ? {} : { egret: num(speeds['egret'], 'hazardSpeeds.egret') }),
     },
     ground,
     terrain: { groundY, ground: spans, platforms, fallY: Math.max(FALL_Y, groundY + 120) },
     coins,
     foods,
     hazards: hazards.sort((p, q) => p.x - q.x),
+    gutters: gutters.sort((p, q) => p.x - q.x),
+    piles,
+    dashFrom,
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
     hall: null,
@@ -382,6 +416,9 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     coins: [],
     foods: [],
     hazards: [],
+    gutters: [],
+    piles: [],
+    dashFrom: null,
     hints: [],
     checkpoint: Infinity,
     hall,

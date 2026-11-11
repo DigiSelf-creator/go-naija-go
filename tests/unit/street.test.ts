@@ -241,25 +241,26 @@ describe('S2.2 the big pit in street 1 (5050 to 5220), from the bus stop', () =>
   });
 });
 
-/** S2.6 How difficulty rises: big pits and hints on each street. */
+/** S2.6 How difficulty rises: big pits, dash gaps (S2.16 B4) and hints on each street. */
 const STREETS = [
-  { L: L1, bigPits: 1, hints: 15 },
-  { L: parseLevel(structuredClone(lagos2)), bigPits: 1, hints: 4 },
-  { L: parseLevel(structuredClone(lagos3)), bigPits: 2, hints: 2 },
+  { L: L1, bigPits: 1, dashGaps: 0, hints: 15 },
+  { L: parseLevel(structuredClone(lagos2)), bigPits: 1, dashGaps: 1, hints: 7 },
+  { L: parseLevel(structuredClone(lagos3)), bigPits: 2, dashGaps: 1, hints: 4 },
 ] as const;
 
-describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, hints }) => {
+describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, dashGaps, hints }) => {
   const pits = L.ground.slice(1).map((s, i) => ({ a: L.ground[i]![1], b: s[0], w: s[0] - L.ground[i]![1] }));
   const onRoad = (x: number): boolean => L.ground.some(([a, b]) => x >= a && x <= b);
   const nearestPit = (x: number): number => Math.min(...pits.map((p) => (x < p.a ? p.a - x : x > p.b ? x - p.b : 0)));
   const corns = [...L.foods.filter((f) => f.kind === 'corn').map((f) => f.x), ...L.crates.filter((c) => c.contents === 'corn').map((c) => c.x)];
 
-  it('every pit is one of the four kinds', () => {
+  it('every pit is one of the five kinds (S2.16 B4 adds the dash gap, 250 to 270 u)', () => {
     for (const p of pits) {
-      const ok = (p.w >= 30 && p.w <= 40) || (p.w >= 50 && p.w <= 64) || (p.w >= 90 && p.w <= 110) || (p.w >= 160 && p.w <= 180);
+      const ok = (p.w >= 30 && p.w <= 40) || (p.w >= 50 && p.w <= 64) || (p.w >= 90 && p.w <= 110) || (p.w >= 160 && p.w <= 180) || (p.w >= 250 && p.w <= 270);
       expect(ok, `pit at ${p.a} is ${p.w} wide`).toBe(true);
     }
-    expect(pits.filter((p) => p.w >= 160)).toHaveLength(bigPits);
+    expect(pits.filter((p) => p.w >= 160 && p.w <= 180)).toHaveLength(bigPits);
+    expect(pits.filter((p) => p.w >= 250)).toHaveLength(dashGaps);
   });
 
   // A corn's reach: the road a full corn run covers (S2.2 big pit rule 3, hazard rule 3), worked
@@ -268,7 +269,7 @@ describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, hints }) => {
   const within = (x: number, c: number, d: number): boolean => x - c >= 0 && x - c <= d;
 
   it('at least 160 u of clear road before every big pit, and none within one corn reach after a corn', () => {
-    const big = pits.filter((q) => q.w >= 160);
+    const big = pits.filter((q) => q.w >= 160 && q.w <= 180);
     for (const p of big) {
       const from = p.a - 160;
       expect(pits.some((q) => q.b > from && q.a < p.a), 'no pit in the run-up').toBe(false);

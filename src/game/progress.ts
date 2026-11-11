@@ -1,8 +1,17 @@
 /**
  * Progress on the phone (docs/design.md S2.8 "Save shape"): one JSON value under `gidi-progress`.
  *
- *   { "v": 1, "states": { "lagos": { "streets": { "1": { "done": true, "best": 120 } },
- *                                     "parcel": true, "hall": { "done": false, "best": 0 } } } }
+ *   { "v": 2, "states": { "lagos": { "streets": { "1": { "done": true, "best": 1200 } },
+ *                                     "parcel": true, "hall": { "done": false, "best": 0 } } },
+ *     "city": { "kobo": 0, "power": 0, "tech": 0, "fixed": [], "fixes": 0 } }
+ *
+ * Version 2 (Naira, N1 to N4; docs/city.md part 5 (b)):
+ * - `best` is whole kobo, 10 kobo a coin (it was 1 a coin in version 1). A version 1 copy is moved
+ *   once on load: every best times 10, then `v: 2` is written, so it never happens twice. The purse
+ *   starts at ₦0: bests are records, never money.
+ * - `city` is the Lagos city screen's part (src/game/city.ts): the three buckets (money as whole
+ *   kobo, Power, Tech), the fixed spots and the fix count. Merged in like everything else; a broken
+ *   or missing part reads as zeros.
  *
  * Rules:
  * - Written only when a street is finished (bus boarded), when the hall is won (at the third hit), and when the
@@ -21,7 +30,12 @@
 import type { Store } from '../storage';
 
 export const KEY_PROGRESS = 'progress';
-export const PROGRESS_VERSION = 1;
+/**
+ * S2.16 B4: `"dash": true` in gidi-progress once street 2's dash hint is reached (the dash works
+ * from then on). Saved at once by savePart, merged like every other part.
+ */
+export const KEY_DASH = 'dash';
+export const PROGRESS_VERSION = 2;
 
 /** Version 1 has one state with three streets and a hall (S2.6, Q16). */
 export const LAGOS = 'lagos';
@@ -29,7 +43,7 @@ export const STREETS_PER_STATE = 3;
 
 export interface PlaceRecord {
   done: boolean;
-  /** Most kobo ever finished with. */
+  /** Most kobo ever finished with (whole kobo, 10 a coin). */
   best: number;
 }
 
@@ -42,7 +56,32 @@ export interface StateProgress {
 
 export type Obj = { [k: string]: unknown };
 
-const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
+export const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * N3 a: a copy saved before Naira (v missing or 1) has bests at 1 kobo a coin. Times 10 once,
+ * marked `v: 2`. Pure: returns the same object when nothing needs moving, else a new one.
+ */
+export function migrate(saved: Obj): Obj {
+  const v = saved['v'];
+  if (typeof v === 'number' && v >= 2) return saved;
+  const out = structuredClone(saved);
+  out['v'] = PROGRESS_VERSION;
+  const states = out['states'];
+  if (!isObj(states)) return out;
+  const times10 = (rec: unknown): void => {
+    if (!isObj(rec)) return;
+    const b = rec['best'];
+    if (typeof b === 'number' && Number.isFinite(b) && b > 0) rec['best'] = Math.floor(b) * 10;
+  };
+  for (const st of Object.values(states)) {
+    if (!isObj(st)) continue;
+    const streets = st['streets'];
+    if (isObj(streets)) for (const r of Object.values(streets)) times10(r);
+    times10(st['hall']);
+  }
+  return out;
+}
 
 function readRecord(v: unknown): PlaceRecord {
   if (!isObj(v)) return { done: false, best: 0 };
@@ -80,7 +119,7 @@ export type Finish = { state: string; street: number; kobo: number; parcel: bool
  * Pure: returns a new object; `saved` is not changed.
  */
 export function mergeFinish(saved: Obj | null, f: Finish): Obj {
-  const base: Obj = saved ? structuredClone(saved) : {};
+  const base: Obj = saved ? structuredClone(migrate(saved)) : {};
   if (typeof base['v'] !== 'number' || (base['v'] as number) < PROGRESS_VERSION) base['v'] = PROGRESS_VERSION;
   const states: Obj = isObj(base['states']) ? (base['states'] as Obj) : {};
   base['states'] = states;
@@ -146,6 +185,34 @@ export class Progress {
     const raw = store.load<unknown>(KEY_PROGRESS);
     if (raw !== undefined && isProgressShape(raw)) this.saved = raw;
     this.broken = store.has(KEY_PROGRESS) && this.saved === null;
+    // N3 a: an old copy is moved to Naira once, and the move is written at once (v: 2).
+    if (this.saved) {
+      const moved = migrate(this.saved);
+      if (moved !== this.saved) {
+        this.saved = moved;
+        this.store.save(KEY_PROGRESS, moved);
+      }
+    }
+  }
+
+  /** The whole saved value (read only), or null when nothing readable is saved. */
+  get raw(): Readonly<Obj> | null {
+    return this.saved;
+  }
+
+  /**
+   * Writes one top-level part (e.g. `city`), merged into the newest readable copy on the phone,
+   * keeping everything else. Returns false if it could not be kept on the phone.
+   */
+  savePart(key: string, value: unknown): boolean {
+    const now = this.store.load<unknown>(KEY_PROGRESS);
+    const base: Obj = now !== undefined && isProgressShape(now) ? migrate(now) : this.saved ? structuredClone(this.saved) : { v: PROGRESS_VERSION, states: {} };
+    const next: Obj = structuredClone(base);
+    if (typeof next['v'] !== 'number' || (next['v'] as number) < PROGRESS_VERSION) next['v'] = PROGRESS_VERSION;
+    if (!isObj(next['states'])) next['states'] = {};
+    next[key] = structuredClone(value);
+    this.saved = next;
+    return this.store.save(KEY_PROGRESS, next);
   }
 
   /** One state's progress (nothing done if it is not saved). */
