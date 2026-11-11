@@ -188,3 +188,26 @@ test('at 320 x 240 every tap target is at least 44 px and the pins at least 48 x
     expect(r.h, spot).toBeGreaterThanOrEqual(56);
   }
 });
+
+test('qa F1: at 320 x 240 with ₦1,250 the three chips sit on one row and no chip overlaps any button', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 240 });
+  await openCity(page, { v: 2, states: {}, city: { kobo: 125000, power: 0, tech: 0, fixed: [], fixes: 0 } });
+  const chips = lagos(page).locator('.city-chip');
+  await expect(chips.first()).toContainText('₦1,250');
+  const boxes = await Promise.all((await chips.all()).map(async (c) => (await c.boundingBox())!));
+  expect(new Set(boxes.map((b) => Math.round(b.y))).size, 'one row').toBe(1);
+  for (const b of boxes) expect(b.x + b.width).toBeLessThanOrEqual(320);
+  // The chip shows its whole text (nothing clipped).
+  const clipped = await chips.evaluateAll((els) => els.some((e) => e.scrollWidth > e.clientWidth + 1));
+  expect(clipped).toBe(false);
+  // The screen's buttons (the pins are on the map, which moves; the chips never take taps).
+  for (const btn of await lagos(page).locator('button:not(.city-pin)').all()) {
+    if (!(await btn.isVisible())) continue;
+    const r = (await btn.boundingBox())!;
+    for (const b of boxes) {
+      const apart = b.x + b.width <= r.x || r.x + r.width <= b.x || b.y + b.height <= r.y || r.y + r.height <= b.y;
+      expect(apart, `chip over "${(await btn.getAttribute('aria-label')) ?? (await btn.textContent())}"`).toBe(true);
+    }
+  }
+});
+
