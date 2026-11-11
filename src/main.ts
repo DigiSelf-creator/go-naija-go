@@ -20,7 +20,7 @@ import { WELL } from './art/well';
 import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
-import { LAGOS, Progress, switchedOn } from './game/progress';
+import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
 import { KEY_CITY, payFix, readCity } from './game/city';
 import { KOBO_PER_COIN } from './game/money';
 import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
@@ -185,9 +185,19 @@ function startGame(): void {
       placeWellButton();
       placeThrowButton();
       syncCorn();
+      syncHum();
     },
   });
 
+  /**
+   * S2.16 B3: the tech suit hums while it is worn in play; never while paused, on a card, with
+   * the tab hidden or with Sound off (the Sound switch stops it inside sound.ts).
+   */
+  function syncHum(): void {
+    sound.setHum(playing && !game.paused && !menus.current && !document.hidden && inPlay() && game.run.power.shield);
+  }
+  /** S2.16 B4: the dash is on once street 2's dash hint was reached (saved), or street 2 is done. */
+  const dashSaved = (): boolean => progress.raw?.[KEY_DASH] === true || streetRecord(progress.state(LAGOS), 2).done;
   /** In a run (HUD showing), including while paused. */
   let playing = false;
   // The tap that pressed "Start running": a second tap on the same spot right after it is the
@@ -204,6 +214,7 @@ function startGame(): void {
     if (!playing || game.paused || !inPlay()) return;
     loop.pause();
     game.paused = true;
+    syncHum();
     toast.hide();
     controls.releaseAll();
     game.release();
@@ -231,7 +242,7 @@ function startGame(): void {
     // The hall's start words come from the run's first step ('hallStart', 'parcelShield').
     // S2.5 gift rules 5 and 6: with a saved parcel every hall try starts with the shield on, and
     // well rooms show 5 kobo instead of a second parcel.
-    game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: lagos.parcel } : { parcelSaved: lagos.parcel });
+    game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: lagos.parcel } : { parcelSaved: lagos.parcel, dash: dashSaved() });
     // S2.8: once Lagos is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(lagos);
     hud.show(true);
@@ -383,7 +394,8 @@ function startGame(): void {
         sound.play('crateEmpty');
         break;
       case 'food':
-        sound.play('food');
+        // S2.16 B2 and B3: amala's deep "gbe-dum"; the garri suit clicks on from the feet up.
+        sound.play(e.kind === 'amala' ? 'strongPick' : e.kind === 'garri' ? 'suitOn' : 'food');
         // S2.15: fufu's words say which key or button throws.
         if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
         else toast.show(W[e.kind], 3200);
@@ -430,14 +442,51 @@ function startGame(): void {
         sound.play(e.kind === 'goat' ? 'meeh' : e.kind === 'drum' ? 'drumBounce' : 'bounce');
         break;
       case 'smash':
-        sound.play(e.kind === 'goat' ? 'meeh' : 'smash');
+        // S2.16 B2: a hearty "gbam" (goats trot off unhurt with their "meeh").
+        sound.play(game.run.power.amala > 0 ? 'strongSmash' : 'smash');
+        if (e.kind === 'goat') sound.play('meeh');
+        break;
+      case 'strongStep':
+        sound.play('strongStep');
+        break;
+      case 'birdOff':
+        // S2.16 B1: the bird's own call says it; a bounce on it bounces.
+        sound.play(e.kind === 'crow' ? 'crowKraa' : 'egretKrk');
+        sound.play('birdFlap');
+        if (e.why === 'stomp') sound.play('bounce');
+        break;
+      case 'pileKobo':
+        sound.play('kobo');
+        break;
+      case 'weedsDry':
+        sound.play('weedsFsss');
+        if (e.first) toast.show(W.weedsDried, HINT_MS);
+        break;
+      case 'weedsTrample':
+        sound.play('strongSmash');
+        break;
+      case 'dashOn':
+        // S2.16 B4: saved at once, so the dash stays on for every later play.
+        progress.savePart(KEY_DASH, true);
+        break;
+      case 'dashStart':
+        sound.play('dashStart');
+        break;
+      case 'dashSteps':
+        sound.play('dashSteps');
+        break;
+      case 'dashReady':
+        sound.play('dashReady');
+        break;
+      case 'dashTired':
+        if (e.first) toast.show(W.dashTired, HINT_MS);
         break;
       case 'hit':
         toast.hide(); // a lost life: the bar hides at once (S2.2)
         sound.play('hit');
         break;
       case 'shieldPop':
-        sound.play('shieldPop');
+        sound.play('suitBreak');
         toast.show(W.shieldUsed);
         break;
       case 'fall':
@@ -579,6 +628,7 @@ function startGame(): void {
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pause();
+    syncHum();
     // S2.9 rule 4: no music while the page is hidden; on the way back it carries on from the
     // same bar (in a run it waits for "Keep playing").
     syncMusic();
@@ -647,6 +697,10 @@ function startGame(): void {
         else if (jump === 'air') sound.play('airJump');
       },
       onJumpRelease: (by) => game.release(by),
+      // S2.16 B4: double tap and hold a direction to dash (where the dash is on).
+      onDash: (dir) => {
+        if (playing && !game.paused && !menus.current && inPlay()) game.run.dash(dir);
+      },
       onMove: (dir) => {
         if (playing && !game.paused) game.steer(dir);
         else game.steer(0);
@@ -722,7 +776,11 @@ function startGame(): void {
         fufu: r.fufu,
         balls: r.balls.map((b) => ({ x: b.x, y: b.y, mode: b.mode, touches: b.touches })),
         plugged: r.plugged.map((p) => [p.a, p.b] as const),
-        hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, mode: z.mode })),
+        hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, y: z.y, mode: z.mode, fufu: z.fufu })),
+        /** S2.16 B5: the gutters and their weeds; B4: the dash. */
+        gutters: r.gutters.map((q) => ({ x: q.x, w: q.w, state: q.state })),
+        dash: { on: r.dashOn, dashing: r.dashing, resting: r.resting, left: r.hero.dash, rest: r.hero.rest },
+        hum: sound.humming,
         /** Kobo picked up one by one (not from crates or smashes). */
         coinsTaken: r.coins.reduce((n, c) => n + (c.taken ? 1 : 0), 0),
         /** S2.5: carrying the garri parcel; below the street; how dark the screen is. */
@@ -768,6 +826,9 @@ function startGame(): void {
         lights: (level.boss?.lights ?? []).map((l) => ({ ...l })),
         platforms: level.terrain.platforms.map((p) => ({ ...p })),
         wells: level.wells.map((w) => ({ ...w })),
+        gutters: level.gutters.map((q) => ({ ...q })),
+        piles: [...level.piles],
+        dashFrom: level.dashFrom,
       };
     },
     get below() {
@@ -1039,7 +1100,11 @@ declare global {
         readonly fufu: number;
         readonly balls: readonly { readonly x: number; readonly y: number; readonly mode: string; readonly touches: number }[];
         readonly plugged: readonly (readonly [number, number])[];
-        readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
+        readonly hazards: readonly { readonly kind: string; readonly x: number; readonly y: number; readonly mode: string; readonly fufu: boolean }[];
+        readonly gutters: readonly { readonly x: number; readonly w: number; readonly state: string }[];
+        readonly dash: { readonly on: boolean; readonly dashing: boolean; readonly resting: boolean; readonly left: number; readonly rest: number };
+        /** S2.16 B3: the suit's hum is playing. */
+        readonly hum: boolean;
         readonly coinsTaken: number;
         readonly parcel: boolean;
         readonly below: boolean;
@@ -1081,6 +1146,9 @@ declare global {
         /** Roofs and other one-way platforms: top y, from x to x + w. */
         readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
         readonly wells: readonly { readonly x: number; readonly exitX: number; readonly room: string }[];
+        readonly gutters: readonly { readonly x: number; readonly w: number }[];
+        readonly piles: readonly number[];
+        readonly dashFrom: number | null;
       };
       /** Below the street: the well room shows (cheap, for per-frame logs). */
       readonly below: boolean;
