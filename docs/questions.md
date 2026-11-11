@@ -1,5 +1,11 @@
 # Open questions for the product owner
 
+## Tp, 11 Nov 2026: yes to merge round 1, and yes to all recommendations
+
+- Designer's S2.16 questions: touching a bird without the suit costs a life (like a goat); birds never break the suit; one easy gutter on street 2 before the bus stop; the dash starts from street 2 and is off in the hall and well room.
+- Rubbish piles by the birds: kept, small and neat, never named after a real place; cleaning up becomes a later city fix.
+- Round 1 (harder hall and streets, fufu, corn tune) goes onto main.
+
 ## po acceptance, 10 Nov 2026: harder hall and streets, pepper fufu, corn tune (P5, P8, P10)
 
 **Verdict: accepted, with Tp's ear and Tp's first hall play still to come.** qa P11 (reported): tsc clean, unit 794/794, first load 402 KB; e2e phone 41/42 and timing 89/91 (only the 3 known sandbox failures); hall worst 55 fps at 4x CPU. Break tests all fine. By eye: no fire or fireball look, nothing mocks anyone; intro and city art show no real people, brands, party colours or faith signs; the Nigeria shape reads right.
