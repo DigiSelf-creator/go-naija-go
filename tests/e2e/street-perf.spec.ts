@@ -10,7 +10,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
 import { hands, playStreetByHand } from './hands';
-import { PAST_DOUBLE_TAP_MS, gentleOn, startRun } from './helpers';
+import { PAST_DOUBLE_TAP_MS, dashSaved, gentleOn, startRun } from './helpers';
 
 /** The bar for each part of the street, fps at 4x slowdown. */
 const BAR = 45;
@@ -48,6 +48,7 @@ for (const { n, id, url, fixed } of STREETS) test(`slowed 4x CPU: street ${n}${f
   const perfLook = process.env['PERF_LOOK'];
   if (perfLook) await page.addInitScript((v) => localStorage.setItem('gidi-look', v), perfLook);
   if (fixed) await page.addInitScript((v) => localStorage.setItem('gidi-progress', v), SWITCHED_ON);
+  if (id === 'lagos-3') await dashSaved(page); // S2.16 B4: on since street 2's dash hint
   await page.goto(url);
   if (perfLook) expect(await page.evaluate(() => window.__game!.look)).toEqual(JSON.parse(perfLook));
   // Gentle mode, so a missed jump on a slow machine does not end the measurement early.

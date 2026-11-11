@@ -93,3 +93,19 @@ export async function storySeen(page: Page): Promise<void> {
     }
   });
 }
+
+/**
+ * S2.16 B4: before the page loads, save the dash as turned on (as after street 2's dash hint),
+ * for tests that start street 3 straight away with ?level=lagos-3.
+ */
+export async function dashSaved(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      const raw = localStorage.getItem('gidi-progress');
+      const v = raw ? JSON.parse(raw) : { v: 2, states: {} };
+      if (v.dash !== true) localStorage.setItem('gidi-progress', JSON.stringify({ ...v, dash: true }));
+    } catch {
+      /* storage blocked */
+    }
+  });
+}

@@ -9,7 +9,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand, snap } from './hands';
-import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock, storySeen } from './helpers';
+import { PAST_DOUBLE_TAP_MS, dashSaved, startRun, waitOutTapLock, storySeen } from './helpers';
 import { wellBot } from './well-bot';
 import { checkCardFits } from './card-fit';
 import { formatMoney } from '../../src/game/money';
@@ -49,6 +49,7 @@ async function watchBar(page: Page): Promise<void> {
 const barLog = (page: Page) => page.evaluate(() => (window as unknown as { __bar: { frames: number; hits: string[]; words: string[]; button: string[] } }).__bar);
 
 async function openStreet(page: Page, id: string) {
+  if (id === 'lagos-3') await dashSaved(page); // S2.16 B4: on since street 2's dash hint
   await page.goto(`./?level=${id}`);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
@@ -252,6 +253,7 @@ test.describe('by keys on a computer', () => {
     test.setTimeout(120_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
+    await dashSaved(page);
     await page.goto('./?level=lagos-3');
     await page.getByRole('button', { name: /^(Make your hero|Play)$/ }).click();
     const builder = page.getByRole('dialog', { name: 'Make your hero' });

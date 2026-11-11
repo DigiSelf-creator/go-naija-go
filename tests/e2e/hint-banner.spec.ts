@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand } from './hands';
 import { HALL_URL, playHall, touchPad, waitForWin } from './hall-play';
-import { PAST_DOUBLE_TAP_MS, openAndRun, startRun, gentleOn, storySeen } from './helpers';
+import { PAST_DOUBLE_TAP_MS, dashSaved, openAndRun, startRun, gentleOn, storySeen } from './helpers';
 
 // Slice 3 (city.md (a)): the intro story is not what these tests are about; it is marked seen.
 test.beforeEach(({ page }) => storySeen(page));
@@ -141,6 +141,7 @@ for (const id of ['lagos-2', 'lagos-3'] as const) {
     test(`${width}x${height}: ${id} by hand, no hint or toast ever covers anything playable`, async ({ page }) => {
       test.setTimeout(240_000);
       await page.setViewportSize({ width, height });
+      if (id === 'lagos-3') await dashSaved(page); // S2.16 B4: on since street 2's dash hint
       await openAndRun(page, `./?level=${id}`);
       await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
       expect(await page.evaluate(() => window.__game!.level.id)).toBe(id);

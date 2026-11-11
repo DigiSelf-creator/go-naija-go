@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
 import { LEFT, buttonCentres, hands, playStreetByHand, snap, type Snap } from './hands';
-import { PAST_DOUBLE_TAP_MS, startRun, waitOutTapLock, screenNow } from './helpers';
+import { PAST_DOUBLE_TAP_MS, dashSaved, startRun, waitOutTapLock, screenNow } from './helpers';
 import { playHall, touchPad, waitForWin } from './hall-play';
 import { formatMoney } from '../../src/game/money';
 
@@ -84,6 +84,8 @@ async function clearedScreen(page: Page, name: string, kobo: number, big: string
 }
 
 async function openStreet(page: Page, id: string) {
+  // S2.16 B4: a player on street 3 has passed street 2's dash hint, so the dash is saved on.
+  if (id === 'lagos-3') await dashSaved(page);
   await page.goto(`./?level=${id}`);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
