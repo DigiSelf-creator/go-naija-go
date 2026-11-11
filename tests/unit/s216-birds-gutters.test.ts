@@ -260,7 +260,7 @@ describe('S2.16 B5 gutters with thorny weeds', () => {
       { x: 9050, w: 44 },
     ]);
     expect(L3.gutters).toEqual([
-      { x: 6150, w: 44 },
+      { x: 6306, w: 44 }, // qa round 2: moved from 6150 so a drum jump never lands in it
       { x: 9300, w: 30 },
     ]);
     expect(L1.gutters).toEqual([]);

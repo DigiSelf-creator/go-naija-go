@@ -71,11 +71,15 @@ test('street 3 by touch: a fufu ball dries the gutter\'s weeds, the hero walks a
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
   const h = hands(await page.context().newCDPSession(page));
   await playStreetByHand(page, h, { until: (s) => s.r.fufu > 0 });
+  // qa round 2: the long gutter moved from 6150 to 6306 (past the drum's landing spot), out of
+  // a ball's reach from the fufu. Play on by hand past the goat (6000) and the drum (6280), and
+  // stop on the road about 150 u short of the gutter.
+  await playStreetByHand(page, h, { until: (s) => s.h.x > 6150 && s.h.x < 6260 && s.h.grounded });
   await h.upAll();
 
-  // Throw balls (X) from where the hero stands: they feed the goat, knock the drum, and one
-  // stops in the long gutter at 6150 and dries its weeds.
-  const gutter = () => page.evaluate(() => window.__game!.run.gutters.find((q) => q.x === 6150)!.state);
+  // Throw balls (X) from where the hero stands: one stops in the long gutter at 6306 and dries
+  // its weeds.
+  const gutter = () => page.evaluate(() => window.__game!.run.gutters.find((q) => q.x === 6306)!.state);
   expect(await gutter()).toBe('weeds');
   for (let i = 0; i < 16 && (await gutter()) === 'weeds'; i++) {
     await page.keyboard.press('x');
@@ -88,7 +92,7 @@ test('street 3 by touch: a fufu ball dries the gutter\'s weeds, the hero walks a
 
   // Walk across the dried gutter (hold Right, no jump): no life lost, the feet stay on the road.
   await page.keyboard.down('ArrowRight');
-  await expect.poll(async () => (await snap(page)).h.x, { timeout: 15_000 }).toBeGreaterThan(6220);
+  await expect.poll(async () => (await snap(page)).h.x, { timeout: 15_000 }).toBeGreaterThan(6370);
   await page.keyboard.up('ArrowRight');
   const after = await snap(page);
   expect(after.r.lives).toBe(before.r.lives);
