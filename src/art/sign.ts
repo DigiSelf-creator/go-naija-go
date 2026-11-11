@@ -28,6 +28,19 @@ const EARTH = '#6b5a45';
  * no worn edge). Leaves the context as it found it.
  */
 export function drawPotholeSign(g: CanvasRenderingContext2D, x: number, groundY = GROUND_Y, fresh = false): void {
+  drawSign(g, x, groundY, fresh, false);
+}
+
+/**
+ * The dash gap sign (S2.16 B4), on the same board and post: a wider hole, the same dotted
+ * two-hump path over it, and three speed lines behind the start of the path. It differs
+ * from the pothole sign by shape, not colour. Placed 120 u before the gap's left lip.
+ */
+export function drawDashSign(g: CanvasRenderingContext2D, x: number, groundY = GROUND_Y, fresh = false): void {
+  drawSign(g, x, groundY, fresh, true);
+}
+
+function drawSign(g: CanvasRenderingContext2D, x: number, groundY: number, fresh: boolean, dash: boolean): void {
   const { boardW: W, boardH: H, height, postW } = POTHOLE_SIGN;
   const top = -height;
   const left = -W / 2;
@@ -110,8 +123,8 @@ export function drawPotholeSign(g: CanvasRenderingContext2D, x: number, groundY 
 
   // Painted picture: a road line broken by a black hole with a ragged rim
   const roadY = top + 15;
-  const h0 = left + 4;
-  const h1 = left + 17.5;
+  const h0 = dash ? left + 8 : left + 4;
+  const h1 = dash ? left + 25 : left + 17.5;
   g.strokeStyle = INK;
   g.fillStyle = INK;
   g.lineWidth = 1.6;
@@ -149,13 +162,26 @@ export function drawPotholeSign(g: CanvasRenderingContext2D, x: number, groundY 
   g.lineWidth = 1.5;
   g.setLineDash([0.1, 2.5]);
   g.beginPath();
-  g.moveTo(left + 2.5, roadY - 2.5);
-  g.quadraticCurveTo(left + 6, top + 6, left + 11, top + 7.5);
-  g.quadraticCurveTo(left + 14.5, top + 8.6, left + 16.5, top + 5.5);
-  g.quadraticCurveTo(left + 20, top + 1.6, left + 24, top + 3.5);
-  g.quadraticCurveTo(left + 27, top + 5.5, left + 27.5, top + 9.5);
+  const p0 = dash ? 6.5 : 2.5;
+  const sx = dash ? 0.84 : 1;
+  const px = (u: number): number => left + p0 + (u - 2.5) * sx;
+  g.moveTo(px(2.5), roadY - 2.5);
+  g.quadraticCurveTo(px(6), top + 6, px(11), top + 7.5);
+  g.quadraticCurveTo(px(14.5), top + 8.6, px(16.5), top + 5.5);
+  g.quadraticCurveTo(px(20), top + 1.6, px(24), top + 3.5);
+  g.quadraticCurveTo(px(27), top + 5.5, px(27.5), top + 9.5);
   g.stroke();
   g.setLineDash([]);
+  if (dash) {
+    // Three speed lines behind the start of the path: a run-up at speed
+    g.lineWidth = 1.2;
+    g.beginPath();
+    for (const [y, x0] of [[top + 7, left + 2.2], [top + 10, left + 1.4], [top + 13, left + 2.2]] as const) {
+      g.moveTo(x0, y);
+      g.lineTo(left + 5.6, y);
+    }
+    g.stroke();
+  }
   // Arrow head pointing right, at the end of the path
   g.beginPath();
   g.moveTo(left + 31.8, top + 11);

@@ -62,7 +62,24 @@ export type SoundName =
   | 'fufuBonk'
   | 'fufuPff'
   | 'goatChew'
-  | 'goatMeeh';
+  | 'goatMeeh'
+  // P13: amala's strong look (S2.16 B2)
+  | 'strongStep'
+  | 'strongSmash'
+  | 'strongPick'
+  // P13: the garri tech suit (S2.16 B3); the hum is setHum, not a one-shot
+  | 'suitOn'
+  | 'suitBreak'
+  // P15: birds (S2.16 B1)
+  | 'crowKraa'
+  | 'egretKrk'
+  | 'birdFlap'
+  // P15: the dash (S2.16 B4)
+  | 'dashStart'
+  | 'dashSteps'
+  | 'dashReady'
+  // P15: thorny weeds dry up (S2.16 B5)
+  | 'weedsFsss';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -410,14 +427,158 @@ const SOUNDS: Record<SoundName, Recipe> = {
       { f: 551, len: 0.22, wave: 'triangle', peak: 584, to: 486, at: 0.09, vol: 0.03 },
     ],
   },
+  // --- S2.16. Volumes: 100 percent in the notes is 0.3 here, so "30 percent" is 0.09.
+  // Amala heavy step: a low "dum", a sine falling 90 to 60 Hz in 0.08 s (at most one every 0.18 s: STRONG.stepGap).
+  strongStep: { tones: [{ f: 90, len: 0.08, wave: 'sine', to: 60, vol: 0.09 }] },
+  // Amala smash: a hearty "gbam", a low drum hit and a wood knock together.
+  strongSmash: {
+    tones: [
+      { f: 120, len: 0.18, wave: 'sine', peak: 135, to: 70, vol: 0.12 },
+      { f: 780, len: 0.035, wave: 'triangle', to: 640, vol: 0.05 },
+    ],
+    hiss: [{ len: 0.05, lp: 700, vol: 0.05 }],
+  },
+  // Amala pick-up: a deep two-note talking drum "gbe-dum" (a bend up, then a lower settle).
+  strongPick: {
+    tones: [
+      { f: 150, len: 0.1, wave: 'triangle', peak: 200, to: 175, vol: 0.09 },
+      { f: 110, len: 0.16, wave: 'triangle', peak: 130, to: 95, at: 0.12, vol: 0.1 },
+    ],
+  },
+  // Suit put-on: "tik-tik-tik-tum" over 0.4 s, small clicks from the feet up, then a soft low close.
+  suitOn: {
+    tones: [
+      ...[0, 1, 2].map((i): Tone => ({ f: 1500 + i * 120, len: 0.025, wave: 'triangle', to: 1300 + i * 120, at: i * 0.1, vol: 0.03 })),
+      { f: 180, len: 0.1, wave: 'sine', to: 140, at: 0.3, vol: 0.07 },
+    ],
+    hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.015, hp: 4000, at: i * 0.1, vol: 0.025 })),
+  },
+  // Suit breaks: a "krink" (a short bright crack), then three small falling "tink"s.
+  suitBreak: {
+    tones: [
+      { f: 2100, len: 0.06, wave: 'triangle', to: 1700, vol: 0.04 },
+      { f: 1350, len: 0.07, wave: 'sine', to: 1250, at: 0.01, vol: 0.03 },
+      ...[0, 1, 2].map((i): Tone => ({ f: 2600 - i * 300, len: 0.04, wave: 'sine', to: 2500 - i * 300, at: 0.12 + i * 0.09, vol: 0.02 })),
+    ],
+    hiss: [{ len: 0.05, hp: 3000, vol: 0.04 }],
+  },
+  // Pied crow: a short, rough, filtered-noise "kraa" with a low nasal tone under it. Our own.
+  crowKraa: {
+    tones: [
+      { f: 520, len: 0.2, wave: 'sawtooth', peak: 560, to: 430, vol: 0.012 },
+      { f: 260, len: 0.2, wave: 'triangle', peak: 280, to: 220, vol: 0.03 },
+    ],
+    hiss: [{ len: 0.2, lp: 1800, vol: 0.05 }],
+  },
+  // Cattle egret: a soft "krk-krk", two dry clicks.
+  egretKrk: {
+    tones: [0, 1].map((i): Tone => ({ f: 700, len: 0.035, wave: 'triangle', to: 520, at: i * 0.12, vol: 0.03 })),
+    hiss: [0, 1].map((i): Hiss => ({ len: 0.035, lp: 2500, at: i * 0.12, vol: 0.04 })),
+  },
+  // Wings as a bird flies off: three soft low air puffs.
+  birdFlap: { tones: [], hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.05, lp: 600, at: i * 0.09, vol: 0.04 - i * 0.008 })) },
+  // Dash start: a quick wood block "tak-tak" (no zoom, no fwoosh).
+  dashStart: {
+    tones: [0, 1].map((i): Tone => ({ f: 950 - i * 120, len: 0.03, wave: 'triangle', to: 800 - i * 120, at: i * 0.07, vol: 0.06 })),
+  },
+  // Fast soft footsteps, four in 0.3 s (play again each 0.3 s of the dash).
+  dashSteps: {
+    tones: [0, 1, 2, 3].map((i): Tone => ({ f: 140, len: 0.03, wave: 'sine', to: 100, at: i * 0.075, vol: 0.035 })),
+    hiss: [0, 1, 2, 3].map((i): Hiss => ({ len: 0.025, lp: 900, at: i * 0.075, vol: 0.02 })),
+  },
+  // Ready to dash again: one small "tik".
+  dashReady: { tones: [{ f: 1600, len: 0.03, wave: 'triangle', to: 1500, vol: 0.035 }] },
+  // Weeds dry up: a soft "fsss" of steam.
+  weedsFsss: { tones: [], hiss: [{ len: 0.3, hp: 3500, vol: 0.03 }, { len: 0.25, lp: 1200, at: 0.05, vol: 0.015 }] },
 };
 
 /** Every tone and hiss fades in over this long from near silence, so none starts with a tick. */
 export const ATTACK = 0.003;
 
+/** The suit's hum: 6 percent volume (100 percent is 0.3, as in the S2.16 recipes). */
+export const HUM_VOL = 0.018;
+
 export class Sound {
   private ac: AudioContext | null = null;
-  enabled = true;
+  private on = true;
+
+  /** Sound switch. Turning it off also stops the suit's hum at once; on again brings it back if still wanted. */
+  get enabled(): boolean {
+    return this.on;
+  }
+
+  set enabled(v: boolean) {
+    this.on = v;
+    this.syncHum();
+  }
+
+  /* ---- S2.16 B3: the tech suit's soft hum, held while the suit is worn ---- */
+
+  private humWanted = false;
+  private humNodes: { gain: GainNode; stops: OscillatorNode[] } | null = null;
+
+  /** True while the hum is playing. */
+  get humming(): boolean {
+    return this.humNodes !== null;
+  }
+
+  /**
+   * Start or stop the suit's hum: two soft sines (110 and 165 Hz) at 6 percent with a slow
+   * wobble. Call with false on pause, a hidden tab or when the suit breaks. It never plays
+   * while the Sound switch is off or before the first tap.
+   */
+  setHum(on: boolean): void {
+    this.humWanted = on;
+    this.syncHum();
+  }
+
+  private syncHum(): void {
+    const ac = this.ac;
+    const want = this.humWanted && this.on && ac !== null && ac.state === 'running';
+    if (want && !this.humNodes && ac) {
+      try {
+        const t = ac.currentTime;
+        const gain = ac.createGain();
+        gain.gain.value = 0.0001;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(HUM_VOL, t + 0.3);
+        gain.connect(this.bus(ac));
+        const stops: OscillatorNode[] = [];
+        for (const f of [110, 165]) {
+          const o = ac.createOscillator();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(f, t);
+          o.connect(gain);
+          o.start(t);
+          stops.push(o);
+        }
+        // The slow wobble: a 0.4 Hz sine moving the hum's volume a little
+        const lfo = ac.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(0.4, t);
+        const depth = ac.createGain();
+        depth.gain.setValueAtTime(HUM_VOL * 0.3, t);
+        lfo.connect(depth).connect(gain.gain);
+        lfo.start(t);
+        stops.push(lfo);
+        this.humNodes = { gain, stops };
+      } catch {
+        this.humNodes = null;
+      }
+    } else if (!want && this.humNodes) {
+      const { gain, stops } = this.humNodes;
+      this.humNodes = null;
+      try {
+        const t = ac?.currentTime ?? 0;
+        gain.gain.cancelScheduledValues(t);
+        gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+        for (const o of stops) o.stop(t + 0.1);
+      } catch {
+        /* already gone */
+      }
+    }
+  }
   /**
    * S2.9 corn tune: every effect goes through this one volume, so the corn tune can turn them all
    * down together (to 30 percent) and back. Made with the first sound; never an envelope.
@@ -474,6 +635,7 @@ export class Sound {
       // iOS: a sound started inside the gesture opens audio for the page.
       playSilence(ac);
       this.opened = true;
+      this.syncHum();
     } catch {
       this.ac = null; // no sound, the game still runs
     }
