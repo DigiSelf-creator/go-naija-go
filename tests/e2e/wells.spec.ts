@@ -167,6 +167,8 @@ test('street 2 by touch: to the well, Go down, every gift in the room, Go up at 
     // Version 2 (slice 3, N3): bests are whole kobo, 10 a coin.
     v: 2,
     states: { lagos: { streets: { 2: { done: true, best: last.r.kobo * 10 } }, parcel: true, hall: { done: false, best: 0 } } },
+    // S2.16 B4: saved when street 2's dash hint was reached.
+    dash: true,
   });
   // The longest case (Computer Village, the parcel line) fits the short screens (po M4 bug 1).
   await checkCardFits(page, 'Next street', async (at) => {
