@@ -100,8 +100,37 @@ export function camScale(zoom: Zoom, v: CityView): number {
   const r = pinRows();
   const reach = pinReach();
   const tall = (v.h - coveredTop(v) - reach.up - reach.down - 2 * PIN_MARGIN) / (r.hi - r.lo);
-  const far = Math.max(MIN_SCALE, Math.min(v.h / CITY_MAP.h, fits, tall));
+  // Never so far out that one pin's tap area lies over another's (a very short screen, 640 x 200:
+  // the Lights out pin covered the Potholes pin). Apart wins over `tall`: on such a screen a sign
+  // may then start partly under the chips, which ignore taps, but every pin can still be tapped.
+  const far = Math.max(MIN_SCALE, pinsApartScale(), Math.min(v.h / CITY_MAP.h, fits, tall));
   return zoom === 'near' ? far * NEAR_TIMES : far;
+}
+
+/** Space kept between two pins' tap areas (CSS px). */
+export const PIN_GAP = 4;
+
+/**
+ * The smallest scale at which no two pins' tap areas overlap: each pair is apart either side by
+ * side or one above the other, whichever needs less.
+ */
+export function pinsApartScale(): number {
+  const spots = Object.values(CITY_SPOTS);
+  const reach = pinReach();
+  let need = 0;
+  for (let i = 0; i < spots.length; i++) {
+    for (let j = i + 1; j < spots.length; j++) {
+      const a = spots[i]!;
+      const b = spots[j]!;
+      const halves = (pinTapBox(0, 0, SPOT_WORDS[a.id]).w + pinTapBox(0, 0, SPOT_WORDS[b.id]).w) / 2;
+      const dx = Math.abs(a.pin.x - b.pin.x);
+      const dy = Math.abs(a.pin.y - b.pin.y);
+      const side = dx > 0 ? (halves + PIN_GAP) / dx : Infinity;
+      const stack = dy > 0 ? (reach.up + reach.down + PIN_GAP) / dy : Infinity;
+      need = Math.max(need, Math.min(side, stack));
+    }
+  }
+  return need;
 }
 
 /** The furthest out the city ever goes (CSS px per map unit). */
