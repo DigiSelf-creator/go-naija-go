@@ -8,12 +8,12 @@ import { HAIRS, OUTFITS, SKINS, drawHero, type HeroPose } from '../../src/art/he
 import { BUS_END, END_BUS_BACK, END_BUS_FRONT, busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence } from '../../src/art/roadside';
 import { recorder } from './recorder';
 
-const KINDS: ControlKind[] = ['back', 'forward', 'jump', 'down', 'up'];
+const KINDS: ControlKind[] = ['back', 'forward', 'jump', 'down', 'up', 'throw'];
 
 describe('phone buttons', () => {
-  it('sizes follow S2.2: circles D x D, Jump 1.5 D, well pills 2.2 D', () => {
-    expect(CONTROL_ASPECT).toEqual({ back: 1, forward: 1, jump: 1.5, down: 2.2, up: 2.2 });
-    expect(CONTROL_WORDS).toEqual({ back: 'Back', forward: 'Forward', jump: 'Jump', down: 'Go down', up: 'Go up' });
+  it('sizes follow S2.2: circles D x D, Jump 1.5 D, well pills 2.2 D; S2.15 Throw a circle', () => {
+    expect(CONTROL_ASPECT).toEqual({ back: 1, forward: 1, jump: 1.5, down: 2.2, up: 2.2, throw: 1 });
+    expect(CONTROL_WORDS).toEqual({ back: 'Back', forward: 'Forward', jump: 'Jump', down: 'Go down', up: 'Go up', throw: 'Throw' });
   });
 
   it('every button makes SVG with no question or exclamation mark, hidden from screen readers', () => {

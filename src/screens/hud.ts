@@ -5,6 +5,7 @@
  */
 import { drawFoodIcon, drawKobo } from '../art/items';
 import { drawParcelIcon } from '../art/wellRoom';
+import { drawFufuIcon } from '../art/fufu';
 import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
 import { h } from './dom';
@@ -29,6 +30,9 @@ export class Hud {
   private readonly slots: Record<Slot, { el: HTMLElement; text: HTMLElement }>;
   /** The garri parcel (S2.5): its icon and "Parcel" next to the kobo while carried. */
   private readonly parcel: HTMLElement;
+  /** S2.15: the fufu chip ("Fufu 8"; tight: the icon and "8"), while balls are held. */
+  private readonly fufu: HTMLElement;
+  private readonly fufuText: HTMLElement;
   private readonly sound: HTMLButtonElement;
   private readonly left: HTMLElement;
   private last = '';
@@ -77,13 +81,21 @@ export class Hud {
       drawParcelIcon(pg, 16, 16, 26);
     }
     this.parcel = h('span', { class: 'hud-food hud-parcel', hidden: true }, parcelIcon, h('span', { class: 'hud-word' }, WORDS.hud.parcel));
+    const fufuIcon = h('canvas', { class: 'hud-icon', width: '56', height: '56', 'aria-hidden': 'true' });
+    const fg = fufuIcon.getContext('2d');
+    if (fg) {
+      fg.scale(56 / 32, 56 / 32);
+      drawFufuIcon(fg, 16, 16, 26);
+    }
+    this.fufuText = h('span', { class: 'hud-text' });
+    this.fufu = h('span', { class: 'hud-food hud-fufu', hidden: true }, fufuIcon, this.fufuText);
     // Both act on the press, so a second finger works while a thumb holds Forward or Jump.
     this.sound = h('button', { type: 'button', class: 'hud-btn hud-sound', 'data-ui': true });
     this.sound.innerHTML = SPEAKER;
     pressOnDown(this.sound, () => hooks.toggleSound());
     const pause = h('button', { type: 'button', class: 'hud-btn hud-pause', 'aria-label': WORDS.hud.pause, 'data-ui': true }, 'II');
     pressOnDown(pause, () => hooks.pause());
-    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el);
+    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el, this.fufu);
     this.root = h('div', { class: 'hud', hidden: true }, this.left, h('div', { class: 'hud-right' }, this.sound, pause));
     parent.append(this.root);
     window.addEventListener('resize', () => this.fit(true));
@@ -104,7 +116,7 @@ export class Hud {
     const p = run.power;
     const secs = (steps: number): number => Math.ceil(steps / STEPS_PER_SECOND);
     const warn = (steps: number): boolean => steps > 0 && steps <= RULES.warnSteps;
-    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn, run.inHall].join('|');
+    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn, run.inHall, run.fufu].join('|');
     if (key === this.last) return;
     this.last = key;
     this.hall = run.inHall;
@@ -117,11 +129,14 @@ export class Hud {
     this.koboWord.textContent = kobo.endsWith(n) ? kobo.slice(0, kobo.length - n.length) : kobo;
     this.koboCount.data = kobo.endsWith(n) ? n : '';
     this.lastKobo = run.kobo;
-    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}`;
+    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}${String(run.fufu).length}`;
     this.parcel.hidden = !run.parcel;
     this.setSlot('garri', p.shield, WORDS.hud.shield, false);
     this.setSlot('corn', p.corn > 0, WORDS.hud.fast(secs(p.corn)), warn(p.corn));
     this.setSlot('amala', p.amala > 0, WORDS.hud.strong(secs(p.amala)), warn(p.amala));
+    this.fufu.hidden = run.fufu <= 0;
+    this.setText(this.fufuText, WORDS.hud.fufu(run.fufu));
+    this.fufu.setAttribute('aria-label', WORDS.hud.fufuSpoken(run.fufu));
     this.sound.classList.toggle('is-off', !soundOn);
     this.sound.setAttribute('aria-label', soundOn ? WORDS.hud.soundOn : WORDS.hud.soundOff);
     this.fit(false);
@@ -154,15 +169,20 @@ export class Hud {
   private setSlot(kind: Slot, on: boolean, words: string, blink: boolean): void {
     const s = this.slots[kind];
     s.el.hidden = !on;
+    this.setText(s.text, words);
+    s.el.classList.toggle('blink', blink);
+  }
+
+  /** A chip's word and number apart, so a tight HUD can show the icon and number only. */
+  private setText(text: HTMLElement, words: string): void {
     // The word and the seconds apart, so a tight HUD can show the icon and seconds only. The
     // word stays in the text (and is read out), only hidden from sight.
     const m = /^(.*?)(\d+)$/.exec(words);
     const word = m ? m[1]! : words;
     const secs = m ? m[2]! : '';
-    if (s.text.textContent !== words) {
-      s.text.replaceChildren(h('span', { class: 'hud-word' }, word), secs);
+    if (text.textContent !== words) {
+      text.replaceChildren(h('span', { class: 'hud-word' }, word), secs);
     }
-    s.el.classList.toggle('blink', blink);
   }
 }
 
@@ -213,6 +233,10 @@ export class Toast {
   private box: HintBarBox | null = null;
   private cssH = 0;
   private full = '';
+  /** S2.9 corn count: while it shows, a toast that comes due waits, then shows its full time. */
+  private holding = false;
+  private waiting: { words: string; ms: number } | null = null;
+  private shownMs = 0;
 
   constructor(parent: HTMLElement) {
     this.el = h('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
@@ -233,6 +257,11 @@ export class Toast {
   }
 
   show(words: string, ms = 2200): void {
+    if (this.holding) {
+      this.waiting = { words, ms };
+      return;
+    }
+    this.shownMs = ms;
     this.full = words;
     this.setWords(words);
     this.el.classList.add('show');
@@ -243,6 +272,31 @@ export class Toast {
   hide(): void {
     clearTimeout(this.timer);
     this.el.classList.remove('show');
+    this.waiting = null;
+  }
+
+  /**
+   * The corn count takes the bar's place (S2.9): on, the bar hides and any toast showing or
+   * coming due waits; off, the last one waiting shows for its full time.
+   */
+  hold(on: boolean): void {
+    if (on === this.holding) return;
+    if (on) {
+      if (this.el.classList.contains('show')) this.waiting = { words: this.full, ms: this.shownMs };
+      clearTimeout(this.timer);
+      this.el.classList.remove('show');
+      this.holding = true;
+      return;
+    }
+    this.holding = false;
+    const w = this.waiting;
+    this.waiting = null;
+    if (w) this.show(w.words, w.ms);
+  }
+
+  /** The toast waiting for the corn count to end (its words), or ''. */
+  get pending(): string {
+    return this.waiting?.words ?? '';
   }
 
   get text(): string {
@@ -258,5 +312,81 @@ export class Toast {
       this.el.style.fontSize = `${px}px`;
       if (this.el.scrollHeight <= this.el.clientHeight && this.el.scrollWidth <= this.el.clientWidth) break;
     }
+  }
+}
+
+/** S2.9 count number height by bar size row: 40 px under 280 px tall, 56 to 419, 72 from 420. */
+export const COUNT_FONT: Record<HintBarBox['size'], number> = { small: 40, mid: 56, big: 72 };
+
+/**
+ * The corn count (docs/design.md S2.9 "Corn tune"): a big 5, 4, 3, 2, 1 with a small corn icon,
+ * in the hint bar's place, so it never covers anything you play. Each number pops in (130 to 100
+ * percent over 0.15 s; none with reduced motion: screens.css). The numbers are hidden from
+ * screen readers; they hear "Corn ends in 5 seconds" once at 5 and "Corn is done" at 0.
+ */
+export class CornCount {
+  private readonly el: HTMLElement;
+  private readonly num: HTMLElement;
+  private readonly said: HTMLElement;
+  private n = 0;
+  private box: HintBarBox | null = null;
+
+  constructor(parent: HTMLElement) {
+    const icon = h('canvas', { class: 'count-icon', width: '64', height: '64', 'aria-hidden': 'true' });
+    const g = icon.getContext('2d');
+    if (g) {
+      g.scale(64 / 32, 64 / 32);
+      drawFoodIcon(g, 'corn', 16, 16, 0.85);
+    }
+    this.num = h('span', { class: 'count-num' });
+    this.el = h('div', { class: 'corn-count', 'aria-hidden': 'true', hidden: true }, icon, this.num);
+    this.said = h('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+    parent.append(this.el, this.said);
+  }
+
+  /** Same place as the hint bar (from hintBarBox). */
+  place(box: HintBarBox, cssH: number): void {
+    this.box = box;
+    const s = this.el.style;
+    s.left = `${box.x}px`;
+    s.width = `${box.w}px`;
+    s.bottom = `${cssH - box.bottom}px`;
+    const room = Math.max(0, box.bottom - box.top);
+    s.maxHeight = `${room}px`;
+    s.fontSize = `${Math.max(11, Math.min(COUNT_FONT[box.size], room - 6))}px`;
+  }
+
+  /** The number to show (0 hides it). `ended`: the corn ran out (not cut short or replaced). */
+  set(n: number, ended = false): void {
+    if (n === this.n) return;
+    const was = this.n;
+    this.n = n;
+    this.el.hidden = n === 0;
+    if (n > 0) {
+      this.num.textContent = String(n);
+      this.el.classList.remove('pop');
+      void this.el.offsetWidth;
+      this.el.classList.add('pop');
+      if (n === 5) this.said.textContent = WORDS.corn.endsIn(5);
+    } else if (ended && was === 1) {
+      this.said.textContent = WORDS.corn.done;
+    }
+  }
+
+  get value(): number {
+    return this.n;
+  }
+
+  /** What screen readers were last told. */
+  get spoken(): string {
+    return this.said.textContent ?? '';
+  }
+
+  get shownBox(): HintBarBox | null {
+    return this.box;
+  }
+
+  get element(): HTMLElement {
+    return this.el;
   }
 }

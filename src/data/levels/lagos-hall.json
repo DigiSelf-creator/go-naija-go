@@ -23,12 +23,13 @@
     ],
     "breakAfterHit": 1.5,
     "phases": [
-      { "every": 2.2, "speed": 156, "pattern": ["tyre"], "bpm": 128 },
-      { "every": 1.8, "speed": 192, "pattern": ["tyre", "tyre", "honk"], "bpm": 134 },
-      { "every": 1.4, "speed": 228, "pattern": ["tyre", "honk", "tyre", "highHonk"], "bpm": 140 }
+      { "every": 2.2, "speed": 156, "pattern": ["tyre"], "bpm": 128, "lightAt": 6.0, "greenFor": 4.0, "darkFor": 4.4 },
+      { "every": 1.8, "speed": 192, "pattern": ["tyre", "tyre", "honk"], "bpm": 134, "lightAt": 4.0, "greenFor": 3.5, "darkFor": 3.6 },
+      { "every": 1.4, "speed": 228, "pattern": ["tyre", "highHonk", "tyre", "honk"], "bpm": 140, "lightAt": 4.5, "greenFor": 3.0, "darkFor": 2.8 }
     ],
     "honkY": 236,
     "highHonkY": 170,
-    "honkSpeed": 120
+    "honkSpeed": 120,
+    "fufu": { "x": 120, "afterHit": 1 }
   }
 }

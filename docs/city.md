@@ -19,6 +19,7 @@ Owner: designer. First written 9 Nov 2026 from Tp's words in chat. Updated 10 No
 | L6: safety missions against the Shadow, with a made-up Safety Team | 10 Nov 2026 | Part 2E |
 | L7: the Booming meter, never goes down by itself | 10 Nov 2026 | Part 1 |
 | Not now: the herder's staff. Fufu and egusi plug potholes, after slice 3 (R3, R4) | 10 Nov 2026 | Part 2D |
+| **Fufu now, not after slice 3** (changes R3's timing only): hot fufu balls thrown with a Throw button, never fire. Corn tune. The city starts now, beside the polish (po's reading of Tp's 10 Nov play; decision line 42 waits to be pasted) | 10 Nov 2026 | Parts 2C, 2D, 5; design S2.9, S2.15 |
 | Hausa, Igbo and Yoruba get an equal share over the updates; next regions north and east (R5) | 10 Nov 2026 | Part 2D, part 1 "It never ends" |
 
 Still a draft (not confirmed): the challenge road map (part 1), and the five questions at the end.
@@ -244,6 +245,7 @@ Confirmed (city choice 5 a, 10 Nov): throws happen only while a throw food is wo
 - **Goats:** corn lands on the roadside in front of the goat, and it trots off after the snack: "meeh".
 - **How it fires:** about twice a second, at the nearest problem ahead in your lane. Nothing to aim.
 - No flames, fire or explosions; never the word "fireball"; no ball bouncing in arcs (R8).
+- **Fufu on the streets (10 Nov):** fufu balls are thrown by the player with the Throw button, not fired by themselves (design S2.15). To stay clear of the banned bouncing-fireball look, a ball plops, makes two hops that get smaller, then rolls; never a run of equal bounces. In the lane run (later) fufu keeps the plan above: it rolls along your lane.
 
 ### 2D. What each food does, and how long
 
@@ -254,7 +256,7 @@ Every timed food lasts **12 seconds** (city choice 6 a, 10 Nov). The last 3 seco
 | Roasted corn | Street food all over Nigeria | **Corn toss** at problems ahead; feeds goats off the road. In the street run it keeps its speed boost | 12 s | "Roasted corn! Corn toss for 12 s." |
 | Garri, sugar and epa | Everywhere | **Shield:** takes one hit on the streets, or one stumble in the lane run | until used | "Garri! A shield takes one hit." |
 | Amala, gbegiri and ewedu | South-West | **Strong:** smash through cones, barrels, tyres and boss throws; goats trot away unhurt | 12 s | "Amala! Super strong for 12 s." |
-| Fufu and egusi soup | Many homes in the South-East and beyond | **Fufu roll:** a ball rolls along your lane and plugs the first pothole ("plop"). **After slice 3**, with an action button then (R3, city choice 8 a) | 12 s | "Fufu! Roll it at potholes. 12 s." |
+| Fufu and egusi soup ("pepper fufu") | Many homes in the South-East and beyond | **Now on the streets and in the hall (10 Nov):** 8 hot fufu balls (most 16), thrown with the Throw button; they plug potholes, knock tyres and drums off the road, feed goats, pop honks (design S2.15). In the lane run, later: a ball rolls along your lane and plugs the first pothole | 8 balls, not timed | "Pepper fufu! Press Throw to throw." |
 
 Not now: the herder's staff (R4, Tp, 10 Nov). The north's first food or tool is chosen later with Hausa and Fulani speakers.
 
@@ -349,7 +351,7 @@ The place in brackets is where the pin sits on the map, never words on the card.
 - Goal 600 m, then "Keep running".
 - A first-timer reaches the goal in 3 tries or fewer.
 
-**Not in slice 3:** safety missions (2E), more areas, other states, fufu, new bosses, any timers or waiting. The challenge road only if Tp says yes (question 1).
+**Not in slice 3:** safety missions (2E), more areas, other states, fufu in the lane run (fufu on the streets comes now, design S2.15), new bosses, any timers or waiting. The challenge road only if Tp says yes (question 1).
 
 **Order:** designer writes the slice 3 notes in docs/design.md → art (city blocks before and after, pins, three pickups, the Blackout, hero from behind and off the bus, sounds) → gamedev → qa (slow phone profile, 4x CPU, size, offline, the 2B and part 6 lists, first-timer tries) → po accepts.
 
@@ -383,6 +385,90 @@ The Stoppers are drawn as problems (a jam of cars, a pothole, a dark lamp, a sta
 ### Accessibility for all of it
 
 Every button at least 44 px (in play at least 56). Sound and Music switches on the title, every pause and Settings. No meaning by colour alone: every bucket, pin, lane-run kind and badge has an icon, a word or a shape. Gentle mode everywhere. "Buttons instead of swipes". Pinch is never needed: + and − buttons zoom the city too. Screen readers hear pins as "Potholes, problem" or "New road, fixed". Reduce motion keeps the city still and skips the walk-in movement.
+
+### Build order (designer, 10 Nov 2026: Tp "when do we see the city and the journey?")
+
+Slice 3 starts now, beside the slice 2 polish (po's reading of Tp's 10 Nov play, item 4). Six steps, each small enough to build, test and show Tp on its own. Each step ends with something Tp can play. Task rows with owners are in docs/plan.md, "Slice 3: the city, build order".
+
+| Step | What Tp sees when it is done | Ready? |
+|---|---|---|
+| (a) The intro story | 6 frames, Skip, plays once, "Watch the story" in Settings | **Ready to start now** |
+| (b) Lagos from above | the city screen, drag and zoom, three pins, the bucket counters, saved on the phone | **Ready to start now** |
+| (c) Wins go home | a street win pays Naira, fixes the Potholes pin, "Mission complete!" and the new road | after (b) |
+| (d) The Booming meter | the bar fills with each fix; at 3 fixes "Lagos is booming!" | after (c) |
+| (e) The challenge road | the road of bus stops replaces the Streets list | after (c) |
+| (f) The lane run and the Blackout | the second kind of challenge; pins 2 and 3 can be fixed | designer note first (f0), then art and gamedev |
+
+Size: the first load is 336.6 KB today. Budgets below are for the gzipped first load, code and code-drawn art together. All six together: about +216 KB, so about 553 KB, well under the 1.5 MB slice 3 aim and the 3 MB rule.
+
+#### (a) The intro story
+
+Words and frames: "The intro" above (captions 1 to 6, confirmed by Tp).
+- **When it plays.** A new player taps "Make your hero": the intro plays first, then the hero builder. A player who already has a hero but has not seen it: it plays once on their next "Play". After it ends or is skipped it never plays by itself again. Save key `gidi-intro`, value "seen".
+- **Moving on.** No frame moves on by itself (everyone reads at their own speed). A tap anywhere but Skip, or Space, Enter or →, goes to the next frame. After 1.5 s on a frame, a small "Tap to go on" shows at the bottom (keys: "Press Space to go on"). Frame 6 has the big button "Let's go" instead.
+- **Skip.** Top right, at least 44 x 44 px, from frame 1, word "Skip". Escape skips too.
+- **Look.** Each frame is a still picture drawn in code with the caption under it in real text (bold 16 px, 14 px under 280 px tall; long captions wrap, never cut). Between frames, a 0.3 s cross-fade; with reduced motion, a plain cut.
+- **Pause.** A call, a switched app or a turned phone pauses it; that frame starts again.
+- **Settings (new small screen).** Title gets a small "Settings" button. Who sees it: anyone who taps it. One job: change how the game plays and sounds. Words: heading "Settings"; "Sound: on" / "Sound: off"; "Music: on" / "Music: off"; "Gentle mode: 5 lives instead of 3"; "Watch the story"; button "Back". The title keeps its Sound and Music switches too. At 320 x 240 it is one column of buttons, each at least 44 px tall, no scroll.
+- **What the frames show (art).** 1: West African land at sunrise, many people of every age working together on a big wooden-and-brass wheel. 2: the Wheel turning, Lagos growing, buses and people arriving. 3: the Wheel at the centre of a Nigeria map shape, cogs turning. 4: the Stoppers as problems: a jam of cars, a pothole, a dark lamp, a stack of forms, each with a grumpy pout (no person). 5: the player's own hero (if built, else a plain outline hero) in front of the Wheel. 6: a yellow bus at a Lagos bus stop at morning. No faith signs, no real people, no flags, no party colours.
+
+Owners and budgets: art draws the 6 frames (src/art/intro.ts, under 12 KB). gamedev builds the intro screen, the once rule and Settings (under 6 KB).
+Done when: every caption fits at 320 x 240 and 851 x 393 with no cut and no scroll; Skip and "Let's go" work by touch and keys; it plays once and then only from "Watch the story"; screen readers read every caption; reduced motion gives plain cuts; qa's originality and no-real-people check passes.
+
+#### (b) Lagos from above
+
+The first city screen. Only Potholes can be fixed until (c) and (f) are built; the other two pins already show.
+- **The look.** Our own model-town Lagos seen from the south at an angle: each block shows its top and its front face, roads run across and up the screen (not a diamond grid of plots; part 6 rule 2). The slice 3 area is 12 blocks in 3 rows of 4 around a main road, with a bus park in the middle, the lagoon along the bottom edge with one of our own bridges running off the map (later areas come in over it). Yellow buses move only when something changes or when you look (no constant drawing).
+- **Size.** The map is 1600 x 1000 map units. Far view: the whole area fits the screen's height. Near view: 2 times as big. It starts at far.
+- **Look around.** Drag with one finger; the map stops within 0.3 s after you let go and never leaves the screen by more than 40 px. Pinch snaps between near and far. Double tap a block: near, centred on it. Buttons "+" and "−" (each at least 44 x 44 px, bottom right) do the same as pinch, so two fingers are never needed. Keys: arrows move 120 px a press; + and − zoom.
+- **Pins.** A 36 px round sign with an icon, the word under it (bold 12 px), a tap area at least 48 x 56 px including the word. A soft bob of 2 px, once a second (none with reduced motion).
+  | Pin | Where on the map | Icon | Word |
+  |---|---|---|---|
+  | 1 | the road on the left (Alausa road) | a cracked road | "Potholes" |
+  | 2 | by the bus stop in the middle (Ikeja) | a dark lamp | "Lights out" |
+  | 3 | the busy block on the right (Computer Village) | a phone mast with one bar | "Slow internet" |
+  Pin states: a problem (icon and word); enough in the bucket (a tick badge and the word "Ready"). The place names in brackets are only where the pin stands; no card line names them (part 1 "Words").
+- **Problem cards.** Words as part 5 "Screens and words". Until the lane run (f) exists, Lights out and Slow internet show their lines and, instead of the big button, "Lane run: coming soon" (not a button), plus "Back".
+- **Counters (top left, one row).** Three chips, each an icon plus words: coin "₦0" (or "80 kobo" under ₦1; "₦3.40" from ₦1; "N" when the font has no ₦, N1 to N4), bulb "Power 0", chip "Tech 0". Screen readers: "Naira: 3 naira 40 kobo", "Power: 6", "Tech: 2".
+- **Buttons.** Top right: Sound, Settings (each 44 px). Bottom: "Streets" (until the challenge road in (e)), "Hero", "Nigeria's wheel".
+- **Flow.** Title "Play" opens the city once a hero is saved (first-timers still go intro, hero builder, then the city). A card's "Run Alausa" starts street 1.
+- **Saved on the phone.** `gidi-progress` gains a `city` part: `{ "kobo": 0, "power": 0, "tech": 0, "fixed": [], "fixes": 0 }` (money kept as whole kobo). Merged in, never overwriting the street progress; a broken or missing part starts at zeros.
+- **Light on the phone.** Each block is drawn once into its own small picture (before and after); the city redraws only on a drag, a zoom or a change. Idle: no drawing at all.
+
+Owners and budgets: art draws the blocks (12, with before and after for the 3 pin spots), roads, lagoon, bridge, buses, pins and the 3 bucket icons (under 40 KB). gamedev builds the screen, the camera, pins, cards, counters, money words and the save (under 20 KB).
+Done when: drag stays at 45 fps or more at 4x CPU slowdown and idle draws nothing; every tap target 44 px or more at 320 x 240; pins and chips read without colour; the save survives reload and an old save without `city` loads; money words right for 0, 80 kobo, ₦1, ₦3.40, ₦124.50; the map passes part 6 (not like Township or any game's map).
+
+#### (c) Street wins go home, and "Mission complete!"
+
+- **Coins become money.** A coin is 10 kobo (N1). The street HUD's kobo chip shows money: "80 kobo", then "₦1.20". The coin count rules do not change.
+- **Street cleared card.** Big button "Take it home" (replaces "Next street"; "Next street" becomes small). The line becomes "{street name} is moving again, thanks to you! You got {money}." A win adds the coins plus a ₦5 prize; the hall win adds ₦15.
+- **Losing keeps it all (Tp, question 2).** Street Game over: "Out of lives" / "You keep {money} for Lagos. The street is still here. Try again!"
+- **A win pays at once (Tp, question 3).** Winning street 1 from the Potholes card pays ₦10 from the bucket straight away, then plays "Mission complete!". Winning any other way just adds the money; the card then shows "Fix it (₦10)".
+- **Mission complete.** Words and timing as part 1 "Mission complete": the yellow bus pulls up, the hero gets off, "Mission complete!" / "New road here. Buses are moving again.", fresh tarmac rolls, lane paint, the cones go. 5 s, "Tap to skip", reduced motion shows the end picture. Then the city, with that block lit and "Fixed ✓" when tapped.
+
+Owners and budgets: art makes the hero getting off the bus (every body, S2.3) and the Potholes fix (under 12 KB). gamedev builds the money, the card changes, the pay-at-once rule and the Mission complete scene (under 8 KB).
+Done when: a first-timer goes city, card, street 1, win, Mission complete, back to a fixed road, in one go; losing keeps the money; money adds up right in tests; the scene skips by tap and key; nothing is lost on reload.
+
+#### (d) The Booming meter
+
+Words and rules: part 1 "The Booming meter". A bar at the top centre of the city screen with the word "Booming", 3 steps to the first boom ("Next boom: 2 fixes"). At 3 fixes, the card "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." / button "See Lagos", then two new pins marked "Coming soon". The first boom turns Lagos's cog on Nigeria's wheel; a player whose cog already turns from the hall keeps it (the cog never turns off).
+Owners and budgets: art draws the bar, the rising-building icon and the grown-city pictures (under 8 KB with (c)'s blocks reused). gamedev builds the bar, the card and the cog link (under 3 KB).
+Done when: the meter never goes down, survives reload, reads "Booming meter. 1 of 3 fixes to the next boom." to screen readers, and the steps show without colour.
+
+#### (e) The challenge road
+
+Words and rules: part 1 "The challenge road" (Tp said yes). Stops in slice 3: "Alausa", "Computer Village", "Ikeja", "Go-Slow Hall", then "Lane run" (locked until (f)). It replaces the Streets screen; the city's "Streets" button becomes "Challenge road".
+Owners and budgets: art draws the road, the danfo-yellow stop signs and the ferry jetty (under 6 KB). gamedev builds the screen and the list for screen readers (under 6 KB).
+Done when: it fits 320 x 240 with stops at least 44 px; screen readers hear it as a list; it is not a path-and-dots world map (part 6 rule 4).
+
+#### (f) The lane run and the Blackout
+
+Rules: part 2B, all confirmed. Built in four steps:
+- f0 designer: the lane run note in docs/design.md: lane width and speeds, the first 600 m laid out (what comes where, one new thing at a time), the pickup counts that make "one win pays for the fix", the Blackout numbers checked against "a first-timer reaches the goal in 3 tries or fewer", buttons and swipes, screens.
+- f1 art: the road from behind, the hero from behind (every body), dodge, burst, goat and slow things, pickups, the Blackout lamps, sounds, a lane-run tune (under 50 KB).
+- f2 gamedev: the lane run engine on the 2D canvas (pool of 20 things, 60 fps on a mid phone), swipes, keys and "Buttons instead of swipes" (under 30 KB).
+- f3 gamedev: the Blackout, buckets, HUD, end card, "Keep running", best distance; pins 2 and 3 open (under 15 KB).
+Done when: everything is visible 1.5 s before it arrives at every speed; first-timers reach the bus stop in 3 tries or fewer; at least 45 fps at 4x CPU; part 2B's "must NOT copy" list passes; goats are never hurt.
 
 ## 6. Original only: the check list for every new piece
 

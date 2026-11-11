@@ -1,5 +1,66 @@
 # Open questions for the product owner
 
+## Tp, 11 Nov 2026: yes to merge round 1, and yes to all recommendations
+
+- Designer's S2.16 questions: touching a bird without the suit costs a life (like a goat); birds never break the suit; one easy gutter on street 2 before the bus stop; the dash starts from street 2 and is off in the hall and well room.
+- Rubbish piles by the birds: kept, small and neat, never named after a real place; cleaning up becomes a later city fix.
+- Round 1 (harder hall and streets, fufu, corn tune) goes onto main.
+
+## po acceptance, 10 Nov 2026: harder hall and streets, pepper fufu, corn tune (P5, P8, P10)
+
+**Verdict: accepted, with Tp's ear and Tp's first hall play still to come.** qa P11 (reported): tsc clean, unit 794/794, first load 402 KB; e2e phone 41/42 and timing 89/91 (only the 3 known sandbox failures); hall worst 55 fps at 4x CPU. Break tests all fine. By eye: no fire or fireball look, nothing mocks anyone; intro and city art show no real people, brands, party colours or faith signs; the Nigeria shape reads right.
+Fixed after qa: the Throw button replayed its pop-in on every press (lead, d4005b2, with a test that failed before the fix).
+Open, not blocking:
+1. Hall time: bots win in about 21 s, under the 30 to 60 s first-timer goal (bots know to wait for the light). Tp's own first play decides; if under 25 s, designer cuts green time to 3.5 / 3.0 / 2.5 s.
+2. Tp listens (checklist below); the corn tune check list lacks the Sonic invincibility and speed-shoes openings, so Tp's ear clears it.
+3. Designer: the hall bowl lands under the left light, so you step off the light to take it. Small; next design pass.
+4. Perf part-0 step rate is 52 to 54 against 55 on the old code too (sandbox); CI decides.
+
+**Listening checklist for Tp** (on the test link, sound on, silent switch off):
+- Corn tune: street 1, grab the roasted corn (about three quarters along), then stand still for 12 s to hear the 5, 4, 3, 2, 1 slow-down. Does it sound like any game's power-up or star music, or a known song?
+- Hall lights: in Go-Slow Hall wait about 6 s for the ding, then the ticks; don't jump and hear the clunk.
+- Fufu: street 2 bowl (about halfway); throw at the road, a pothole and a tyre.
+- Goat: street 2, throw a fufu ball near the goat: chew and "meeh".
+
+## Tp, 10 Nov 2026 (later): designer's three choices, and five new ideas
+
+**Answered by Tp: 1 a, 2 a, 3 a.** Fufu plops, hops twice (smaller each time), then rolls; with Music off there is no corn tune but the 5, 4, 3, 2, 1 still shows; players who already have a hero see the intro once on their next Play.
+
+**Answered by Tp in chat, 10 Nov 2026: B1 a, B2 a, B3 a, B4 a, B5 a** (birds on street 3 that are never hurt; amala gives a strong look with no size change; the garri shield shows as our own tech suit; a 2.5 s dash from double tap and hold; open gutters with still thorny weeds that fufu clears). Tp also: the city view angle in art's drawing is OK. Intro frame 3 (the Nigeria shape): use the country's colours (green and white), keep every cog inside the borders, and make the border itself out of cogs/wheels, "the borders are the wheels that make it keep working". (National colours are not party colours, so rule 3 is kept.)
+
+Lines for Tp to paste into docs/decisions.md:
+43. Street 3 has birds by the rubbish; they are never hurt. Amala gives a strong look, never a size change. The garri shield looks like our own tech suit. Double tap and hold forward for a short dash. Open gutters with still thorny weeds; fufu clears them. (B1 to B5)
+
+Tp's new ideas, in short, with po's read. CLAUDE.md rule 2 bans copying Mario, so two of them need a safe version (marked).
+- **B1. Birds on street 3.** Because of dirt and rubbish, birds gather and get in the way. Dodge them by throwing fufu, jumping on them, or running into them with the shield on. po: yes, with our rule for animals: birds are never hurt. Fufu: a bird catches the ball and flies off with it. Jump on one: it flaps away. Shield: it gets a fright and flies off. They gather by rubbish piles, so cleaning up is the real fix (a later city fix). Not like Angry Birds, Flappy Bird or any game's bird. Recommended: a) yes, as written; b) birds only fly overhead as scenery.
+- **B2. Amala makes the hero big, and you only go small when hit with no protection.** **po flag: this is Mario's best-known rule** (a power-up makes you big, a hit makes you small). Rule 2 forbids it.
+  - a) (po's pick) Amala stays a 12 s power-up with a strong look: wider shoulders, a warm glow, heavier footsteps, smashing through hazards. No change of size, no lasting big state.
+  - b) The hero grows a little (about 15%) for the 12 s only, then back to normal. Closer to Tp's idea; still a risk.
+  - c) Tp's full idea. po cannot recommend it.
+- **B3. A protection look: a halo or a robot build.** po: a halo is a faith sign (angels, saints), so rule 4 says no. A robot-style **tech suit** fits the game well (it matches the Tech bucket).
+  - a) (po's pick) The garri shield shows as a light tech suit frame around the hero, our own design: no famous robot or superhero look (not Iron Man or Mega Man). It still takes one hit.
+  - b) Keep the round shield bubble as now.
+- **B4. Fast run.** Double tap forward and hold = a fast run for a few seconds, for faster, longer jumps. The two jump taps stay, and holes get wider to need it. po: yes; many runner games have a dash, and ours is our own.
+  - a) (po's pick) A 2.5 s dash, dust and speed lines, then a short rest before the next. Some new wide holes need it; Gentle mode never needs it.
+  - b) No dash.
+- **B5. Gutters with thorn plants that harm you.** Fufu destroys the thorns, or you jump over. **po flag:** a harmful plant coming out of a pipe or hole is Mario's "piranha plant". Ours must never bite, have a mouth, or pop up and down.
+  - a) (po's pick) An open gutter (a wide drain) choked with thorny weeds that stay still. Touching them costs a life. A fufu ball clears them: they wither and the gutter turns to safe ground. Or jump over. Drawn our own way, no "fire".
+  - b) Gutters with no plants.
+Also: Tp says "fufu fireball". In the game it is always a hot fufu ball, never fire (rule 2).
+
+## Tp, 10 Nov 2026 (after playing the PR #3 build)
+
+Tp's words, in short: it works; it needs to be harder; "I don't see my fufu as my fireballs"; when corn is picked up its sound should be different, fast and louder than every other sound, then wear off slowly 5, 4, 3, 2, 1; and when do we see the city and the journey?
+
+Taken as Tp's instructions (po):
+1. **Harder:** designer tunes the streets and Go-Slow Hall (plan P2 hall goal, plus the streets), keeping Gentle mode kind.
+2. **Fufu now, not after slice 3** (changes R3 a, the timing only): pepper fufu as hot, steaming fufu balls thrown with a new action button, bouncing along the road, knocking problems away and plugging potholes; at problems only, never people; goats are shooed, never hit (city choice 5 a). **No flames, no fire, no fireball look or sound** (CLAUDE.md rule 2: a fireball power-up is a Mario signature).
+3. **Corn tune (Tp's new idea 2):** while corn works, our own fast corn tune plays over everything (other sounds and the street tune duck under it); for the last 5 seconds it slows and fades with a 5, 4, 3, 2, 1 count on screen. Never like any game's power-up music.
+4. **City now:** slice 3 starts now beside the polish: the intro story first, then Lagos from above with its problem pins, then "Mission complete!".
+
+Line for Tp to paste into docs/decisions.md:
+42. Pepper fufu comes now: hot fufu balls thrown with an action button, never fire. While corn works, our own corn tune plays over every other sound and fades 5, 4, 3, 2, 1. Slice 3 (the city) starts now, beside the polish.
+
 ## po acceptance, 10 Nov 2026: P1 and P2 (code part)
 
 **Verdict: accepted**, branch claude/serene-hopper-ydve2g. qa passed it (reported): tsc clean, unit 672/672, first load 336.6 KB, offline cache check proven by breaking it on purpose; e2e phone-landscape 37/38 and timing 89/91, where the 3 failures fail the same way on the unchanged base 73640ec (older sandbox browser: hall first toast, a late icon request, "installable" in incognito). Perf in the sandbox is slow on the base too (worst 29.3 fps), so it is not a regression; real fps is checked by CI and on a real phone.

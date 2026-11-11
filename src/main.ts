@@ -9,7 +9,7 @@ import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
 import { Sound } from './engine/sound';
 import { Music } from './engine/music';
-import { MusicDirector } from './game/music-cue';
+import { CORN_GAIN, CORN_LOUD, CornDirector, MusicDirector, cornCount } from './game/music-cue';
 import { listenForAudioGestures } from './engine/audio-unlock';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
@@ -21,8 +21,8 @@ import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
 import { LAGOS, Progress, anyDone, switchedOn } from './game/progress';
-import { TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
-import { Hud, Toast } from './screens/hud';
+import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
+import { CornCount, Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
@@ -95,7 +95,13 @@ function startGame(): void {
     game.lift = buttons.layout.lift;
   };
   /** The hint bar sits between the buttons shown now (S2.2, "The hint bar"). */
-  const barBox = (): HintBarBox => hintBarBox(window.innerWidth, window.innerHeight, readSafeArea(), buttons.layout, buttons.which);
+  const barBox = (): HintBarBox => hintBarBox(window.innerWidth, window.innerHeight, readSafeArea(), buttons.layout, buttons.which, throwButton.shown);
+  /** S2.15: Throw (button or X): one fufu ball, only while playing. */
+  function throwFufu(): void {
+    if (!playing || game.paused || menus.current || !inPlay()) return;
+    game.throwFufu();
+  }
+  const throwButton = new ThrowButton(document.body, throwFufu);
   onResize.push(placeButtons, () => game.setView(view));
   placeButtons();
   game.setView(view);
@@ -111,11 +117,51 @@ function startGame(): void {
   // phone). It schedules its own notes on a 25 ms timer, 0.1 s ahead: the game never waits.
   const music = new Music();
   const director = new MusicDirector(music);
+  // S2.9 corn tune: its own player and output (0.8) on the same context, over the street tune.
+  const cornMusic = new Music({ gain: CORN_GAIN });
+  const corn = new CornDirector({
+    start: () => {
+      cornMusic.setLevel(1, 0);
+      cornMusic.restart('corn', 0);
+    },
+    step: (st) => {
+      cornMusic.setTempoSoon(st);
+      cornMusic.setLevel(CORN_LOUD[st] ?? 0.1, 0.15);
+      cornMusic.accent(); // one agogo note on each new number
+    },
+    stop: (fade) => cornMusic.stop(fade),
+    pause: () => cornMusic.pause(),
+    resume: () => cornMusic.resume(),
+    // One setting each: the street (or well) tune and every sound effect.
+    duck: (level, ramp) => {
+      music.setLevel(level, ramp);
+      sound.setEffectsLevel(level, ramp);
+    },
+  });
+  /** The corn ran out by itself (not cut short by a lost life or replaced): "Corn is done". */
+  let cornRanOut = false;
+  /** The corn tune and the 5, 4, 3, 2, 1 follow the corn timer (cheap every frame). */
+  function syncCorn(): void {
+    const run = game.run;
+    const active = playing && where !== 'hall' && (run.phase === 'run' || run.below || run.phase === 'wellDown');
+    corn.update({
+      corn: run.power.corn,
+      active,
+      audible: sound.enabled && menus.music,
+      held: game.paused || document.hidden || menus.current === 'pause',
+    });
+    // The count shows even with Music or Sound off (Tp 3a); it takes the hint bar's place.
+    const n = active ? cornCount(run.power.corn) : 0;
+    count.set(n, cornRanOut);
+    cornRanOut = false;
+    toast.hold(n > 0);
+  }
   /** True inside startRun: the old run's state must not pick a tune; the new run picks it at the end. */
   let startingRun = false;
   /** Music follows what shows now: the screen, the street, the well room, hall hits, a hidden page. */
   function syncMusic(): void {
     if (startingRun) return;
+    syncCorn();
     const run = game.run;
     director.update({
       screen: menus.current ?? (playing ? 'play' : null),
@@ -135,6 +181,8 @@ function startGame(): void {
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
       }
       placeWellButton();
+      placeThrowButton();
+      syncCorn();
     },
   });
 
@@ -249,6 +297,7 @@ function startGame(): void {
     },
   });
   const toast = new Toast(document.body);
+  const count = new CornCount(document.body);
   // po M4 bug 2: in the hall the chips stay left of the hit circles (drawn 32 u each side of the
   // middle, at the top; see drawHitCounter).
   hud.limit = () => (game.run.inHall ? window.innerWidth / 2 - (34 * canvas.getBoundingClientRect().width) / view.width : Infinity);
@@ -277,7 +326,18 @@ function startGame(): void {
     const label = kind === 'down' ? (touch ? WORDS.well.down : WORDS.well.downKeys) : touch ? WORDS.well.up : WORDS.well.upKeys;
     wellButton.update(kind, label, box);
   }
-  const placeBar = (): void => toast.place(barBox(), window.innerHeight);
+  const placeBar = (): void => {
+    const box = barBox();
+    toast.place(box, window.innerHeight);
+    count.place(box, window.innerHeight);
+  };
+  /** The Throw button while balls are held (S2.15); the hint bar moves when it comes and goes. */
+  function placeThrowButton(): void {
+    const was = throwButton.shown;
+    const show = playing && !game.paused && !menus.current && buttons.shown && game.run.canThrow;
+    throwButton.update(show, game.run.fufu, buttons.layout.throwTouch);
+    if (throwButton.shown !== was) placeBar();
+  }
   buttons.onChange = placeBar;
   placeBar();
   sound.enabled = menus.sound;
@@ -308,7 +368,41 @@ function startGame(): void {
         break;
       case 'food':
         sound.play('food');
-        toast.show(W[e.kind], 3200);
+        // S2.15: fufu's words say which key or button throws.
+        if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
+        else toast.show(W[e.kind], 3200);
+        break;
+      case 'fufuToss':
+        sound.play('fufuToss');
+        break;
+      case 'fufuPlop':
+        sound.play(e.hop ? 'fufuHop' : 'fufuPlop');
+        break;
+      case 'fufuRoll':
+        sound.play('fufuRoll');
+        break;
+      case 'fufuPlug':
+        sound.play('fufuPlug');
+        if (e.first) toast.show(W.plugged, HINT_MS);
+        break;
+      case 'fufuFarPlop':
+        sound.play('fufuFarPlop');
+        break;
+      case 'fufuKnock':
+        sound.play('fufuBonk');
+        break;
+      case 'goatEat':
+        sound.play('goatChew');
+        break;
+      case 'goatMeeh':
+        sound.play('goatMeeh');
+        break;
+      case 'fufuPop':
+      case 'fufuJam':
+        sound.play('fufuPff');
+        break;
+      case 'fufuBowl':
+        sound.play('cratePop');
         break;
       case 'hint':
         toast.show(hintWords(e.words, controls.lastKind), HINT_MS);
@@ -342,12 +436,14 @@ function startGame(): void {
         sound.play('checkpoint');
         break;
       case 'wearingOff':
-        toast.show(e.kind === 'corn' ? W.cornWearingOff : W.amalaWearingOff);
+        // S2.9: corn's ending is the 5, 4, 3, 2, 1 count now; amala keeps its toast.
+        if (e.kind === 'amala') toast.show(W.amalaWearingOff);
         break;
       case 'tick':
         sound.play('tick');
         break;
       case 'powerEnd':
+        if (e.kind === 'corn') cornRanOut = true;
         break;
       case 'gameOver':
         sound.play('gameOver');
@@ -416,9 +512,20 @@ function startGame(): void {
         sound.play('greenHit');
         if (e.left > 0) toast.show(W.greenLight(e.left));
         break;
-      case 'bossLight':
-        // S2.7: before the phase with high honks starts.
+      case 'bossPhase':
+        // S2.14: the "PEEP!" hint shows as the phase with high honks starts.
         if (e.highHonks) toast.show(W.highHonks, HINT_MS);
+        break;
+      case 'bossLight':
+        sound.play('lightDing');
+        if (e.first) toast.show(W.lightOn, HINT_MS);
+        break;
+      case 'bossLightTick':
+        sound.play('lightTick');
+        break;
+      case 'bossLightOff':
+        sound.play('lightClunk');
+        if (e.first) toast.show(W.lightMissed, HINT_MS);
         break;
       case 'bossDefeat':
         // S2.8: the hall is won at the third hit. Saved now, so leaving or reloading during the
@@ -496,13 +603,20 @@ function startGame(): void {
       const ac = sound.context;
       if (ac && !musicAttached) {
         music.attach(ac);
+        cornMusic.attach(ac);
         musicAttached = true;
       }
-      if (musicAttached) music.unlock();
+      if (musicAttached) {
+        music.unlock();
+        cornMusic.unlock();
+      }
     },
     () => {
       sound.wake();
-      if (musicAttached) music.unlock();
+      if (musicAttached) {
+        music.unlock();
+        cornMusic.unlock();
+      }
     },
   );
 
@@ -521,6 +635,7 @@ function startGame(): void {
         else game.steer(0);
       },
       // S2.2 Keys: at a well Down, S, Enter or E go down; under the room's rope Enter or E go up.
+      onThrow: () => throwFufu(),
       onWellKey: (code) => {
         if (!playing || game.paused || menus.current) return;
         if (game.run.wellHere) useWell('down');
@@ -586,6 +701,10 @@ function startGame(): void {
         checkpoint: r.checkpointReached,
         safe: r.safe,
         power: { ...r.power },
+        /** S2.15: fufu balls held, balls about, potholes plugged (left lips). */
+        fufu: r.fufu,
+        balls: r.balls.map((b) => ({ x: b.x, y: b.y, mode: b.mode, touches: b.touches })),
+        plugged: r.plugged.map((p) => [p.a, p.b] as const),
         hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, mode: z.mode })),
         /** Kobo picked up one by one (not from crates or smashes). */
         coinsTaken: r.coins.reduce((n, c) => n + (c.taken ? 1 : 0), 0),
@@ -638,6 +757,12 @@ function startGame(): void {
       // Cheap: below the street (the well room shows), for per-frame logs.
       return game.run.below;
     },
+    get throwButton() {
+      // S2.15: the Throw button on screen now (its touch box, CSS px) and its spoken label, or null.
+      if (!throwButton.shown) return null;
+      const r = throwButton.el.getBoundingClientRect();
+      return { label: throwButton.el.getAttribute('aria-label') ?? '', x: r.x, y: r.y, w: r.width, h: r.height };
+    },
     get wellButton() {
       // The Go down / Go up button (S2.5) on screen now: which, its words, its box (CSS px).
       const s = wellButton.shown;
@@ -688,6 +813,26 @@ function startGame(): void {
       // O2: the Music switch, whether music may sound (Music and Sound both on), the tune asked for.
       return { on: menus.music, audible: music.enabled, place: music.place, tempo: music.tempoStep, held: music.held, started: musicAttached };
     },
+    get corn() {
+      // S2.9 corn tune: the count showing, the tune (place, tempo step, loudness), the turn-down
+      // of the street tune and of the effects, and what screen readers were last told.
+      return {
+        count: count.value,
+        countBox: (() => {
+          const r = count.element.getBoundingClientRect();
+          return count.value > 0 ? { x: r.x, y: r.y, w: r.width, h: r.height, font: parseFloat(getComputedStyle(count.element).fontSize) } : null;
+        })(),
+        on: corn.on,
+        step: corn.step,
+        place: cornMusic.place,
+        tempo: cornMusic.tempoStep,
+        level: cornMusic.outLevel,
+        musicLevel: music.outLevel,
+        effectsLevel: sound.effectsLevel,
+        spoken: count.spoken,
+        waiting: toast.pending,
+      };
+    },
     get hintBar() {
       // The hint bar as laid out now, CSS px, and whether its words fit uncut (S2.2).
       const el = document.querySelector<HTMLElement>('.toast')!;
@@ -728,6 +873,8 @@ function startGame(): void {
           else if (t.kind === 'honk') add('honk', t.x - 30, t.y - 20, t.x + 30, t.y + 20);
           else add('high honk', t.x - 30, t.y - 15, t.x + 30, t.y + 15);
         }
+        for (const f of r.foods) if (!f.taken) add('food', f.x - 20, f.y - 22, f.x + 20, f.y + 22);
+        for (const q of r.balls) add('fufu ball', q.x - 9, q.y - 14, q.x + 9, q.y + 2);
         const hh = game.hero;
         add('hero', hh.x - 20, hh.y - 58, hh.x + 20, hh.y + 2);
         return out;
@@ -752,6 +899,7 @@ function startGame(): void {
           else add(z.kind, z.x - 18, z.y - 40, z.x + 18, z.y + 4);
         }
       }
+      for (const q of r.balls) if (q.y <= gy + 2) add('fufu ball', q.x - 9, q.y - 14, q.x + 9, q.y + 2);
       for (const c of r.crates) {
         // The crate swings about the point where its rope meets the line, 88 u above its bottom.
         const a = game.crateAngle(c);
@@ -852,6 +1000,9 @@ declare global {
         readonly checkpoint: boolean;
         readonly safe: number;
         readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
+        readonly fufu: number;
+        readonly balls: readonly { readonly x: number; readonly y: number; readonly mode: string; readonly touches: number }[];
+        readonly plugged: readonly (readonly [number, number])[];
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly mode: string }[];
         readonly coinsTaken: number;
         readonly parcel: boolean;
@@ -897,11 +1048,26 @@ declare global {
       };
       /** Below the street: the well room shows (cheap, for per-frame logs). */
       readonly below: boolean;
+      /** The Throw button on screen now (touch box, CSS px) and its spoken label, or null. */
+      readonly throwButton: { readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       /** The Go down / Go up button on screen now (CSS px), or null. */
       readonly wellButton: { readonly kind: 'down' | 'up'; readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       readonly toast: string;
       /** The street shows its fixed look (Lagos switched on, S2.8). */
       readonly fixedLook: boolean;
+      readonly corn: {
+        readonly count: number;
+        readonly countBox: { readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly font: number } | null;
+        readonly on: boolean;
+        readonly step: number;
+        readonly place: string | null;
+        readonly tempo: number;
+        readonly level: number;
+        readonly musicLevel: number;
+        readonly effectsLevel: number;
+        readonly spoken: string;
+        readonly waiting: string;
+      };
       /** The hint bar now (CSS px): words showing, its box, font size, whether the words fit, and its limits. */
       readonly hintBar: {
         readonly words: string;

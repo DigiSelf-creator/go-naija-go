@@ -1,12 +1,13 @@
 /**
- * Pick-ups and effects: kobo coin, the three foods, pickup sparkle, shield bubble.
+ * Pick-ups and effects: kobo coin, the foods (pepper fufu's bowl is drawn in fufu.ts), pickup sparkle, shield bubble.
  * World space, centred on (x, y). No gradients or shadowBlur.
  */
+import { fufuBowl } from './fufu';
 import * as P from './palette';
 
 const TAU = Math.PI * 2;
 
-export type FoodKind = 'corn' | 'garri' | 'amala';
+export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu';
 
 /** Spinning kobo coin. The "k" shows when the coin faces you. */
 export function drawKobo(g: CanvasRenderingContext2D, x: number, y: number, time: number): void {
@@ -175,6 +176,7 @@ export function drawFoodIcon(g: CanvasRenderingContext2D, kind: FoodKind, x: num
   g.scale(size, size);
   if (kind === 'corn') corn(g);
   else if (kind === 'garri') garri(g);
+  else if (kind === 'fufu') fufuBowl(g);
   else amala(g);
   g.restore();
 }

@@ -251,6 +251,60 @@ All confirmed as recommended except Q22 (street names). Kept as history.
 | Q24 left-handed "Swap sides" | answered: slice 3 | H3, H5 (button layout), N2 (a switch on title or pause, a new save key) |
 | Q25 the elder look | answered: no stick, short neat grey beard | I1, I2 |
 
+## Added by designer, 10 Nov 2026: Tp's play of PR #3 (pm to order and own)
+
+Source: docs/questions.md top block "Tp, 10 Nov 2026 (after playing the PR #3 build)". The notes are written; each row starts at art or gamedev. Sizes are the gzipped first load.
+
+### P2 follow-ups: harder, fufu, corn tune
+
+| id | owner | task | depends on | done when |
+|----|-------|------|------------|-----------|
+| P5 | gamedev | Harder (design S2.14): hall lights come on later and stay green for a while (`lightAt`, `greenFor`, `darkFor`), phase 3 pattern, new hall words; the street file changes | none | S2.14 part 3 tests pass; hall bot clean win 18 s or more |
+| P6 | art | Hall light blink and reduced-motion look; "ding", "tick", "clunk" sounds (S2.14 part 3) | none | gallery shows it; sounds our own |
+| P7 | art | Pepper fufu pictures, throw pose, goat eating and "meeh", knocked tyre and drum, Throw button and HUD icons, sounds (S2.15 tasks) | none | under 15 KB with P8; nothing looks or sounds like fire |
+| P8 | gamedev | Pepper fufu: balls, Throw button and X key, plugs, goats fed, hall pops, HUD, words (S2.15 tasks) | P5, P7 | S2.15 tests pass |
+| P9 | art | The `corn` tune data and originality check openings (S2.9 "Corn tune") | none | inside the rules; music test passes |
+| P10 | gamedev | Corn tune player: effects volume node, turn-down, 5 to 1 count, switches, pause, restart (S2.9 "Corn tune") | P9 | S2.9 corn tune checks pass |
+| P11 | qa | Test P5 to P10: S2.14, S2.15 and corn tune qa done checks, phone profile and 4x CPU, first-timers (Tp first) | P5 to P10 | three-line report |
+| P12 | po | Accept P5 to P10 | P11 | note in docs/questions.md |
+
+### Slice 3: the city, build order (docs/city.md part 5 "Build order")
+
+(a) and (b) are ready to start now.
+
+| id | owner | task | depends on | done when | size |
+|----|-------|------|------------|-----------|------|
+| S3a1 | art | The 6 intro frames, drawn in code (src/art/intro.ts) | none: **ready now** | city.md (a) "What the frames show"; qa originality and no real people | 12 KB |
+| S3a2 | gamedev | Intro screen (Skip, tap to go on, plays once, `gidi-intro`), Settings screen with "Watch the story" | S3a1 | city.md (a) done checks | 6 KB |
+| S3b1 | art | City blocks (12, before and after for the 3 pin spots), roads, lagoon, bridge, buses, pins, bucket icons | none: **ready now** | city.md (b); not like any game's map (part 6) | 40 KB |
+| S3b2 | gamedev | City screen: drag, pinch, + and −, double tap, pins, problem cards, counters, money words, `city` save part | S3a2, S3b1 | city.md (b) done checks; 45 fps drag at 4x CPU; idle draws nothing | 20 KB |
+| S3c1 | art | Hero getting off the bus (every body); the Potholes fix | S3b1 | city.md (c) | 12 KB |
+| S3c2 | gamedev | Coins as money, "Take it home", keep everything on a loss, pay at once, "Mission complete!" scene | S3b2, S3c1 | city.md (c) done checks | 8 KB |
+| S3d1 | art and gamedev | The Booming meter, the boom card, the cog link | S3c2 | city.md (d) | 11 KB |
+| S3e1 | art and gamedev | The challenge road (replaces the Streets screen) | S3c2 | city.md (e) | 12 KB |
+| S3f0 | designer | Lane run note in docs/design.md | none | written, with exact numbers and words | |
+| S3f1 | art | Lane run pictures, sounds, tune | S3f0 | city.md (f) | 50 KB |
+| S3f2 | gamedev | Lane run engine, swipes, keys, buttons | S3f0, S3f1 | 60 fps mid phone, 45 at 4x CPU | 30 KB |
+| S3f3 | gamedev | Blackout, buckets, HUD, end card, keep running; pins 2 and 3 open | S3f2 | city.md (f) done checks; first-timers reach the goal in 3 tries | 15 KB |
+| S3q | qa | Test each step on the phone profile, 4x CPU, offline, size, originality | each step | report per step | |
+| S3p | po | Accept each step; then "slice 3 done" (city.md part 5 goal) | S3q | note in docs/questions.md | |
+
+Suggested gamedev order (one at a time): P5, S3a2, P8, P10, S3b2, S3c2, then S3d1, S3e1, S3f2, S3f3. Art can run P6, P7, P9, S3a1, S3b1 side by side (sound tasks one at a time in src/engine/sound.ts).
+
+### B1 to B5: birds, the strong look, the tech suit, the dash, thorny gutters (design S2.16; Tp, 10 Nov)
+
+Added by designer. The street changes sit on top of P5 (S2.14) and P8 (S2.15), so P16 and P17 wait for them.
+
+| id | owner | task | depends on | done when | size |
+|----|-------|------|------------|-----------|------|
+| P13 | art | Amala strong look and the tech suit for every body, hair and outfit; their sounds (S2.16 B2, B3) | none | B2 and B3 qa checks; nothing reads as Mario's grow or star, Iron Man or Mega Man | 8 KB |
+| P14 | gamedev | Hook up B2 and B3: step events, amala blink, suit put-on and break, the hum with Sound, pause and hidden tab | P13 | B2 and B3 done checks | 2 KB |
+| P15 | art | Egret, crow, rubbish pile and bin; gutter, weeds, dried weeds; dash pose, speed lines, breath puffs, cement blocks, dash sign; their sounds (S2.16 B1, B4, B5) | none | gallery shows them; nothing reads as Angry Birds, Flappy Bird, a piranha plant or Sonic | 14 KB |
+| P16 | gamedev | The dash: double tap input, physics, rest, save flag, dash gap pit kind, Gentle blocks (S2.16 B4) | P5, P15 | B4 tests pass | 4 KB |
+| P17 | gamedev | Birds and gutters: hazard kinds, `piles`, `gutters`, fufu meets birds and weeds, the S2.16 street changes, hints, toasts, level tests (S2.16 B1, B5) | P8, P15, P16 | B1 and B5 tests pass; all street rule tests pass | 4 KB |
+| P18 | qa | Test P13 to P17: the S2.16 done checks, phone profile and 4x CPU, first-timers (Tp first) on streets 2 and 3, Normal and Gentle | P13 to P17 | three-line report | |
+| P19 | po | Accept P13 to P17 | P18 | note in docs/questions.md | |
+
 ## Known facts
 
 1. Node 22 via nvm: ~/.nvm/versions/node/v22.19.0.

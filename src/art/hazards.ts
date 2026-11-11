@@ -10,7 +10,17 @@ import * as P from './palette';
 
 const TAU = Math.PI * 2;
 
-export type GoatMode = 'walk' | 'runAway';
+/** 'eat' (S2.15): stopped, head down, chewing a fufu ball; use drawGoatEating for it. */
+export type GoatMode = 'walk' | 'runAway' | 'eat';
+
+/** Seconds the goat chews a fufu ball before it says "meeh" and trots off (S2.15). */
+export const GOAT_EAT_TIME = 0.6;
+
+/** Which eating frame shows at k (0 to 1 over GOAT_EAT_TIME): 0 head down at the ball, 1 head up chewing. Three chews. */
+export function goatEatFrame(k: number): 0 | 1 {
+  const t = Number.isFinite(k) ? Math.min(Math.max(k, 0), 0.999) : 0;
+  return Math.floor(t * 6) % 2 === 1 ? 1 : 0;
+}
 
 function blob(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string): void {
   g.fillStyle = fill;
@@ -27,9 +37,41 @@ function blob(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
  * In 'runAway' the goat hops along with motion lines; time drives the legs.
  */
 export function drawGoat(g: CanvasRenderingContext2D, x: number, y: number, time: number, mode: GoatMode = 'walk', facing: 1 | -1 = -1): void {
+  goat(g, x, y, time, mode, facing, 0);
+}
+
+/**
+ * The goat eating a fufu ball (S2.15): stopped, legs planted, two frames (head down at the
+ * ball, then head up chewing with a full cheek), the bite getting smaller. k 0 to 1 over
+ * GOAT_EAT_TIME. In the last fifth the "MEEH!" bubble shows; then the game switches to
+ * 'runAway' (which keeps the bubble). The goat is never hurt: it is just fed.
+ */
+export function drawGoatEating(g: CanvasRenderingContext2D, x: number, y: number, k: number, facing: 1 | -1 = -1): void {
+  goat(g, x, y, 0, 'eat', facing, Number.isFinite(k) ? Math.min(Math.max(k, 0), 1) : 0);
+}
+
+/** The goat's bleat bubble with the word, centred above (x, y) (unflipped, so it reads). */
+export function drawMeehBubble(g: CanvasRenderingContext2D, x: number, y: number): void {
+  g.fillStyle = P.WHITE;
+  g.strokeStyle = P.INK;
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.roundRect(x - 17, y - 8, 34, 15, 6);
+  g.fill();
+  g.stroke();
+  g.fillStyle = P.INK;
+  g.font = 'bold 9px sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('MEEH!', x, y);
+}
+
+function goat(g: CanvasRenderingContext2D, x: number, y: number, time: number, mode: GoatMode, facing: 1 | -1, eatK: number): void {
   const run = mode === 'runAway';
+  const eat = mode === 'eat';
+  const chew = eat ? goatEatFrame(eatK) : 0;
   const speed = run ? 18 : 8;
-  const s = Math.sin(time * speed);
+  const s = eat ? 0 : Math.sin(time * speed);
   const hop = run ? -Math.abs(Math.sin(time * 9)) * 6 : 0;
   g.save();
   g.translate(x, y + hop);
@@ -83,8 +125,10 @@ export function drawGoat(g: CanvasRenderingContext2D, x: number, y: number, time
 
   // Head, ears, horns, beard
   g.save();
-  g.translate(-14, -22);
-  g.rotate(run ? -0.15 : Math.sin(time * 2) * 0.05);
+  // Eating: the head dips to the road (frame 0) or lifts a little to chew (frame 1).
+  if (eat) g.translate(chew === 0 ? -16 : -15, chew === 0 ? -9 : -16);
+  else g.translate(-14, -22);
+  g.rotate(eat ? (chew === 0 ? 0.45 : 0.15) : run ? -0.15 : Math.sin(time * 2) * 0.05);
   blob(g, -10, -8, 12, 11, 4, P.GOAT_COAT);
   // Horns
   g.strokeStyle = P.GOAT_HORN;
@@ -99,17 +143,43 @@ export function drawGoat(g: CanvasRenderingContext2D, x: number, y: number, time
   if (run) g.ellipse(4, -5, 5, 2, 0.3, 0, TAU);
   else g.ellipse(2, -3, 5, 2, 0.6, 0, TAU);
   g.fill();
-  // Eye (friendly)
-  g.fillStyle = P.INK;
-  g.beginPath();
-  g.arc(-6, -4, 1.2, 0, TAU);
-  g.fill();
+  // Eye (friendly); closed and happy while eating (drawn below)
+  if (!eat) {
+    g.fillStyle = P.INK;
+    g.beginPath();
+    g.arc(-6, -4, 1.2, 0, TAU);
+    g.fill();
+  }
   // Smile when running away: it is fine, just off to find more grass
   if (run) {
     g.strokeStyle = P.INK;
     g.lineWidth = 1;
     g.beginPath();
     g.arc(-7, 0, 2, 0.2, Math.PI - 0.6);
+    g.stroke();
+  }
+  if (eat) {
+    // The bite of fufu at the mouth, smaller with each chew, and a full cheek when chewing
+    const bite = 3 * (1 - eatK) + 0.8;
+    g.fillStyle = '#fbf8ef';
+    g.strokeStyle = P.INK;
+    g.lineWidth = 0.9;
+    g.beginPath();
+    g.arc(-10.5, 1.5, bite, 0, TAU);
+    g.fill();
+    g.stroke();
+    if (chew === 1) {
+      g.fillStyle = P.GOAT_COAT;
+      g.beginPath();
+      g.arc(-4.5, 0.5, 2.6, 0, TAU);
+      g.fill();
+      g.stroke();
+    }
+    // A happy closed eye while it eats
+    g.strokeStyle = P.INK;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(-6, -4.5, 1.4, 0.2, Math.PI - 0.2);
     g.stroke();
   }
   // Beard
@@ -123,22 +193,9 @@ export function drawGoat(g: CanvasRenderingContext2D, x: number, y: number, time
 
   g.restore();
 
-  if (run) {
+  if (run || (eat && eatK >= 0.8)) {
     // Bleat bubble, unflipped so the word reads
-    const bx = x - facing * 4;
-    const by = y + hop - 44;
-    g.fillStyle = P.WHITE;
-    g.strokeStyle = P.INK;
-    g.lineWidth = 1.2;
-    g.beginPath();
-    g.roundRect(bx - 17, by - 8, 34, 15, 6);
-    g.fill();
-    g.stroke();
-    g.fillStyle = P.INK;
-    g.font = 'bold 9px sans-serif';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText('MEEH!', bx, by);
+    drawMeehBubble(g, x - facing * 4, y + hop - 44);
   }
 }
 

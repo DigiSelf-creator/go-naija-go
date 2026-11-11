@@ -47,7 +47,22 @@ export type SoundName =
   // Slice 2: Streets screen and Nigeria's wheel (N1)
   | 'cogRatchet'
   | 'cogBell'
-  | 'lockedTuk';
+  | 'lockedTuk'
+  // P6: the hall light's green time (S2.14 part 3)
+  | 'lightDing'
+  | 'lightTick'
+  | 'lightClunk'
+  // P7: pepper fufu (S2.15)
+  | 'fufuToss'
+  | 'fufuPlop'
+  | 'fufuHop'
+  | 'fufuRoll'
+  | 'fufuPlug'
+  | 'fufuFarPlop'
+  | 'fufuBonk'
+  | 'fufuPff'
+  | 'goatChew'
+  | 'goatMeeh';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -320,6 +335,81 @@ const SOUNDS: Record<SoundName, Recipe> = {
     ],
     hiss: [{ len: 0.02, lp: 900, vol: 0.03 }],
   },
+  // P6 (S2.14 part 3). The hall light turns green: a bright two-note agogo hit, high bell then
+  // the low bell a fourth under it, each with its out-of-tune 2.7 partial. Sine only, falling.
+  lightDing: {
+    tones: [
+      { f: 1175, len: 0.14, wave: 'sine', to: 1170, vol: 0.05 },
+      { f: 1175 * 2.7, len: 0.07, wave: 'sine', vol: 0.012 },
+      { f: 880, len: 0.2, wave: 'sine', to: 876, at: 0.09, vol: 0.05 },
+      { f: 880 * 2.7, len: 0.08, wave: 'sine', at: 0.09, vol: 0.012 },
+    ],
+  },
+  // Each blink in the light's last second: a dry wood click, short and level (no pitch run).
+  lightTick: {
+    tones: [{ f: 1900, len: 0.018, wave: 'triangle', to: 1700, vol: 0.045 }],
+    hiss: [{ len: 0.012, hp: 3500, vol: 0.03 }],
+  },
+  // The light goes dark, missed: a low, muted thud, like a heavy switch in a box.
+  lightClunk: {
+    tones: [
+      { f: 150, len: 0.12, wave: 'triangle', to: 85, vol: 0.09 },
+      { f: 300, len: 0.03, wave: 'triangle', to: 220, vol: 0.03 },
+    ],
+    hiss: [{ len: 0.05, lp: 500, vol: 0.05 }],
+  },
+  // P7 (S2.15). Pepper fufu: soft food sounds only. Never a "fwoosh", a crackle, a rising
+  // "pew", or any game's throw or fireball sound.
+  // The toss: a soft breathy "fff" (low hiss) over a barely-there low breath tone.
+  fufuToss: {
+    tones: [{ f: 420, len: 0.08, wave: 'sine', to: 380, vol: 0.006 }],
+    hiss: [{ len: 0.08, lp: 1400, vol: 0.035 }],
+  },
+  // First landing: a "plop", a sine sliding down from 220 to 140 Hz.
+  fufuPlop: { tones: [{ f: 220, len: 0.08, wave: 'sine', to: 140, vol: 0.09 }] },
+  // Each hop after: the same plop, smaller and softer.
+  fufuHop: { tones: [{ f: 200, len: 0.06, wave: 'sine', to: 150, vol: 0.045 }] },
+  // Rolling along the road: a soft low rumble that fades (play once as it starts to roll).
+  fufuRoll: {
+    tones: [{ f: 95, len: 0.25, wave: 'triangle', to: 85, vol: 0.025 }],
+    hiss: [{ len: 0.25, lp: 350, vol: 0.03 }],
+  },
+  // Plugging a pothole: a deeper "plup", then a short soft steam hiss.
+  fufuPlug: {
+    tones: [
+      { f: 170, len: 0.1, wave: 'sine', to: 90, vol: 0.1 },
+      { f: 120, len: 0.06, wave: 'sine', peak: 150, to: 110, at: 0.07, vol: 0.04 },
+    ],
+    hiss: [{ len: 0.28, hp: 2500, at: 0.05, vol: 0.02 }],
+  },
+  // A ball dropping into a big pit: a small, far-off soft plop after a short wait.
+  fufuFarPlop: { tones: [{ f: 260, len: 0.07, wave: 'sine', to: 170, at: 0.18, vol: 0.02 }] },
+  // A tyre or drum knocked off the road: a rubbery "bonk" (bends up a little, then sags).
+  fufuBonk: {
+    tones: [
+      { f: 170, len: 0.13, wave: 'triangle', peak: 240, to: 140, vol: 0.09 },
+      { f: 340, len: 0.05, wave: 'sine', to: 280, vol: 0.025 },
+    ],
+  },
+  // A throw popped in the hall: a soft "pff" (a puff of low hiss and a tiny dull tone).
+  fufuPff: {
+    tones: [{ f: 260, len: 0.06, wave: 'sine', to: 200, vol: 0.025 }],
+    hiss: [{ len: 0.1, lp: 1500, vol: 0.05 }],
+  },
+  // The goat eating a ball: three soft, muffled munches (0.6 s of chewing), level in pitch.
+  goatChew: {
+    tones: [0, 1, 2].map((i): Tone => ({ f: i % 2 ? 230 : 250, len: 0.05, wave: 'triangle', to: 190, at: i * 0.2, vol: 0.04 })),
+    hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.04, lp: 900, at: i * 0.2, vol: 0.03 })),
+  },
+  // Then a happy "meeh": two slightly detuned tones that wobble up and down together.
+  goatMeeh: {
+    tones: [
+      { f: 560, len: 0.08, wave: 'triangle', peak: 600, to: 540, vol: 0.05 },
+      { f: 566, len: 0.08, wave: 'triangle', peak: 606, to: 546, vol: 0.03 },
+      { f: 545, len: 0.22, wave: 'triangle', peak: 590, to: 480, at: 0.09, vol: 0.055 },
+      { f: 551, len: 0.22, wave: 'triangle', peak: 584, to: 486, at: 0.09, vol: 0.03 },
+    ],
+  },
 };
 
 /** Every tone and hiss fades in over this long from near silence, so none starts with a tick. */
@@ -328,6 +418,44 @@ export const ATTACK = 0.003;
 export class Sound {
   private ac: AudioContext | null = null;
   enabled = true;
+  /**
+   * S2.9 corn tune: every effect goes through this one volume, so the corn tune can turn them all
+   * down together (to 30 percent) and back. Made with the first sound; never an envelope.
+   */
+  private fx: GainNode | null = null;
+  private fxLevel = 1;
+
+  /** The effects volume now asked for (1 = full). */
+  get effectsLevel(): number {
+    return this.fxLevel;
+  }
+
+  /** Turns every sound effect to `level` (0 to 1) over `ramp` seconds. */
+  setEffectsLevel(level: number, ramp = 0.15): void {
+    this.fxLevel = level;
+    const ac = this.ac;
+    const fx = this.fx;
+    if (!ac || !fx) return;
+    try {
+      const now = ac.currentTime;
+      fx.gain.cancelScheduledValues(now);
+      fx.gain.setValueAtTime(fx.gain.value, now);
+      fx.gain.linearRampToValueAtTime(level, now + Math.max(0.001, ramp));
+    } catch {
+      /* fine */
+    }
+  }
+
+  /** The effects volume node (made on first use, at the level asked for). */
+  private bus(ac: AudioContext): AudioNode {
+    if (!this.fx) {
+      const fx = ac.createGain();
+      fx.gain.setValueAtTime(this.fxLevel, ac.currentTime);
+      fx.connect(ac.destination);
+      this.fx = fx;
+    }
+    return this.fx;
+  }
 
   /**
    * Call from every tap, touch end, click or key (see audio-unlock.ts): creates the audio the
@@ -379,6 +507,12 @@ export class Sound {
     if (!this.enabled || !ac || ac.state !== 'running') return;
     const recipe = SOUNDS[name];
     const now = ac.currentTime;
+    let out: AudioNode;
+    try {
+      out = this.bus(ac);
+    } catch {
+      return;
+    }
     try {
       for (const tone of recipe.tones) {
         const t = now + (tone.at ?? 0);
@@ -393,7 +527,7 @@ export class Sound {
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(tone.vol ?? 0.06, t + ATTACK);
         gain.gain.exponentialRampToValueAtTime(0.0001, Math.max(end, t + ATTACK + 0.01));
-        osc.connect(gain).connect(ac.destination);
+        osc.connect(gain).connect(out);
         osc.start(t);
         osc.stop(end + 0.02);
       }
@@ -421,7 +555,7 @@ export class Sound {
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(h.vol ?? 0.04, t + ATTACK);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(h.len, ATTACK + 0.01));
-        src.connect(filter).connect(gain).connect(ac.destination);
+        src.connect(filter).connect(gain).connect(out);
         src.start(t);
         src.stop(t + h.len + 0.02);
       }

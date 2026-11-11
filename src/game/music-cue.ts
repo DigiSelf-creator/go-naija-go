@@ -125,3 +125,115 @@ export class MusicDirector {
     }
   }
 }
+
+// ---------------------------------------------------------------- the corn tune (S2.9 "Corn tune")
+
+/** The corn tune plays on its own output at 0.8 (effects 1.0, music 0.3). */
+export const CORN_GAIN = 0.8;
+/** By count step (0 fresh, then 5, 4, 3, 2, 1): the street tune and every effect, 0 to 1. */
+export const CORN_DUCK = [0.3, 0.44, 0.58, 0.72, 0.86, 0.93] as const;
+/** By count step: the corn tune's own loudness. Its tempo step is the count step (144, 128 ... 72). */
+export const CORN_LOUD = [1, 0.8, 0.6, 0.4, 0.2, 0.1] as const;
+/** Seconds: turning down at the start; the end's fade and the way back; a lost life or the bus. */
+export const CORN_TIMES = { duck: 0.15, endFade: 0.4, endBack: 0.6, cutFade: 0.3, cutBack: 0.3, switchFade: 0.05 } as const;
+const STEPS_PER_SECOND = 60;
+
+/** The number the count shows for `steps` of corn left: 5, 4, 3, 2, 1, or 0 for none. */
+export function cornCount(steps: number): number {
+  if (steps <= 0) return 0;
+  const n = Math.ceil(steps / STEPS_PER_SECOND);
+  return n <= 5 ? n : 0;
+}
+
+/** The count step (0 while fresh, 1 at "5" ... 5 at "1"): the tempo and loudness row. */
+export function cornStage(steps: number): number {
+  const n = cornCount(steps);
+  return n === 0 ? 0 : 6 - n;
+}
+
+/** The parts of the corn player and the turn-down the game uses. */
+export interface CornPlayer {
+  /** From bar 1 at 144 BPM and full loudness. */
+  start(): void;
+  /** A count step: tempo on the next 16th, loudness, and one agogo note. */
+  step(stage: number): void;
+  stop(fade: number): void;
+  pause(): void;
+  resume(): void;
+  /** The street (or well) tune and every sound effect to `level` over `ramp` seconds. */
+  duck(level: number, ramp: number): void;
+}
+
+export interface CornScene {
+  /** Steps of corn left (Run.power.corn). */
+  corn: number;
+  /** A street (or its well room) is being played: not the hall, the bus, a card or the menus. */
+  active: boolean;
+  /** Sound on and Music on (po Ruling 1). */
+  audible: boolean;
+  /** Paused: the pause card, the page hidden. */
+  held: boolean;
+}
+
+/**
+ * Turns the corn timer into corn tune calls (S2.9). Cheap to call every frame.
+ * - Corn picked up: the tune starts at once, the street tune and effects go down to 30 percent.
+ * - A second corn: the tune starts again from bar 1 at full speed and loudness.
+ * - The last 5 seconds: one step per number, slower and softer, the turn-down easing off.
+ * - At 0: the tune fades in 0.4 s and everything comes back over 0.6 s.
+ * - A lost life, the bus, leaving: fades in 0.3 s and comes back over 0.3 s.
+ * - Music or Sound off: no corn tune and no turn-down (the count still shows, elsewhere).
+ * - Pause: the tune holds with the corn timer.
+ */
+export class CornDirector {
+  private playing = false;
+  private stage = 0;
+  private last = 0;
+  private held = false;
+
+  constructor(private readonly player: CornPlayer) {}
+
+  get on(): boolean {
+    return this.playing;
+  }
+
+  get step(): number {
+    return this.stage;
+  }
+
+  update(s: CornScene): void {
+    const want = s.active && s.audible && s.corn > 0;
+    const fresh = s.corn > this.last; // picked up (or a second corn)
+    if (want && (fresh || !this.playing)) {
+      this.player.start();
+      this.playing = true;
+      this.held = false;
+      this.stage = 0;
+      this.player.duck(CORN_DUCK[0], CORN_TIMES.duck);
+    }
+    if (this.playing && !want) {
+      const T = CORN_TIMES;
+      const natural = s.corn === 0 && s.active && s.audible && this.last <= 6;
+      const switched = !s.audible;
+      this.player.stop(switched ? T.switchFade : natural ? T.endFade : T.cutFade);
+      this.player.duck(1, switched ? T.switchFade : natural ? T.endBack : T.cutBack);
+      this.playing = false;
+      this.held = false;
+      this.stage = 0;
+    }
+    if (this.playing) {
+      const st = cornStage(s.corn);
+      if (st !== this.stage) {
+        this.stage = st;
+        this.player.step(st);
+        this.player.duck(CORN_DUCK[st]!, CORN_TIMES.duck);
+      }
+      if (s.held !== this.held) {
+        this.held = s.held;
+        if (s.held) this.player.pause();
+        else this.player.resume();
+      }
+    }
+    this.last = s.corn;
+  }
+}

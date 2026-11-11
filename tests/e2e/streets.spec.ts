@@ -213,7 +213,7 @@ test('street 3, Ikeja, by hand: back to the secret well, then start to bus with 
   // Piece M2: Go-Slow Hall (S2.7), full lives and 0 kobo, no parcel carried (none was picked up).
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
   expect(await page.evaluate(() => window.__game!.run.phase)).toBe('arena');
-  await expect(page.getByText('General Go-Slow is jamming the hall! Jump onto the green light.')).toBeVisible();
+  await expect(page.getByText('General Go-Slow is jamming the hall! Wait for the green light.')).toBeVisible();
   const boss = await snap(page);
   expect(boss.r.kobo).toBe(0);
   expect(boss.r.lives).toBe(boss.r.maxLives);

@@ -48,6 +48,9 @@ export const WORDS = {
     fast: (s: number) => `Fast ${s}`,
     shield: 'Shield',
     strong: (s: number) => `Strong ${s}`,
+    /** S2.15: the fufu chip, and what screen readers hear. */
+    fufu: (n: number) => `Fufu ${n}`,
+    fufuSpoken: (n: number) => `Fufu balls: ${n}`,
     /** S2.10 HUD: the garri parcel icon and this word while it is carried (S2.5). */
     parcel: 'Parcel',
     pause: 'Pause',
@@ -135,8 +138,8 @@ export const WORDS = {
    * characters (U+2192, U+2190, U+2193) in the hint's own font, never emoji.
    */
   hintMarks: {
-    touch: { forward: '\u2192', back: '\u2190', jump: 'Jump', down: 'Go down' },
-    keys: { forward: '\u2192', back: '\u2190', jump: 'Space', down: '\u2193' },
+    touch: { forward: '\u2192', back: '\u2190', jump: 'Jump', down: 'Go down', throw: 'Throw' },
+    keys: { forward: '\u2192', back: '\u2190', jump: 'Space', down: '\u2193', throw: 'X' },
   },
   /** Toasts in the run: docs/design.md Power-ups, Level 1. */
   toast: {
@@ -147,7 +150,10 @@ export const WORDS = {
     amalaWearingOff: 'Amala is wearing off!',
     shieldUsed: 'Shield used up!',
     /** S2.7 Go-Slow Hall. */
-    hallStart: 'General Go-Slow is jamming the hall! Jump onto the green light.',
+    hallStart: 'General Go-Slow is jamming the hall! Wait for the green light.',
+    /** S2.14: the first time a light comes on in a try, and the first time one goes dark unhit. */
+    lightOn: 'Green light! Jump on it!',
+    lightMissed: 'Missed it! Wait for the next one.',
     parcelShield: 'Your garri parcel: the shield is on!',
     greenLight: (left: number) => `Green light! ${left} more.`,
     highHonks: 'PEEP! High honks fly high. Stay low on the floor.',
@@ -158,6 +164,15 @@ export const WORDS = {
     /** po ruling 8 Nov 2026: from N2 on, now the parcel is saved for the hall. */
     parcel: 'Garri parcel! Shield for the hall.',
     backOnStreet: 'Back on the street!',
+    /** S2.15 pepper fufu ({throw} is "Throw" on touch, "X" on keys). */
+    fufu: 'Pepper fufu! Press {throw} to throw.',
+    fufuHall: 'Fufu! Press {throw} to pop throws.',
+    plugged: 'Plugged! Fufu fills potholes.',
+  },
+  /** S2.9 corn count: what screen readers hear (once at 5, and at 0). */
+  corn: {
+    endsIn: (n: number) => `Corn ends in ${n} seconds`,
+    done: 'Corn is done',
   },
   /** S2.13 part 5: the hint after every Gentle mode climb-out, by the kind of pit (35 characters or fewer). */
   climbOut: {
@@ -194,7 +209,7 @@ export const SHORT_TOAST: Readonly<Record<string, string>> = {
   'Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
   'A secret room! Grab the kobo. Stand under the rope to go back up.': 'Secret room! Use the rope to go up.',
   'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
-  'General Go-Slow is jamming the hall! Jump onto the green light.': 'Go-Slow! Jump on the green light.',
+  'General Go-Slow is jamming the hall! Wait for the green light.': 'Go-Slow! Wait for the green light.',
   'PEEP! High honks fly high. Stay low on the floor.': 'PEEP! High honks: stay low.',
 };
 
@@ -204,8 +219,8 @@ export function barWords(words: string, barWidth: number): string {
   return SHORT_TOAST[words] ?? words;
 }
 
-/** Fills the {forward} {back} {jump} {down} markers in a hint for touch or keys. */
+/** Fills the {forward} {back} {jump} {down} {throw} markers in a hint for touch or keys. */
 export function hintWords(words: string, kind: 'touch' | 'keys'): string {
   const marks: Record<string, string> = WORDS.hintMarks[kind];
-  return words.replace(/\{(forward|back|jump|down)\}/g, (_, k: string) => marks[k] ?? k);
+  return words.replace(/\{(forward|back|jump|down|throw)\}/g, (_, k: string) => marks[k] ?? k);
 }

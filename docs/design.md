@@ -823,6 +823,8 @@ The lights are one-way platforms all fight long, lit or not (part 1). Unlit: dar
 
 ### The rule and the timeline
 
+**Changed by S2.14 (10 Nov 2026):** no light is lit at the start; each light comes on after two throws and stays green only for a while; phase 3's pattern puts the high honk second. Where S2.14 and this part differ, S2.14 wins.
+
 Same rule as part 1: land on the lit green light from above three times. Order: left, right, middle.
 
 - t = 0: the hero is inside. If the state has a parcel: shield on, toast "Your garri parcel: the shield is on!". Then toast "General Go-Slow is jamming the hall! Jump onto the green light." The left light comes on. The player can move straight away.
@@ -998,6 +1000,65 @@ Rules:
 4. Music stops when the game pauses (pause screen, phone upright, tab hidden, app switched, a call) and carries on from the same bar when play goes on.
 5. "Music: on / off" is its own switch, separate from "Sound: on / off", on the title screen and the pause screen, and the M key. Remembered as `gidi-music`. Sound off makes the game quiet, music too. Music off stops only the tunes. Each switch shows its own setting. (po Ruling 1, 9 Nov, as built: a tune plays only when Sound and Music are both on; "Music: on" stays shown while Sound is off, so the tune comes back by itself when Sound comes back.)
 6. The game never waits for music to start. Notes are scheduled 0.1 s ahead, checked every 25 ms.
+
+### Corn tune (Tp, 10 Nov 2026; designer note)
+
+Source: Tp, 10 Nov: when corn is picked up its sound should be different, fast and louder than every other sound, then wear off slowly, 5, 4, 3, 2, 1 (docs/questions.md top block, item 3).
+
+**What the player hears and sees.** You eat roasted corn: our own fast corn tune starts at once, loud and bright, and the street tune and every sound effect go quiet under it. For the last 5 seconds a big "5, 4, 3, 2, 1" counts down, and with each number the tune gets slower and softer. At 0 it is gone and the street tune comes back up.
+
+The tune (art writes the notes in src/art/tunes.ts, as data, like the others):
+
+| | |
+|---|---|
+| Name | `corn` |
+| Tempo | 144 BPM while the corn is fresh (street tunes are 108 to 116) |
+| Key | G major pentatonic (G, A, B, D, E), the street tunes' key, so the quiet street tune under it never clashes |
+| Chords | G, C, D, G (one bar each), 4 bars, looping (about 6.7 s a loop) |
+| Instruments | highlife guitar pluck plays the lead riff in quick 16th notes; bass on beat 1 and the "and" of 2; agogo bell in a two-note pattern; shekere on every 16th; a talking-drum fill in bar 4 |
+| The riff | our own short highlife riff, 2 bars, answered by a second 2 bars. Common scale notes only |
+| Must not sound like | any game's power-up, star, invincibility or speed music (Mario's star tune first, then Sonic's invincibility and speed shoes, Pac-Man's power pellet and other well-known ones), or any known song. So no bouncy "da da da-da da-da da" star rhythm, no fast rising arpeggio on every beat, no chromatic climb. art adds the openings of those tunes to the check list in tests/unit/music.test.ts if they are not there |
+| Size | note data, under 2 KB |
+
+How loud (rules for gamedev, src/engine/music.ts and src/engine/sound.ts):
+1. The corn tune plays on its own output at 0.8 (sound effects are 1.0, the music is 0.3 today). So it is about 2.7 times as loud as the street tune.
+2. While it plays, the street tune (or the well tune) keeps running underneath but is turned down to 30 percent of its level, and every sound effect is turned down to 30 percent. Turning down takes 0.15 s. (Today effects go straight to the speakers; gamedev adds one effects volume node that every effect goes through, so this is one setting.)
+3. The count's own ticks are part of the corn tune and are not turned down.
+
+The last 5 seconds (the count):
+
+| Corn seconds left | Number on screen | Corn tune tempo | Corn tune loudness | Street tune and effects |
+|---|---|---|---|---|
+| 12 to 5 | none | 144 | 100 percent | 30 percent |
+| 5 | "5" | 128 | 80 percent | 44 percent |
+| 4 | "4" | 112 | 60 percent | 58 percent |
+| 3 | "3" | 96 | 40 percent | 72 percent |
+| 2 | "2" | 80 | 20 percent | 86 percent |
+| 1 | "1" | 72 | 10 percent | 93 percent |
+| 0 | gone | fades to silence in 0.4 s | 0 | back to 100 percent over 0.6 s |
+
+Each step starts on the second the HUD's "Fast" number changes, on the next 16th note of the tune. Only the speed changes, never the pitch (no slowed-tape wobble). One agogo note on each new number, so the count can be heard.
+
+The count on screen:
+1. It shows in the hint bar's place (S2.2, "The hint bar"), so it never covers anything you play. It replaces the old "Corn is wearing off!" toast for corn (amala keeps its toast). A hint or toast that comes due during the count waits until the count ends, then shows for its full 3.5 s.
+2. Each number: a small corn icon and the number, bold, as tall as the bar allows: 40 px on screens under 280 px tall, 56 px on 280 to 419 px, 72 px from 420 px. Same yellow bar, dark number.
+3. Each number pops in (130 percent to 100 percent over 0.15 s). With reduced motion: no pop, the number just changes.
+4. Screen readers: the number boxes are hidden from them; once, at 5, they hear "Corn ends in 5 seconds", and at 0, "Corn is done". No reading of every number.
+5. The HUD's corn chip keeps its own seconds and its blink in the last 2 s, as built.
+
+Other rules:
+1. **Switches (po Ruling 1).** The corn tune is a tune: it plays only when Sound is on and Music is on. Music off: no corn tune and no turning down of the effects; the count still shows. Sound off: everything quiet; the count still shows.
+2. **iPhone silent switch.** We leave it be (as built, src/engine/audio-unlock.ts): with the switch on, nothing is heard, the count still shows. In the store app wrapper the audio must keep obeying the silent switch (gamedev: use the "ambient" audio setting there).
+3. **A second corn** while corn works: the tune starts again from bar 1 at 144 and full loudness, the count hides, the effects stay turned down.
+4. **Pause** (pause screen, phone upright, app switched, a call): the corn tune holds with the corn timer and carries on from the same place, at the same step of the count.
+5. **Lost life during corn:** the corn ends at once, so the tune fades out in 0.3 s with no count, and the street tune and effects come back over 0.3 s.
+6. **Street end during corn:** the corn tune fades out in 0.3 s as the bus jingle starts (S2.6 "The street end").
+7. The corn tune never plays in the hall (there is no corn there).
+
+Tasks:
+- art: the `corn` tune data in src/art/tunes.ts (rules above), and the originality check openings in tests/unit/music.test.ts.
+- gamedev: the effects volume node (src/engine/sound.ts); the corn tune player with the turn-down, tempo and loudness steps, restart, pause and switches (src/engine/music.ts, src/game/music-cue.ts); the count in the hint bar place with the screen reader lines (src/main.ts, src/screens); remove the corn "wearing off" toast (keep amala's).
+- qa done checks: (1) the corn tune is clearly louder than every other sound and they come back after; (2) the 5, 4, 3, 2, 1 shows and the tune slows and fades with it, pitch unchanged; (3) Sound off, Music off and the iPhone silent switch each give no corn tune and the count still shows; (4) a second corn restarts it; pause, lost life and the bus behave as above; (5) the count never covers anything you play, at every qa size; (6) reduced motion: no pop; a screen reader hears two lines only; (7) originality: not like any game's power-up or star music, or any known song.
 
 ## S2.10 Screens and words (slice 2)
 
@@ -1177,3 +1238,513 @@ Words on screens (gamedev): street Game over offer "Want more tries? Gentle mode
 Art: the "dust off" pose for every body (S2.3), facing right: a quick crouch, two pats on the knees, a small dust puff, then stand. Two frames are enough.
 
 Tests: in Gentle mode, a fall in each pit kind brings the hero back at the right restart point, with one life fewer, 1.7 s of safety and the right hint; in Normal mode the bus stop restart is unchanged; with Gentle mode on, game over still comes at 0 lives.
+
+## S2.14 Harder (designer, 10 Nov 2026: Tp "it needs to be harder")
+
+Source: Tp, 10 Nov, after playing the PR #3 build (docs/questions.md, top block, item 1), and the plan P2 hall goal (po M4). Gentle mode stays kind: 5 lives, and the climb-out on streets (S2.13 part 5). Nothing here changes Gentle mode.
+
+What stays true on every street: every hazard shows at least 1.5 s before it reaches you, the corn rules (S2.2 hazard rule 3 a to e, big pit rule 3), the four pit kinds, hazards at least 200 u from a pit, foods at least 300 u from a pit, a pothole sign before every pit 90 u or wider (S2.13 part 4, worked out in code, so the new wide potholes get signs by themselves).
+
+### 1. Go-Slow Hall: the goal and the two levers
+
+The goal (plan P2): a first-timer meets at least 2 throws in each phase, sees a high honk before the third hit, wins the first time in about 30 to 60 s, and can still clear the hall in 3 tries. Today the left light is lit at once and each next light comes on straight after the 1.5 s break, so a bot wins in 6 to 7 s.
+
+**Lever 1 (plan P2's first lever): each light comes on later.** No light is lit at the start. In every phase the light waits until two throws are out.
+
+**Lever 2: a light stays green only for a while.** If you miss it, it goes dark, then comes back after two more throws. The green time gets shorter after each hit. This is how the fight gets harder after each hit, along with the faster throws already there.
+
+Phase start: the fight start for phase 1; the end of the 1.5 s break for phases 2 and 3. All times below are seconds from the phase start.
+
+| Phase | Light | Throws come out at | Pattern (repeats) | Throw every | Tyre speed | Light comes on at (`lightAt`) | Green for (`greenFor`) | Then dark for (`darkFor`) | Music |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 (before any hit) | left | 2.0, 4.2, 6.4, ... | tyre | 2.2 | 156 | 6.0 | 4.0 | 4.4 | 128 BPM |
+| 2 (after hit 1) | right | 1.8, 3.6, 5.4, ... | tyre, tyre, honk | 1.8 | 192 | 4.0 | 3.5 | 3.6 | 134 BPM |
+| 3 (after hit 2) | middle | 1.4, 2.8, 4.2, 5.6, ... | tyre, **high honk**, tyre, honk | 1.4 | 228 | 4.5 | 3.0 | 2.8 | 140 BPM |
+
+Why these numbers:
+- Phase 1: the first tyre comes out at 2.0 s and reaches a hero near the door at about 4.4 s. The second is out at 4.2 s. The light comes on at 6.0 s, so every player has jumped one tyre and has a second one rolling at them.
+- Phase 2: two tyres are out (1.8 and 3.6 s) when the right light comes on at 4.0 s; the second tyre is passing under it.
+- Phase 3: the pattern now puts the **high honk second** (was fourth). It comes out at 2.8 s and is right over the middle light at about 4.4 s, just as the light comes on at 4.5 s. So every player sees a high honk fly over the middle light before the third hit, and learns to wait for it to pass.
+- A light that goes dark comes back after `darkFor`, which is two throw gaps, so the "two throws first" rule holds for every return too.
+- A perfect player now wins in about 20 s (phase 1 about 6.5 s, break 1.5, phase 2 about 4.6, break 1.5, phase 3 about 5.6). A first-timer who misses one green time in each phase, or loses a life, takes about 30 to 45 s. That is the goal.
+- Still fair: every light is reachable from a walk in under 1 s (S2.7), and the shortest green time is 3.0 s.
+
+What the light shows (never colour alone):
+| Light state | Look | Sound |
+|---|---|---|
+| Dark | grey, no arrow, no word (as built) | |
+| Green | green, a bouncing down arrow, the word "GO" (as built) | a soft "ding" as it comes on |
+| Last 1.0 s of green | blinks 2 times a second (never faster), the arrow stops bouncing | a "tick" each blink |
+| Last 1.0 s, reduced motion on | no blink: the arrow hides, "GO" stays | the ticks |
+| Goes dark (missed) | grey again | a low "clunk" |
+
+Rules: only a landing from above while the light is green counts (as built). Standing on a light when it turns green is not a hit: hop off and land again. A light going dark under the hero does nothing to the hero. A hurt or the shield breaking never moves the light's clock.
+
+Words (all in the hint bar):
+- Start: "General Go-Slow is jamming the hall! Wait for the green light." (replaces "... Jump onto the green light."). Short words: "Go-Slow! Wait for the green light."
+- The first time a light comes on in a try: "Green light! Jump on it!"
+- The first time a green light goes dark unhit in a try: "Missed it! Wait for the next one."
+- As built: "Green light! 2 more.", "Green light! 1 more.", "PEEP! High honks fly high. Stay low on the floor." (now shown at the start of phase 3, 2.8 s before the high honk comes, and hidden at the third hit, po N4).
+
+Gentle mode in the hall: 5 lives, as now. The lights are the same.
+
+If qa's first-timers find it too hard, tune in this order (S2.7's order still comes after these): green time 4.0/3.5/3.0 to 4.5/4.0/3.5; then `lightAt` 6.0/4.0/4.5 to 5.0/3.6/4.5 (keep phase 3, it carries the high honk); then S2.7's list. If it is still too easy (a first win under 25 s): green time 3.5/3.0/2.5.
+
+Exact change to src/data/levels/lagos-hall.json, `boss.phases` (every other field stays):
+```json
+"phases": [
+  { "every": 2.2, "speed": 156, "pattern": ["tyre"], "bpm": 128, "lightAt": 6.0, "greenFor": 4.0, "darkFor": 4.4 },
+  { "every": 1.8, "speed": 192, "pattern": ["tyre", "tyre", "honk"], "bpm": 134, "lightAt": 4.0, "greenFor": 3.5, "darkFor": 3.6 },
+  { "every": 1.4, "speed": 228, "pattern": ["tyre", "highHonk", "tyre", "honk"], "bpm": 140, "lightAt": 4.5, "greenFor": 3.0, "darkFor": 2.8 }
+]
+```
+
+### 2. The streets: one step harder in the second half
+
+Before the bus stop nothing changes on any street: that is where a first-timer learns. After the bus stop: one more wide pothole on each street, one more hazard on each street, and amala in street 1 moved so the rule "food 300 u from a pit" still holds. Pepper fufu (S2.15) is added to each street in the same change.
+
+**Street 1, Alausa (src/data/levels/lagos-1.json).** Kept light: it is the teaching street and must stay "3 tries or fewer".
+| Field | Change |
+|---|---|
+| `ground` | `[9210, 11000]` becomes `[9250, 11000]`: the hold pothole at 9150 (60 wide) becomes a wide pothole (100 wide) |
+| `kobo` | `[9156, 220, 3]` becomes `[9160, 220, 2], [9200, 170, 2], [9240, 220, 2]` (an arc over the wide pothole) |
+| `hazards` | add `["tyre", 7100]` (a goat at 6900 then a tyre: the garri shield has something to save you from) |
+| `foods` | amala `[9530, 272, "amala"]` becomes `[9560, 272, "amala"]`; add `[8700, 272, "fufu"]` (S2.15) |
+
+**Street 2, Computer Village (src/data/levels/lagos-2.json).**
+| Field | Change |
+|---|---|
+| `ground` | `[5970, 7700]` becomes `[5970, 6750], [6850, 7700]` (a new wide pothole, 100, at 6750). `[9360, 10300]` becomes `[9400, 10300]` (the hold pothole at 9300 becomes wide, 100) |
+| `kobo` | `[6800, 276, 3]` becomes `[6760, 220, 2], [6800, 170, 2], [6840, 220, 2]`. `[9306, 200, 3]` becomes `[9310, 220, 2], [9350, 170, 2], [9390, 220, 2]` |
+| `hazards` | `["tyre", 6600]` becomes `["tyre", 6550]`; `["goat", 7000]` becomes `["goat", 7050]` (both 200 u from the new pothole); add `["tyre", 8750]` (in the second half of the corn reach, after 8668: allowed) |
+| `foods` | add `[4800, 272, "fufu"]` (S2.15) |
+
+**Street 3, Ikeja (src/data/levels/lagos-3.json).**
+| Field | Change |
+|---|---|
+| `ground` | `[5470, 7000]` becomes `[5470, 6550], [6650, 7000]` (a new wide pothole, 100, at 6550, between the two big pits; big pit 2 keeps 350 u of clear road before it, more than the 160 it needs) |
+| `kobo` | `[6600, 276, 3]` becomes `[6560, 220, 2], [6600, 170, 2], [6640, 220, 2]` |
+| `hazards` | `["goat", 5900]` becomes `["goat", 6000]` (room to pick up the fufu first); add `["tyre", 9750]` (under the roof at 9700, so you can hop up out of its way) |
+| `foods` | add `[5800, 272, "fufu"]` (S2.15) |
+
+Checked against the rules: every new hazard is at least 200 u from a pit; every food at least 300 u from a pit; no tyre in a fast stretch (street 2's corn crate at 7300, fast to 8668; street 3's at 7500, fast to 8868); no new drum; the big pits keep their run-up. New pothole signs (worked out in code): street 1 at 9030, street 2 at 6630 and 9180, street 3 at 6430. Gentle mode climb-out points (100 u before the lip) are all on solid road: 9050; 6650 and 9200; 6450.
+
+Kobo: each changed arc adds 3. New loose totals: street 1 +3, street 2 +6, street 3 +3.
+
+If qa's first-timers need more than 3 tries on a street, take these back in this order: street 3's tyre at 9750; street 2's tyre at 8750; street 1's tyre at 7100; then the plan P3 order (big pits 170 to 160, one hazard fewer in street 3's group).
+
+### 3. Tasks
+
+gamedev:
+1. Hall: read `lightAt`, `greenFor`, `darkFor` per phase (src/game/level.ts, required numbers above 0). src/game/boss.ts: `lit` starts at -1; the light comes on at phase start + `lightAt`, stays green `greenFor`, goes dark `darkFor`, and repeats until hit. New events `bossLightOff` and a "blink" flag for the last 1.0 s (art and sound use them). New pattern for phase 3. The throw clock is not changed by the light.
+2. Hall words in src/screens/words.ts as in part 1, with the short words added to the hint bar table. The "PEEP!" toast now shows when phase 3 starts (the end of the break after hit 2), not when the middle light comes on.
+3. Street files: the exact changes in part 2. Update the kobo counts and any test that counts hazards or pits (tests/unit/street.test.ts STREETS keeps bigPits 1, 1, 2).
+4. Tests: the light timeline (dark at the start, on at 6.0 s, green 4.0 s, dark 4.4 s, on again); a landing on a dark or blinking-out light; the hall bot (tests/unit/hall-bot.ts) with 120 ms jitter now takes 18 s or more for a clean win and meets 2 or more throws in each phase and a high honk before the third hit; the street rule tests still pass.
+
+art:
+1. The light's last-second blink (2 times a second, the arrow still) and the reduced-motion look (arrow hidden). src/art/hall.ts.
+2. Three short sounds in src/engine/sound.ts, our own: the light's "ding" (a bright two-note agogo hit), the "tick" (a dry wood click), the "clunk" (a low muted thud). Never a game's sound.
+
+qa done checks:
+1. A first-timer (Tp first) in the hall: at least 2 throws met in each phase, a high honk seen before the third hit, first win in 30 to 60 s, cleared in 3 tries or fewer. Bots: a clean win takes 18 s or more.
+2. Each street still cleared by a first-timer in 3 tries or fewer, Normal mode; Gentle mode climb-outs land on solid road at the new wide potholes.
+3. With reduced motion on, nothing blinks; the light still says when it is ending (the arrow hides, the ticks).
+4. All street rule tests pass; every new wide pothole has its sign.
+
+## S2.15 Pepper fufu, now (designer, 10 Nov 2026)
+
+Source: Tp, 10 Nov ("I don't see my fufu as my fireballs"), taken by po as item 2 in docs/questions.md's top block. This changes only the timing of R3 / city choice 8 (fufu comes now, not after slice 3). Fufu with egusi is the Igbo-home food of version 1 (R5, equal shares): eaten all over Nigeria, shown with pride, never as a joke.
+
+**Hard rule (CLAUDE.md rule 2):** fufu balls are soft, hot food. Never flames, fire, sparks, glow, a burning trail, a "fwoosh" or any fireball look or sound. A fireball power-up is a Mario signature and is banned. The word "fireball" never appears in the game.
+
+### What it does, in one line
+
+Pick up a bowl of pepper fufu: you get 8 hot fufu balls. Press Throw to toss one the way you face. It plops onto the road, hops twice (each hop smaller), then rolls. It knocks tyres and drums off the road, plugs a pothole it falls into, and feeds a goat, which trots away. It never hurts a goat or anyone.
+
+### The food
+
+| | |
+|---|---|
+| Look (art) | A white enamel bowl with a blue rim, three soft white fufu balls in it, a small dish of egusi beside it (yellow-orange with green leaf bits), one small curl of steam. 20 u wide x 16 u tall, on the road like the other foods (centre y 272) |
+| Gives | 8 balls. Most you can hold: 16 (a second bowl while you hold 12 gives 16) |
+| Not timed | Balls stay until thrown. They are not a 12 s food, so no shrinking bar and no corn-style count |
+| Lost a life | Like every food power: your balls go to 0. A fufu bowl at or past the restart point comes back (as all foods do). Potholes you plugged stay plugged (like kobo taken) |
+| Street cleared | Balls are not carried to the next street; each street and each hall try starts with 0 |
+
+### Where the fufu sits (one per street, one in the hall)
+
+| Place | Fufu at | Why there: what to try it on next |
+|---|---|---|
+| Street 1, Alausa | road, x 8700 (in the second half of the corn) | tyre 8900, the wide pothole at 9150 (S2.14), goats at 9850 and 10250. After every lesson, so it never teaches two things at once |
+| Street 2, Computer Village | road, x 4800 (just before the bus stop) | the big pit at 5800 (a ball falls in and nothing happens: big pits are too deep), goat 6300, tyre 6550, the new wide pothole at 6750, goat 7050 |
+| Street 3, Ikeja | road, x 5800 (after big pit 1) | goat 6000, drum 6300, the new wide pothole at 6550, big pit 2 at 7000 (too deep) |
+| Go-Slow Hall | a bowl drops onto the floor at x 120 when the break after hit 1 ends (once per try) | the tyres and honks of phases 2 and 3. Phase 1 stays a pure jumping lesson |
+
+Level data: `foods` adds the kind "fufu" (the street changes are listed in S2.14 part 2). Crates may hold "fufu" later; none do now. Hall file, inside `boss`: `"fufu": { "x": 120, "afterHit": 1 }`.
+
+### The Throw button and the key
+
+| | |
+|---|---|
+| Shape | A circle, size T = max(64, D) CSS px (D as in S2.2 "Phone buttons"). Icon: a white ball with two steam curls and a small forward arrow; the word "Throw" under the icon. Spoken label "Throw fufu, {n} left" |
+| Place | Right thumb, beside Jump: its right edge 10 px left of Jump's left edge, same bottom as Jump. With "Swap sides" (Q24, slice 3) everything mirrors and Throw stays on the inner side of Jump |
+| Shown | Only while you hold 1 or more balls. It pops in over 0.15 s when you pick up fufu (no pop with reduced motion) and hides when the last ball is thrown |
+| Touch | A real button: takes its own taps first (as Pause and Go down). Touch area: the drawn circle plus 5 px all round (never past the 10 px gap's middle). One press = one ball. Holding does not repeat |
+| Look | Like the other buttons: white at 35 percent, 2 px dark outline; pressed: fill 60 percent, 94 percent size, icon turns dark (shape and size, not colour alone) |
+| Key | X. Key repeat is ignored. Mouse: clicking the drawn button works too |
+| Words for hints | New marker {throw}: touch "Throw", keys "X" |
+
+Where the buttons sit on the screens qa tests (CSS px, Throw shown):
+
+| Screen | Jump spans | Throw spans | Hint bar |
+|---|---|---|---|
+| 320 x 240 | 224 to 308 | 150 to 214 | see "Narrowest screens" |
+| 480 x 270 | 370 to 468 | 295 to 360 | 158 to 289 (131 wide) |
+| 568 x 230 | 472 to 556 | 398 to 462 | 140 to 392 |
+| 640 x 200 | 544 to 628 | 470 to 534 | 140 to 464 |
+| 568 x 320 | 437 to 556 | 348 to 427 | 186 to 342 (156 wide: short words) |
+| 667 x 375 | 535 to 655 | 445 to 525 | 188 to 439 |
+| 851 x 393, home bar 21 | 719 to 839 | 629 to 709 | 210 to 623 (413) |
+| 1024 x 768 | 892 to 1012 | 802 to 882 | 480 wide, centred: 252 to 732 |
+
+The hint bar rule (S2.2) gains one line: while Throw is shown, the bar's right side is Throw's left edge - 6 (not Jump's).
+
+Narrowest screens: if that leaves the bar under 96 px wide (of the qa sizes, only 320 x 240), the bar keeps its usual place (Forward + 6 to Jump - 6) and is drawn over the Throw button while a hint or toast shows. Throw still works under it (the bar takes no taps), and its outline shows on both sides of the bar. This is the only time the bar may cover a button; it never covers anything you play.
+
+### How a ball flies
+
+Same units as S2.2: world units, y grows down, 60 steps a second.
+
+| | Number |
+|---|---|
+| Ball | round, 12 u across (radius 6) |
+| Starts at | hero centre + 12 u the way the hero faces; hand height, hero feet - 26 |
+| Thrown on the ground (standing, walking, running, or on a roof) | across: 240 u/s + the hero's own speed that way (if moving that way); up: 180 u/s. At a stand it lands about 86 u ahead |
+| Thrown in the air (Tp: "aims down") | across: 150 u/s + the hero's speed that way; down: 260 u/s. From a jump it hits the road ahead and below |
+| Gravity on the ball | 1400 u/s², falls no faster than 720 u/s |
+| Landing (road or a roof top, from above only, like the hero) | first touch: a squash and a "plop", then it hops up at 45 percent of its landing speed; the second touch the same; after that, or when a hop would be under 40 u/s, it rolls along at the same speed across. So: plop, hop, little hop, roll. Never a run of equal bounces |
+| Rolls for | up to 1.5 s after its first landing, then it settles and sinks into a small puff of steam (0.3 s) |
+| Also gone | 200 u past the edge of the screen; at the start fence, the bus park wall or the bus |
+| How many | one per press; at most one every 0.25 s; at most 3 balls flying or rolling at once (a press with 3 out does nothing) |
+
+### What a ball does
+
+| It meets | What happens |
+|---|---|
+| A pothole 30 to 110 u wide (tap, hold, wide) | The ball falls in and **plugs it**: a "plup", a puff of steam, and the hole becomes a pale, slightly domed fufu patch level with the road. It is solid road for the rest of this play of the street, also after a lost life. The pothole sign stays. One ball fills one pothole |
+| A big pit (170 u) | Too deep. The ball drops away with a far-off soft "plop". Nothing changes (the run-up jump lesson stays) |
+| A tyre or a drum | It is **knocked off the road**: it tips, rolls off the back of the road into the roadside (0.4 s) and is gone for this play. +1 kobo pops out (amala's smash gives +2). The ball is used up |
+| A goat | **Never hit.** A ball that would touch a goat, from any side or from above, stops on the road 16 u in front of the goat (on the hero's side). The goat stops, eats it (0.6 s of chewing), says "meeh" (a small speech bubble with the word, and our own bleat), then trots off the road as built (2.5 s). It cannot hurt you after that |
+| A crate | Balls never open crates. A ball touching a crate's side or bottom drops straight down |
+| Kobo, foods, the hero | Nothing: balls pass by. They never collect anything and never hurt anyone |
+| In the hall: a tyre | The throw is **stunned**: it pops into dust (like the dust at a hit). The ball is used up |
+| In the hall: a low or high honk | It pops ("pff") into dust |
+| In the hall: the jam | The heap goes "pfft" and shakes for 0.3 s, and its next throw comes 0.5 s later (once per throw at most). Never a hit: **only landing on a green light wins** |
+
+People are never in the way of a ball, and the hero never aims at a person: in Gbese! people are scenery on the pavement, never on the road.
+
+### HUD and words
+
+HUD chip (S2.10 "The HUD row"): a fufu ball icon and "Fufu 8"; from step 1 on, the icon and "8". Screen readers: "Fufu balls: 8". Never colour alone: its own icon shape. It sits after the food chips; it comes and goes like them (the HUD fit steps work it out).
+
+Toasts (hint bar, all 35 characters or fewer, so no short words needed; touch or keys words follow the last thing used, as hints do):
+
+| When | Touch | Keys |
+|---|---|---|
+| Picking up fufu on a street | "Pepper fufu! Press Throw to throw." | "Pepper fufu! Press X to throw." |
+| Picking up fufu in the hall | "Fufu! Press Throw to pop throws." | "Fufu! Press X to pop throws." |
+| The first pothole plugged in a play | "Plugged! Fufu fills potholes." | same |
+| A goat eats a ball | (no toast) the "meeh" bubble over the goat | same |
+
+How to play words on the title do not change: the toast teaches it where it is needed.
+
+### Sounds (our own, made in code)
+
+Toss: a soft breathy "fff" (filtered hiss, 0.08 s). Landing: "plop" (a sine sliding from 220 to 140 Hz, 0.08 s); the hops, softer. Plug: a deeper "plup" and a short steam hiss (0.3 s). Tyre or drum knocked: a rubbery "bonk". Goat: "meeh", a short bleat (two slightly detuned tones with a wobble). Honk popped: "pff". Never a "fwoosh", a crackle, a rising "pew", or any game's throw or fireball sound.
+
+### Tasks
+
+gamedev:
+1. src/game/fufu.ts (new, pure rules): ball flight, hops, roll, the meets table above, the 3-at-once and 0.25 s limits. src/game/level.ts: food kind "fufu"; hall `boss.fufu`.
+2. src/game/run.ts: the ball count (8, max 16, 0 on a lost life), throw on X or Throw, plugged potholes (src/game/pits.ts: a plugged gap is solid road and has no Gentle climb-out), tyres and drums knocked off (+1 kobo), goats fed (then run away as built). src/game/boss.ts: balls pop throws; the jam's 0.5 s delay; the bowl drop after hit 1.
+3. Input and layout: X key (src/engine/input.ts); the Throw button, its touch area and the hint bar's new right edge (src/screens/controls.ts `buttonLayout`); the narrowest-screen rule.
+4. HUD chip, toasts, the {throw} marker (src/screens/hud.ts, src/screens/words.ts).
+5. Tests: flight distances (stand throw lands 86 u ahead, within 3 u), two hops then roll, one ball plugs a 100 u pothole and the hero walks over it, a big pit is never plugged, a goat is never hurt and leaves, tyre +1 kobo, 3 at once, count 8/16/0, the button hidden at 0, hall pops, light hits still need a landing.
+
+art:
+1. The fufu bowl food, the ball (round, squash frame on landing, two steam curls, an optional small pepper-red dot on top), the plugged patch, the Throw button icon and the HUD chip icon (src/art/items.ts, src/art/controls.ts). Soft white and cream only; no orange or yellow glow, no trail, no flame shape.
+2. The hero's throw pose for every body (S2.3), on the ground and in the air: one 0.15 s arm swing, two frames.
+3. The goat eating (two frames) and the "meeh" bubble; a tyre and a drum tipping off the road.
+4. The sounds above in src/engine/sound.ts.
+
+Size: under 15 KB for all of it.
+
+qa done checks:
+1. Nothing on screen or in sound could be taken for fire or a fireball (no flame, glow, sparks, trail, crackle or "fwoosh"); qa compares against Mario's fireball by eye and ear and reports.
+2. Throw works by touch (64 px or more at every size, beside Jump) and by X; hidden at 0 balls; screen readers hear "Throw fufu, 8 left".
+3. A goat is never hit in 50 tries from every angle, ground and air; it always eats, says "meeh" and leaves.
+4. A plugged pothole stays solid after a lost life; big pits are never plugged.
+5. The hint bar never overlaps Throw except at the narrowest screens (bar under 96 px), and never covers anything you play.
+6. Each street still cleared by a first-timer in 3 tries or fewer; the hall goal (S2.14) still met with fufu picked up.
+
+## S2.16 Birds, the strong look, the tech suit, the dash, thorny gutters (designer, 10 Nov 2026: Tp B1 a to B5 a)
+
+Source: docs/questions.md, top block "Tp, 10 Nov 2026 (later): designer's three choices, and five new ideas", Tp's answers B1 a, B2 a, B3 a, B4 a, B5 a. Docs only; nothing here is built yet.
+
+Built on top of S2.14 part 2 and S2.15. Those street changes are not in the level files yet (P5, P8), so every street change below is written as a change to the S2.14 layout. gamedev makes the S2.14, S2.15 and S2.16 street changes in that order.
+
+Every S2.2 rule still holds: every hazard shows at least 1.5 s before it reaches you on the narrowest view (448 u of road ahead), the corn rules (S2.2 hazard rule 3 a to e, big pit rule 3), the pit kinds, hazards at least 200 u from a pit lip, foods at least 300 u from a pit, a sign before every gap 90 u or wider, hints at least 120 u apart and 35 characters or fewer.
+
+Numbers used below (S2.2 and src/game/run.ts, checked again with a step-by-step sum at dt = 1/60): walk 90, run 156, corn run 228 u/s; jump vy -576, second jump -504, gravity 2232, hold gravity 1152, max fall 720, coyote 5 steps; hero box 14 x 44. A full hold with a held second jump stays in the air 1.47 s and reaches 132 u from a walk, 229 u from a run (242 with coyote), 334 u on corn.
+
+### B1. Birds by the rubbish (street 3)
+
+**The idea.** On Ikeja's evening road, birds peck by the rubbish waiting for collection. They are in the way, never the enemy, and they are never hurt: every way past a bird ends with it flying off, fine.
+
+**Two birds, real Lagos birds, our own drawings:**
+
+| | Cattle egret (hops) | Pied crow (hovers low) |
+|---|---|---|
+| Look | white, long neck, yellow beak, long legs, calm round eye | black with a white chest band, stout, wings out and flapping slowly |
+| Box | 16 wide x 28 tall, feet on the road (y 272 to 300) | 22 wide x 14 tall, y 266 to 280 (its bottom 20 u above the road) |
+| Moves | pecks, then hops back and forth inside x0 - 20 to x0 + 20 at 30 u/s; a little 6 u hop is drawn, the box stays on the road | flaps in place over the pile; drawn bob 2 u up and down once a second; the box never moves |
+| Never | walks toward you, leaves its 40 u patch, rises, dives, swoops, chases | moves toward you, comes lower, dives, swoops |
+| To jump over (its width plus the hero's 14) | 30 u above 28 u high: a walking tap just does it (33 u), a walking hold or a running tap easily | 36 u above 34 u high: a walking hold (66 u) or a running tap (52 u). A walking tap (30 u) is not enough, so the crow teaches "hold" |
+
+Not colour alone: the egret is tall and thin on legs, the crow is a short, wide shape in the air.
+
+Why 1.5 s is always met: birds never come toward you, so the closing speed is your own: at most 228 u/s (corn), 448 / 228 = 1.96 s.
+
+**What happens when you meet a bird:**
+
+| You | The bird | You get |
+|---|---|---|
+| Land on it from above (the stomp rule, as goats) | flaps up and away | a small bounce, vy -360 (a normal bounce is -480; your second jump is still there), and 2 kobo pop out of the pile |
+| Throw fufu (S2.15) and the ball comes within 12 u of it | the crow catches it in the air, or the egret picks it up off the road, and flies off with it | the ball is used up; no kobo (the bird has its lunch) |
+| Touch it with the tech suit on (B3) | gets a fright at the suit's hum and flies off before it touches you | the suit stays on. Birds never break the suit |
+| Touch it with amala on (B2) | gets a fright and flies off | no kobo; amala goes on |
+| Touch it from the side or from below, with no suit and no amala | flaps up and away | **you lose a life** (1.7 s of blinking safety), the same as a goat |
+
+My choice (Tp asked "decide fairly"): a touch costs a life, the same as a goat. Reasons: one rule for everything on the road ("touch it, lose a life; land on it, bounce"); birds are as easy to see and as slow as goats; a bird that costs nothing would teach players to ignore things on the road. Gentle mode has 5 lives, as everywhere.
+
+Flying off: up and to the right at 45 degrees, 200 u/s, gone after 1.2 s. From the moment it starts to fly it has no box and can hurt no one. A bird that flew off comes back after a lost life only if it is at or past the restart point (as hazards do). Birds wake, sleep and leave as hazards do (S2.2 hazard rules 1 and 2). A hopping egret that would come within 30 u of a pit lip turns back.
+
+**Not like any bird game (rule 2).** Real bird shapes with legs, beaks and wings; calm faces; no angry eyebrows; never round ball birds; no slingshot, no launching, no pipes, no tapping to flap, no yellow round bird. The hero never throws a bird, or throws at a bird to hurt it: fufu is food it takes away.
+
+**The rubbish piles (scenery, never solid, never hurt).** A neat pile at the back edge of the road: tied sacks and a woven basket next to a green bin with the painted words "PLEASE USE THE BIN". Never flies, smell lines, rats, a joke about mess, or a word about any person or place. In the fixed look after Lagos is switched on, the piles are gone and the birds peck on clean pavement (same boxes, same play).
+
+**Where they go on street 3, Ikeja (src/data/levels/lagos-3.json).** After the bus stop only (before it, street 3 teaches the drum). Never in a corn fast stretch (a corn starts as a treat).
+
+| Bird | x | Pile at | Why there | Checks |
+|---|---|---|---|---|
+| Egret | 7400 | 7420 | The lesson: alone, on clear road after big pit 2, before the corn crate. Hint at 7240 | its patch starts 210 u after big pit 2's far lip (7170) |
+| Crow | 8960 | 8960 | Just after the corn's fast stretch (ends 8868): a hold jump, then tyre 9100 | 300 u from the hold pothole's far lip (8660) |
+| Egret | 10050 | 10070 | Just after amala (9950): try "amala frightens birds" | far from every pit |
+
+Level data: `hazards` gains `["egret", 7400]`, `["crow", 8960]`, `["egret", 10050]`; `hazardSpeeds` gains `"egret": 30`; new scenery field `piles`: `[7420, 8960, 10070]`.
+
+**Words.** Hint `[7240, "Birds! Hop over, or bounce on one."]` (34 characters, touch and keys). No toast for a fright or a fufu catch: the bird's own call says it ("kraa" for the crow, a soft "krk-krk" for the egret).
+
+**Tasks.**
+- art: egret (peck, hop, fly away; 2 frames each), crow (flap, fly away), both carrying a fufu ball; the pile and bin; the 2 kobo pop; calls in src/engine/sound.ts (our own: a short filtered-noise "kraa", two clicks "krk-krk"), never a game's bird sound.
+- gamedev: hazard kinds `egret` and `crow` (src/game/level.ts; src/game/run.ts `HAZARD_BOX`: egret halfW 8, h 28; crow halfW 11, h 14 with its bottom at y 280); egret pacing; the table above in `touchHazards` (bounce vy -360 and +2 kobo; suit and amala fright with no hit); the fufu catch (src/game/fufu.ts); fly-off with no box; `piles` scenery.
+- qa done checks: 1. No bird ever moves toward the hero or lower; each is on screen 1.5 s or more before you reach it at corn speed on the 560 u view. 2. In 50 meetings each way (stomp, fufu, suit, amala, side touch) a bird is never shown hurt and always flies off; only the side touch with nothing on costs a life; the suit survives. 3. Originality: nothing reads as Angry Birds or Flappy Bird (shapes, faces, sounds). 4. Street 3 is still cleared by a first-timer in 3 tries or fewer.
+
+### B2. Amala: the strong look
+
+**The idea.** For amala's 12 s the hero looks and sounds strong: steady, planted and warm. No change of size, nothing that lasts after the 12 s.
+
+| | Exactly |
+|---|---|
+| Stance | feet drawn 3 u further apart on each side (still inside the 50 u art box), shoulders square, elbows 2 u out from the body. Same run cycle, same lean |
+| Warm glow | a soft outline 3 u wide around the whole hero, amala brown-gold #c98a3a, breathing slowly between 35 and 55 percent see-through once a second. With reduced motion: a steady 45 percent |
+| Heavier footsteps | each time a foot meets the ground: a small dust thump (a 6 u puff and two pebbles) and a low "dum" (a sine from 90 to 60 Hz, 0.08 s, 30 percent volume), at most one every 0.18 s |
+| Smash | a touched tyre, drum or goat goes as built (+2 kobo for tyres and drums; goats trot off unhurt), now with a 24 u dust ring and a hearty "gbam" (a low drum hit and a wood knock together). Gutter weeds (B5): trampled flat, safe for the rest of the run. Birds (B1): frightened off |
+| Pick up | a 0.3 s arm flex drawn while you keep moving (the controls never lock); a deep two-note talking drum "gbe-dum" |
+| Last 2 s | the glow blinks 2 times a second (reduced motion: the glow thins to 1 u instead); the "Strong" HUD count and the amala toast as built |
+| End | a 0.3 s "shake out" of the arms, stance back to normal. A lost life ends it at once, as now |
+| Hero box | unchanged: 14 x 44. Not one number in the rules changes |
+
+**Not Mario's grow-and-shrink, and not its star (rule 2).** Never bigger or smaller, never a grow or shrink flash, never flashing or rainbow colours, no stars or sparkles around the hero, no change of music or tempo, no rising "power up" notes. A hit while strong does nothing (as built), never a shrink.
+
+Every body, hair and outfit: the stance moves only the feet and elbows, by the same amount for every body (S2.3 sizes scale it); the glow follows whatever is drawn, hair and headwear included.
+
+Words: none new. The toast stays "Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!" (short: "Amala, gbegiri and ewedu! Strong!").
+
+**Tasks.**
+- art: the strong stance for every body and both facings; the glow (drawn as a widened outline of the hero shape in one extra pass, no blur filter, so it stays fast); the dust thump; the dust ring; sounds "dum", "gbam", "gbe-dum".
+- gamedev: give art the step events (a foot meets the ground), the amala time left (for the blink) and reduced motion. Nothing in the rules changes.
+- qa done checks: 1. With amala, the hero box is still 14 x 44 and every drawn pixel stays inside the 50 u art box plus the 3 u glow. 2. The look is gone the moment amala ends or a life is lost. 3. Side by side with Mario's mushroom and star, by eye and ear: no grow, no shrink, no rainbow, no star music. 4. 60 fps on the mid phone, 45 at 4x CPU, with amala on and three smashes.
+
+### B3. The garri shield: our own tech suit
+
+**The idea.** Garri, sugar and epa still gives "a shield takes one hit for you". It now shows as a light suit of plates floating just off the hero's body, in our colours, with a soft hum. It replaces the round bubble outline (part 1, Power-ups).
+
+| | Exactly |
+|---|---|
+| Plates | 7 plates: 2 shoulder caps, 1 chest plate (a rounded oblong with three short lines like garri grains), 2 forearm bands, 2 shin bands. Each sits 1 to 2 u off the body. Two thin frame lines join the shoulder caps to the chest plate |
+| Colours | plates cream #fff8e6 with a 1.5 u ink outline #1d1a14; seams and frame lines sage green #7fc4a4 |
+| Hum | the seams brighten softly once every 2 s (reduced motion: steady). Sound: a soft low hum (two sine tones, 110 and 165 Hz, 6 percent volume, a slow wobble) while worn. It follows the Sound switch and stops on pause and when the tab is hidden |
+| Put on | the plates click on from the feet up in 0.4 s, "tik-tik-tik-tum" (reduced motion: all at once) |
+| One hit | white crack lines on the plates for 0.1 s, then they burst into 10 cream bits (3 to 5 u) that fly out 20 to 40 u, drop and fade over 0.5 s, with a "krink" and three small "tink"s. Reduced motion: the bits fade where they are in 0.3 s. Then, as built: toast "Shield used up!", 1.2 s of blinking safety, no life lost |
+| What breaks it | what used up the shield before: a tyre, drum, goat, honk, and now gutter weeds (B5). Never a bird (B1) |
+| Hall | the garri parcel's shield is the same suit |
+
+**Every body, hair and outfit.** Plates hang on the same rig points for every body and scale with S2.3's shoulder width and limb thickness. Nothing is drawn above the shoulders, so the face, every hair (Low cut, Afro, Braids, Gele, Headscarf) and grey elder hair stay fully seen. Plates sit over the outfit; on Agbada and Kaftan the forearm bands sit at the wrist over the sleeve. The hero still looks like the player, with a suit on.
+
+**Not like any known suit (rule 2).** No helmet, no face plate, no visor; no red and gold; no round glowing light in the chest; nothing in the palms or on the feet that glows or flies; no arm cannon; no full blue body suit; no robot body; no change-over pose. It is a few light plates over the hero's own clothes.
+
+Words: none new. Toast as built: "Garri, sugar and epa (groundnut)! A shield takes one hit for you." (short: "Garri, sugar and epa! Shield on!"); the HUD cup icon and "Shield" as built.
+
+**Tasks.**
+- art: the 7 plates and frame for every body, both facings, in the stand, walk, run, jump and rope poses; put-on; crack and 10 bits; sounds (hum, put-on, "krink", "tink"). Remove the bubble outline.
+- gamedev: put-on and break events for art and sound; start and stop the hum with the shield, Sound, pause and a hidden tab; the bird rule (B1) in `touchHazards`.
+- qa done checks: 1. Every body x every hair x every outfit: face and hair never covered; the plates stay inside the 50 u art box plus 2 u. 2. Sound off: no hum; paused: no hum. 3. Originality by eye against Iron Man, Mega Man and other robot or hero suits: nothing reads as one of them. 4. The break shows on a hit, and with reduced motion nothing flies.
+
+### B4. The dash
+
+**The idea.** Double tap forward and hold: the hero puts their head down and dashes for 2.5 s, then needs 2 s to catch their breath. A jump from a dash flies further. New, wider gaps after the bus stop on streets 2 and 3 need it.
+
+**How to do it.**
+
+| | Exactly |
+|---|---|
+| Phone | tap Forward, lift, press Forward again within 0.25 s, and keep holding. The first tap must be 0.25 s or shorter. Both presses must be new fingers on the Forward side (S2.2 "Fingers"): rocking from Back to Forward does not count |
+| Keys | double tap Right arrow (or D) and hold. Key repeat never counts as a tap |
+| Back | the same with Back (Left arrow, A) dashes left |
+| Starts | only on the ground or a roof, or within coyote time (5 steps). In the air a double tap does nothing extra |
+| Not | on corn (corn is faster already; a double tap just keeps the corn run); while resting; in Go-Slow Hall or the well room (a double tap is a normal run there); while the controls are locked |
+| Turned on | the dash works from the moment the player first reaches the dash hint on street 2 (saved as `dash: true`). Before that a double tap is a normal walk, so street 1 stays exactly as tuned |
+
+**Numbers.**
+
+| | Value | Why |
+|---|---|---|
+| Dash speed | 210 u/s | Faster than a run (156), slower than corn (228). With a drum (84) coming the other way it closes at 294 u/s: 448 / 294 = 1.52 s, so the 1.5 s rule holds for every hazard. 216 or more would break it for drums |
+| Getting up to speed | 1200 u/s² from whatever speed you have (from a stand: 210 in 0.18 s, about 19 u) | |
+| Lasts | 2.5 s while held: about 525 u | |
+| Ends | at 2.5 s, or when forward is let go, the other way is pressed, you bump a wall, lose a life, or the controls lock. On the ground it eases back to run speed at 300 u/s² if forward is still held, else stops as normal (1200 u/s², about 18 u) | |
+| The jump gets longer | a jump that leaves the ground during the dash keeps the dash speed until it lands, even if the 2.5 s run out in the air (S2.2 "In the air" rule 1 already keeps take-off speed). Heights and air time are the same as every jump (full hold plus second jump: 245 u high, 1.47 s), so it lands 1.35 times further than a run jump | |
+| Rest | 2.0 s from the moment the dash ends (if it ended in the air, from the landing). A double tap while resting is a normal run | |
+| Run timer | after a dash the run timer counts as full, so you are running, not walking | |
+
+How far a dash jump goes (from take-off, dt 1/60; add up to 17 u for coyote): tap 105 u, full hold 182 u, full hold then held second jump **308 u** (325 u with coyote).
+
+**What it looks and sounds like.** The hero leans 12 degrees (more than the run), arms pumping. A dust puff at the feet every 0.1 s and three white speed lines with a thin ink edge, 18 to 30 u long, trailing behind. While resting: two small breath puffs by the mouth every 0.5 s (a shape, not a colour, says "not ready"). Start: a quick wood block "tak-tak", then fast soft footsteps; ready again: a small "tik". Reduced motion: the speed lines stand still (no flicker), one dust puff every 0.3 s. Not Sonic's spin dash (rule 2): never a ball, a spin or a blur, never revving in place; the hero always runs upright on their feet. No "zoom" or "fwoosh" sound.
+
+**The new pit kind: the dash gap.** S2.2 "Pit sizes" gains a fifth kind, and still nothing in between:
+
+| Kind | Width | Crossed by | Not crossed by |
+|---|---|---|---|
+| Dash gap | 260 u (250 to 270 if qa asks) | a dash jump plus second jump: 308 u, 18 percent slack (more with coyote) | a running jump plus second jump: 229 u, 242 u with coyote, 18 u short at best. Walking: 132 u |
+
+Dash gap rules:
+1. Only after the bus stop, on streets 2 and 3. None on street 1, none in the hall or the well room.
+2. 320 u of flat, clear road straight before it (no pit, hazard, crate, food or gutter): time to double tap, reach 210 and jump. A dash started at the start of that road still has about 200 u of dash left at the lip.
+3. 300 u of clear road after the far lip (no hazard or gutter): you land at speed.
+4. No dash gap from a corn to corn + reach (2736 u): a corn run jump (334 u) would cross it and teach the wrong jump (as big pit rule 3).
+5. Foods at least 300 u from it (the food rule).
+6. Cones on both lips (as big pits), a kobo arc over it, and a sign 120 u before the left lip, worked out in code (S2.13 part 4). For a gap 250 u or wider the sign shows the hole and the two-hump path with three speed lines behind it, so it differs from the big pit sign by shape, not colour.
+7. Fufu: too deep, like a big pit. A ball drops away and nothing changes.
+
+**Gentle mode never needs the dash.** In Gentle mode every dash gap has a stack of cement blocks (the hollow blocks seen at every Lagos building site) standing in its middle at road height: 60 u wide, solid. So the gap is two wide potholes of 100 u, each crossed by a walking jump plus second jump (139 u with coyote, 39 percent slack). Worked out in code from the gap (left lip + 100 to + 160), no level data. One dash sign only (no second sign for the far half). Climb-out (S2.13 part 5) works for each half: 100 u before the left lip for the near half; for the far half that point is in the gap, so the rule's own fallback puts you in the middle of the blocks (30 u of block on each side). The dash still works in Gentle mode; it is just never needed.
+
+**Where the dash gaps go.**
+
+Street 2, Computer Village (src/data/levels/lagos-2.json), changes to the S2.14 layout. The lesson comes after big pit 1 and a goat, before the corn crate (7300):
+
+| Field | Change |
+|---|---|
+| `ground` | S2.14's `[5970, 6750], [6850, 7700]` becomes `[5970, 6700], [6960, 7700]`: S2.14's new wide pothole at 6750 is replaced by a dash gap from 6700 to 6960 |
+| `hazards` | `["goat", 6300]` becomes `["goat", 6200]` (230 u after the big pit's far lip, 5970); S2.14's `["tyre", 6550]` is removed (it stood in the lesson road); S2.14's `["goat", 7050]` becomes `["goat", 7450]` (490 u after the far lip) |
+| `platforms` | `[7050, 240, 140]` becomes `[7430, 240, 140]` (the roof moves with its goat) |
+| `kobo` | remove S2.14's arc `[6760, 220, 2], [6800, 170, 2], [6840, 220, 2]`; `[7065, 216, 5]` becomes `[7445, 216, 5]`; add a road trail `[6420, 276, 3], [6560, 276, 3]` and the dash arc `[6710, 220, 2], [6770, 160, 2], [6830, 130, 2], [6890, 160, 2]` |
+| `hints` | add `[6300, "Double tap {forward} and hold to dash!"]` and `[6480, "Dash, then jump twice!"]` |
+
+Checks: clear road 6300 to 6700 (400 u; rule 2 needs 320); landing road 6960 to 7260 clear; the corn crate at 7300 is 340 u past the far lip (food rule) and comes after the gap (rule 4); sign at 6580; Gentle blocks 6800 to 6860; climb-out points 6600 and 6830.
+
+Street 3, Ikeja (src/data/levels/lagos-3.json): the wide pothole at 10900 becomes a dash gap. The corn crate is at 7500, so corn + reach is 10236 and the gap is past it (rule 4).
+
+| Field | Change |
+|---|---|
+| `ground` | `[8660, 10900], [11000, 11800]` becomes `[8660, 10900], [11160, 11800]` (dash gap 10900 to 11160) |
+| `hazards` | `["goat", 10500]` becomes `["goat", 10450]`; `["goat", 10650]` becomes `["goat", 10550]` (both left of the 320 u lesson road, 10580 to 10900; goats walk left, away from it) |
+| `kobo` | `[10890, 220, 2], [10935, 170, 2], [10985, 220, 2]` become `[10910, 220, 2], [10970, 160, 2], [11030, 130, 2], [11090, 160, 2]` |
+| `hints` | add `[10600, "Dash gap! Dash, then jump twice."]` |
+
+Checks: landing road 11160 to 11460 clear (the bus starts at end.x - 40 = 11460); the sign stays at 10780; Gentle blocks 11000 to 11060; climb-out points 10800 and 11030.
+
+**Words.** All 35 characters or fewer with the markers filled in; touch and keys the same ({forward} shows →).
+
+| When | Words |
+|---|---|
+| Street 2, x 6300 (the lesson) | "Double tap → and hold to dash!" |
+| Street 2, x 6480 | "Dash, then jump twice!" |
+| Street 3, x 10600 | "Dash gap! Dash, then jump twice." |
+| Gentle mode, in place of either of the last two (`GENTLE_HINTS`) | "Dash, or hop over the blocks." |
+| The first double tap while resting, once per play | "Catch your breath! Dash again soon." |
+| Gentle climb-out after a dash gap | "Up you come! Jump, then jump again." (the wide pothole words: with the blocks it is two wide potholes) |
+
+How to play words on the title: unchanged (the dash is taught where it is needed).
+
+**Tasks.**
+- art: the dash pose for every body, both facings (2 frames); speed lines; dust; breath puffs; the cement block stack (Gentle); the dash sign; sounds "tak-tak", fast steps, "tik".
+- gamedev: double tap detection (src/engine/input.ts for keys, src/screens/controls.ts for touch, with the timings above); the dash in src/engine/physics.ts (`dashSpeed: 210`, `dashAccel: 1200`, `dashSteps: secs(2.5)`, `dashRestSteps: secs(2)`) and src/game/run.ts (not on corn, not in the hall or the room, the `dash` save flag set at street 2's lesson hint); pit kind `dash` for 250 to 270 u (src/game/pits.ts); the Gentle blocks; the dash sign; the street changes; hints and `GENTLE_HINTS`.
+- Tests: a dash jump plus second jump lands 308 u from take-off (within 3 u); a run jump plus second jump cannot cross 260 u, coyote included; every dash gap has 320 u clear before and 300 u after, is after the bus stop and outside corn reach, and food is 300 u away; Gentle blocks make two 100 u gaps; the rest blocks a dash for 2 s; no dash on corn, in the hall, or before the save flag; dash plus drum closing time 1.5 s or more on the 560 u view.
+- qa done checks: 1. Double tap and hold works on a phone with one thumb, and with the keys; a single tap or a rock from Back to Forward never dashes. 2. First-timers cross street 2's dash gap within 3 tries of its hint, and still clear each street in 3 tries or fewer. 3. Gentle mode: both streets cleared without ever dashing. 4. Reduced motion: no flicker. 5. Originality: nothing reads as Sonic's spin dash.
+
+If first-timers need more than 3 tries at a dash gap, tune in this order: gap 260 to 250; rest 2.0 to 1.5 s; dash 2.5 to 3.0 s. Never raise the dash speed past 212 (the drum rule).
+
+### B5. Open gutters with thorny weeds (streets 2 and 3)
+
+**The idea.** An open gutter crosses the road, choked with still, thorny weeds. Touch the weeds and you lose a life. Jump right over, or throw a hot pepper fufu ball: the weeds dry up and the gutter is safe to cross for the rest of that play.
+
+| | Exactly |
+|---|---|
+| Gutter | a shallow concrete channel across the road with a thin line of dark water. The hero's feet stay at road height across it: it is never a hole, never a pit, and you never fall in. Not a pit kind, so no sign and no climb-out |
+| Weeds | fill the gutter from edge to edge: the weed box is the gutter's width x 18 u tall (y 282 to 300). Still, spiky clumps: dark green #2f6b2a with cream thorn tips |
+| Widths | two kinds only, learnable by eye: **short gutter 30 u**, **long gutter 44 u** |
+| Jumping over | you must be above 18 u for the width + 14 u. Short: 44 u, done by a walking hold (70 u, 59 percent slack) or a running tap (62 u). Long: 58 u, done by a walking hold (70 u, 21 percent slack) or a running hold (122 u). A walking tap (36 u) clears neither |
+| Touch | from the side or from above: **you lose a life** (1.7 s of blinking safety). Never a bounce: thorns. With the tech suit on: the suit breaks instead (B3). With amala: the weeds are trampled flat and safe, no life lost |
+| Fufu | a ball that lands on or rolls into the weeds stops there: the weeds dry up in 0.5 s (they turn straw brown #9a7b5a and lie flat, 4 u high), with a soft "fsss" and a small steam puff. One ball clears one gutter. Dried weeds are safe for the rest of this play of the street, also after a lost life (like plugged potholes) |
+| Other hazards | tyres and drums roll across a gutter (drawn in front of the weeds); goats turn back at its edge; birds are never placed at one |
+
+**Never alive (rule 2: unlike a piranha plant).** The weeds never move: no sway, no bob, no growing, no popping up or down, no mouth, no teeth, no head, no face, no bulb, no stem, no pot and no pipe. They look the same in every frame, with or without reduced motion. They are plants in a drain, nothing more.
+
+**Spacing rules.** Gutters stand still, so the 1.5 s rule is met at any speed (448 / 228 = 1.96 s). Also:
+1. At least 200 u from any pit lip.
+2. At least 300 u from any food (so nobody jumps over a food by accident).
+3. Never in a corn fast stretch, a big pit run-up (160 u), a dash gap run-up (320 u) or its landing road (300 u).
+4. Never on the spawn, the bus stop, a well or the bus.
+5. The first gutter of the game is a short one, alone, with a hint.
+6. Two kobo in the air over each gutter, at y 236.
+
+**Where they go.**
+
+| Street | Gutter (left edge, width) | Changes | Checks |
+|---|---|---|---|
+| 2, Computer Village | short, 800, 30 (the lesson) | add kobo `[803, 236, 2]`; hint `[650, "Thorny weeds! Jump right over them."]` | The calmest place in the game: the warm-up, after the kobo crate at 600 and before the roof crates. It is the one change before a bus stop in S2.14 to S2.16: the easiest thing to jump, and a touch costs a life without sending you back |
+| 2 | long, 9050, 44 | replaces `["goat", 9100]`; add kobo `[9060, 236, 2]` | 206 u before S2.14's wide pothole (9300); after the fast stretch (ends 8668); amala at 9700 is 606 u away |
+| 3, Ikeja | long, 6150, 44 | add kobo `[6160, 236, 2]` | 350 u after the fufu (5800), so players can try a ball on it; 680 u from big pit 1, 356 u from the wide pothole at 6550; between goat 6000 and drum 6300 |
+| 3 | short, 9300, 30 | replaces `["goat", 9300]`; add kobo `[9303, 236, 2]` | 640 u from the hold pothole (8660); after the fast stretch (8868); amala at 9950 is 620 u away |
+
+Level data: new field `gutters`: `[[left x, width]]`. Street 2: `[[800, 30], [9050, 44]]`. Street 3: `[[6150, 44], [9300, 30]]`. The level test checks every width is 30 or 44 and every spacing rule above.
+
+**Words.** Hint (street 2, x 650): "Thorny weeds! Jump right over them." (35 characters). Toast the first time weeds dry up in a play: "The weeds dried up! Safe to cross." (34 characters).
+
+**Tasks.**
+- art: the gutter, the weeds and the dried weeds (our own; no motion at all), the steam puff, "fsss" in src/engine/sound.ts.
+- gamedev: `gutters` in src/game/level.ts; weed boxes in src/game/run.ts (a touch costs a life or the suit; amala tramples them; dried weeds stay dried after a lost life); fufu meets weeds in src/game/fufu.ts; goats turn back at a gutter; the street changes; hint and toast in src/screens/words.ts; level tests.
+- qa done checks: 1. Nothing about the weeds moves, ever; side by side with a piranha plant by eye: nothing alike. 2. A walking hold clears a long gutter; a walking tap touches a short one. 3. One fufu ball clears a gutter, and it stays safe after a lost life. 4. Streets 2 and 3 still cleared by a first-timer in 3 tries or fewer.
+
+### Street totals after S2.16 (S2.14 and S2.15 counted)
+
+| | Street 2 | Street 3 |
+|---|---|---|
+| Hazards | 9 (S2.14's 11, minus the tyre at 6550 and the goat at 9100) | 16 (S2.14's 14, plus 3 birds, minus the goat at 9300) |
+| Gutters | 2 | 2 |
+| Dash gaps | 1 (in place of S2.14's wide pothole at 6750) | 1 (in place of the wide pothole at 10900) |
+| Loose kobo | +12 on S2.14 (trail 6, arc 8, gutters 4, minus S2.14's arc 6) | +6 (arc 8 minus 6, gutters 4) |
+| Hints | 4 + 3 = 7 | 2 + 2 = 4 |
+
+If first-timers need more than 3 tries on street 3, take back in this order (before S2.14's list): the crow at 8960; the egret at 10050; the short gutter at 9300.

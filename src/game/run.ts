@@ -7,9 +7,10 @@
  */
 import { bounce, createBody, createWalker, groundAt, halt, press, release, steer, step, type Body, type Gait, type Terrain } from '../engine/physics';
 import { BossFight, throwBox, type BossEvent } from './boss';
-import { freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
+import { CRATE_RULES, freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
-import type { FoodKind, HazardKind, Level, WellData } from './level';
+import { ballsOut, FUFU_RULES, stepBall, tossBall, type BallWorld, type FufuBall } from './fufu';
+import type { FoodKind, HazardKind, Level, ThrowKind, WellData } from './level';
 import { pitKind, pitsOf, BIG_PIT, type Pit, type PitKind } from './pits';
 import { GENTLE_HINTS } from '../screens/words';
 import { freshRoom, roomWalls, WELL_RULES, type RoomData, type RoomPlay } from './well';
@@ -83,7 +84,8 @@ export const HAZARD_BOX: Record<HazardKind, { halfW: number; h: number }> = {
   drum: { halfW: 13, h: 30 },
 };
 
-export type HazardMode = 'wait' | 'move' | 'runAway' | 'falling' | 'gone';
+/** eat: a goat chewing a fufu ball (S2.15); knocked: a tyre or drum tipping off the road. */
+export type HazardMode = 'wait' | 'move' | 'runAway' | 'falling' | 'eat' | 'knocked' | 'gone';
 
 export interface HazardState {
   readonly kind: HazardKind;
@@ -98,6 +100,8 @@ export interface HazardState {
   t: number;
   /** Tyre roll angle. */
   rot: number;
+  /** The way a goat faces while it eats (towards the ball). */
+  face: 1 | -1;
 }
 
 export interface CoinState {
@@ -142,6 +146,25 @@ export type RunEvent =
   | { type: 'parcel'; x: number; y: number }
   | { type: 'wellUp' }
   | { type: 'wellBack'; x: number }
+  /** S2.15 pepper fufu: a ball tossed, its plop or hop, its roll, its settle. */
+  | { type: 'fufuToss'; x: number; y: number }
+  | { type: 'fufuPlop'; hop: boolean; x: number; y: number }
+  | { type: 'fufuRoll'; x: number }
+  | { type: 'fufuSettle'; x: number; y: number }
+  /** A pothole plugged (first: the first in this play of the street). */
+  | { type: 'fufuPlug'; x: number; a: number; b: number; first: boolean }
+  /** A ball dropped into a big pit: too deep. */
+  | { type: 'fufuFarPlop'; x: number }
+  /** A tyre or drum knocked off the road (+1 kobo). */
+  | { type: 'fufuKnock'; kind: HazardKind; x: number; y: number }
+  /** A goat stops to eat a ball; then says "meeh" and trots off. */
+  | { type: 'goatEat'; x: number; y: number }
+  | { type: 'goatMeeh'; x: number; y: number }
+  /** Hall: a throw popped into dust; the jam went "pfft" (pushed: its next throw was put back). */
+  | { type: 'fufuPop'; kind: ThrowKind; x: number; y: number }
+  | { type: 'fufuJam'; pushed: boolean }
+  /** Hall: the fufu bowl drops onto the floor (once per try). */
+  | { type: 'fufuBowl'; x: number; y: number }
   | CrateEvent
   | BossEvent;
 
@@ -209,8 +232,20 @@ export class Run {
   readonly crates: CrateState[];
   /** The fight (halls only). */
   boss: BossFight | null = null;
-  /** The level's road and roofs, plus the boss's light platforms (solid all fight long). */
-  readonly terrain: Terrain;
+  /**
+   * The level's road and roofs, plus the boss's light platforms (solid all fight long). Its own
+   * copy: a pothole plugged with fufu becomes road here for the rest of this play (S2.15).
+   */
+  terrain: Terrain;
+  /** S2.15: pepper fufu balls held (0 to 16), and the balls thrown that are still about. */
+  fufu = 0;
+  balls: FufuBall[] = [];
+  /** Potholes plugged in this play (they stay plugged after a lost life). */
+  readonly plugged: Pit[] = [];
+  /** Step of the last throw (the throw pose and the 0.25 s limit). */
+  throwStep = -Infinity;
+  /** The hall's fufu bowl has dropped in this try. */
+  private bowlDropped = false;
   /** Hints already shown in this play of the level (not again after a fall). */
   private readonly hintsShown = new Set<number>();
   /**
@@ -273,7 +308,7 @@ export class Run {
     this.maxLives = this.gentle ? RULES.gentleLives : RULES.lives;
     this.lives = this.maxLives;
     this.spawnX = level.spawnX;
-    this.terrain = level.boss ? { ...level.terrain, platforms: [...level.terrain.platforms, ...level.boss.lights] } : level.terrain;
+    this.terrain = { ...level.terrain, ground: [...level.terrain.ground], platforms: [...level.terrain.platforms, ...(level.boss?.lights ?? [])] };
     this.hero = this.newHero(level.spawnX);
     this.coins = level.coins.map((c) => ({ ...c, taken: false }));
     this.foods = level.foods.map((f) => ({ ...f, taken: false }));
@@ -391,6 +426,7 @@ export class Run {
       this.hopFrom = h.x;
       steer(h, 0);
       release(h);
+      this.balls = []; // gone at the bus
       ev.push({ type: 'busBoard' });
       return ev;
     }
@@ -414,6 +450,7 @@ export class Run {
 
     this.pickUps(ev);
     this.moveHazards(dt, ev);
+    this.stepBalls(dt, ev);
     this.touchHazards(ev);
     if (this.safe > 0) this.safe--;
     return ev;
@@ -454,6 +491,7 @@ export class Run {
     this.wellFromX = h.x;
     this.wellSteps = 0;
     this.phase = 'wellDown';
+    this.balls = [];
     this.lockHero(h);
     this.pending.push({ type: 'wellDown', x: w.x });
     return true;
@@ -693,11 +731,23 @@ export class Run {
         ev.push(...hit);
       }
     }
-    ev.push(...boss.step(dt));
+    const bossEv = boss.step(dt);
+    ev.push(...bossEv);
     if (boss.defeated) {
+      this.balls = [];
       if (ev.some((e) => e.type === 'win')) this.phase = 'won';
       return ev;
     }
+    // S2.15: the fufu bowl drops onto the floor when the break after its hit ends (once per try).
+    const f = this.level.boss?.fufu;
+    if (f && !this.bowlDropped && bossEv.some((e) => e.type === 'bossPhase' && e.phase === f.afterHit)) {
+      this.bowlDropped = true;
+      const food: FoodState = { x: f.x, y: this.level.groundY - 28, kind: 'fufu', taken: false };
+      this.foods.push(food);
+      ev.push({ type: 'fufuBowl', x: food.x, y: food.y });
+    }
+    this.pickFoods(ev);
+    this.stepBalls(dt, ev);
     this.touchThrows(boss, ev);
     if (this.safe > 0) this.safe--;
     return ev;
@@ -759,6 +809,12 @@ export class Run {
         ev.push({ type: 'kobo', x: c.x, y: c.y });
       }
     }
+    this.pickFoods(ev);
+  }
+
+  /** Foods on the road (and out of crates) the hero touches. */
+  private pickFoods(ev: RunEvent[]): void {
+    const box = this.heroBox();
     const crateFoods = this.crates.flatMap((c) => (c.food ? [c.food] : []));
     for (const f of [...this.foods, ...crateFoods]) {
       if (f.taken || f.x + 14 < box.l || f.x - 14 > box.r) continue;
@@ -766,14 +822,111 @@ export class Run {
         f.taken = true;
         if (f.kind === 'corn') this.power.corn = RULES.cornSteps;
         else if (f.kind === 'amala') this.power.amala = RULES.amalaSteps;
+        else if (f.kind === 'fufu') this.fufu = Math.min(FUFU_RULES.max, this.fufu + FUFU_RULES.give);
         else this.power.shield = true; // a second garri while shielded gives nothing extra
         ev.push({ type: 'food', kind: f.kind, x: f.x, y: f.y });
       }
     }
   }
 
+  // ---------- Pepper fufu (S2.15) ----------
+
+  /** Throw can be pressed now: balls held, in play, not dusting off. */
+  get canThrow(): boolean {
+    if (this.fufu <= 0 || this.dustOff > 0) return false;
+    return this.phase === 'run' || (this.phase === 'arena' && !this.boss?.defeated);
+  }
+
+  /**
+   * Throw (button or X): one ball the way the hero faces. Nothing with no balls, within 0.25 s of
+   * the last throw, or with 3 balls already out. Returns true when a ball was thrown.
+   */
+  throwFufu(): boolean {
+    if (!this.canThrow) return false;
+    if (this.steps - this.throwStep < FUFU_RULES.coolSteps) return false;
+    if (ballsOut(this.balls) >= FUFU_RULES.maxOut) return false;
+    const b = tossBall(this.hero);
+    this.balls.push(b);
+    this.fufu--;
+    this.throwStep = this.steps;
+    this.pending.push({ type: 'fufuToss', x: b.x, y: b.y });
+    return true;
+  }
+
+  /** Seconds since the last throw (the throw pose). */
+  get throwAge(): number {
+    return (this.steps - this.throwStep) / STEPS_PER_SECOND;
+  }
+
+  /** Moves every ball one step and does what they meet (S2.15 "What a ball does"). */
+  private stepBalls(dt: number, ev: RunEvent[]): void {
+    if (this.balls.length === 0) return;
+    const boss = this.boss;
+    const hall = this.level.hall;
+    const end = this.level.end;
+    const throws = boss ? boss.throws.map((t) => ({ box: throwBox(t), t })) : [];
+    const world: BallWorld = {
+      terrain: this.terrain,
+      groundY: this.level.groundY,
+      pits: pitsOf(this.level.ground).filter((p) => !this.plugged.some((q) => q.a === p.a)),
+      hazards: this.hazards,
+      hazardBox: HAZARD_BOX,
+      crates: this.crates.map((c) => ({ l: c.x - CRATE_RULES.halfW, r: c.x + CRATE_RULES.halfW, t: c.bottomY - CRATE_RULES.h, b: c.bottomY })),
+      throws,
+      jamX: boss ? boss.data.throwX : null,
+      left: hall ? (boss?.data.drainX ?? 0) : Math.max(this.viewLeft - FUFU_RULES.offScreen, this.level.startWall),
+      right: hall ? Infinity : Math.min(this.viewRight + FUFU_RULES.offScreen, end ? end.x : Infinity),
+      heroX: this.hero.x,
+    };
+    for (const b of this.balls) {
+      for (const e of stepBall(b, world, dt)) {
+        switch (e.type) {
+          case 'fufuPlug': {
+            const { a, b: pb } = e.pit;
+            this.plugged.push(e.pit);
+            this.terrain = { ...this.terrain, ground: [...this.terrain.ground, { x0: a, x1: pb }] };
+            world.terrain = this.terrain;
+            world.pits = world.pits.filter((p) => p.a !== a);
+            ev.push({ type: 'fufuPlug', x: e.x, a, b: pb, first: this.plugged.length === 1 });
+            break;
+          }
+          case 'fufuKnock': {
+            const z = e.target as HazardState;
+            z.mode = 'knocked';
+            z.t = 0;
+            this.kobo += FUFU_RULES.knockKobo;
+            ev.push({ type: 'fufuKnock', kind: z.kind, x: z.x, y: z.y });
+            break;
+          }
+          case 'fufuGoat': {
+            const z = e.target as HazardState;
+            z.mode = 'eat';
+            z.t = 0;
+            z.face = e.x > z.x ? 1 : -1;
+            ev.push({ type: 'goatEat', x: z.x, y: z.y });
+            break;
+          }
+          case 'fufuPop': {
+            const t = throws[e.index]!.t;
+            boss!.remove(t);
+            const y = t.kind === 'tyre' ? t.y - 11 : t.y;
+            ev.push({ type: 'dust', x: t.x, y }, { type: 'fufuPop', kind: t.kind, x: t.x, y });
+            break;
+          }
+          case 'fufuJam':
+            ev.push({ type: 'fufuJam', pushed: boss!.pushJam() });
+            break;
+          default:
+            ev.push(e);
+        }
+      }
+    }
+    this.balls = this.balls.filter((b) => b.mode !== 'gone');
+  }
+
   private moveHazards(dt: number, ev: RunEvent[]): void {
-    const { terrain, hazardSpeeds, groundY } = this.level;
+    const { hazardSpeeds, groundY } = this.level;
+    const terrain = this.terrain; // plugged potholes are road (S2.15)
     const heroX = this.hero.x;
     // Player-moved: the road the camera shows ahead of the hero right now (S2.2).
     const ahead = this.hero.manual ? this.viewRight - heroX : this.viewAhead;
@@ -816,6 +969,17 @@ export class Run {
         case 'runAway':
           z.x += RULES.goatRunAwaySpeed * dt;
           if (++z.t > RULES.goatRunAwaySteps) z.mode = 'gone';
+          break;
+        case 'eat':
+          // S2.15: chews the fufu ball, says "meeh", then trots off as built (never hurt).
+          if (++z.t >= FUFU_RULES.eatSteps) {
+            z.mode = 'runAway';
+            z.t = 0;
+            ev.push({ type: 'goatMeeh', x: z.x, y: z.y });
+          }
+          break;
+        case 'knocked':
+          if (++z.t >= FUFU_RULES.knockSteps) z.mode = 'gone';
           break;
         case 'gone':
           break;
@@ -867,6 +1031,7 @@ export class Run {
     }
     this.lives--;
     this.safe = RULES.hurtSafeSteps;
+    this.fufu = 0; // S2.15: a lost life takes every ball held
     ev.push({ type: 'hit' });
     if (this.lives <= 0) this.gameOver(ev);
   }
@@ -877,6 +1042,8 @@ export class Run {
     // Food effects end on every fall, the last one too (so the HUD never shows a food at 0 lives).
     this.power = { corn: 0, amala: 0, shield: false };
     this.safe = 0;
+    this.fufu = 0;
+    this.balls = [];
     if (this.lives <= 0) {
       this.gameOver(ev);
       return;
@@ -909,6 +1076,7 @@ export class Run {
     let best: Pit | null = null;
     let bestD = Infinity;
     for (const p of pitsOf(this.level.ground)) {
+      if (this.plugged.some((q) => q.a === p.a)) continue; // a plugged pothole is road
       const d = x < p.a ? p.a - x : x > p.b ? x - p.b : 0;
       if (d < bestD) [best, bestD] = [p, d];
     }
@@ -919,13 +1087,14 @@ export class Run {
     this.lives = 0;
     // Food effects end on every game over, a hit or a fall (the HUD never shows a food at 0 lives).
     this.power = { corn: 0, amala: 0, shield: false };
+    this.fufu = 0;
     this.phase = 'over';
     ev.push({ type: 'gameOver' });
   }
 }
 
 function freshHazard(kind: HazardKind, x: number, groundY: number): HazardState {
-  return { kind, x0: x, x, y: groundY, vx: 0, mode: 'wait', t: 0, rot: 0 };
+  return { kind, x0: x, x, y: groundY, vx: 0, mode: 'wait', t: 0, rot: 0, face: -1 };
 }
 
 /**

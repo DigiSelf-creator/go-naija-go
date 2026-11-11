@@ -140,14 +140,14 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
     requestAnimationFrame(look);
   });
 
-  // The hall as it opens (S2.7 t = 0): inside by the left door, the left light lit, the boss words.
+  // The hall as it opens (S2.7 t = 0, S2.14): inside by the left door, no light lit yet, the boss words.
   const s0 = await hallSnap(page);
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
   expect(s0.r.phase).toBe('arena');
-  expect(s0.b).toMatchObject({ hits: 0, lit: 0, defeated: false });
+  expect(s0.b).toMatchObject({ hits: 0, lit: -1, defeated: false });
   expect(s0.h.x).toBeLessThan(60);
   expect(s0.r.power.shield).toBe(false);
-  await expect(page.getByText('General Go-Slow is jamming the hall! Jump onto the green light.')).toBeVisible();
+  await expect(page.getByText('General Go-Slow is jamming the hall! Wait for the green light.')).toBeVisible();
   // The phone buttons show: the player moves the hero here.
   expect(await page.evaluate(() => window.__game!.input.buttons)).toBe(true);
 
@@ -160,7 +160,8 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
 
   const seen = await toasts(page);
   for (const words of [
-    'General Go-Slow is jamming the hall! Jump onto the green light.',
+    'General Go-Slow is jamming the hall! Wait for the green light.',
+    'Green light! Jump on it!',
     'Green light! 2 more.',
     'Green light! 1 more.',
     'PEEP! High honks fly high. Stay low on the floor.',
@@ -203,7 +204,7 @@ test('Win screen buttons: Play again starts the hall fresh, after a short tap lo
   await expect(won).toBeHidden();
   const s = await hallSnap(page);
   expect(s.r).toMatchObject({ phase: 'arena', lives: 5, kobo: 0 });
-  expect(s.b).toMatchObject({ hits: 0, lit: 0, defeated: false });
+  expect(s.b).toMatchObject({ hits: 0, lit: -1, defeated: false });
   expect(s.h.x).toBeLessThan(60);
 });
 
@@ -227,7 +228,7 @@ test('street 3 by keys, then Go to Go-Slow Hall by keys, the hall fight by keys 
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
   const s0 = await hallSnap(page);
   expect(s0.r).toMatchObject({ phase: 'arena', kobo: 0, lives: s0.r.maxLives });
-  await expect(page.getByText('General Go-Slow is jamming the hall! Jump onto the green light.')).toBeVisible();
+  await expect(page.getByText('General Go-Slow is jamming the hall! Wait for the green light.')).toBeVisible();
 
   const { presses, log } = await playHall(page, keyPad(page));
   expect(await page.evaluate(() => window.__game!.input.lastKind)).toBe('keys');
@@ -266,7 +267,7 @@ test('street 3 by touch with the secret well parcel: the hall starts with the sh
   const s0 = await hallSnap(page);
   expect(s0.r.power.shield).toBe(true);
   await expect(page.getByText('Your garri parcel: the shield is on!')).toBeVisible();
-  await expect(page.getByText('General Go-Slow is jamming the hall! Jump onto the green light.')).toBeVisible({ timeout: 4000 });
+  await expect(page.getByText('General Go-Slow is jamming the hall! Wait for the green light.')).toBeVisible({ timeout: 4000 });
   await page.screenshot({ path: join(SHOTS, 'm2-parcel-shield-start.png') });
 
   // Stand in the way of the tyres: the shield takes the first, then every life goes.
@@ -290,7 +291,7 @@ test('street 3 by touch with the secret well parcel: the hall starts with the sh
   const again = await hallSnap(page);
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('lagos-hall');
   expect(again.r).toMatchObject({ phase: 'arena', lives: again.r.maxLives, kobo: 0, power: { shield: true } });
-  expect(again.b).toMatchObject({ hits: 0, lit: 0, defeated: false });
+  expect(again.b).toMatchObject({ hits: 0, lit: -1, defeated: false });
   expect(again.h.x).toBeLessThan(60);
   // ...and it plays: a jump by touch.
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
