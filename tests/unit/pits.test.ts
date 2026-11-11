@@ -14,10 +14,10 @@ import { parseRoom } from '../../src/game/well';
 const STREETS = [lagos1, lagos2, lagos3].map((raw) => parseLevel(structuredClone(raw)));
 
 describe('S2.13 part 4: pothole warning signs', () => {
-  it('stand at the nine places S2.13 lists, plus the four new wide potholes of S2.14 (9030; 6630, 9180; 6430)', () => {
+  it('stand at the nine places S2.13 lists, plus the four new wide potholes of S2.14 (9030; 9180; 6430) and the dash gaps of S2.16 (6580; 10780)', () => {
     expect(STREETS.map((L) => potholeSigns(L))).toEqual([
       [3880, 4930, 9030],
-      [3480, 5680, 6630, 9180, 10180],
+      [3480, 5680, 6580, 9180, 10180],
       [2580, 5180, 6430, 6880, 10780],
     ]);
   });
@@ -50,5 +50,7 @@ describe('S2.13 part 4: pothole warning signs', () => {
     expect(pitKind({ a: 0, b: 90, w: 90 })).toBe('wide');
     expect(pitKind({ a: 0, b: 110, w: 110 })).toBe('wide');
     expect(pitKind({ a: 0, b: 170, w: 170 })).toBe('big');
+    expect(pitKind({ a: 0, b: 180, w: 180 })).toBe('big');
+    expect(pitKind({ a: 0, b: 260, w: 260 })).toBe('dash');
   });
 });

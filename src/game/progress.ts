@@ -30,6 +30,11 @@
 import type { Store } from '../storage';
 
 export const KEY_PROGRESS = 'progress';
+/**
+ * S2.16 B4: `"dash": true` in gidi-progress once street 2's dash hint is reached (the dash works
+ * from then on). Saved at once by savePart, merged like every other part.
+ */
+export const KEY_DASH = 'dash';
 export const PROGRESS_VERSION = 2;
 
 /** Version 1 has one state with three streets and a hall (S2.6, Q16). */

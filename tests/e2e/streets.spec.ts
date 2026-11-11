@@ -197,7 +197,7 @@ test('street 3, Ikeja, by hand: back to the secret well, then start to bus with 
   expect(last.r.phase).toBe('bus');
   expect(last.r.checkpoint).toBe(true);
   expect(drumShot).toBe(true);
-  expect(crates.opened).toEqual([700, 850, 1100, 4900, 7500, 8400]);
+  expect(crates.opened).toEqual([700, 850, 1100, 4900, 7600, 8400]);
   expect(crates.foods).toEqual(['garri', 'corn']);
   // Both big pits crossed by run-up jumps.
   expect(stats.bigPitJumps.filter((j) => j.speed >= 156).length).toBeGreaterThanOrEqual(2);

@@ -249,6 +249,10 @@ export const WORDS = {
     fufu: 'Pepper fufu! Press {throw} to throw.',
     fufuHall: 'Fufu! Press {throw} to pop throws.',
     plugged: 'Plugged! Fufu fills potholes.',
+    /** S2.16 B5: the first time weeds dry up in a play. */
+    weedsDried: 'The weeds dried up! Safe to cross.',
+    /** S2.16 B4: the first double tap while resting, once per play. */
+    dashTired: 'Catch your breath! Dash again soon.',
   },
   /** S2.9 corn count: what screen readers hear (once at 5, and at 0). */
   corn: {
@@ -260,6 +264,8 @@ export const WORDS = {
     small: 'Up you come! Try that jump again.',
     wide: 'Up you come! Jump, then jump again.',
     big: 'Up you come! Run, then jump twice.',
+    /** S2.16 B4: with the Gentle blocks a dash gap is two wide potholes (each half is one). */
+    dash: 'Up you come! Jump, then jump again.',
   },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
   well: {
@@ -276,6 +282,9 @@ export const WORDS = {
  */
 export const GENTLE_HINTS: Readonly<Record<string, string>> = {
   'Bus stop! Now you start here.': 'Bus stop! Halfway there.',
+  /** S2.16 B4: Gentle mode never needs the dash (cement blocks stand in every dash gap). */
+  'Dash, then jump twice!': 'Dash, or hop over the blocks.',
+  'Dash gap! Dash, then jump twice.': 'Dash, or hop over the blocks.',
 };
 
 /** S2.2 hint bar: a toast longer than this shows its short words on a narrow bar. */

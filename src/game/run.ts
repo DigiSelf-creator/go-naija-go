@@ -5,13 +5,13 @@
  * restart point come back, and kobo already taken stay counted and do not come back.
  * Q15 (provisional): the number of lives is fixed when the run starts.
  */
-import { bounce, createBody, createWalker, groundAt, halt, press, release, steer, step, type Body, type Gait, type Terrain } from '../engine/physics';
+import { bounce, createBody, createWalker, endDash, groundAt, halt, press, release, resting, startDash, steer, step, type Body, type Gait, type Terrain } from '../engine/physics';
 import { BossFight, throwBox, type BossEvent } from './boss';
 import { CRATE_RULES, freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import { ballsOut, FUFU_RULES, stepBall, tossBall, type BallWorld, type FufuBall } from './fufu';
-import type { FoodKind, HazardKind, Level, ThrowKind, WellData } from './level';
-import { pitKind, pitsOf, BIG_PIT, type Pit, type PitKind } from './pits';
+import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type ThrowKind, type WellData } from './level';
+import { pitKind, pitsOf, withBlocks, BIG_PIT, type Pit, type PitKind } from './pits';
 import { GENTLE_HINTS } from '../screens/words';
 import { freshRoom, roomWalls, WELL_RULES, type RoomData, type RoomPlay } from './well';
 import { wellDownAt, wellUpAt } from '../art/well';
@@ -75,6 +75,21 @@ export const RULES = {
   climbRoad: 20,
   climbSafeSteps: secs(1.7),
   dustOffSteps: secs(0.4),
+  /** S2.16 B1 birds: a bounce off one is smaller than off a goat (the second jump stays). */
+  birdBounceVy: -360,
+  /** Bouncing on a bird pops this many kobo out of the pile. */
+  birdKobo: 2,
+  /** Flying off: up and to the right at 45 degrees, this fast, gone after this long. */
+  birdFlySpeed: 200,
+  birdFlySteps: secs(1.2),
+  /** The egret paces this far either side of where it stands, and turns back this far from a pit lip. */
+  egretPatch: 20,
+  egretPitGap: 30,
+  /** It pecks this long at each end of its patch. */
+  egretPeckSteps: secs(0.8),
+  /** S2.16 B5: the weeds are 18 u tall; a fufu ball dries them in 0.5 s (safe from the first touch). */
+  weedH: 18,
+  weedDrySteps: secs(0.5),
 } as const;
 
 /** Size of each hazard's box (half width, height), feet on the road. */
@@ -82,10 +97,16 @@ export const HAZARD_BOX: Record<HazardKind, { halfW: number; h: number }> = {
   goat: { halfW: 16, h: 26 },
   tyre: { halfW: 10, h: 22 },
   drum: { halfW: 13, h: 30 },
+  /** S2.16 B1: the egret stands on the road; the crow's box bottom is 20 u above it (HazardState y). */
+  egret: { halfW: 8, h: 28 },
+  crow: { halfW: 11, h: 14 },
 };
 
+/** S2.16 B1: the crow's box bottom is this far above the road. */
+export const CROW_ABOVE = 20;
+
 /** eat: a goat chewing a fufu ball (S2.15); knocked: a tyre or drum tipping off the road. */
-export type HazardMode = 'wait' | 'move' | 'runAway' | 'falling' | 'eat' | 'knocked' | 'gone';
+export type HazardMode = 'wait' | 'move' | 'runAway' | 'falling' | 'eat' | 'knocked' | 'flyOff' | 'gone';
 
 export interface HazardState {
   readonly kind: HazardKind;
@@ -102,7 +123,21 @@ export interface HazardState {
   rot: number;
   /** The way a goat faces while it eats (towards the ball). */
   face: 1 | -1;
+  /** S2.16 B1: a bird flying off with a fufu ball. */
+  fufu: boolean;
 }
+
+/** S2.16 B5: an open gutter and the state of its weeds in this play. */
+export interface GutterState {
+  readonly x: number;
+  readonly w: number;
+  /** 'weeds' hurt; 'drying' (a fufu ball, t steps ago) and 'dry' or 'trampled' (amala) are safe. */
+  state: 'weeds' | 'drying' | 'dry' | 'trampled';
+  t: number;
+}
+
+/** How a bird came to fly off (S2.16 B1). */
+export type BirdWhy = 'stomp' | 'fufu' | 'suit' | 'amala' | 'touch';
 
 export interface CoinState {
   readonly x: number;
@@ -165,6 +200,18 @@ export type RunEvent =
   | { type: 'fufuJam'; pushed: boolean }
   /** Hall: the fufu bowl drops onto the floor (once per try). */
   | { type: 'fufuBowl'; x: number; y: number }
+  /** S2.16 B1: a bird flies off (never hurt); a stomp pops kobo out of the pile. */
+  | { type: 'birdOff'; kind: BirdKind; why: BirdWhy; x: number; y: number }
+  | { type: 'pileKobo'; x: number; y: number }
+  /** S2.16 B5: weeds dried by a fufu ball (first: the first in this play), or trampled by amala. */
+  | { type: 'weedsDry'; x: number; first: boolean }
+  | { type: 'weedsTrample'; x: number }
+  /** S2.16 B4: the dash is turned on (save it), starts, ends, is ready again; a double tap while resting. */
+  | { type: 'dashOn' }
+  | { type: 'dashStart'; dir: -1 | 1 }
+  | { type: 'dashEnd' }
+  | { type: 'dashReady' }
+  | { type: 'dashTired'; first: boolean }
   | CrateEvent
   | BossEvent;
 
@@ -204,6 +251,8 @@ export interface RunOptions {
    * rule 5, S2.7). Until N2 saves the parcel, the game passes the parcel carried off the bus.
    */
   parcel?: boolean;
+  /** S2.16 B4: the dash is already turned on (saved after street 2's dash hint). */
+  dash?: boolean;
 }
 
 export class Run {
@@ -246,6 +295,12 @@ export class Run {
   throwStep = -Infinity;
   /** The hall's fufu bowl has dropped in this try. */
   private bowlDropped = false;
+  /** S2.16 B5: the gutters and their weeds in this play (dried or trampled weeds stay so after a lost life). */
+  readonly gutters: GutterState[];
+  /** S2.16 B4: a double tap and hold dashes (on from street 2's dash hint, saved). */
+  dashOn: boolean;
+  /** The "catch your breath" words showed in this play. */
+  private tiredShown = false;
   /** Hints already shown in this play of the level (not again after a fall). */
   private readonly hintsShown = new Set<number>();
   /**
@@ -309,6 +364,10 @@ export class Run {
     this.lives = this.maxLives;
     this.spawnX = level.spawnX;
     this.terrain = { ...level.terrain, ground: [...level.terrain.ground], platforms: [...level.terrain.platforms, ...(level.boss?.lights ?? [])] };
+    // S2.16 B4 Gentle mode: cement blocks in every dash gap make it two 100 u potholes.
+    if (this.gentle && !level.hall) this.terrain.ground = withBlocks(level.ground).map(([x0, x1]) => ({ x0, x1 }));
+    this.gutters = level.gutters.map((q) => ({ x: q.x, w: q.w, state: 'weeds', t: 0 }));
+    this.dashOn = opts.dash ?? false;
     this.hero = this.newHero(level.spawnX);
     this.coins = level.coins.map((c) => ({ ...c, taken: false }));
     this.foods = level.foods.map((f) => ({ ...f, taken: false }));
@@ -378,6 +437,35 @@ export class Run {
     steer(this.hero, free ? move : 0);
   }
 
+  /**
+   * S2.16 B4: a double tap of a direction, still held. Dashes on a street (not the hall or a well
+   * room) once the dash is on, on the ground or within coyote time, not on corn, not resting, not
+   * while the controls are locked. Returns true when a dash started.
+   */
+  dash(dir: -1 | 1): boolean {
+    const h = this.hero;
+    if (!this.dashOn || this.phase !== 'run' || this.inHall || !h.manual || this.dustOff > 0) return false;
+    if (this.power.corn > 0 || h.move !== dir) return false;
+    if (resting(h)) {
+      this.pending.push({ type: 'dashTired', first: !this.tiredShown });
+      this.tiredShown = true;
+      return false;
+    }
+    if (!startDash(h, dir)) return false;
+    this.pending.push({ type: 'dashStart', dir });
+    return true;
+  }
+
+  /** Dashing now (S2.16 B4). */
+  get dashing(): boolean {
+    return this.hero.dash > 0;
+  }
+
+  /** Catching breath after a dash. */
+  get resting(): boolean {
+    return resting(this.hero);
+  }
+
   /** The direction held (player-moved streets). */
   get move(): -1 | 0 | 1 {
     return this.hero.move;
@@ -406,12 +494,23 @@ export class Run {
     if (h.manual) h.gait = this.gait();
     else h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
 
+    if (h.dash > 0 && this.power.corn > 0) endDash(h); // corn is faster already
+    const dash0 = h.dash > 0;
+    const rest0 = resting(h);
     step(h, this.terrain, dt);
     if (h.fallen) {
       this.fall(ev);
       return ev;
     }
     if (h.manual) this.walls();
+    if (dash0 && h.dash === 0) ev.push({ type: 'dashEnd' });
+    if (rest0 && !resting(h)) ev.push({ type: 'dashReady' });
+    // S2.16 B4: reaching street 2's dash hint turns the dash on (the game saves it).
+    const from = this.level.dashFrom;
+    if (!this.dashOn && from !== null && h.x >= from) {
+      this.dashOn = true;
+      ev.push({ type: 'dashOn' });
+    }
     if (this.crates.length > 0) {
       const out = stepCrates(this.crates, { hero: h, heroBox: this.heroBox(), heroH: RULES.heroH, amala: this.power.amala > 0, steps: this.steps, dt });
       this.kobo += out.kobo;
@@ -452,6 +551,7 @@ export class Run {
     this.moveHazards(dt, ev);
     this.stepBalls(dt, ev);
     this.touchHazards(ev);
+    this.touchWeeds(ev);
     if (this.safe > 0) this.safe--;
     return ev;
   }
@@ -877,6 +977,7 @@ export class Run {
       left: hall ? (boss?.data.drainX ?? 0) : Math.max(this.viewLeft - FUFU_RULES.offScreen, this.level.startWall),
       right: hall ? Infinity : Math.min(this.viewRight + FUFU_RULES.offScreen, end ? end.x : Infinity),
       heroX: this.hero.x,
+      weeds: this.gutters.flatMap((q, i) => (q.state === 'weeds' ? [{ i, x: q.x, w: q.w }] : [])),
     };
     for (const b of this.balls) {
       for (const e of stepBall(b, world, dt)) {
@@ -904,6 +1005,21 @@ export class Run {
             z.t = 0;
             z.face = e.x > z.x ? 1 : -1;
             ev.push({ type: 'goatEat', x: z.x, y: z.y });
+            break;
+          }
+          case 'fufuBird': {
+            const z = e.target as HazardState;
+            z.fufu = true;
+            this.flyOff(z, 'fufu', ev);
+            break;
+          }
+          case 'fufuWeeds': {
+            const q = this.gutters[e.i]!;
+            q.state = 'drying';
+            q.t = 0;
+            world.weeds = world.weeds!.filter((w) => w.i !== e.i);
+            const first = !this.gutters.some((o) => o !== q && (o.state === 'drying' || o.state === 'dry'));
+            ev.push({ type: 'weedsDry', x: e.x, first });
             break;
           }
           case 'fufuPop': {
@@ -943,7 +1059,8 @@ export class Run {
         case 'wait':
           if (z.x - heroX <= wakeDistance) {
             z.mode = 'move';
-            z.vx = -hazardSpeeds[z.kind]; // towards the hero
+            z.vx = -speedOf(hazardSpeeds, z.kind); // towards the hero (an egret pecks first)
+            if (z.kind === 'egret') z.t = RULES.egretPeckSteps;
             ev.push({ type: 'wake', kind: z.kind, x: z.x }); // the drum's "dum" (K1)
           }
           break;
@@ -952,8 +1069,13 @@ export class Run {
           if (z.kind === 'goat') {
             // Goats turn back at pothole edges (they never fall in).
             const front = nx + Math.sign(z.vx) * HAZARD_BOX.goat.halfW;
-            if (!groundAt(terrain, front)) z.vx = -z.vx;
+            // S2.16 B5: they turn back at a gutter's edge too.
+            if (!groundAt(terrain, front) || this.gutters.some((q) => front >= q.x && front <= q.x + q.w)) z.vx = -z.vx;
             else z.x = nx;
+          } else if (z.kind === 'egret') {
+            this.paceEgret(z, dt);
+          } else if (z.kind === 'crow') {
+            // Hovers in place over the pile: the box never moves.
           } else {
             z.x = nx;
             z.rot += (z.vx * dt) / 11;
@@ -981,6 +1103,14 @@ export class Run {
         case 'knocked':
           if (++z.t >= FUFU_RULES.knockSteps) z.mode = 'gone';
           break;
+        case 'flyOff': {
+          // Up and to the right at 45 degrees; it has no box now and can hurt no one.
+          const v = (RULES.birdFlySpeed * dt) / Math.SQRT2;
+          z.x += v;
+          z.y -= v;
+          if (++z.t >= RULES.birdFlySteps) z.mode = 'gone';
+          break;
+        }
         case 'gone':
           break;
       }
@@ -996,6 +1126,10 @@ export class Run {
       const top = z.y - size.h;
       if (box.r < z.x - size.halfW || box.l > z.x + size.halfW || box.b < top || box.t > z.y) continue;
 
+      if (isBird(z.kind)) {
+        this.touchBird(z, top, ev);
+        continue;
+      }
       if (h.vy > 0 && h.prevY <= top + RULES.stompSlack) {
         // Landed on it: bounce. The goat runs off unhurt; the tyre is knocked away.
         bounce(h);
@@ -1009,6 +1143,72 @@ export class Run {
       } else {
         this.hurt(ev);
       }
+    }
+  }
+
+  /**
+   * S2.16 B1: a bird met. Landed on: a small bounce and 2 kobo from the pile. The tech suit or
+   * amala: it gets a fright (no hit; birds never break the suit). Else a life is lost, like a
+   * goat. Every way, it flies off, fine.
+   */
+  private touchBird(z: HazardState, top: number, ev: RunEvent[]): void {
+    const h = this.hero;
+    if (h.vy > 0 && h.prevY <= top + RULES.stompSlack) {
+      bounce(h);
+      h.vy = RULES.birdBounceVy;
+      h.y = Math.min(h.y, top);
+      this.kobo += RULES.birdKobo;
+      const pile = this.level.piles.find((x) => Math.abs(x - z.x0) <= 60) ?? z.x0;
+      this.flyOff(z, 'stomp', ev);
+      ev.push({ type: 'pileKobo', x: pile, y: this.level.groundY });
+    } else if (this.power.shield) {
+      this.flyOff(z, 'suit', ev);
+    } else if (this.power.amala > 0) {
+      this.flyOff(z, 'amala', ev);
+    } else {
+      this.flyOff(z, 'touch', ev);
+      this.hurt(ev);
+    }
+  }
+
+  private flyOff(z: HazardState, why: BirdWhy, ev: RunEvent[]): void {
+    z.mode = 'flyOff';
+    z.t = 0;
+    ev.push({ type: 'birdOff', kind: z.kind as BirdKind, why, x: z.x, y: z.y });
+  }
+
+  /**
+   * S2.16 B1: the egret pecks, then hops to the other end of its patch (x0 - 20 to x0 + 20) at
+   * 30 u/s, and back. One that would come within 30 u of a pit lip turns back.
+   */
+  private paceEgret(z: HazardState, dt: number): void {
+    if (z.t > 0) {
+      z.t--;
+      return;
+    }
+    const nx = z.x + z.vx * dt;
+    const P = RULES.egretPatch;
+    const reach = nx + Math.sign(z.vx) * (HAZARD_BOX.egret.halfW + RULES.egretPitGap);
+    if (nx < z.x0 - P || nx > z.x0 + P || !groundAt(this.level.terrain, reach)) {
+      z.vx = -z.vx;
+      z.t = RULES.egretPeckSteps;
+    } else z.x = nx;
+  }
+
+  /**
+   * S2.16 B5: thorny weeds touched (the hero's box in the weed box, 18 u tall). Amala tramples them
+   * flat for the rest of the play; else they cost a life, or the tech suit. Never a bounce.
+   */
+  private touchWeeds(ev: RunEvent[]): void {
+    const box = this.heroBox();
+    const top = this.level.groundY - RULES.weedH;
+    for (const q of this.gutters) {
+      if (q.state === 'drying' && ++q.t >= RULES.weedDrySteps) q.state = 'dry';
+      if (q.state !== 'weeds' || box.r <= q.x || box.l >= q.x + q.w || box.b <= top) continue;
+      if (this.power.amala > 0) {
+        q.state = 'trampled';
+        ev.push({ type: 'weedsTrample', x: q.x + q.w / 2 });
+      } else this.hurt(ev);
     }
   }
 
@@ -1032,6 +1232,7 @@ export class Run {
     this.lives--;
     this.safe = RULES.hurtSafeSteps;
     this.fufu = 0; // S2.15: a lost life takes every ball held
+    if (this.hero.dash > 0) endDash(this.hero); // S2.16 B4: a lost life ends the dash
     ev.push({ type: 'hit' });
     if (this.lives <= 0) this.gameOver(ev);
   }
@@ -1052,7 +1253,8 @@ export class Run {
     // pit (S2.13 part 5). Food effects end; foods and hazards at or past the restart point come
     // back; kobo already taken stay taken and counted.
     const pit = this.gentle && !this.inHall && this.hero.manual ? this.pitAt(this.hero.x) : null;
-    const x = pit ? climbOutX(this.level.ground, pit, this.spawnX) : this.spawnX;
+    // S2.16 B4: with the blocks, each half of a dash gap is a pothole of its own.
+    const x = pit ? climbOutX(withBlocks(this.level.ground), pit, this.spawnX) : this.spawnX;
     const { down, move } = this.hero;
     this.hero = this.newHero(x);
     this.hero.down = down;
@@ -1075,7 +1277,7 @@ export class Run {
   private pitAt(x: number): Pit | null {
     let best: Pit | null = null;
     let bestD = Infinity;
-    for (const p of pitsOf(this.level.ground)) {
+    for (const p of pitsOf(this.gentle ? withBlocks(this.level.ground) : this.level.ground)) {
       if (this.plugged.some((q) => q.a === p.a)) continue; // a plugged pothole is road
       const d = x < p.a ? p.a - x : x > p.b ? x - p.b : 0;
       if (d < bestD) [best, bestD] = [p, d];
@@ -1094,7 +1296,14 @@ export class Run {
 }
 
 function freshHazard(kind: HazardKind, x: number, groundY: number): HazardState {
-  return { kind, x0: x, x, y: groundY, vx: 0, mode: 'wait', t: 0, rot: 0, face: -1 };
+  return { kind, x0: x, x, y: kind === 'crow' ? groundY - CROW_ABOVE : groundY, vx: 0, mode: 'wait', t: 0, rot: 0, face: -1, fufu: false };
+}
+
+/** How fast a hazard moves when woken (the egret's pacing; the crow hovers). */
+function speedOf(speeds: Level['hazardSpeeds'], kind: HazardKind): number {
+  if (kind === 'egret') return speeds.egret ?? EGRET_SPEED;
+  if (kind === 'crow') return 0;
+  return speeds[kind];
 }
 
 /**
