@@ -278,10 +278,13 @@ Source: docs/questions.md top block "Tp, 10 Nov 2026 (after playing the PR #3 bu
 | S3a2 | gamedev | Intro screen (Skip, tap to go on, plays once, `gidi-intro`), Settings screen with "Watch the story" | S3a1 | city.md (a) done checks | 6 KB |
 | S3b1 | art | City blocks (12, before and after for the 3 pin spots), roads, lagoon, bridge, buses, pins, bucket icons | none: **ready now** | city.md (b); not like any game's map (part 6) | 40 KB |
 | S3b2 | gamedev | City screen: drag, pinch, + and −, double tap, pins, problem cards, counters, money words, `city` save part | S3a2, S3b1 | city.md (b) done checks; 45 fps drag at 4x CPU; idle draws nothing | 20 KB |
-| S3c1 | art | Hero getting off the bus (every body); the Potholes fix | S3b1 | city.md (c) | 12 KB |
-| S3c2 | gamedev | Coins as money, "Take it home", keep everything on a loss, pay at once, "Mission complete!" scene | S3b2, S3c1 | city.md (c) done checks | 8 KB |
-| S3d1 | art and gamedev | The Booming meter, the boom card, the cog link | S3c2 | city.md (d) | 11 KB |
-| S3e1 | art and gamedev | The challenge road (replaces the Streets screen) | S3c2 | city.md (e) | 12 KB |
+| S3c0 | designer | Walk the city note (city.md part 5W) | none | written, with exact numbers and words (done 11 Nov 2026) | |
+| S3c1 | art | Hero walking from above (front, back, side, every body) and off the bus; mat and chalk price board (three buckets, part paid, "Done ✓"); chalk outlines; Mama Put with cook and queue; market stalls empty, filling, full; danfo loading goods; tray bubbles; flying coins, bulbs, chips; chink, built, collect sounds; the Potholes fix | S3b1, S3c0 | city.md 5W W1, W2, W3, W11; nothing like the arcade game's look | 18 KB |
+| S3c2 | gamedev | Walk: walk grid and path, tap and hold to walk, arrow keys, camera follows, pin edge arrows, hero's saved place, first hint; drag no longer pans, double tap dropped | S3b2, S3c1 | city.md 5W W1, W9, W10; 45 fps walking at 4x CPU | 6 KB |
+| S3c3 | gamedev | Pay: boards, stand to pay, part pay, not-enough card, "Walk there" on cards; coins as money, "Take it home", keep everything on a loss, prize top-up; Mission complete in the walkable city | S3c2 | city.md 5W W2, W5, W8; money tests | 5 KB |
+| S3c4 | gamedev | Earn and collect: Mama Put and market, play-time filling, caps and "Full", trays saved, collecting, boom points, the two hints | S3c3 | city.md 5W W3, W4, W6, W7; nothing fills while closed; still city at most 2 small redraws a second | 3 KB |
+| S3d1 | art and gamedev | The Booming meter (points: 4 a fix or build, 1 a full collect, first boom at 20), the boom card, the cog link | S3c4 | city.md (d) and 5W W6 | 11 KB |
+| S3e1 | art and gamedev | The challenge road (replaces the Streets screen) | S3c3 | city.md (e) | 12 KB |
 | S3f0 | designer | Lane run note in docs/design.md | none | written, with exact numbers and words | |
 | S3f1 | art | Lane run pictures, sounds, tune | S3f0 | city.md (f) | 50 KB |
 | S3f2 | gamedev | Lane run engine, swipes, keys, buttons | S3f0, S3f1 | 60 fps mid phone, 45 at 4x CPU | 30 KB |
@@ -289,7 +292,7 @@ Source: docs/questions.md top block "Tp, 10 Nov 2026 (after playing the PR #3 bu
 | S3q | qa | Test each step on the phone profile, 4x CPU, offline, size, originality | each step | report per step | |
 | S3p | po | Accept each step; then "slice 3 done" (city.md part 5 goal) | S3q | note in docs/questions.md | |
 
-Suggested gamedev order (one at a time): P5, S3a2, P8, P10, S3b2, S3c2, then S3d1, S3e1, S3f2, S3f3. Art can run P6, P7, P9, S3a1, S3b1 side by side (sound tasks one at a time in src/engine/sound.ts).
+Suggested gamedev order (one at a time): P5, S3a2, P8, P10, S3b2, S3c2, S3c3, S3c4 (walk the city, 5W), then S3d1, S3e1, S3f2, S3f3. Art can run P6, P7, P9, S3a1, S3b1, S3c1 side by side (sound tasks one at a time in src/engine/sound.ts).
 
 ### B1 to B5: birds, the strong look, the tech suit, the dash, thorny gutters (design S2.16; Tp, 10 Nov)
 
