@@ -1,5 +1,15 @@
 # Open questions for the product owner
 
+## po, 11 Nov 2026: slice 3 (a) intro and (b) city home after qa
+
+qa (reported): (a) passes; (b) passes on the phone (unit 861/861, first load 456 KB, e2e only the known sandbox failures, city drag 56 to 58 fps at 4x CPU, words exact, money words exact, old saves move once, blocked storage fine). Two fixes sent to gamedev: F1 the money chips overlap the Sound button at 320 x 240; F2 the first city view cuts pins off on narrow screens. Accept after those pass.
+po rulings on qa's questions:
+1. Intro frame 3 in green-white-green bands is Tp's own request (10 Nov, "the country's colours"); it is the map in national colours, with no flagpole or coat of arms, so city.md's "no flags" (meaning no flag drawn as a flag) is kept. designer: add that line to city.md.
+2. At 320 x 240, Settings may be two columns so it fits with no scroll. designer: update city.md.
+3. At 320 x 240, caption 1 may wrap to 4 lines (whole, no scroll). Keep Tp's words.
+4. 240 x 180 is below our 320 x 240 minimum: no work.
+5. A +/- tap right after a drag was lost in the sandbox browser; Tp checks on a real phone.
+
 ## Tp, 11 Nov 2026: yes to merge round 1, and yes to all recommendations
 
 - Designer's S2.16 questions: touching a bird without the suit costs a life (like a goat); birds never break the suit; one easy gutter on street 2 before the bus stop; the dash starts from street 2 and is off in the hall and well room.
