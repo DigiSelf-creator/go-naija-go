@@ -712,6 +712,16 @@ Answers from designer, 12 Nov 2026, after gamedev built steps c2 to c4.
 - **The map draws at 1 dpr while the hero walks, for speed.** Agreed, as long as the hero, boards, bubbles, chips and all words stay sharp at full dpr, and the still map is painted sharp again once the hero stops. qa checks this on the slow phone profile.
 - **The Market's front umbrella row is hidden once the Market is built.** Agreed: it keeps the door, the bubble and the hero clear. The built stalls take its place.
 
+### W15. Sign room on tiny screens (designer, 12 Nov 2026)
+
+The case: 320 x 240, far zoom, with the Lamps, Market and Mast boards and the Mama Put bubble all up. Only three clear spots exist for four signs, so the Lamps board stands over the fixed Potholes block's tap area.
+
+**Ruling: a fixed block's tap area is not a pin. A sign may sit over it.** A pin is something you can see: a dark block's icon and word. A fixed block has no pin (part 1, "Dark and lit blocks"), so there is nothing for the sign to hide. The sign is drawn on top and takes the tap, so what a child sees is what a tap does. The fixed block can still be tapped on its uncovered part, and Tab still reaches it, for its small "Fixed ✓".
+
+Why not the others: a board standing in for its own pin (b) gives one sign two jobs and the pin's word goes missing on the smallest phone, which is where a 10 year old needs it most. Shorter pin words (c) make every phone harder to read to fix one rare case ("Slow internet" says more than "Slow").
+
+The W2 and W9 rule now reads: a sign never sits over a **drawn** pin, a chip or a button. qa's sign test checks only the pins of spots that are not fixed. **No game change.**
+
 ## 6. Original only: the check list for every new piece
 
 On top of design R8 and part 2B's "must NOT copy" list:
