@@ -1704,6 +1704,10 @@
   pointer-events: auto;
   touch-action: none;
 }
+.screen .city-arrow {
+  /* The arrow's tap area is exactly its 48 x 48 square, corners too (qa round 5). */
+  border-radius: 0;
+}
 .screen .city-sign[hidden] {
   display: none;
 }

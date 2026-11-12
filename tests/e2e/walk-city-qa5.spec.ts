@@ -106,10 +106,9 @@ for (const [width, height] of [
   }
 }
 
-// Minor follow-up (round 5): the arrow button is said to be exactly its square, but `.city-sign`
-// has `border-radius: 8px`, which Chromium hit-tests, so a finger 1-3 px in from a corner of the
-// 48 square lands on the map (the hero walks there) instead of the arrow.
-test.fixme('an edge arrow takes a tap 1 px in from every corner of its square', async ({ page }) => {
+// Round 5 follow-up: `.city-sign` has `border-radius: 8px`, which Chromium hit-tests, so a finger
+// 1-3 px in from a corner of the 48 square landed on the map. `.city-arrow` now has square corners.
+test('an edge arrow takes a tap 1 px in from every corner of its square', async ({ page }) => {
   await page.setViewportSize({ width: 851, height: 393 });
   await openCity(page, STATES.fresh);
   const map = (await page.getByRole('dialog', { name: 'Lagos' }).locator('.city-map').boundingBox())!;
