@@ -272,6 +272,8 @@ interface SignAsk {
   box0: ScreenBox;
   /** Its size anywhere but its own place, when that differs (a bubble away from its place drops its tail). */
   boxAway?: ScreenBox;
+  /** A board on a short stick (48 px tall), for a tiny screen with no room at full size (W15). */
+  boxShort?: ScreenBox;
   /** Half the size of what it stands by (the mat), so the rings start outside it. */
   hw: number;
   hh: number;
@@ -284,6 +286,10 @@ interface SignSpot {
   box: ScreenBox;
   /** Not at its own place (a bubble is drawn without its tail). */
   away: boolean;
+  /** A board on its short stick. */
+  short?: boolean;
+  /** No clear place was found: it covers something (the least it could). */
+  bad?: boolean;
 }
 /** Something a sign keeps clear of. Soft ones (the heading, a fixed spot's tap area, which has no pin drawn) are given up only when a tiny screen has no other room. */
 interface Block extends ScreenBox {
@@ -626,7 +632,9 @@ export class CityScreen {
   }
 
   /** Where each sign (board or bubble) sat last, and why, so it is worked out again only when something around it changes. */
-  private signCache = new Map<string, { key: string; spot: SignSpot; dx: number; dy: number; tag: string; zoom: Zoom }>();
+  private signCache = new Map<string, { dx: number; dy: number; tag: string; zoom: Zoom; short: boolean }>();
+  /** The last layout and what it was worked out for (the camera, the screen, the pins, the words). */
+  private signLayout: { key: string; spots: Map<string, SignSpot> } | null = null;
   /** A sign's size round its foot, by its words (measuring words is slow on a cheap phone: once per words). */
   private signSizes = new Map<string, ScreenBox>();
 
@@ -647,29 +655,124 @@ export class CityScreen {
    * camera slides.
    */
   private layoutSigns(bubbles: readonly SignAsk[], boards: readonly SignAsk[]): Map<string, SignSpot> {
-    const out = new Map<string, SignSpot>();
+    const asks = [...bubbles, ...boards];
+    // Worked out again whenever the camera, the screen, the pins or the words change (so a walk
+    // that slides the camera places them again), and once more when the hero stops.
+    const settled = !this.hero.moving;
+    const key = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, this.view.top ?? 0, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet, settled ? 's' : 'm', this.covers.map((c) => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.w)}`).join(';'), ...asks.map((a) => `${a.id}=${a.tag}`)].join('|');
+    if (this.signLayout && this.signLayout.key === key) return this.signLayout.spots;
+    let out = new Map<string, SignSpot>();
     const taken: ScreenBox[] = [];
     const all = this.pinBoxes();
     const pins: Block[] = SPOT_IDS.map((spot) => ({ ...all[spot], soft: this.looks[spot] === 'fixed' }));
-    const base = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet].join('|');
-    for (const ask of [...bubbles, ...boards]) {
-      const key = `${base}|${ask.tag}|${taken.map((t) => `${Math.round(t.x)},${Math.round(t.y)}`).join(';')}`;
+    for (const ask of asks) {
       const had = this.signCache.get(ask.id);
-      let spot: SignSpot;
-      if (had && had.key === key) spot = had.spot;
-      else {
-        const prev = had && had.tag === ask.tag && had.zoom === this.cam.zoom ? { x: ask.anchor.x + had.dx, y: ask.anchor.y + had.dy } : null;
-        spot = this.signSpot(ask, pins, taken, prev);
-        this.signCache.set(ask.id, { key, spot, dx: spot.x - ask.anchor.x, dy: spot.y - ask.anchor.y, tag: ask.tag, zoom: this.cam.zoom });
-      }
+      const prev = had && had.tag === ask.tag && had.zoom === this.cam.zoom ? { x: ask.anchor.x + had.dx, y: ask.anchor.y + had.dy, short: had.short } : null;
+      const spot = this.signSpot(ask, pins, taken, prev);
       out.set(ask.id, spot);
       taken.push(spot.box);
     }
+    // No clear place for one of them (a tiny screen, many signs): once the hero stands still, look
+    // at every way to fit them all, at full size first, then with boards on short sticks. While the
+    // hero walks the quick placing above is kept (it runs every frame the camera slides).
+    if (settled && [...out.values()].some((sp) => sp.bad)) {
+      const found = this.fitAllSigns(asks, pins);
+      if (found) out = found;
+    }
+    for (const ask of asks) {
+      const sp = out.get(ask.id)!;
+      this.signCache.set(ask.id, { dx: sp.x - ask.anchor.x, dy: sp.y - ask.anchor.y, tag: ask.tag, zoom: this.cam.zoom, short: !!sp.short });
+    }
+    this.signLayout = { key, spots: out };
     return out;
   }
 
+  /**
+   * Every sign clear of every pin, chip, button and other sign, if there is any such way (W2, W9,
+   * W15): each sign's free places on screen (one per 16 px square, the nearest its own place),
+   * then a search over them, the sign with the fewest places first. Null when there is none.
+   */
+  private fitAllSigns(asks: readonly SignAsk[], pins: readonly Block[]): Map<string, SignSpot> | null {
+    const vw = this.view.w;
+    const vh = this.view.h;
+    const blocks: Block[] = [...pins, ...this.covers];
+    const hard = blocks.filter((o) => !o.soft);
+    const soft = blocks.filter((o) => o.soft);
+    const clearOf = (bx: ScreenBox, o: ScreenBox, gap: number): boolean => bx.x + bx.w + gap <= o.x || o.x + o.w + gap <= bx.x || bx.y + bx.h + gap <= o.y || o.y + o.h + gap <= bx.y;
+    for (const short of [false, true]) {
+      const lists: SignSpot[][] = [];
+      for (const ask of asks) {
+        const home = ask.prefer[0]!;
+        const boxAt = (c: Pt, away: boolean): SignSpot => {
+          const b0 = short && ask.boxShort ? ask.boxShort : away ? (ask.boxAway ?? ask.box0) : ask.box0;
+          return { x: c.x, y: c.y, box: { x: c.x + b0.x, y: c.y + b0.y, w: b0.w, h: b0.h }, away: away && !!ask.boxAway, short: short && !!ask.boxShort };
+        };
+        if (ask.mayHide) {
+          const nb = boxAt(home, false).box;
+          if (nb.x + nb.w <= 0 || nb.y + nb.h <= 0 || nb.x >= vw || nb.y >= vh) {
+            lists.push([boxAt(home, false)]);
+            continue;
+          }
+        }
+        const seen = new Set<string>();
+        const found: { sp: SignSpot; cost: number }[] = [];
+        const tryAt = (sp: SignSpot): void => {
+          const b = sp.box;
+          if (b.x < 0 || b.y < 0 || b.x + b.w > vw || b.y + b.h > vh) return;
+          const id = `${Math.round(b.x)},${Math.round(b.y)}`;
+          if (seen.has(id)) return;
+          seen.add(id);
+          for (const o of hard) if (!clearOf(b, o, 2)) return;
+          let cost = (sp.x - home.x) ** 2 + (sp.y - home.y) ** 2;
+          for (const o of soft) if (!clearOf(b, o, 2)) cost += 1e6;
+          found.push({ sp, cost });
+        };
+        for (const c of ask.prefer) tryAt(boxAt(c, c !== home));
+        // Tops and lefts: snug against the screen's edges and every block's edges (tight packing),
+        // and every 8 px between.
+        const b0 = short && ask.boxShort ? ask.boxShort : (ask.boxAway ?? ask.box0);
+        const xs = new Set<number>([0, Math.floor(vw - b0.w)]);
+        const ys = new Set<number>([0, Math.floor(vh - b0.h)]);
+        for (const o of blocks) {
+          xs.add(Math.ceil(o.x + o.w + 2)).add(Math.floor(o.x - b0.w - 2));
+          ys.add(Math.ceil(o.y + o.h + 2)).add(Math.floor(o.y - b0.h - 2));
+        }
+        for (let v = 0; v + b0.w <= vw; v += 8) xs.add(v);
+        for (let v = 0; v + b0.h <= vh; v += 8) ys.add(v);
+        for (const by of ys) for (const bx of xs) tryAt(boxAt({ x: bx - b0.x, y: by - b0.y }, true));
+        const list = found.sort((a, b) => a.cost - b.cost).map((e) => e.sp);
+        if (!list.length) break;
+        lists.push(list);
+      }
+      if (lists.length < asks.length) continue;
+      const order = asks.map((_, i) => i).sort((a, b) => lists[a]!.length - lists[b]!.length);
+      const pick: (SignSpot | undefined)[] = [];
+      let budget = 60_000;
+      const onScreen = (b: ScreenBox): boolean => b.x + b.w > 0 && b.y + b.h > 0 && b.x < vw && b.y < vh;
+      const go = (k: number): boolean => {
+        if (k === order.length) return true;
+        const i = order[k]!;
+        for (const sp of lists[i]!) {
+          if (--budget < 0) return false;
+          let ok = true;
+          if (onScreen(sp.box)) for (const j of order.slice(0, k)) if (!clearOf(sp.box, pick[j]!.box, 2)) {
+            ok = false;
+            break;
+          }
+          if (!ok) continue;
+          pick[i] = sp;
+          if (go(k + 1)) return true;
+        }
+        pick[i] = undefined;
+        return false;
+      };
+      if (go(0)) return new Map(asks.map((a, i) => [a.id, pick[i]!]));
+    }
+    return null;
+  }
+
   /** One sign's foot on screen: its own place if it fits, else the nearest free place round it. */
-  private signSpot(ask: SignAsk, pins: readonly Block[], taken: readonly ScreenBox[], prev: Pt | null): SignSpot {
+  private signSpot(ask: SignAsk, pins: readonly Block[], taken: readonly ScreenBox[], prev: (Pt & { short?: boolean }) | null): SignSpot {
     const { anchor } = ask;
     const vw = this.view.w;
     const vh = this.view.h;
@@ -697,6 +800,12 @@ export class CityScreen {
     if (prev) {
       const sp = at(prev, !isHome(prev));
       if (fits(sp)) return sp;
+      // It stood on its short stick (W15): keep that while it still fits.
+      const b0 = prev.short ? ask.boxShort : undefined;
+      if (b0) {
+        const ss = { x: prev.x, y: prev.y, box: { x: prev.x + b0.x, y: prev.y + b0.y, w: b0.w, h: b0.h }, away: true, short: true };
+        if (fits(ss)) return ss;
+      }
     }
     for (const c of ask.prefer) {
       const sp = at(c, c !== home);
@@ -752,7 +861,7 @@ export class CityScreen {
           pick = sp;
         }
       }
-    return pick ?? at(home, false);
+    return { ...(pick ?? at(home, false)), bad: true };
   }
 
   // ---------- The problem card and the not-enough card ----------
@@ -1703,16 +1812,18 @@ export class CityScreen {
       const box0 = this.signSize(`board|${b}|${units}`, () => priceBoardBox(g, 0, 0, b, units));
       const beside = { x: m.x + hw + 4 + box0.w / 2, y: m.y + hh };
       const other = { x: m.x - hw - 4 - box0.w / 2, y: m.y + hh };
-      return { id: `board ${b}`, tag: `${units}`, anchor: m, prefer: [beside, other], box0, hw, hh, mayHide: false, b, units, done };
+      const boxShort = this.signSize(`board|${b}|${units}|short`, () => priceBoardBox(g, 0, 0, b, units, { short: true }));
+      return { id: `board ${b}`, tag: `${units}`, anchor: m, prefer: [beside, other], box0, boxShort, hw, hh, mayHide: false, b, units, done };
     });
     const spots = this.layoutSigns(bubbleAsks, boardAsks);
     for (const a of boardAsks) {
       const foot = spots.get(a.id)!;
       const { b, units, done } = a;
       const wob = this.wobble?.build === b ? boardWobble(this.wobble.t) : 0;
-      const sp = wob ? null : this.sprite(`board|${b}|${units}|${done}|${dpr}`, foot.box.w + 16, foot.box.h + 16, foot.x - foot.box.x + 8, foot.y - foot.box.y + 8, dpr, (c) => drawPriceBoard(c, 0, 0, b, units, { done }));
+      const short = !!foot.short;
+      const sp = wob ? null : this.sprite(`board|${b}|${units}|${done}|${short}|${dpr}`, foot.box.w + 16, foot.box.h + 16, foot.x - foot.box.x + 8, foot.y - foot.box.y + 8, dpr, (c) => drawPriceBoard(c, 0, 0, b, units, { done, short }));
       if (sp) g.drawImage(sp.img, foot.x - sp.ox, foot.y - sp.oy, foot.box.w + 16, foot.box.h + 16);
-      else drawPriceBoard(g, foot.x, foot.y, b, units, { wobble: wob, done });
+      else drawPriceBoard(g, foot.x, foot.y, b, units, { wobble: wob, done, short });
       this.boardBox.set(b, foot.box);
       this.placeSign(this.boardEls.get(b), foot.box);
     }
