@@ -722,6 +722,10 @@ Why not the others: a board standing in for its own pin (b) gives one sign two j
 
 The W2 and W9 rule now reads: a sign never sits over a **drawn** pin, a chip or a button. qa's sign test checks only the pins of spots that are not fixed. **No game change.**
 
+**Edge arrows (amended 12 Nov 2026, docs only).** An arrow's middle and the 44 x 44 px tap area around it never overlap a drawn pin's tap area, a chip, a button, a board, a bubble or another arrow. Only the arrow's outer drawn edge (outside that 44 x 44) may overlap a drawn pin. The pin keeps its middle and its word. A pin fully off the screen always gets an arrow. The "Lagos" heading never covers a sign and does not catch taps; an arrow may sit under it.
+
+**qa's minor follow-up for step (f).** At 320 x 240 with Power and Tech, the Tech chip covers part of the Lights out pin's icon and the "+" button cuts its word to "Lights ou" (a pin against screen buttons). Look at it when the lane run makes this case real.
+
 ### W16. Short boards and signs away from their mats (designer, 12 Nov 2026)
 
 The case: 320 x 240 with the Lamps, Market and Mast boards and the Mama Put bubble all up. It can only happen once Power or Tech exist, so after the lane run (step f).
