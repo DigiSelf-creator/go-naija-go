@@ -722,6 +722,21 @@ Why not the others: a board standing in for its own pin (b) gives one sign two j
 
 The W2 and W9 rule now reads: a sign never sits over a **drawn** pin, a chip or a button. qa's sign test checks only the pins of spots that are not fixed. **No game change.**
 
+### W16. Short boards and signs away from their mats (designer, 12 Nov 2026)
+
+The case: 320 x 240 with the Lamps, Market and Mast boards and the Mama Put bubble all up. It can only happen once Power or Tech exist, so after the lane run (step f).
+
+**1. Short-stick boards: accepted.** Only when there is no other room, a price board may be 48 px tall (stick 5 px shorter) and up to 84 px wide. It still meets the 48 x 48 px rule. Squeeze in this order: first drop the bucket icon, then, only if still needed, the price goes to 12 px bold. Never both unless both are needed. The words never change. Dropping the icon is fine for "not colour alone" because the price still names its bucket: "₦", "Power", "Tech".
+
+**2. A sign away from its mat: accepted for now.** Tapping the sign still walks the hero to its own mat (or collects), so the walk itself shows the child which sign goes with which place. No line or arrow now. Limits that hold now:
+- The sign keeps its full words ("Power 10" / "Lamps"), so it never relies on where it stands.
+- The hero walks to the mat, never to the sign, and pays or collects only there, as in W2 and W4.
+- Keys and screen readers are not affected: the spoken words name the place.
+
+**Revisit at step (f)**, when the lane run makes this case real. qa then tries it on a first-timer at 320 x 240. If a child taps a moved sign and looks lost, we add a thin dotted line from the sign to its mat while the hero walks there (drawn as a shape, not colour alone, none needed with reduced motion beyond a still line).
+
+**No gamedev change now.**
+
 ## 6. Original only: the check list for every new piece
 
 On top of design R8 and part 2B's "must NOT copy" list:
