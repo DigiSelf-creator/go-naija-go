@@ -1,13 +1,14 @@
 /**
- * Slice 3 step (b) done check (docs/city.md part 5 (b)): dragging Lagos from above stays at 45 fps
- * or more at 4x CPU slowdown, and a still city draws nothing.
+ * Slice 3 step (b) and 5W done checks (docs/city.md part 5 (b), W10): walking the hero by hold and
+ * slide (the camera follows) stays at 45 fps or more at 4x CPU slowdown, and a still city draws
+ * nothing.
  */
 import { expect, test } from '@playwright/test';
 import { screenNow } from './helpers';
 
 const LOOK = '{"skin":2,"hair":0,"outfit":0,"body":0,"age":1}';
 
-test('slowed 4x CPU: dragging Lagos from above near and far, at least 45 fps; still, nothing is drawn', async ({ page }) => {
+test('slowed 4x CPU: walking the hero by hold and slide, near and far, at least 45 fps; still, nothing is drawn', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('./');
   await page.evaluate((look) => {
@@ -56,16 +57,18 @@ test('slowed 4x CPU: dragging Lagos from above near and far, at least 45 fps; st
       const secs = (frames[frames.length - 1]! - frames[0]!) / 1000;
       const fps = (frames.length - 1) / secs;
       results.push(`${zoom}: ${fps.toFixed(1)} fps over ${secs.toFixed(1)} s, ${draws} map draws`);
-      expect(draws, `${zoom}: the drag redraws the map`).toBeGreaterThan(10);
+      expect(draws, `${zoom}: the walk redraws the map`).toBeGreaterThan(10);
       expect(fps, `${zoom}: fps while dragging`).toBeGreaterThanOrEqual(45);
     }
-    // Still: no draws at all for a second.
+    // Still: once the hero stops, no draws at all for a second.
+    await expect.poll(() => page.evaluate(() => window.__game!.city!.hero.moving), { timeout: 20_000 }).toBe(false);
+    await page.waitForTimeout(700);
     const d0 = await page.evaluate(() => window.__game!.city!.draws);
     await page.waitForTimeout(1000);
     expect(await page.evaluate(() => window.__game!.city!.draws)).toBe(d0);
   } finally {
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   }
-  console.log(`city drag at 4x CPU: ${results.join('; ')}`);
-  test.info().annotations.push({ type: 'city drag', description: results.join('; ') });
+  console.log(`city walk at 4x CPU: ${results.join('; ')}`);
+  test.info().annotations.push({ type: 'city walk', description: results.join('; ') });
 });

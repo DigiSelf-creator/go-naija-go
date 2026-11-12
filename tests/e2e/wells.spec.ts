@@ -161,7 +161,7 @@ test('street 2 by touch: to the well, Go down, every gift in the room, Go up at 
   const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(cleared).toBeVisible({ timeout: 6000 });
   // N2: the parcel is saved on the bus, and the cleared card says so (S2.10).
-  await expect(cleared.getByText(`Computer Village is moving again, thanks to you! You got ${formatMoney(last.r.kobo * 10)}.`)).toBeVisible();
+  await expect(cleared.getByText(`Computer Village is moving again, thanks to you! You got ${formatMoney(last.r.kobo * 10 + 500)}.`)).toBeVisible();
   await expect(cleared.getByText('Your garri parcel is saved for Go-Slow Hall.')).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress')!))).toEqual({
     // Version 2 (slice 3, N3): bests are whole kobo, 10 a coin.
@@ -169,9 +169,11 @@ test('street 2 by touch: to the well, Go down, every gift in the room, Go up at 
     states: { lagos: { streets: { 2: { done: true, best: last.r.kobo * 10 } }, parcel: true, hall: { done: false, best: 0 } } },
     // S2.16 B4: saved when street 2's dash hint was reached.
     dash: true,
+    // (c): the coins and the ₦5 prize went home to Lagos.
+    city: expect.objectContaining({ kobo: last.r.kobo * 10 + 500 }),
   });
   // The longest case (Computer Village, the parcel line) fits the short screens (po M4 bug 1).
-  await checkCardFits(page, 'Next street', async (at) => {
+  await checkCardFits(page, 'Take it home', async (at) => {
     await page.screenshot({ path: join(N2_SHOTS, `${at}-cleared-parcel.png`) });
   });
   for (const vp of [{ width: 932, height: 430 }]) {

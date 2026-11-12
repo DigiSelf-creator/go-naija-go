@@ -162,8 +162,9 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
   test.info().annotations.push({ type: 'hall by touch', description: `${end.time.toFixed(1)} s, ${end.lives} lives, ${presses} presses` });
 
   const seen = await toasts(page);
+  // The opening words ("General Go-Slow is jamming the hall!") can show before watchToasts starts,
+  // so they are checked on screen above (toBeVisible), not in this list (CI flake, 11 Nov).
   for (const words of [
-    'General Go-Slow is jamming the hall! Wait for the green light.',
     'Green light! Jump on it!',
     'Green light! 2 more.',
     'Green light! 1 more.',
