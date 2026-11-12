@@ -1468,6 +1468,8 @@
   overflow: hidden;
   touch-action: none;
   cursor: grab;
+  /* Pins over signs over a fixed spot's tap area (it has no pin drawn), all inside the stage. */
+  isolation: isolate;
 }
 .city-map {
   position: absolute;
@@ -1483,6 +1485,7 @@
 }
 .city-pin {
   position: absolute;
+  z-index: 3;
   left: 0;
   top: 0;
   padding: 0;
@@ -1679,8 +1682,12 @@
   inset: 0;
   pointer-events: none;
 }
+.city-pin.fixed {
+  z-index: 1;
+}
 .screen .city-sign {
   position: absolute;
+  z-index: 2;
   left: 0;
   top: 0;
   min-width: 0;

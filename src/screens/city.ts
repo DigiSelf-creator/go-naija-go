@@ -37,6 +37,7 @@ import {
   BUILDS,
   EDGE_ARROW,
   MAT,
+  BUBBLE,
   PAY,
   boardWobble,
   drawBuildOutline,
@@ -260,6 +261,35 @@ export interface ScreenBox {
   h: number;
 }
 
+/** A sign to place: its own place on screen, where it would like its foot, and its size round the foot. */
+interface SignAsk {
+  id: string;
+  /** Changes when the sign's words change (a new size). */
+  tag: string;
+  anchor: Pt;
+  /** Feet to try first, best first. */
+  prefer: Pt[];
+  box0: ScreenBox;
+  /** Its size anywhere but its own place, when that differs (a bubble away from its place drops its tail). */
+  boxAway?: ScreenBox;
+  /** Half the size of what it stands by (the mat), so the rings start outside it. */
+  hw: number;
+  hh: number;
+  /** A bubble may stay off screen with its place (an edge arrow shows the way). */
+  mayHide: boolean;
+}
+interface SignSpot {
+  x: number;
+  y: number;
+  box: ScreenBox;
+  /** Not at its own place (a bubble is drawn without its tail). */
+  away: boolean;
+}
+/** Something a sign keeps clear of. Soft ones (the heading, a fixed spot's tap area, which has no pin drawn) are given up only when a tiny screen has no other room. */
+interface Block extends ScreenBox {
+  soft?: boolean;
+}
+
 export class CityScreen {
   readonly el: HTMLElement;
   private readonly map: HTMLCanvasElement;
@@ -274,7 +304,7 @@ export class CityScreen {
   /** Covered at the bottom (the button row), CSS px from the bottom. */
   private bottomCover = 0;
   /** The heading, chips and buttons lying over the map (CSS px in the map). */
-  private covers: ScreenBox[] = [];
+  private covers: Block[] = [];
   cam: CityCam;
   private looks: SpotLooks;
   private pins: { spot: SpotId; el: HTMLButtonElement; pic: HTMLCanvasElement | null; word: string }[] = [];
@@ -593,73 +623,134 @@ export class CityScreen {
     return this.mission !== null && this.mission.phase !== 'end';
   }
 
-  /** The board's stick foot on screen: beside its mat, kept clear of the pins and the covered edges. */
-  private footCache = new Map<BuildId, { key: string; foot: { x: number; y: number; box: ScreenBox }; dx: number; dy: number; left: number; zoom: Zoom }>();
+  /** Where each sign (board or bubble) sat last, and why, so it is worked out again only when something around it changes. */
+  private signCache = new Map<string, { key: string; spot: SignSpot; dx: number; dy: number; tag: string; zoom: Zoom }>();
+  /** A sign's size round its foot, by its words (measuring words is slow on a cheap phone: once per words). */
+  private signSizes = new Map<string, ScreenBox>();
 
-  /** boardFoot, worked out again only when the camera, the screen, the price or the signs around change. */
-  private boardFootCached(g: CanvasRenderingContext2D, b: BuildId, left: number, taken: ScreenBox[]): { x: number; y: number; box: ScreenBox } {
-    const key = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, left, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet, ...taken.map((t) => `${Math.round(t.x)},${Math.round(t.y)}`)].join('|');
-    const had = this.footCache.get(b);
-    if (had && had.key === key) return had.foot;
-    // While the camera slides, the board keeps its place beside the mat as long as it still fits.
-    const m = toScreen(this.cam, this.view, MATS[b]);
-    const prev = had && had.left === left && had.zoom === this.cam.zoom ? { x: m.x + had.dx, y: m.y + had.dy } : null;
-    const foot = this.boardFoot(g, b, left, taken, prev);
-    this.footCache.set(b, { key, foot, dx: foot.x - m.x, dy: foot.y - m.y, left, zoom: this.cam.zoom });
-    return foot;
+  private signSize(key: string, make: () => ScreenBox): ScreenBox {
+    let b = this.signSizes.get(key);
+    if (!b) {
+      if (this.signSizes.size > 60) this.signSizes.clear();
+      b = make();
+      this.signSizes.set(key, b);
+    }
+    return b;
   }
 
-  private boardFoot(g: CanvasRenderingContext2D, b: BuildId, left: number, taken: ScreenBox[], prev: Pt | null = null): { x: number; y: number; box: ScreenBox } {
-    const s = camScale(this.cam.zoom, this.view);
-    const m = toScreen(this.cam, this.view, MATS[b]);
-    const hw = (MAT.w * s) / 2;
-    const hh = (MAT.h * s) / 2;
-    const units = boardUnits(bucketOf(b), left);
-    const box0 = priceBoardBox(g, 0, 0, b, units);
-    const bw = box0.w;
-    const bh = box0.h;
-    const pins = Object.values(this.pinBoxes());
-    const clearOf = (bx: ScreenBox, o: ScreenBox): boolean => bx.x + bx.w + 4 <= o.x || o.x + o.w + 4 <= bx.x || bx.y + bx.h + 4 <= o.y || o.y + o.h + 4 <= bx.y;
-    const fits = (c: Pt): boolean => {
-      const bx = { x: c.x + box0.x, y: c.y + box0.y, w: bw, h: bh };
-      // Never over a pin, a chip, a button or another sign (W2 "Size"), and on screen.
-      return (
-        bx.x >= 0 &&
-        bx.x + bx.w <= this.view.w &&
-        bx.y >= 0 &&
-        bx.y + bx.h <= this.view.h &&
-        pins.every((p) => clearOf(bx, p)) &&
-        this.covers.every((o) => clearOf(bx, o)) &&
-        taken.every((o) => clearOf(bx, o))
-      );
+  /**
+   * Places every board and tray bubble showing (W2, W9: a sign never sits over a pin, a chip, a
+   * button or another sign; boards stay on screen). Bubbles first, by their places; then boards,
+   * by their mats. Each keeps its place while it still fits, so signs do not jump while the
+   * camera slides.
+   */
+  private layoutSigns(bubbles: readonly SignAsk[], boards: readonly SignAsk[]): Map<string, SignSpot> {
+    const out = new Map<string, SignSpot>();
+    const taken: ScreenBox[] = [];
+    const all = this.pinBoxes();
+    const pins: Block[] = SPOT_IDS.map((spot) => ({ ...all[spot], soft: this.looks[spot] === 'fixed' }));
+    const base = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet].join('|');
+    for (const ask of [...bubbles, ...boards]) {
+      const key = `${base}|${ask.tag}|${taken.map((t) => `${Math.round(t.x)},${Math.round(t.y)}`).join(';')}`;
+      const had = this.signCache.get(ask.id);
+      let spot: SignSpot;
+      if (had && had.key === key) spot = had.spot;
+      else {
+        const prev = had && had.tag === ask.tag && had.zoom === this.cam.zoom ? { x: ask.anchor.x + had.dx, y: ask.anchor.y + had.dy } : null;
+        spot = this.signSpot(ask, pins, taken, prev);
+        this.signCache.set(ask.id, { key, spot, dx: spot.x - ask.anchor.x, dy: spot.y - ask.anchor.y, tag: ask.tag, zoom: this.cam.zoom });
+      }
+      out.set(ask.id, spot);
+      taken.push(spot.box);
+    }
+    return out;
+  }
+
+  /** One sign's foot on screen: its own place if it fits, else the nearest free place round it. */
+  private signSpot(ask: SignAsk, pins: readonly Block[], taken: readonly ScreenBox[], prev: Pt | null): SignSpot {
+    const { anchor } = ask;
+    const vw = this.view.w;
+    const vh = this.view.h;
+    const home = ask.prefer[0]!;
+    const at = (c: Pt, away: boolean): SignSpot => {
+      const b0 = away ? (ask.boxAway ?? ask.box0) : ask.box0;
+      return { x: c.x, y: c.y, box: { x: c.x + b0.x, y: c.y + b0.y, w: b0.w, h: b0.h }, away: away && !!ask.boxAway };
     };
-    // Beside the mat if it fits; else the nearest free place round it (rings 8 px apart).
-    const beside: Pt = { x: m.x + hw + 4 + bw / 2, y: m.y + hh };
-    let pick: Pt | null = prev && fits(prev) ? prev : fits(beside) ? beside : null;
-    const other: Pt = { x: m.x - hw - 4 - bw / 2, y: m.y + hh };
-    if (!pick && fits(other)) pick = other;
-    for (let r = 8; !pick && r <= 240; r += 8) {
+    const isHome = (c: Pt): boolean => Math.abs(c.x - home.x) < 0.5 && Math.abs(c.y - home.y) < 0.5;
+    // A bubble whose place is off the screen stays there (its edge arrow shows the way).
+    if (ask.mayHide) {
+      const nb = at(home, false).box;
+      if (nb.x + nb.w <= 0 || nb.y + nb.h <= 0 || nb.x >= vw || nb.y >= vh) return at(home, false);
+    }
+    const blocks: Block[] = [...pins, ...this.covers, ...taken];
+    const hard = blocks.filter((o) => !o.soft);
+    const clearOf = (bx: ScreenBox, o: ScreenBox, gap: number): boolean => bx.x + bx.w + gap <= o.x || o.x + o.w + gap <= bx.x || bx.y + bx.h + gap <= o.y || o.y + o.h + gap <= bx.y;
+    const fitsIn = (sp: SignSpot, list: readonly Block[], gap: number): boolean => {
+      const bx = sp.box;
+      if (bx.x < 0 || bx.y < 0 || bx.x + bx.w > vw || bx.y + bx.h > vh) return false;
+      for (const o of list) if (!clearOf(bx, o, gap)) return false;
+      return true;
+    };
+    const fits = (sp: SignSpot): boolean => fitsIn(sp, blocks, 4);
+    if (prev) {
+      const sp = at(prev, !isHome(prev));
+      if (fits(sp)) return sp;
+    }
+    for (const c of ask.prefer) {
+      const sp = at(c, c !== home);
+      if (fits(sp)) return sp;
+    }
+    // Rings round its place, 8 px apart.
+    const b0 = ask.boxAway ?? ask.box0;
+    const bw = b0.w;
+    const bh = b0.h;
+    const cx = anchor.x - (b0.x + bw / 2);
+    const cy = anchor.y - (b0.y + bh / 2);
+    for (let r = 8; r <= 240; r += 8) {
       const n = Math.max(8, Math.round(r / 6));
-      for (let k = 0; k < n && !pick; k++) {
+      for (let k = 0; k < n; k++) {
         const a = (k / n) * Math.PI * 2;
-        const c = { x: m.x + Math.cos(a) * (r + hw), y: m.y + bh / 2 + Math.sin(a) * (r + hh) };
-        if (fits(c)) pick = c;
+        const sp = at({ x: cx + Math.cos(a) * (r + ask.hw), y: cy + Math.sin(a) * (r + ask.hh) }, true);
+        if (fits(sp)) return sp;
       }
     }
-    if (!pick) {
-      // A tight screen (320 x 240, 640 x 200): every free spot on screen, 4 px apart; the nearest wins.
+    // A tight screen (320 x 240, 640 x 200): every free place on screen, 2 px apart; the nearest
+    // wins. First clear of everything; then clear of all but the soft things.
+    for (const list of [blocks, hard]) {
+      let pick: SignSpot | null = null;
       let best = Infinity;
-      for (let y = bh; y <= this.view.h; y += 4)
-        for (let x = bw / 2; x <= this.view.w - bw / 2; x += 4) {
-          const d = Math.hypot(x - beside.x, y - beside.y);
-          if (d < best && fits({ x, y })) {
+      for (let by = 0; by + bh <= vh; by += 2)
+        for (let bx = 0; bx + bw <= vw; bx += 2) {
+          const c = { x: bx - b0.x, y: by - b0.y };
+          const d = (c.x - home.x) ** 2 + (c.y - home.y) ** 2;
+          if (d >= best) continue;
+          const sp = at(c, true);
+          if (fitsIn(sp, list, 2)) {
             best = d;
-            pick = { x, y };
+            pick = sp;
           }
         }
+      if (pick) return pick;
     }
-    const at = pick ?? beside;
-    return { x: at.x, y: at.y, box: { x: at.x + box0.x, y: at.y + box0.y, w: bw, h: bh } };
+    // Nowhere is free: on screen where it covers the least (a soft thing before a pin, a pin before a button).
+    let pick: SignSpot | null = null;
+    let least = Infinity;
+    for (let by = 0; by + bh <= vh; by += 4)
+      for (let bx = 0; bx + bw <= vw; bx += 4) {
+        const sp = at({ x: bx - b0.x, y: by - b0.y }, true);
+        const b = sp.box;
+        let over = 0;
+        for (const o of blocks) {
+          const ov = Math.max(0, Math.min(b.x + bw, o.x + o.w + 2) - Math.max(b.x, o.x - 2)) * Math.max(0, Math.min(b.y + bh, o.y + o.h + 2) - Math.max(b.y, o.y - 2));
+          over += ov * (o.soft ? 1 : pins.includes(o) ? 20 : 400);
+        }
+        const score = over * 1000 + (sp.x - home.x) ** 2 + (sp.y - home.y) ** 2;
+        if (score < least) {
+          least = score;
+          pick = sp;
+        }
+      }
+    return pick ?? at(home, false);
   }
 
   // ---------- The problem card and the not-enough card ----------
@@ -1192,9 +1283,10 @@ export class CityScreen {
     this.hintEl.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
     this.banner.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
     // The heading, chips and buttons over the map: boards keep clear of them.
-    this.covers = [...this.el.querySelectorAll<HTMLElement>('.city-top > *, .city-chip, .city-bottom button')].map((e) => {
+    // The heading is soft: a tiny screen with no other room may put a sign over it (never over a chip or a button).
+    this.covers = [...this.el.querySelectorAll<HTMLElement>('.city-top h2, .city-chip, .city-top button, .city-bottom button')].map((e) => {
       const b = e.getBoundingClientRect();
-      return { x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height };
+      return { x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height, soft: e.tagName === 'H2' };
     });
     const bottom = this.el.querySelector<HTMLElement>('.city-bottom');
     this.bottomCover = bottom ? Math.max(0, r.bottom - bottom.getBoundingClientRect().top) : 0;
@@ -1587,36 +1679,58 @@ export class CityScreen {
     // Signs in screen px.
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const pay = this.pay;
-    const taken: ScreenBox[] = [];
-    for (const p of this.trays()) {
+    const bubbleAsks: (SignAsk & { p: PlaceId; text: string; full: boolean })[] = this.trays().map((p) => {
+      const text = trayWords(this.life.state.trays[p] ?? 0);
+      const full = trayFull(this.life.state, p);
       const at = toScreen(this.cam, this.view, BUBBLE_AT[p]);
-      const amount = this.life.state.trays[p] ?? 0;
-      taken.push(trayBubbleBox(g, at.x, at.y, trayWords(amount), trayFull(this.life.state, p)));
-    }
-    for (const b of boards) {
+      const box0 = this.signSize(`bubble|${text}|${full}`, () => trayBubbleBox(g, 0, 0, text, full));
+      // Away from its place the bubble drops its tail (it would point at nothing): its body only, at least 48 tall.
+      const body = Math.max(48, BUBBLE.h + (full ? BUBBLE.fullH : 0) + 2);
+      const boxAway = { x: box0.x, y: -BUBBLE.tail - body, w: box0.w, h: body };
+      return { id: `bubble ${p}`, tag: `${text}|${full}`, anchor: at, prefer: [at], box0, boxAway, hw: 0, hh: 0, mayHide: true, p, text, full };
+    });
+    const boardAsks: (SignAsk & { b: BuildId; units: number; done: boolean })[] = boards.map((b) => {
       const bucket = bucketOf(b);
       let left = this.building?.build === b ? 0 : leftOf(st, b);
       if (pay && pay.build === b) left = pay.leftBefore - Math.round((pay.amount * pay.landed) / pay.pieces);
       const units = boardUnits(bucket, left);
-      const foot = this.boardFootCached(g, b, left, taken);
-      taken.push(foot.box);
-      const wob = this.wobble?.build === b ? boardWobble(this.wobble.t) : 0;
       const done = this.building?.build === b || (pay?.build === b && pay.done && pay.landed === pay.pieces);
+      const m = toScreen(this.cam, this.view, MATS[b]);
+      const hw = (MAT.w * s) / 2;
+      const hh = (MAT.h * s) / 2;
+      const box0 = this.signSize(`board|${b}|${units}`, () => priceBoardBox(g, 0, 0, b, units));
+      const beside = { x: m.x + hw + 4 + box0.w / 2, y: m.y + hh };
+      const other = { x: m.x - hw - 4 - box0.w / 2, y: m.y + hh };
+      return { id: `board ${b}`, tag: `${units}`, anchor: m, prefer: [beside, other], box0, hw, hh, mayHide: false, b, units, done };
+    });
+    const spots = this.layoutSigns(bubbleAsks, boardAsks);
+    for (const a of boardAsks) {
+      const foot = spots.get(a.id)!;
+      const { b, units, done } = a;
+      const wob = this.wobble?.build === b ? boardWobble(this.wobble.t) : 0;
       const sp = wob ? null : this.sprite(`board|${b}|${units}|${done}|${dpr}`, foot.box.w + 16, foot.box.h + 16, foot.x - foot.box.x + 8, foot.y - foot.box.y + 8, dpr, (c) => drawPriceBoard(c, 0, 0, b, units, { done }));
       if (sp) g.drawImage(sp.img, foot.x - sp.ox, foot.y - sp.oy, foot.box.w + 16, foot.box.h + 16);
       else drawPriceBoard(g, foot.x, foot.y, b, units, { wobble: wob, done });
       this.boardBox.set(b, foot.box);
       this.placeSign(this.boardEls.get(b), foot.box);
     }
-    for (const p of this.trays()) {
-      const at = toScreen(this.cam, this.view, BUBBLE_AT[p]);
-      const amount = this.life.state.trays[p] ?? 0;
-      const text = trayWords(amount);
-      const full = trayFull(this.life.state, p);
-      drawTrayBubble(g, at.x, at.y, 'naira', text, full, 0);
-      const box = trayBubbleBox(g, at.x, at.y, text, full);
-      this.bubbleBox.set(p, box);
-      this.placeSign(this.bubbleEls.get(p), box);
+    for (const a of bubbleAsks) {
+      const at = spots.get(a.id)!;
+      const { p, text, full } = a;
+      const tail = !at.away;
+      const sp = this.sprite(`bubble|${text}|${full}|${tail}|${dpr}`, at.box.w + 16, at.box.h + 16, at.x - at.box.x + 8, at.y - at.box.y + 8, dpr, (c) => {
+        if (!tail) {
+          // Away from its place: no tail (cut just under the body).
+          c.beginPath();
+          c.rect(-at.box.w, -BUBBLE.tail - 200, at.box.w * 2, 200 + 1);
+          c.clip();
+        }
+        drawTrayBubble(c, 0, 0, 'naira', text, full, 0);
+      });
+      if (sp) g.drawImage(sp.img, at.x - sp.ox, at.y - sp.oy, at.box.w + 16, at.box.h + 16);
+      else drawTrayBubble(g, at.x, at.y, 'naira', text, full, 0);
+      this.bubbleBox.set(p, at.box);
+      this.placeSign(this.bubbleEls.get(p), at.box);
     }
     // Flying money: hero to board when paying, place to hero when collecting.
     const heroAt = toScreen(this.cam, this.view, this.hero);
