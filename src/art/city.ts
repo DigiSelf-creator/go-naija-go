@@ -590,11 +590,13 @@ function cone(g: CanvasRenderingContext2D, x: number, y: number): void {
 }
 
 /** Market umbrellas in rows in front of the shops (our umbrella colours, no writing). */
-function marketStalls(g: CanvasRenderingContext2D, b: CityBlock): void {
+function marketStalls(g: CanvasRenderingContext2D, b: CityBlock, front = true): void {
   const cols = ['#f2b300', '#9b59b6', '#16a3b8', '#d63d6c', '#f39c12'];
   const y0 = b.y + Math.round(b.d * 0.32) + 34;
+  // Without the front row: the Market's stall row (5W W3) stands there once it is built.
+  const end = front ? b.y + b.d - 14 : b.y + b.d - 48;
   let i = 0;
-  for (let y = y0; y < b.y + b.d - 14; y += 34)
+  for (let y = y0; y < end; y += 34)
     for (let x = b.x + 30 + ((y - y0) % 68 ? 18 : 0); x < b.x + b.w - 24; x += 40) {
       oval(g, x + 3, y + 4, 14, 5, 'rgba(0,0,0,0.15)');
       rect(g, x - 9, y - 6, 18, 6, '#8a5d36');
@@ -618,7 +620,7 @@ function marketStalls(g: CanvasRenderingContext2D, b: CityBlock): void {
  * One block. A block with a spot takes that spot's look; any other block is a plain, bright
  * day block (look ignored). Draw blocks in CITY_BLOCKS order (back row first).
  */
-export function drawCityBlock(g: CanvasRenderingContext2D, b: CityBlock, look: SpotLook = 'fixed'): void {
+export function drawCityBlock(g: CanvasRenderingContext2D, b: CityBlock, look: SpotLook = 'fixed', opts: CityOpts = {}): void {
   const spot = b.spot;
   // The lot: pavement with a kerb and a little green
   rect(g, b.x, b.y, b.w, b.d, K.lot, K.kerb, 1.5);
@@ -642,7 +644,7 @@ export function drawCityBlock(g: CanvasRenderingContext2D, b: CityBlock, look: S
   const lit = spot === 'lightsOut' ? (look === 'fixed' ? 'glow' : 'dim') : spot === 'slowInternet' && look !== 'fixed' ? 'dim' : 'day';
   const boxes = [...b.boxes].sort((p, q) => p.y + p.d - (q.y + q.d));
   for (const box of boxes) drawBox(g, box, lit);
-  if (b.kind === 'market') marketStalls(g, b);
+  if (b.kind === 'market') marketStalls(g, b, opts.market !== true);
   if (spot === 'lightsOut' && look === 'fixed') for (const x of lampXs(b)) drawCityLamp(g, x, front - 6, true);
   if (spot === 'slowInternet' && look === 'fixed') {
     const m = mastAt(b);
@@ -733,11 +735,17 @@ export function drawPotholeSpot(g: CanvasRenderingContext2D, look: SpotLook): vo
 export const START_LOOKS: SpotLooks = { potholes: 'problem', lightsOut: 'problem', slowInternet: 'problem' };
 
 /** The whole still city in map units: ground, the potholes spot, then every block back to front. */
-export function drawCity(g: CanvasRenderingContext2D, looks: SpotLooks = START_LOOKS, opts: { jetty?: boolean } = {}): void {
+/** Still-picture options: `jetty` false hides the ferry jetty; `market` true clears the market block's front umbrella row for the built Market (5W). */
+export interface CityOpts {
+  jetty?: boolean;
+  market?: boolean;
+}
+
+export function drawCity(g: CanvasRenderingContext2D, looks: SpotLooks = START_LOOKS, opts: CityOpts = {}): void {
   g.save();
   drawCityGround(g, opts);
   drawPotholeSpot(g, looks.potholes);
-  for (const b of CITY_BLOCKS) drawCityBlock(g, b, b.spot ? looks[b.spot] : 'fixed');
+  for (const b of CITY_BLOCKS) drawCityBlock(g, b, b.spot ? looks[b.spot] : 'fixed', opts);
   g.restore();
 }
 
@@ -747,7 +755,7 @@ export function drawCity(g: CanvasRenderingContext2D, looks: SpotLooks = START_L
  * it with g.drawImage(canvas, 0, 0, CITY_MAP.w, CITY_MAP.h) in map units. Paint it again only
  * when a look changes. Returns null where there is no document (tests, workers).
  */
-export function makeCityCanvas(looks: SpotLooks = START_LOOKS, scale = 1, maxPx = 2048, opts: { jetty?: boolean } = {}): HTMLCanvasElement | null {
+export function makeCityCanvas(looks: SpotLooks = START_LOOKS, scale = 1, maxPx = 2048, opts: CityOpts = {}): HTMLCanvasElement | null {
   if (typeof document === 'undefined') return null;
   const s = Math.max(0.1, Math.min(Number.isFinite(scale) ? scale : 1, maxPx / CITY_MAP.w));
   const c = document.createElement('canvas');
