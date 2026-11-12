@@ -89,14 +89,20 @@ test('street 1 by hand, saved on the bus: the cleared card, Streets, reload, Pla
   const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(cleared).toBeVisible({ timeout: 6000 });
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
-  // N2 (slice 3): money words, a coin is 10 kobo.
-  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${formatMoney(kobo * 10)}.`)).toBeVisible();
+  // N2 (slice 3): money words, a coin is 10 kobo. 5W W5: the first street 1 win from the Potholes card brings ₦14.
+  const home = Math.max(1400, kobo * 10 + 500);
+  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${formatMoney(home)}.`)).toBeVisible();
   await expect(cleared.getByText('Your garri parcel is saved for Go-Slow Hall.')).toHaveCount(0); // no parcel on street 1
-  await expect(cleared.getByRole('button', { name: 'Next street' })).toBeFocused();
-  // Version 2 (slice 3, N3): bests are whole kobo.
-  expect(await saved(page)).toEqual({ v: 2, states: { lagos: { streets: { 1: { done: true, best: kobo * 10 } }, parcel: false, hall: { done: false, best: 0 } } } });
+  await expect(cleared.getByRole('button', { name: 'Take it home' })).toBeFocused();
+  await expect(cleared.getByRole('button', { name: 'Next street' })).toBeVisible();
+  // Version 2 (slice 3, N3): bests are whole kobo; (c) the money went home to Lagos.
+  expect(await saved(page)).toEqual({
+    v: 2,
+    states: { lagos: { streets: { 1: { done: true, best: kobo * 10 } }, parcel: false, hall: { done: false, best: 0 } } },
+    city: expect.objectContaining({ kobo: home }),
+  });
   // po M4 bug 1: the cleared card fits the short screens.
-  await checkCardFits(page, 'Next street', (at) => shotAt(page, `${at}-cleared-street1`));
+  await checkCardFits(page, 'Take it home', (at) => shotAt(page, `${at}-cleared-street1`));
 
   // "Streets" instead of Home.
   await waitOutTapLock(page);
@@ -121,6 +127,65 @@ test('street 1 by hand, saved on the bus: the cleared card, Streets, reload, Pla
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('lagos-2');
   expect(await page.evaluate(() => window.__game!.fixedLook)).toBe(false);
   expect(errors).toEqual([]);
+});
+
+test('5W W5: street 1 from the Potholes card, "Take it home": Mission complete in Lagos, the hero pays the road, ₦4 left for the Mama Put', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = watchErrors(page);
+  await page.goto('./');
+  await startRun(page);
+  const h = hands(await page.context().newCDPSession(page));
+  const { last } = await playStreetByHand(page, h);
+  await h.upAll();
+  expect(last.r.phase).toBe('bus');
+  const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
+  await expect(cleared).toBeVisible({ timeout: 6000 });
+  const kobo = await page.evaluate(() => window.__game!.run.kobo);
+  const home = Math.max(1400, kobo * 10 + 500);
+  await waitOutTapLock(page);
+  await cleared.getByRole('button', { name: 'Take it home' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  const banner = page.locator('.city-banner');
+  await expect(banner.getByRole('heading', { name: 'Mission complete!' })).toBeVisible();
+  await expect(banner.getByText('New road here. Buses are moving again.')).toBeVisible();
+  await expect(banner.getByText('Tap to skip')).toBeVisible();
+  // The bus pulls up, the hero walks to the board and pays by themselves, the road is built: 4 to 6 s.
+  const t0 = Date.now();
+  await expect.poll(async () => (await page.evaluate(() => window.__game!.city!)).mission, { timeout: 10_000 }).toBe('end');
+  const took = (Date.now() - t0) / 1000;
+  expect(took).toBeLessThan(7.5);
+  const c = await page.evaluate(() => window.__game!.city!);
+  expect(c.saved).toMatchObject({ kobo: home - 1000, fixed: ['potholes'], boom: 4 });
+  expect(Math.hypot(c.hero.x - 101, c.hero.y - 480)).toBeLessThan(30);
+  await expect(page.getByRole('button', { name: 'New road, fixed' })).toBeAttached();
+  // Then the Mama Put board, with its hint (W7).
+  await expect(page.locator('.city-hint')).toHaveText('Walk onto the ₦4 board to build a Mama Put.', { timeout: 6000 });
+  expect(Object.keys(c.boards)).toEqual(['mamaPut']);
+  await page.locator('[data-build="mamaPut"]').tap();
+  await expect.poll(async () => (await page.evaluate(() => window.__game!.city!)).saved.built, { timeout: 20_000 }).toEqual(['buka']);
+  expect(errors).toEqual([]);
+});
+
+test('5W W5: a win from the Streets card: Mission complete says "You brought ... home"; a tap skips it', async ({ page }) => {
+  test.setTimeout(240_000);
+  await openSaved(page, progress({ streets: { 1: { done: true, best: 120 } }, parcel: false, hall: { done: false, best: 0 } }));
+  await playToStreets(page);
+  await page.getByRole('dialog', { name: 'Lagos' }).locator('[data-where="0"]').tap();
+  await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-1');
+  const h = hands(await page.context().newCDPSession(page));
+  await playStreetByHand(page, h);
+  await h.upAll();
+  const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
+  await expect(cleared).toBeVisible({ timeout: 6000 });
+  const kobo = await page.evaluate(() => window.__game!.run.kobo);
+  await waitOutTapLock(page);
+  await page.keyboard.press('Enter'); // the focused big button: Take it home
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await expect(page.locator('.city-banner').getByText(`You brought ${formatMoney(kobo * 10 + 500)} home.`)).toBeVisible();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await page.evaluate(() => window.__game!.city!)).mission).toBe('end');
+  expect((await page.evaluate(() => window.__game!.city!)).saved.fixed).toEqual([]);
 });
 
 test('the hall from the Streets card with a saved parcel, won: lives left, 1 of 37, the wheel, the list, and the fixed street look', async ({ page }) => {
@@ -349,11 +414,11 @@ test('game over on a street: the street words, focus, Streets and Home; the card
   await expect(over).toBeVisible({ timeout: 90_000 });
   await h.upAll();
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
-  await expect(over.getByText(`You got ${formatMoney(kobo * 10)}. The street is still here. Try again!`)).toBeVisible();
+  await expect(over.getByText(`You keep ${formatMoney(kobo * 10)} for Lagos. The street is still here. Try again!`)).toBeVisible();
   for (const b of ['Play again', 'Streets', 'Home']) await expect(over.getByRole('button', { name: b, exact: true })).toBeVisible();
   await expect(over.getByRole('button', { name: 'Play again' })).toBeFocused();
-  // Nothing was saved (no street finished).
-  expect(await saved(page)).toBeNull();
+  // No street was saved; (c) losing keeps it all: only the money went home to Lagos.
+  expect(await saved(page)).toEqual(kobo > 0 ? { v: 2, states: {}, city: expect.objectContaining({ kobo: kobo * 10 }) } : null);
   await checkCardFits(page, 'Play again', (at) => shotAt(page, `${at}-gameover-street`));
   // Enter on the focused big button plays again (after the 0.4 s guard).
   await waitOutTapLock(page);
