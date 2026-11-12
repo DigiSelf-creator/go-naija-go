@@ -79,7 +79,14 @@ export type SoundName =
   | 'dashSteps'
   | 'dashReady'
   // P15: thorny weeds dry up (S2.16 B5)
-  | 'weedsFsss';
+  | 'weedsFsss'
+  // Slice 3 (c): walk the city (city.md 5W): paying, building, collecting
+  | 'payChink'
+  | 'payBulb'
+  | 'payChip'
+  | 'built'
+  | 'collect'
+  | 'notEnough';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -490,6 +497,41 @@ const SOUNDS: Record<SoundName, Recipe> = {
   dashReady: { tones: [{ f: 1600, len: 0.03, wave: 'triangle', to: 1500, vol: 0.035 }] },
   // Weeds dry up: a soft "fsss" of steam.
   weedsFsss: { tones: [], hiss: [{ len: 0.3, hp: 3500, vol: 0.03 }, { len: 0.25, lp: 1200, at: 0.05, vol: 0.015 }] },
+  // Walk the city (5W). One soft "chink" per coin into a price board: two bright sine
+  // partials struck together (a coin on a coin), very short. Never a two-note rising pickup.
+  payChink: {
+    tones: [
+      { f: 2350, len: 0.05, wave: 'sine', to: 2300, vol: 0.03 },
+      { f: 3520, len: 0.035, wave: 'sine', to: 3480, vol: 0.015 },
+    ],
+    hiss: [{ len: 0.02, hp: 6000, vol: 0.02 }],
+  },
+  // A Power bulb into a board: a small glassy "tink" that bends down a little.
+  payBulb: { tones: [{ f: 1660, len: 0.06, wave: 'sine', to: 1560, vol: 0.035 }] },
+  // A Tech chip into a board: a dry wooden "tk".
+  payChip: { tones: [{ f: 1250, len: 0.025, wave: 'triangle', to: 1100, vol: 0.04 }], hiss: [{ len: 0.015, hp: 4000, vol: 0.015 }] },
+  // Built: two talking-drum knocks and a two-tone agogo (high bell then low), with a shake.
+  built: {
+    tones: [
+      { f: 150, len: 0.12, wave: 'sine', peak: 190, to: 120, vol: 0.09 },
+      { f: 170, len: 0.12, wave: 'sine', peak: 220, to: 140, at: 0.13, vol: 0.09 },
+      { f: 880, len: 0.14, wave: 'triangle', to: 870, at: 0.3, vol: 0.045 },
+      { f: 587, len: 0.22, wave: 'triangle', to: 580, at: 0.44, vol: 0.05 },
+    ],
+    hiss: [{ len: 0.12, hp: 4500, at: 0.3, vol: 0.03 }],
+  },
+  // Collect: a shekere shake and a soft low-high kalimba pluck.
+  collect: {
+    tones: [
+      { f: 523, len: 0.12, wave: 'sine', to: 520, vol: 0.05 },
+      { f: 784, len: 0.16, wave: 'sine', to: 780, at: 0.09, vol: 0.045 },
+    ],
+    hiss: [{ len: 0.08, hp: 5000, vol: 0.035 }, { len: 0.06, hp: 5000, at: 0.1, vol: 0.025 }],
+  },
+  // Not enough in the bucket: two gentle low wood knocks (never a buzzer).
+  notEnough: {
+    tones: [0, 1].map((i): Tone => ({ f: 320, len: 0.05, wave: 'triangle', to: 260, at: i * 0.11, vol: 0.05 })),
+  },
 };
 
 /** Every tone and hiss fades in over this long from near silence, so none starts with a tick. */
