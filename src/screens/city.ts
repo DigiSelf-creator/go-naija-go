@@ -820,7 +820,7 @@ export class CityScreen {
           this.hooks.run('potholes', e);
         }),
       );
-    } else body.push(h('p', {}, w.earnLane), h('p', { class: 'city-soon' }, w.cards.lightsOut.soon));
+    } else body.push(h('p', {}, w.earnLane(bucket)), h('p', { class: 'city-soon' }, w.cards.lightsOut.soon));
     const card = this.showCard(null, BUILDS[b].name, body, [back]);
     card.classList.add('city-short');
     this.notEnough = b;

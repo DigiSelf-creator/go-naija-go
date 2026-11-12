@@ -186,7 +186,8 @@ export const WORDS = {
     /** 5W W8 Not enough card. */
     need: (price: string) => `You need ${price} for this.`,
     earnRun: 'Run Alausa to earn more.',
-    earnLane: 'The lane run will earn more.',
+    /** W14 Q2: names the bucket ("Lane runs earn Power." / "Lane runs earn Tech."). */
+    earnLane: (bucket: 'power' | 'tech') => `Lane runs earn ${bucket === 'power' ? 'Power' : 'Tech'}.`,
     /** 5W W8 Part paid line. */
     partPaid: (paid: string, left: string) => `You paid ${paid}. ${left} more to go.`,
     /** 5W W8 Built lines (2 s). */

@@ -178,6 +178,26 @@ test('not enough: walking onto the board with ₦0 opens "You need ₦10 for thi
   expect((await city(page)).saved.kobo).toBe(0);
 });
 
+for (const [build, spot, word, paid, left] of [
+  ['lamps', 'lightsOut', 'Power', 6, 4],
+  ['mast', 'slowInternet', 'Tech', 2, 4],
+] as const) {
+  test(`not enough (W14 Q2): the ${build} board with ${word} 0 after a part pay says "You need ${word} ${left} for this." and "Lane runs earn ${word}."`, async ({ page }) => {
+    await openCity(page, { kobo: 0, power: 0, tech: 0, fixed: [], fixes: 0, paid: { [spot]: paid }, hints: ['walk'] });
+    await page.locator(`[data-build="${build}"]`).tap();
+    const card = page.getByRole('dialog', { name: build === 'lamps' ? 'Lamps' : 'Mast' });
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    await expect(card.getByText(`You need ${word} ${left} for this.`)).toBeVisible();
+    await expect(card.getByText(`Lane runs earn ${word}.`)).toBeVisible();
+    // Plain words, not a button, until the lane run comes (step f).
+    await expect(card.getByText('Lane run: coming soon')).toBeVisible();
+    await expect(card.getByRole('button', { name: /Lane run/ })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: 'Back' })).toBeFocused();
+    await card.getByRole('button', { name: 'Back' }).tap();
+    await expect(card).toHaveCount(0);
+  });
+}
+
 test('Mama Put: a full tray shows "Full", the hero walks over and collects ₦1.50, the meter gets 1, saved at once', async ({ page }) => {
   await openCity(page, { kobo: 0, power: 0, tech: 0, fixed: ['potholes'], fixes: 1, built: ['buka'], trays: { buka: 150 }, boom: 8, hints: ['walk', 'buka'] });
   const bubble = page.getByRole('button', { name: 'Mama Put has 1 naira 50 kobo for you. Full.' });
