@@ -1,5 +1,17 @@
 # Open questions for the product owner
 
+## po, 12 Nov 2026: Tp's answers on walking the city (W1 to W4, W13)
+
+**Answered by Tp: W1 a, W2 a, W3 a, W4 a (11 Nov 2026), and "Yes to all" to the six W13 questions in docs/city.md part 5W (12 Nov 2026).**
+- W1 to W4: the hero walks around Lagos seen from above; pay spots on the ground replace the "Fix it" button; fixed places keep working and make money that waits until you walk over to collect it; this goes in the plan now and is built before the lane run.
+- W13: 1 places fill only while you play (never while the game is closed); 2 part pay, the board keeps the rest and shows "₦4 left"; 3 drag moves the hero, the camera follows, double tap to zoom is dropped; 4 Booming meter: 4 points per fix or build, 1 per full collect (at most 4 from collecting per boom), first boom at 20, replacing the earlier "first boom after 3 fixes" (L7); 5 the names "Mama Put" and "Market"; 6 a win always brings home at least the price of the fix you came for, and the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4).
+- Done by po (12 Nov): W13 marked answered in docs/city.md part 5W and part 7; the old "3 fixes" lines in city.md (part 1 Booming meter, build order (d), step (d), the city screen words) now say first boom at 20, "9 of 20". docs/plan.md S3c4 and S3d1 already matched.
+- Nothing waits for Tp on the city walk now, except pasting the lines below. The build goes ahead as written in city.md W12 (c1 art, c2 to c4 gamedev, cq qa).
+
+Lines for Tp to paste into docs/decisions.md:
+44. In Lagos the hero walks around the city seen from above: tap or drag where to go and the camera follows (drag no longer moves the map; double tap to zoom is dropped). Each fix or build has a pay spot on the ground: stand on it to pay, and if you have only part of the price, you pay part and the board shows what is left ("₦4 left"). Fixed places such as the Mama Put and the Market keep making money while you play (never while the game is closed); it waits in a tray, up to a cap, until you walk over to collect it. Built before the lane run. (W1 to W4, W13 questions 1, 2, 3, 5)
+45. The Booming meter counts points: 4 for each fix or build, 1 for each full collect (at most 4 from collecting per boom). The first boom is at 20, replacing "after 3 fixes". A won challenge always brings home at least the price of the fix you came for; the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4). (W13 questions 4 and 6)
+
 ## po acceptance, 11 Nov 2026: round 2 (intro, Lagos city home, F1/F2, S2.16 B1 to B5)
 
 **Verdict: accepted, with Tp's ear and Tp's first play still to come.**

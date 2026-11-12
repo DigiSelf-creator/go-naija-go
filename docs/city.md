@@ -104,13 +104,13 @@ Exact words (one line under the heading, 40 characters or fewer for 320 x 240):
 
 ### The Booming meter (Tp, L7, 10 Nov)
 
-A bar at the top of the city screen with the word **"Booming"** and a small rising-building icon. It is in steps, not colour: each fix fills one step. At set marks Lagos grows: new buildings rise, the skyline gets busier, more people and buses, and new needs show up as new pins. It never goes down by itself.
+A bar at the top of the city screen with the word **"Booming"** and a small rising-building icon. It is in steps, not colour: each fix or build fills 4 points, and a full collect fills 1 (W6, Tp 12 Nov 2026). At set marks Lagos grows: new buildings rise, the skyline gets busier, more people and buses, and new needs show up as new pins. It never goes down by itself.
 
 Exact words:
-- Label on the bar: "Booming" and under it "Next boom: 2 fixes".
+- Label on the bar: "Booming" and under it "9 of 20" (W6; replaces "Next boom: 2 fixes").
 - At a mark (a short card, tap to close): "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." Button "See Lagos".
-- Screen readers: "Booming meter. 1 of 3 fixes to the next boom."
-- Slice 3 marks: the first boom after 3 fixes (this also turns Lagos's cog on Nigeria's wheel). Later marks come further apart.
+- Screen readers: "Booming meter. 9 of 20 to the next boom."
+- Slice 3 marks: the first boom at 20 points (W6, Tp 12 Nov 2026; replaces "after 3 fixes"). This also turns Lagos's cog on Nigeria's wheel. Later marks come further apart.
 
 The meter replaces the old "Lagos: 1,200 new people" counter (question 4).
 
@@ -362,7 +362,7 @@ The place in brackets is where the pin sits on the map, never words on the card.
 |---|---|---|---|
 | Intro (6 frames) | A first-time player, before the hero builder; later anyone from Settings, "Watch the story" | Tell the story in 20 seconds | See "The intro" below. "Skip" on every frame; a tap moves on |
 | Title | Everyone who opens the game | Start | "Gbese!" / "Build up Lagos. Get Nigeria working." Button "Play". "Sound: on", "Music: on" |
-| City | Anyone who taps "Play" | Pick a problem to fix | Heading "Lagos". Bucket chips "₦24.50", "Power 6", "Tech 3". "Booming" bar, "Next boom: 2 fixes". Pins with one word each. Buttons "Nigeria's wheel", "Hero", "Settings" (and "Challenge road" if Tp says yes) |
+| City | Anyone who taps "Play" | Pick a problem to fix | Heading "Lagos". Bucket chips "₦24.50", "Power 6", "Tech 3". "Booming" bar, "9 of 20" (W6). Pins with one word each. Buttons "Nigeria's wheel", "Hero", "Settings" (and "Challenge road" if Tp says yes) |
 | Problem card | A player who taps a pin | Say what is wrong, the cost and how to help | Potholes: "Potholes on this road." / "Fixing it costs ₦10." / Big "Run Alausa", or "Walk there" when you have some of the price (part 5W replaces "Fix it"). Lights out: "Lamps are out here." / "Switching them on costs Power 10." / Big "Lane run", or "Switch on (Power 10)". Slow internet: "The internet is slow here." / "Fixing it costs Tech 6." / Big "Lane run", or "Fix it (Tech 6)". Small "Back" on each |
 | Lane run HUD | A player in the lane run | Show what you have and how close the Blackout is | "₦3.40" "Power 6" "Tech 2" / "Blackout: 40 m behind" / "To the bus stop: 420 m" |
 | Lane run end | A player who reached the goal or was caught | Bring it home | Goal: "You made it to the bus stop!" / "You got ₦6.20, Power 12 and Tech 7." Big "Take it home", small "Keep running for more". Caught before the goal: "The Blackout caught up." / "You keep it all: ₦3.10, Power 5 and Tech 2." Big "Run again", small "Take it home" |
@@ -396,7 +396,7 @@ Slice 3 starts now, beside the slice 2 polish (po's reading of Tp's 10 Nov play,
 | (a) The intro story | 6 frames, Skip, plays once, "Watch the story" in Settings | **Ready to start now** |
 | (b) Lagos from above | the city screen, drag and zoom, three pins, the bucket counters, saved on the phone | **Ready to start now** |
 | (c) Wins go home | a street win pays Naira, fixes the Potholes pin, "Mission complete!" and the new road | after (b) |
-| (d) The Booming meter | the bar fills with each fix; at 3 fixes "Lagos is booming!" | after (c) |
+| (d) The Booming meter | the bar fills with each fix, build and full collect; at 20 points "Lagos is booming!" (W6) | after (c) |
 | (e) The challenge road | the road of bus stops replaces the Streets list | after (c) |
 | (f) The lane run and the Blackout | the second kind of challenge; pins 2 and 3 can be fixed | designer note first (f0), then art and gamedev |
 
@@ -454,9 +454,9 @@ Done when: a first-timer goes city, card, street 1, win, Mission complete, back 
 
 #### (d) The Booming meter
 
-Words and rules: part 1 "The Booming meter". A bar at the top centre of the city screen with the word "Booming", 3 steps to the first boom ("Next boom: 2 fixes"). At 3 fixes, the card "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." / button "See Lagos", then two new pins marked "Coming soon". The first boom turns Lagos's cog on Nigeria's wheel; a player whose cog already turns from the hall keeps it (the cog never turns off).
+Words and rules: part 1 "The Booming meter". A bar at the top centre of the city screen with the word "Booming" and "9 of 20" under it, five big steps of four notches to the first boom (W6). At 20 points, the card "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." / button "See Lagos", then two new pins marked "Coming soon". The first boom turns Lagos's cog on Nigeria's wheel; a player whose cog already turns from the hall keeps it (the cog never turns off).
 Owners and budgets: art draws the bar, the rising-building icon and the grown-city pictures (under 8 KB with (c)'s blocks reused). gamedev builds the bar, the card and the cog link (under 3 KB).
-Done when: the meter never goes down, survives reload, reads "Booming meter. 1 of 3 fixes to the next boom." to screen readers, and the steps show without colour.
+Done when: the meter never goes down, survives reload, reads "Booming meter. 9 of 20 to the next boom." to screen readers, and the steps show without colour.
 
 #### (e) The challenge road
 
@@ -685,7 +685,7 @@ Done when (whole step): a first-timer walks, fixes the road through Mission comp
 
 ### W13. Questions for Tp
 
-Small ones; the build can start on the recommended answers and change later.
+**Answered by Tp, 12 Nov 2026: "Yes to all" (1 a, 2 a, 3 a, 4 a, 5 a, 6 a).** Places fill only while you play; part pay with "₦4 left"; drag moves the hero, the camera follows, double tap to zoom is dropped; Booming points 4 per fix or build, 1 per full collect (at most 4 a boom), first boom at 20; names "Mama Put" and "Market"; a win always brings home at least the price of the fix you came for, and the first street 1 win brings ₦14. Decision lines 44 and 45 are in docs/questions.md for Tp to paste.
 1. **Do places fill while the game is closed?** a) No, only while you play (recommended: no clocks, no "come back later", nothing to cheat with the phone's clock). b) Yes, up to the cap.
 2. **Part pay:** if you do not have the whole price, the hero pays what they have and the board keeps the rest. a) Yes (recommended: nothing is wasted, and it matches "Halfway there"). b) No, pay only with the whole price.
 3. **Drag moves the hero, not the map;** the camera follows the hero and double tap to zoom goes. a) Yes (recommended: one rule, one thumb). b) Keep drag to look around, and walk by tapping only.
@@ -720,6 +720,8 @@ Numbers follow docs/questions.md, "City direction (9 Nov 2026)".
 | 9. Art and Blender | a) code art; Blender side test on one city picture | 10 Nov 2026 |
 | 10. Title line | a) "Build up Lagos. Get Nigeria working." | 9 Nov 2026 |
 | L1 to L7 | all a): buckets, the Blackout, keep everything when caught, view from above, Mission complete, the Shadow, the Booming meter | 10 Nov 2026 |
+| W1 to W4 | all a): walk the city, pay spots, places that earn, in the plan now before the lane run | 11 Nov 2026 |
+| W13 1 to 6 | all a): fill only while playing, part pay, drag moves the hero, boom points (first boom at 20), "Mama Put" and "Market", win top-up (first street 1 win ₦14) | 12 Nov 2026 |
 
 ## Lines for Tp
 
