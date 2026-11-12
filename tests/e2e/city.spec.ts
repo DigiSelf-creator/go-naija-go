@@ -102,54 +102,47 @@ test('the city buttons: Streets (Home comes back), Hero, the wheel (Back comes b
   await expect.poll(() => screenNow(page)).toBe('city');
 });
 
-test('looking around: + and −, drag, keys, and double tap on a block', async ({ page }) => {
+test('looking around: + and −, pinch steps, keys zoom; one-finger drag walks the hero, never pans (5W W1)', async ({ page }) => {
   await openCity(page);
   expect((await city(page)).cam.zoom).toBe('far');
   await page.getByRole('button', { name: 'Zoom in' }).tap();
   await expect.poll(async () => (await city(page)).cam.zoom).toBe('near');
   const a = (await city(page)).cam;
-  // Drag with one finger (a mouse here): the map follows.
+  // A drag with one finger (a mouse here) steers the hero; the map moves only to follow them.
   const box = (await page.locator('.city-map').boundingBox())!;
   const x0 = box.x + box.width / 2;
   const y0 = box.y + box.height / 2;
   await page.mouse.move(x0, y0);
   await page.mouse.down();
-  await page.mouse.move(x0 - 60, y0 - 30, { steps: 6 });
+  await page.mouse.move(x0 - 20, y0 - 10, { steps: 6 });
   await page.mouse.up();
+  await expect.poll(async () => (await city(page)).hero.moving).toBe(true);
   const b = (await city(page)).cam;
-  expect(b.x).toBeLessThan(a.x);
-  expect(b.y).toBeLessThan(a.y);
-  // Keys: an arrow moves 120 px.
-  await page.keyboard.press('ArrowLeft');
-  await expect.poll(async () => (await city(page)).cam.x).toBeCloseTo(b.x + 120, 0);
+  expect(b.x).toBeCloseTo(a.x, 0);
   await page.keyboard.press('-');
   await expect.poll(async () => (await city(page)).cam.zoom).toBe('far');
   await page.keyboard.press('+');
   await expect.poll(async () => (await city(page)).cam.zoom).toBe('near');
   await page.getByRole('button', { name: 'Zoom out' }).tap();
   await expect.poll(async () => (await city(page)).cam.zoom).toBe('far');
-  // Double tap the park block (row 1, top): near, centred on it.
-  const view = { w: box.width, h: box.height };
-  const cam = (await city(page)).cam;
-  const s = view.h / 1000;
-  const px = box.x + cam.x + 990 * s;
-  const py = box.y + cam.y + 200 * s;
-  await page.mouse.click(px, py);
-  await page.mouse.click(px, py);
-  await expect.poll(async () => (await city(page)).cam.zoom).toBe('near');
+  // Double tap to zoom is dropped: two quick taps stay far (they walk the hero).
+  await page.mouse.click(x0, y0);
+  await page.mouse.click(x0, y0);
+  await page.waitForTimeout(300);
+  expect((await city(page)).cam.zoom).toBe('far');
 });
 
-test('enough Naira: the pin says Ready, "Fix it (₦10)" pays from the bucket, and it is saved', async ({ page }) => {
+test('enough Naira: the pin says Ready, "Walk there" walks to the ₦10 board and pays, and it is saved', async ({ page }) => {
   await openCity(page, { v: 2, states: {}, city: { kobo: 1250, power: 3, tech: 0, fixed: [], fixes: 0 } });
   await expect(lagos(page).locator('.city-chip').first()).toContainText('₦12.50');
   await page.getByRole('button', { name: 'Potholes, ready to fix' }).tap();
   const card = page.getByRole('dialog', { name: 'Potholes' });
-  await card.getByRole('button', { name: 'Fix it (₦10)' }).tap();
+  await card.getByRole('button', { name: 'Walk there' }).tap();
   await expect(card).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'New road, fixed' })).toBeAttached({ timeout: 15_000 });
   await expect(lagos(page).locator('.city-chip').first()).toContainText('₦2.50');
-  await expect(page.getByRole('button', { name: 'New road, fixed' })).toBeAttached();
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress')!) as unknown);
-  expect(saved).toEqual({ v: 2, states: {}, city: { kobo: 250, power: 3, tech: 0, fixed: ['potholes'], fixes: 1 } });
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress')!) as { v: number; states: object; city: object });
+  expect(saved).toMatchObject({ v: 2, states: {}, city: { kobo: 250, power: 3, tech: 0, fixed: ['potholes'], fixes: 1, boom: 4, paid: {} } });
   await page.reload();
   await page.getByRole('button', { name: 'Play' }).tap();
   await expect.poll(() => screenNow(page)).toBe('city');
@@ -179,7 +172,7 @@ test('a broken city part starts at zeros and the game still plays', async ({ pag
 test('at 320 x 240 every tap target is at least 44 px and the pins at least 48 x 56', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
   await openCity(page);
-  for (const b of await lagos(page).locator('button:not(.city-pin)').all()) {
+  for (const b of await lagos(page).locator('button:not(.city-pin):not(.city-sign)').all()) {
     const r = (await b.boundingBox())!;
     expect(Math.min(r.width, r.height), (await b.textContent()) ?? "").toBeGreaterThanOrEqual(44);
   }
@@ -201,7 +194,7 @@ test('qa F1: at 320 x 240 with ₦1,250 the three chips sit on one row and no ch
   const clipped = await chips.evaluateAll((els) => els.some((e) => e.scrollWidth > e.clientWidth + 1));
   expect(clipped).toBe(false);
   // The screen's buttons (the pins are on the map, which moves; the chips never take taps).
-  for (const btn of await lagos(page).locator('button:not(.city-pin)').all()) {
+  for (const btn of await lagos(page).locator('button:not(.city-pin):not(.city-sign)').all()) {
     if (!(await btn.isVisible())) continue;
     const r = (await btn.boundingBox())!;
     for (const b of boxes) {

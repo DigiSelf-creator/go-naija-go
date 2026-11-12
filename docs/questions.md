@@ -1,5 +1,68 @@
 # Open questions for the product owner
 
+## po note, 12 Nov 2026 (newest): walk the city accepted
+
+- Accepted: "Walk the city" (city.md part 5W, W1 to W16; plan S3c0 to S3c4), after qa round 5 and the lead's arrow-corner fix (e114cb8). See "po acceptance, 12 Nov 2026: walk the city" below.
+- Waits for Tp: nothing new. Still waiting: paste decision lines 44 and 45 (recommend: paste as written), a play on a real phone, and the new sounds by ear.
+
+## po acceptance, 12 Nov 2026: walk the city (5W, S3c0 to S3c4)
+
+**Verdict: accepted.** Two small things carry to step (f) as conditions, not blockers.
+Reported (qa round 5, tests at fdeb9cc, pushed 3e4ee29, tests/e2e/walk-city-qa5.spec.ts): passed. Reported (lead): qa's minor follow-up fixed in e114cb8 (every corner of an arrow's 48 x 48 square takes the tap). Reported: first load about 542 KB (under 3 MB).
+Checked by po (verified by reading the code and docs):
+1. Tp's answers are what was built: walk by tap or hold and slide, camera follows, double tap dropped (W13 q3); pay mats, part pay "₦4 left" (q2); trays fill only while playing (q1); Booming points 4 and 1, first boom 20, saved only, bar is step (d) (q4); "Mama Put" and "Market" (q5); first street 1 win ₦14 and the top-up (q6, and po's top-up ruling). Loss keeps your coins (part 5 (c), Tp question 2). Boards one at a time road, Mama Put, Market (W7).
+2. Words (src/screens/words.ts, city part): every line matches city.md W8 and W14 q2 word for word, is plain, warm and short. "Lane runs earn Power." names the bucket, good for a 10 year old.
+3. Rules: no network calls, trackers, ads, accounts or photo access in src (grep of the source). The pay spot is a woven mat and a chalk board; no dollar tiles, plots, joystick, snow or furnaces (W11); no brands on stalls or danfos; no real people; nothing mocks anyone. Nothing from Mario or any Nintendo game. The "wrong premise" line is not used on these screens.
+4. The W14 to W16 changes are fair: the hero on top of roofs keeps "the hero walks to your finger" true on a small phone; Lamps and Mast boards wait until you have Power or Tech, so nothing shows that you cannot start.
+Carried to step (f) (reasoned; only reachable after the lane run, so no player meets them yet):
+- The packed 320 x 240 layout with Power and Tech: arrows must get back to 48 x 48, the Tech chip and "+" must stop cutting the Lights out pin ("Lights ou"), and the drawn arrow must match its tap square. po will not accept step (f) with a 36 px arrow or a cut pin word.
+- Opinion: "New road here. Buses are moving again." and "Danfos are back." are said while no bus moves in the city yet (W14). Fine for now as story words; when moving buses come, show at least one danfo on the new road so the words come true.
+Not tested yet (open, not blocking): a real cheap phone, the chink, built and collect sounds by ear, Tp's own first play of the walk.
+
+## po note, 12 Nov 2026 (latest): win prize top-up on "Play again"
+
+- Ruled by po (docs settle it, nothing waits for Tp): keep the top-up as built. See "po ruling, 12 Nov 2026: the win top-up counts what you bring home, not the bucket" below.
+- Accepted: nothing new. Waits for Tp: nothing new (older items below still stand).
+
+## po note, 12 Nov 2026 (later): Street cleared card buttons
+
+- Ruled by po (docs settle it, nothing waits for Tp): "Streets" stays as the third small button. See "po ruling, 12 Nov 2026: keep Streets on the Street cleared card" below.
+- Accepted: nothing new today (the card waits for qa's S3c3 pass).
+- Waits for Tp: nothing new. Older items below still stand (pasting decisions 44 and 45; the sound check and first play).
+
+## po, 12 Nov 2026: Tp's answers on walking the city (W1 to W4, W13)
+
+**Answered by Tp: W1 a, W2 a, W3 a, W4 a (11 Nov 2026), and "Yes to all" to the six W13 questions in docs/city.md part 5W (12 Nov 2026).**
+- W1 to W4: the hero walks around Lagos seen from above; pay spots on the ground replace the "Fix it" button; fixed places keep working and make money that waits until you walk over to collect it; this goes in the plan now and is built before the lane run.
+- W13: 1 places fill only while you play (never while the game is closed); 2 part pay, the board keeps the rest and shows "₦4 left"; 3 drag moves the hero, the camera follows, double tap to zoom is dropped; 4 Booming meter: 4 points per fix or build, 1 per full collect (at most 4 from collecting per boom), first boom at 20, replacing the earlier "first boom after 3 fixes" (L7); 5 the names "Mama Put" and "Market"; 6 a win always brings home at least the price of the fix you came for, and the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4).
+- Done by po (12 Nov): W13 marked answered in docs/city.md part 5W and part 7; the old "3 fixes" lines in city.md (part 1 Booming meter, build order (d), step (d), the city screen words) now say first boom at 20, "9 of 20". docs/plan.md S3c4 and S3d1 already matched.
+- Nothing waits for Tp on the city walk now, except pasting the lines below. The build goes ahead as written in city.md W12 (c1 art, c2 to c4 gamedev, cq qa).
+
+Lines for Tp to paste into docs/decisions.md:
+44. In Lagos the hero walks around the city seen from above: tap or drag where to go and the camera follows (drag no longer moves the map; double tap to zoom is dropped). Each fix or build has a pay spot on the ground: stand on it to pay, and if you have only part of the price, you pay part and the board shows what is left ("₦4 left"). Fixed places such as the Mama Put and the Market keep making money while you play (never while the game is closed); it waits in a tray, up to a cap, until you walk over to collect it. Built before the lane run. (W1 to W4, W13 questions 1, 2, 3, 5)
+45. The Booming meter counts points: 4 for each fix or build, 1 for each full collect (at most 4 from collecting per boom). The first boom is at 20, replacing "after 3 fixes". A won challenge always brings home at least the price of the fix you came for; the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4). (W13 questions 4 and 6)
+
+### po ruling, 12 Nov 2026: the win top-up counts what you bring home, not the bucket (asked by qa, walk the city)
+
+**Ruling: stay as is.** While the road is not built and you came for it, each street 1 win brings home at least ₦10, even if the Naira bucket already holds ₦14. No code change.
+Why (docs quoted):
+1. city.md part 5W, W5: "the win prize is ₦5, or more if needed so the money you bring home reaches the price." The rule measures the money this win brings home, not what is already in the bucket.
+2. Tp's own words, W13 question 6 (answered "Yes to all", 12 Nov): "a win always brings home at least the price of the fix you came for". Same measure: the win, not the bucket.
+3. The ₦14 first win (road ₦10, Mama Put ₦4) is for the first street 1 win only, and stays that way.
+Reasoned: the extra over the normal prize is at most about 40 kobo a win (qa, reported), and city.md W3 says "Capped so runs stay the main way to earn"; a bigger win prize on a run keeps runs the main way, so it fits. One simple rule ("a win pays for what you came for") is easier for a 10 year old to trust than a prize that shrinks because they saved up. Opinion: a player who keeps replaying instead of paying is having fun on street 1; that is fine.
+qa: add a test that the ₦14 comes only once, and that once the road is built, a street 1 win pays the plain ₦5 prize plus coins.
+
+### po ruling, 12 Nov 2026: keep Streets on the Street cleared card (asked by gamedev, S3c3)
+
+**Ruling: keep "Streets".** The card is: big "Take it home"; small "Next street" (or "Go to Go-Slow Hall"), "Play again", "Streets".
+Why (docs quoted):
+1. city.md part 5 (c): "Big button "Take it home" (replaces "Next street"; "Next street" becomes small)." It changes only the big button and moves "Next street" down. It drops nothing.
+2. design.md S2.10, Street cleared row: "Small "Play again", "Streets"". Those two stay; with "Next street" moved down, that makes three small buttons.
+3. city.md part 5 (e): the challenge road "replaces the Streets screen". So the third button is renamed "Challenge road" in S3e1. It is not removed now.
+4. One clear main action: there is still one big button, and it is "Take it home" (verified by gamedev's report). Small screens: qa's short-screen card-fit checks pass (reported by gamedev). qa checks it again in S3c3 at 320 x 240, 480 x 200 and 640 x 200, with "Computer Village", the parcel line and a 3-digit amount, all buttons at least 44 x 44 px.
+Reasoned: taking "Streets" off would hide the street list. A player who wants to replay street 1 for more money would have to go home first, then come back. Opinion: three short words in one row still read at a glance. If qa finds the row wraps or a button falls under 44 px, keep the big button and "Next street", and move "Streets" before "Play again". Do not drop it without asking Tp.
+designer: nothing to change in design.md S2.10 now. In S3e1, rename "Streets" to "Challenge road" on this card and on the Win card.
+
 ## po acceptance, 11 Nov 2026: round 2 (intro, Lagos city home, F1/F2, S2.16 B1 to B5)
 
 **Verdict: accepted, with Tp's ear and Tp's first play still to come.**

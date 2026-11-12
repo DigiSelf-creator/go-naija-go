@@ -21,7 +21,10 @@ import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
-import { KEY_CITY, payFix, readCity } from './game/city';
+import { HALL_PRIZE, HERO_START, KEY_CITY, addKobo, isBuilt, leftOf, winPrize, writeCity } from './game/city';
+import { CityLife } from './game/cityLife';
+import type { BuildId } from './art/payspot';
+import type { Mission } from './screens/city';
 import { KOBO_PER_COIN } from './game/money';
 import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
 import { CornCount, Hud, Toast } from './screens/hud';
@@ -175,9 +178,15 @@ function startGame(): void {
   }
 
   const loop = new FixedLoop({
-    update: (dt) => game.update(dt),
+    update: (dt) => {
+      game.update(dt);
+      // 5W W3: Lagos's working places fill while a challenge is being played (not paused, tab in front).
+      if (playing && !game.paused && !document.hidden && inPlay()) cityLife.tick(dt);
+    },
     render: () => {
-      game.render(g, view);
+      // The city fills the whole screen and draws itself: the street under it is not drawn
+      // (on a slow phone that was a second full-screen picture every frame while walking).
+      if (menus.current !== 'city') game.render(g, view);
       if (playing) {
         hud.update(game.run, menus.sound);
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
@@ -229,7 +238,9 @@ function startGame(): void {
   }
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
   function startRun(at: TapPoint | null, to: Where = where): void {
+    if (to !== where) missionFor = null;
     where = to;
+    paidHome = false;
     startingRun = true;
     director.restart();
     const lagos = progress.state(LAGOS);
@@ -252,8 +263,11 @@ function startGame(): void {
     syncMusic();
     if (portrait.matches || document.hidden) pause();
   }
-  /** Leaves the run (saving nothing from it) for the city ("Home"), the title, Streets or Nigeria's wheel. */
-  function leave(to: LeaveTo): void {
+  /**
+   * Leaves the run (saving nothing from it) for the city ("Home"), the title, Streets or Nigeria's
+   * wheel. Home: the hero stands at the bus park, or Mission complete brings them by bus (5W W5).
+   */
+  function leave(to: LeaveTo, mission: Mission | null = null): void {
     playing = false;
     document.body.classList.remove('playing');
     hud.show(false);
@@ -269,11 +283,32 @@ function startGame(): void {
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
       sound.play('cogRatchet');
       window.setTimeout(() => sound.play('cogBell'), 320);
+    } else if (to === 'city') {
+      if (cityLife.state.at) cityLife.set({ ...cityLife.state, at: { ...HERO_START } });
+      menus.showCity(mission);
     } else menus.show(to);
   }
 
-  /** The saved city (city.md (b)): the `city` part of gidi-progress. */
-  const city = () => readCity(progress.raw?.[KEY_CITY]);
+  /** The live city (city.md (b), 5W): the `city` part of gidi-progress, kept in memory while the game runs. */
+  const cityLife = new CityLife({
+    load: () => progress.raw?.[KEY_CITY],
+    // A broken copy is left alone until a street is finished (S2.8): the city lives in memory till then.
+    save: (part) => (progress.broken && progress.raw === null ? false : progress.savePart(KEY_CITY, part)),
+  });
+  const city = () => cityLife.state;
+  /** The board the challenge being played was for (the Potholes card's "Run Alausa": the New road), or null. */
+  let missionFor: BuildId | null = null;
+  /** Money the last win brought home (whole kobo), for "Mission complete!". */
+  let brought = 0;
+  /** This run's money is already home (a hall win pays at the third hit, then 'win' follows). */
+  let paidHome = false;
+  /** (c) Money from a run goes home to Lagos at once, saved. */
+  function payHome(kobo: number): void {
+    if (paidHome) return;
+    paidHome = true;
+    brought = kobo;
+    if (kobo > 0) cityLife.set(addKobo(cityLife.state, kobo), true);
+  }
   const menus = new Menus(document.body, store, game.look, {
     // city.md (b) flow: "Play" (and the builder's "Start running") opens Lagos from above, the
     // home screen. ?level=lagos-2, lagos-3 or lagos-hall still starts that level (for testing).
@@ -281,20 +316,23 @@ function startGame(): void {
       if (askedAt === null) menus.show('city');
       else startRun(at, firstStreet);
     },
-    city,
-    // The Potholes card's "Run Alausa" starts street 1. The lane run (step (f)) comes later.
+    cityLife,
+    // The Potholes card's "Run Alausa" starts street 1, for the New road. The lane run (step (f)) comes later.
     runSpot: (spot, at) => {
-      if (spot === 'potholes') startRun(at, 0);
+      if (spot !== 'potholes') return;
+      startRun(at, 0);
+      missionFor = isBuilt(cityLife.state, 'road') ? null : 'road';
     },
-    fix: (spot) => {
-      const next = payFix(city(), spot);
-      if (!next) return false;
-      progress.savePart(KEY_CITY, next);
-      return true;
+    takeHome: () => leave('city', { build: missionFor, kobo: brought }),
+    play: (to, at) => {
+      missionFor = null;
+      startRun(at, to);
     },
-    play: (to, at) => startRun(at, to),
     restart: (at) => startRun(at),
-    next: (at) => startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall'),
+    next: (at) => {
+      missionFor = null;
+      startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
+    },
     resume,
     leave,
     lookChanged: (look) => {
@@ -515,6 +553,8 @@ function startGame(): void {
         controls.releaseAll();
         loop.pause();
         toast.hide();
+        // (c) Losing keeps it all (Tp, question 2): the coins go home to Lagos.
+        payHome(game.run.kobo * KOBO_PER_COIN);
         menus.showGameOver({ kobo: game.run.kobo * KOBO_PER_COIN, lives: 0, hall: game.run.inHall });
         break;
       case 'parcelShield':
@@ -562,10 +602,18 @@ function startGame(): void {
         toast.hide();
         // S2.8: saved only now, when the bus is boarded (with the parcel, if carried).
         // N1: a coin is 10 kobo; bests and the card's money are whole kobo.
-        if (typeof where === 'number') progress.finish({ state: LAGOS, street: where + 1, kobo: game.run.kobo * KOBO_PER_COIN, parcel: game.run.parcel });
+        {
+          const coins = game.run.kobo * KOBO_PER_COIN;
+          // 5W W5: a win brings home at least what is left of the fix it was for; the first street 1
+          // win from the Potholes card brings ₦14 (road ₦10, Mama Put ₦4).
+          const first = where === 0 && missionFor === 'road' && !streetRecord(progress.state(LAGOS), 1).done;
+          const left = missionFor ? leftOf(cityLife.state, missionFor) : 0;
+          if (typeof where === 'number') progress.finish({ state: LAGOS, street: where + 1, kobo: coins, parcel: game.run.parcel });
+          payHome(coins + winPrize(coins, { left, first }));
+        }
         menus.showCleared({
           name: game.level.name,
-          kobo: game.run.kobo * KOBO_PER_COIN,
+          kobo: brought,
           last: typeof where === 'number' && where + 1 >= streets.length,
           parcel: game.run.parcel,
         });
@@ -598,6 +646,8 @@ function startGame(): void {
         // 6 s kind finish never loses it (qa N3). The same save uses the garri parcel up (po ruling
         // d). 'win' saves the same again (merge, never lower).
         progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
+        // (c) The hall win adds ₦15 to Lagos.
+        payHome(game.run.kobo * KOBO_PER_COIN + HALL_PRIZE);
         // P2 (po N4): no fight hint ("PEEP!") stays up over the kind finish.
         toast.hide();
         break;
@@ -627,7 +677,11 @@ function startGame(): void {
   };
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pause();
+    if (document.hidden) {
+      pause();
+      // 5W W4: the trays and the hero's place are saved when the tab is hidden.
+      cityLife.flush();
+    }
     syncHum();
     // S2.9 rule 4: no music while the page is hidden; on the way back it carries on from the
     // same bar (in a run it waits for "Keep playing").
@@ -1022,7 +1076,21 @@ function startGame(): void {
       // in the map), the open card and the saved buckets.
       const c = menus.city;
       if (!c) return null;
-      return { cam: { ...c.cam }, draws: c.draws, pins: c.pinBoxes(), open: c.open, saved: city() };
+      return {
+        cam: { ...c.cam },
+        draws: c.draws,
+        pins: c.pinBoxes(),
+        boards: c.boardBoxes(),
+        bubbles: c.bubbleBoxes(),
+        arrows: c.arrows(),
+        open: c.open,
+        hero: { x: c.hero.x, y: c.hero.y, moving: c.hero.moving, dir: c.hero.dir },
+        mission: c.missionPhase,
+        paying: c.paying,
+        writes: cityLife.writes,
+        // The city part as it would be saved now (plain JSON).
+        saved: writeCity(city()) as never,
+      };
     },
     get busBoard() {
       // The "BUS PARK" board as drawn on screen right now, CSS px (null on a level with no bus park).
@@ -1214,7 +1282,27 @@ declare global {
         readonly draws: number;
         readonly pins: Readonly<Record<string, { readonly x: number; readonly y: number; readonly w: number; readonly h: number }>>;
         readonly open: string | null;
-        readonly saved: { readonly kobo: number; readonly power: number; readonly tech: number; readonly fixed: readonly string[]; readonly fixes: number };
+        readonly boards: Readonly<Record<string, { readonly x: number; readonly y: number; readonly w: number; readonly h: number }>>;
+        readonly bubbles: Readonly<Record<string, { readonly x: number; readonly y: number; readonly w: number; readonly h: number }>>;
+        readonly arrows: readonly { readonly icon: string; readonly x: number; readonly y: number; readonly tap: number }[];
+        readonly hero: { readonly x: number; readonly y: number; readonly moving: boolean; readonly dir: string };
+        readonly mission: string | null;
+        readonly paying: boolean;
+        readonly writes: number;
+        readonly saved: {
+          readonly kobo: number;
+          readonly power: number;
+          readonly tech: number;
+          readonly fixed: readonly string[];
+          readonly fixes: number;
+          readonly at?: { readonly x: number; readonly y: number };
+          readonly paid: Readonly<Record<string, number>>;
+          readonly built: readonly string[];
+          readonly trays: Readonly<Record<string, number>>;
+          readonly boom: number;
+          readonly boomCollect: number;
+          readonly hints: readonly string[];
+        };
       } | null;
       /** The "BUS PARK" board's drawn box on screen, CSS px; null when the level has no bus park. */
       readonly busBoard: { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;

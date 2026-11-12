@@ -73,7 +73,8 @@ export const WORDS = {
   gameOver: {
     heading: 'Out of lives',
     /** N2: money words; `kobo` is whole kobo (10 a coin). */
-    text: (kobo: number) => `You got ${formatMoney(kobo)}. The street is still here. Try again!`,
+    /** (c) "Losing keeps it all" (Tp, question 2): the money goes home to Lagos. */
+    text: (kobo: number) => `You keep ${formatMoney(kobo)} for Lagos. The street is still here. Try again!`,
     /** S2.10 Game over (hall). */
     hallText: 'General Go-Slow is still jamming the hall. Try again!',
     playAgain: 'Play again',
@@ -90,6 +91,8 @@ export const WORDS = {
     text: (name: string, kobo: number) => `${name} is moving again, thanks to you! You got ${formatMoney(kobo)}.`,
     /** Shown when the player got on the bus carrying the garri parcel. */
     parcel: 'Your garri parcel is saved for Go-Slow Hall.',
+    /** (c), 5W W5: the big button goes home to Lagos ("Mission complete!"). */
+    takeHome: 'Take it home',
     next: 'Next street',
     toHall: 'Go to Go-Slow Hall',
     playAgain: 'Play again',
@@ -150,7 +153,7 @@ export const WORDS = {
   city: {
     heading: 'Lagos',
     /** The map picture's spoken name. */
-    map: 'Lagos from above. Drag to look around.',
+    map: 'Lagos from above. Tap where you want to go.',
     power: (n: number) => `Power ${n}`,
     tech: (n: number) => `Tech ${n}`,
     spokenNaira: (money: string) => `Naira: ${money}`,
@@ -173,26 +176,65 @@ export const WORDS = {
     fixedName: { potholes: 'New road', lightsOut: 'Lamps on', slowInternet: 'Fast internet' },
     fixed: 'Fixed ✓',
     back: 'Back',
+    /** 5W W7 hints, once each, in the bar under the top row. */
+    hintWalk: 'Tap where you want to go.',
+    hintWalkKeys: 'Use the arrow keys to walk.',
+    hintBuka: () => `Walk onto the ${formatMoney(400)} board to build a Mama Put.`,
+    hintCollect: 'Mama Put made money! Walk over to collect it.',
+    /** 5W W2: the problem card's button that walks the hero to the board. */
+    walkThere: 'Walk there',
+    /** 5W W8 Not enough card. */
+    need: (price: string) => `You need ${price} for this.`,
+    earnRun: 'Run Alausa to earn more.',
+    /** W14 Q2: names the bucket ("Lane runs earn Power." / "Lane runs earn Tech."). */
+    earnLane: (bucket: 'power' | 'tech') => `Lane runs earn ${bucket === 'power' ? 'Power' : 'Tech'}.`,
+    /** 5W W8 Part paid line. */
+    partPaid: (paid: string, left: string) => `You paid ${paid}. ${left} more to go.`,
+    /** 5W W8 Built lines (2 s). */
+    builtLine: {
+      road: 'New road! Danfos are back.',
+      mamaPut: 'Mama Put is open! Food for the queue.',
+      market: 'The market is open! Danfos come for goods.',
+      lamps: 'Lamps on! The street is awake.',
+      mast: 'Fast internet! Shops are busy.',
+    },
+    /** 5W W8 Collect line (1.5 s): "+₦1.20 from Mama Put". */
+    collectLine: (money: string, name: string) => `+${money} from ${name}`,
+    /** Spoken: "Mama Put has 1 naira 20 kobo for you. Full." */
+    traySpoken: (name: string, money: string, full: boolean) => `${name.charAt(0).toUpperCase()}${name.slice(1)} has ${money} for you.${full ? ' Full.' : ''}`,
+    /** Spoken: "New road. Costs 10 naira. You have 6 naira. Walk there." */
+    boardSpoken: (name: string, price: string, have: string, part: boolean) => `${name}. ${part ? `${price} left` : `Costs ${price}`}. You have ${have}. Walk there.`,
+    /** 5W W5 Mission complete in the walkable city. */
+    mission: {
+      heading: 'Mission complete!',
+      line: {
+        road: 'New road here. Buses are moving again.',
+        lamps: 'The lamps are on. The street is awake.',
+        mast: 'Fast internet here. Shops are busy.',
+        mamaPut: 'Mama Put is open here.',
+        market: 'The market is open here.',
+      },
+      more: (money: string) => `${money} more to finish it.`,
+      brought: (money: string) => `You brought ${money} home.`,
+      skip: 'Tap to skip',
+    },
     cards: {
       potholes: {
         line1: 'Potholes on this road.',
         line2: (money: string) => `Fixing it costs ${money}.`,
         go: 'Run Alausa',
-        fix: (money: string) => `Fix it (${money})`,
       },
       lightsOut: {
         line1: 'Lamps are out here.',
         line2: 'Switching them on costs Power 10.',
         go: 'Lane run',
         soon: 'Lane run: coming soon',
-        fix: 'Switch on (Power 10)',
       },
       slowInternet: {
         line1: 'The internet is slow here.',
         line2: 'Fixing it costs Tech 6.',
         go: 'Lane run',
         soon: 'Lane run: coming soon',
-        fix: 'Fix it (Tech 6)',
       },
     },
   },

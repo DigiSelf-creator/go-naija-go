@@ -70,15 +70,15 @@ async function playToBus(page: Page, street: string, parts: readonly (readonly [
   return { stats, last, crates, h };
 }
 
-async function clearedScreen(page: Page, name: string, kobo: number, big: string) {
+async function clearedScreen(page: Page, name: string, kobo: number, next: string) {
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 6000 });
-  // Tp's line (8 Nov 2026), and "Streets" in place of "Home" (S2.10).
-  await expect(dialog.getByText(`${name} is moving again, thanks to you! You got ${formatMoney(kobo * 10)}.`)).toBeVisible();
-  for (const b of [big, 'Play again', 'Streets']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Home' })).toHaveCount(0);
-  // po M4 bug 4: focus on the big button.
-  await expect(dialog.getByRole('button', { name: big })).toBeFocused();
+  // Tp's line (8 Nov 2026), and "Streets" in place of "Home" (S2.10). (c): the coins plus the ₦5 win prize.
+  await expect(dialog.getByText(`${name} is moving again, thanks to you! You got ${formatMoney(kobo * 10 + 500)}.`)).toBeVisible();
+  for (const b of ['Take it home', next, 'Play again', 'Streets']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Home', exact: true })).toHaveCount(0);
+  // po M4 bug 4: focus on the big button, (c) "Take it home"; the next street is a small button now.
+  await expect(dialog.getByRole('button', { name: 'Take it home' })).toBeFocused();
   expect(await page.evaluate(() => window.__game!.screen)).toBe('cleared');
   return dialog;
 }
