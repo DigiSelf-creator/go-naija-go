@@ -823,7 +823,8 @@ export function pinHitBox(x: number, y: number): { x: number; y: number; w: numb
   return { x: x - 32, y: y - h, w: 64, h: h + 4 };
 }
 
-function pinIcon(g: CanvasRenderingContext2D, spot: SpotId, x: number, y: number): void {
+/** A spot's icon (the one in its pin), centred on (x, y), about 24 across. For pin edge arrows. */
+export function drawSpotIcon(g: CanvasRenderingContext2D, spot: SpotId, x: number, y: number): void {
   if (spot === 'potholes') {
     // A cracked road with a hole
     rect(g, x - 11, y - 7, 22, 14, '#5b5b62', INK, 1);
@@ -895,7 +896,7 @@ export function drawProblemPin(g: CanvasRenderingContext2D, x: number, y: number
   g.beginPath();
   g.arc(0, cy, PIN.r, 0, TAU);
   g.stroke();
-  pinIcon(g, spot, 0, cy);
+  drawSpotIcon(g, spot, 0, cy);
   if (state === 'ready') {
     // Tick badge, top right
     disc(g, 13, cy - 13, 8, '#22a85a');
