@@ -133,7 +133,7 @@ for (const [width, height] of [
     await page.waitForTimeout(800);
     let checked = 0;
     // Walk the camera round with the arrow keys so different pins leave the screen.
-    for (const key of ['', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp']) {
+    for (const key of ['', 'ArrowRight', 'ArrowRight', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowLeft', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowUp']) {
       if (key) {
         await page.keyboard.down(key);
         await page.waitForTimeout(1200);
@@ -146,9 +146,12 @@ for (const [width, height] of [
       for (const [spot, p] of Object.entries(c.pins) as [string, Box][]) {
         if (BUSY.fixed.includes(spot) || shows(p, map.width, map.height)) continue;
         checked++;
+        if (!icons.includes(spot) && process.env['QA_SHOTS']) await page.screenshot({ path: `${process.env['QA_SHOTS']}/r3-${width}x${height}-no-arrow-${spot}-${checked}.png` });
         expect.soft(icons, `after ${key || 'zoom'}: ${spot} pin ${JSON.stringify(p)} is fully off screen`).toContain(spot);
       }
     }
     test.info().annotations.push({ type: 'off-screen pins checked', description: String(checked) });
+    // The test means something only if some pin did leave the screen.
+    expect(checked, 'no pin left the screen').toBeGreaterThan(0);
   });
 }
