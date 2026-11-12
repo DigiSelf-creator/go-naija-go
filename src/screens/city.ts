@@ -526,7 +526,9 @@ export class CityScreen {
     for (const p of this.pins) {
       const at = toScreen(this.cam, this.view, CITY_SPOTS[p.spot].pin);
       const box = pinTapBox(at.x, at.y, p.word);
-      p.el.style.transform = `translate(${Math.round(box.x)}px, ${Math.round(box.y)}px)`;
+      // Written only when it changes: no style work per frame while the camera is still.
+      const t = `translate(${Math.round(box.x)}px, ${Math.round(box.y)}px)`;
+      if (p.el.style.transform !== t) p.el.style.transform = t;
     }
   }
 

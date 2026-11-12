@@ -184,7 +184,9 @@ function startGame(): void {
       if (playing && !game.paused && !document.hidden && inPlay()) cityLife.tick(dt);
     },
     render: () => {
-      game.render(g, view);
+      // The city fills the whole screen and draws itself: the street under it is not drawn
+      // (on a slow phone that was a second full-screen picture every frame while walking).
+      if (menus.current !== 'city') game.render(g, view);
       if (playing) {
         hud.update(game.run, menus.sound);
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
