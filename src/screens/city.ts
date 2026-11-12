@@ -1907,18 +1907,60 @@ export class CityScreen {
     return made;
   }
 
+  /**
+   * Where an edge arrow goes: its own spot on the edge band if that is clear of everything in
+   * `avoid`; else the nearest clear spot along the band's edges (pointing at the thing from
+   * there); else nowhere (null: no arrow, rather than one over a sign or a button).
+   */
+  private arrowSpot(base: { x: number; y: number; angle: number } | null, to: Pt, avoid: readonly ScreenBox[], inset: number, top: number, bottomH: number): { x: number; y: number; angle: number } | null {
+    if (!base) return null;
+    const r = EDGE_ARROW.r + 2;
+    const clear = (x: number, y: number): boolean => avoid.every((o) => x + r <= o.x || o.x + o.w <= x - r || y + r <= o.y || o.y + o.h <= y - r);
+    if (clear(base.x, base.y)) return base;
+    const x0 = inset;
+    const x1 = Math.max(x0, this.view.w - inset);
+    const y0 = top + inset;
+    const y1 = Math.max(y0, bottomH - inset);
+    let pick: Pt | null = null;
+    let best = Infinity;
+    const tryAt = (x: number, y: number): void => {
+      const d = (x - base.x) ** 2 + (y - base.y) ** 2;
+      if (d < best && clear(x, y)) {
+        best = d;
+        pick = { x, y };
+      }
+    };
+    for (let x = x0; x <= x1; x += 4) {
+      tryAt(x, y0);
+      tryAt(x, y1);
+    }
+    for (let y = y0; y <= y1; y += 4) {
+      tryAt(x0, y);
+      tryAt(x1, y);
+    }
+    const p = pick as Pt | null;
+    return p ? { x: p.x, y: p.y, angle: Math.atan2(to.y - p.y, to.x - p.x) } : null;
+  }
+
   /** Pins, boards and trays off the screen get a round sign at the edge with their icon (W1). */
   private drawArrows(g: CanvasRenderingContext2D): void {
     const want: { icon: EdgeIcon; at: Pt; go: () => void; label: string }[] = [];
     const top = this.view.top ?? 0;
     const bottomH = this.view.h - this.bottomCover;
-    // Off the screen: its middle is outside the whole map area (a thing partly under a button row still shows).
+    // Off the screen: its middle is outside the whole map area (a thing partly under a button row
+    // still shows), and less than a quarter of it shows (a pin half on screen needs no arrow: its
+    // icon would show twice).
     const off = (b: ScreenBox): boolean => {
       const cx = b.x + b.w / 2;
       const cy = b.y + b.h / 2;
-      return cx < 0 || cx > this.view.w || cy < 0 || cy > this.view.h;
+      if (!(cx < 0 || cx > this.view.w || cy < 0 || cy > this.view.h)) return false;
+      const seen = Math.max(0, Math.min(b.x + b.w, this.view.w) - Math.max(b.x, 0)) * Math.max(0, Math.min(b.y + b.h, this.view.h) - Math.max(b.y, 0));
+      return seen < (b.w * b.h) / 4;
     };
     const pins = this.pinBoxes();
+    // An arrow is a sign too: never over a board, a bubble, a drawn pin, a chip, a button or another arrow.
+    const onView = (b: ScreenBox): boolean => b.x + b.w > 0 && b.y + b.h > 0 && b.x < this.view.w && b.y < this.view.h;
+    const avoid: ScreenBox[] = [...this.boardBox.values(), ...this.bubbleBox.values(), ...this.covers, ...this.pins.filter((p) => this.looks[p.spot] !== 'fixed').map((p) => pins[p.spot])].filter(onView);
     for (const p of this.pins) {
       if (this.looks[p.spot] === 'fixed') continue;
       const b = pins[p.spot];
@@ -1937,11 +1979,12 @@ export class CityScreen {
       el.hidden = !a;
       if (!a) return;
       const inset = Math.max(EDGE_ARROW.r + 2, Math.min(EDGE_ARROW.inset, (bottomH - top) / 2));
-      const at = edgeArrowPlace(a.at.x, a.at.y, this.view.w, bottomH, top, inset);
+      const at = this.arrowSpot(edgeArrowPlace(a.at.x, a.at.y, this.view.w, bottomH, top, inset), a.at, avoid, inset, top, bottomH);
       if (!at) {
         el.hidden = true;
         return;
       }
+      avoid.push({ x: at.x - EDGE_ARROW.r, y: at.y - EDGE_ARROW.r, w: EDGE_ARROW.r * 2, h: EDGE_ARROW.r * 2 });
       drawEdgeArrow(g, at.x, at.y, at.angle, a.icon);
       const r = EDGE_ARROW.r + 4;
       this.placeSign(el, { x: at.x - r, y: at.y - r, w: r * 2, h: r * 2 });
