@@ -495,7 +495,7 @@ This section replaces the plain "Fix it (₦10)" button and the S3c tasks. It is
 - **Tap a pin** (Potholes, Lights out, Slow internet): the problem card opens, as now. The hero does not move.
 - **Tap a price board or a tray bubble:** the hero walks there and then pays or collects by itself.
 - **When a tap counts as "hold":** the finger stays down 150 ms or moves more than 8 px. A quick tap is always a tap.
-- **What changes in (b).** One-finger drag no longer moves the map: it moves the hero, and the camera follows the hero. Double tap to zoom is dropped (it would make every tap wait 300 ms). Pinch and the "+" and "−" buttons still zoom. "−" (far) still shows the whole area, and on narrow screens the first look still shows every pin (qa F2). A pin off the screen gets a small arrow sign at the screen edge with its icon (at least 44 x 44 px); tapping it opens that pin's card.
+- **What changes in (b).** One-finger drag no longer moves the map: it moves the hero, and the camera follows the hero. Double tap to zoom is dropped (it would make every tap wait 300 ms). Pinch and the "+" and "−" buttons still zoom. "−" (far) still shows the whole area, and on narrow screens the first look still shows every pin (qa F2). A pin off the screen gets a small arrow sign at the screen edge with its icon (a clear 48 x 48 px tap square, W15); tapping it opens that pin's card.
 
 **The path.**
 - The map has a walk grid of 25 x 25 map unit cells (64 x 40 cells). Roads, pavements, the bus park, the jetty and the lots in front of each block are walkable. Building blocks, the lagoon and the bridge rails are not.
@@ -722,9 +722,13 @@ Why not the others: a board standing in for its own pin (b) gives one sign two j
 
 The W2 and W9 rule now reads: a sign never sits over a **drawn** pin, a chip or a button. qa's sign test checks only the pins of spots that are not fixed. **No game change.**
 
-**Edge arrows (amended 12 Nov 2026, docs only).** An arrow's middle and the 44 x 44 px tap area around it never overlap a drawn pin's tap area, a chip, a button, a board, a bubble or another arrow. Only the arrow's outer drawn edge (outside that 44 x 44) may overlap a drawn pin. The pin keeps its middle and its word. A pin fully off the screen always gets an arrow. The "Lagos" heading never covers a sign and does not catch taps; an arrow may sit under it.
+**Edge arrows (amended 12 Nov 2026, docs only).** An arrow's middle and the clear 48 x 48 px tap square around it (as "Big targets") never overlap a drawn pin's tap area, a chip, a button, a board, a bubble or another arrow. Only the arrow's outer drawn edge (outside that 48 x 48) may overlap a drawn pin.
+
+**Narrow exception (accepted by the lead for now, 12 Nov 2026).** Only when no clear 48 x 48 square fits anywhere on the screen (seen in one packed 320 x 240 layout with Power and Tech, reachable only after the lane run), the square shrinks to 44, then 40, then 36 x 36 px, so a fully off-screen pin still gets an arrow. An arrow is better than none. Even shrunk, it still never overlaps a drawn pin, a chip, a button, a board, a bubble or another arrow. Every other layout keeps 48. The pin keeps its middle and its word. A pin fully off the screen always gets an arrow. The "Lagos" heading never covers a sign and does not catch taps; an arrow may sit under it.
 
 **qa's minor follow-up for step (f).** At 320 x 240 with Power and Tech, the Tech chip covers part of the Lights out pin's icon and the "+" button cuts its word to "Lights ou" (a pin against screen buttons). Look at it when the lane run makes this case real.
+
+**Also for step (f):** revisit the packed 320x240 Power+Tech layout so every arrow gets 48.
 
 ### W16. Short boards and signs away from their mats (designer, 12 Nov 2026)
 
