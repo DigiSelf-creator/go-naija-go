@@ -36,8 +36,8 @@ describe('S2.10 words', () => {
   it('Pause and game over words', () => {
     const p = WORDS.pause;
     expect([p.heading, p.keepPlaying, p.restart, p.streets, p.home]).toEqual(['Paused', 'Keep playing', 'Start again', 'Streets', 'Home']);
-    // N2: "You got 90 kobo. The street is still here. Try again!"
-    expect(WORDS.gameOver.text(90)).toBe('You got 90 kobo. The street is still here. Try again!');
+    // N2 and (c) "Losing keeps it all": "You keep 90 kobo for Lagos. The street is still here. Try again!"
+    expect(WORDS.gameOver.text(90)).toBe('You keep 90 kobo for Lagos. The street is still here. Try again!');
     expect([WORDS.title.musicOn, WORDS.title.musicOff]).toEqual(['Music: on', 'Music: off']);
     expect(WORDS.title.start).toBe('Play');
     // City choice 10 (Tp, 9 Nov 2026).
