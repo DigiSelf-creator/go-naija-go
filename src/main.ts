@@ -1284,7 +1284,7 @@ declare global {
         readonly open: string | null;
         readonly boards: Readonly<Record<string, { readonly x: number; readonly y: number; readonly w: number; readonly h: number }>>;
         readonly bubbles: Readonly<Record<string, { readonly x: number; readonly y: number; readonly w: number; readonly h: number }>>;
-        readonly arrows: readonly { readonly icon: string; readonly x: number; readonly y: number }[];
+        readonly arrows: readonly { readonly icon: string; readonly x: number; readonly y: number; readonly tap: number }[];
         readonly hero: { readonly x: number; readonly y: number; readonly moving: boolean; readonly dir: string };
         readonly mission: string | null;
         readonly paying: boolean;

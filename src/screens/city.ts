@@ -144,6 +144,10 @@ const HOLD_MS = 150;
 const REPATH_MS = 200;
 /** How near the door a collect happens (W4); Gentle doubles it (W9). */
 const COLLECT_REACH = 48;
+/** An edge arrow's clear tap area, square, in CSS px (W15, "Big targets": at least 48 x 48). */
+const ARROW_TAP = 48;
+/** The tap squares tried in turn: 48 always when there is room; smaller only on a packed tiny screen. */
+const ARROW_TAPS = [ARROW_TAP, 44, 40, 36] as const;
 /** A build goes up in this long (W2 step 5: 1 to 2 s). */
 const BUILD_TIME = 1.5;
 /** Lines under the top row: built lines 2 s, the part paid line 2 s, the collect line 1.5 s. */
@@ -294,7 +298,7 @@ interface SignSpot {
 /** Something a sign keeps clear of. Soft ones (the heading, a fixed spot's tap area, which has no pin drawn) are given up only when a tiny screen has no other room. */
 interface Block extends ScreenBox {
   soft?: boolean;
-  /** The "Lagos" heading: hard for signs, soft for an edge arrow that has no clear spot. */
+  /** The "Lagos" heading: hard for signs; an edge arrow's tap area may go a little under it. */
   heading?: boolean;
 }
 
@@ -322,7 +326,7 @@ export class CityScreen {
   /** Where each board and bubble sits on screen now (CSS px), for taps and tests. */
   private boardBox = new Map<BuildId, ScreenBox>();
   private bubbleBox = new Map<PlaceId, ScreenBox>();
-  private arrowBox: { icon: EdgeIcon; x: number; y: number }[] = [];
+  private arrowBox: { icon: EdgeIcon; x: number; y: number; tap: number }[] = [];
   private raf = 0;
   private idleTimer = 0;
   private last = 0;
@@ -557,7 +561,8 @@ export class CityScreen {
   bubbleBoxes(): Partial<Record<PlaceId, ScreenBox>> {
     return Object.fromEntries(this.bubbleBox);
   }
-  arrows(): { icon: string; x: number; y: number }[] {
+  /** Edge arrows on screen now: middle and clear square tap size (48, smaller only when packed), for tests. */
+  arrows(): { icon: string; x: number; y: number; tap: number }[] {
     return this.arrowBox.map((a) => ({ ...a }));
   }
   get missionPhase(): string | null {
@@ -1926,63 +1931,92 @@ export class CityScreen {
   }
 
   /**
-   * Where an edge arrow goes (a pin, board or tray fully off screen always gets one): its own
-   * spot on the edge band if that is clear of everything in `avoid`; else the nearest clear spot
-   * along the band's edges, then along a band nearer the edge (the smallest inset); else, when
-   * nothing is fully clear, the spot that covers the least, where only soft things (a drawn
-   * pin, the heading) may be covered much, and never the middle of a hard thing (a chip, a
-   * button, a board, a bubble, another arrow). Null only when every spot would cover one.
+   * Where an edge arrow goes (a pin, board or tray fully off screen always gets one), and the
+   * size of its clear square tap area. The arrow's middle and the ARROW_TAP (48) square round it
+   * stay on the map and never overlap a drawn pin's tap area, a chip, a button, a board, a bubble
+   * or another arrow (W15, "Big targets"): only its outer drawn edge may reach over a drawn pin.
+   * The "Lagos" heading takes no taps, so the tap area may go a little under it. Tried in order:
+   * its own spot on the edge band; the nearest clear spot along the band's edges; bands nearer the
+   * edge; any clear spot on the map, nearest its own. Only when no 48 square is clear anywhere
+   * (a tiny screen packed with signs) does the square shrink, to 44 (W1) and then a little more,
+   * so a pin fully off the screen still gets its arrow (F2). Null only when even that fails.
    */
-  private arrowSpot(base: { x: number; y: number; angle: number } | null, to: Pt, avoid: readonly Block[], inset: number, top: number, bottomH: number): { x: number; y: number; angle: number } | null {
+  private arrowSpot(base: { x: number; y: number; angle: number } | null, to: Pt, avoid: readonly Block[], inset: number, top: number, bottomH: number): { x: number; y: number; angle: number; tap: number } | null {
     if (!base) return null;
-    const r = EDGE_ARROW.r + 2;
-    const clear = (x: number, y: number): boolean => avoid.every((o) => x + r <= o.x || o.x + o.w <= x - r || y + r <= o.y || o.y + o.h <= y - r);
-    if (clear(base.x, base.y)) return base;
-    // The cost of an arrow at (x, y): 0 when clear; Infinity over a hard thing's middle.
+    for (const tap of ARROW_TAPS) {
+      const p = this.arrowSpotAt(tap, base, avoid, inset, top, bottomH);
+      if (p) return { x: p.x, y: p.y, angle: Math.atan2(to.y - p.y, to.x - p.x), tap };
+    }
+    return null;
+  }
+
+  private arrowSpotAt(tap: number, base: Pt, avoid: readonly Block[], inset: number, top: number, bottomH: number): Pt | null {
+    // Half the tap area, plus half a pixel for the rounding of buttons on screen.
+    const r = tap / 2 + 0.5;
+    const area = (2 * r) ** 2;
+    const W = this.view.w;
+    const H = this.view.h;
+    // The cost of an arrow at (x, y): Infinity off the map or over anything hard; else how much
+    // of the heading it goes under (at most a fifth of the tap area).
     const cost = (x: number, y: number): number => {
+      if (x - r < 0 || y - r < 0 || x + r > W || y + r > H) return Infinity;
       let c = 0;
       for (const o of avoid) {
         const ov = Math.max(0, Math.min(x + r, o.x + o.w) - Math.max(x - r, o.x)) * Math.max(0, Math.min(y + r, o.y + o.h) - Math.max(y - r, o.y));
         if (!ov) continue;
-        if (!o.soft) {
-          if (Math.abs(o.x + o.w / 2 - x) < r && Math.abs(o.y + o.h / 2 - y) < r) return Infinity;
-          c += ov * 400;
-        } else c += ov * (o.heading ? 5 : 1);
+        if (!o.heading || ov > area / 5) return Infinity;
+        c += ov;
       }
       return c;
     };
+    const b0 = { x: Math.round(base.x), y: Math.round(base.y) };
+    if (cost(b0.x, b0.y) === 0) return b0;
     let pick: Pt | null = null;
     let best = Infinity;
     let bestD = Infinity;
-    const small = EDGE_ARROW.r + 2;
-    const insets = inset > small ? [inset, small] : [inset];
+    const tryAt = (x: number, y: number, rank: number): void => {
+      const c = cost(x, y);
+      if (!Number.isFinite(c)) return;
+      // Fully clear beats a little under the heading; the usual band beats one nearer the edge.
+      const score = rank + (c > 0 ? 100 + c / area : 0);
+      const d = (x - b0.x) ** 2 + (y - b0.y) ** 2;
+      if (score < best || (score === best && d < bestD)) {
+        best = score;
+        bestD = d;
+        pick = { x, y };
+      }
+    };
+    const lo = Math.ceil(r);
+    const insets: number[] = [Math.max(lo, Math.round(inset))];
+    for (let i = insets[0]! - 4; i > lo; i -= 4) insets.push(i);
+    if (insets[insets.length - 1] !== lo) insets.push(lo);
     insets.forEach((ins, k) => {
       const x0 = ins;
-      const x1 = Math.max(x0, this.view.w - ins);
-      const y0 = top + ins;
-      const y1 = Math.max(y0, bottomH - ins);
-      const tryAt = (x: number, y: number): void => {
-        // Fully clear on the usual band beats the nearer band, which beats any overlap.
-        const c = cost(x, y);
-        const score = c > 0 ? 2 + c : k;
-        const d = (x - base.x) ** 2 + (y - base.y) ** 2;
-        if (score < best || (score === best && d < bestD)) {
-          best = score;
-          bestD = d;
-          pick = { x, y };
-        }
-      };
+      const x1 = Math.max(x0, Math.round(W) - ins);
+      const y0 = Math.round(top) + ins;
+      const y1 = Math.max(y0, Math.round(bottomH) - ins);
       for (let x = x0; x <= x1; x += 4) {
-        tryAt(x, y0);
-        tryAt(x, y1);
+        tryAt(x, y0, k);
+        tryAt(x, y1, k);
       }
       for (let y = y0; y <= y1; y += 4) {
-        tryAt(x0, y);
-        tryAt(x1, y);
+        tryAt(x0, y, k);
+        tryAt(x1, y, k);
       }
     });
-    const p = pick as Pt | null;
-    return p && Number.isFinite(best) ? { x: p.x, y: p.y, angle: Math.atan2(to.y - p.y, to.x - p.x) } : null;
+    if (pick) return pick;
+    // Anywhere on the map that is clear (also between the top rows and beside the bottom
+    // buttons: `avoid` holds every chip and button), nearest its own spot. A clear spot can
+    // always slide until it touches a thing or the map's edge on each axis, so trying only those
+    // lines (and its own) finds every gap, however narrow, in a few hundred tries.
+    const xs = new Set<number>([lo, Math.floor(W - r), b0.x]);
+    const ys = new Set<number>([lo, Math.floor(H - r), b0.y]);
+    for (const o of avoid) {
+      xs.add(Math.floor(o.x - r)).add(Math.ceil(o.x + o.w + r));
+      ys.add(Math.floor(o.y - r)).add(Math.ceil(o.y + o.h + r));
+    }
+    for (const y of ys) for (const x of xs) tryAt(x, y, 1000);
+    return pick;
   }
 
   /** Pins, boards and trays off the screen get a round sign at the edge with their icon (W1). */
@@ -2003,12 +2037,12 @@ export class CityScreen {
     const pins = this.pinBoxes();
     // An arrow is a sign too: never over a board, a bubble, a drawn pin, a chip, a button or another arrow.
     const onView = (b: ScreenBox): boolean => b.x + b.w > 0 && b.y + b.h > 0 && b.x < this.view.w && b.y < this.view.h;
-    // Soft (may be covered when nothing else is clear): drawn pins and the heading.
+    // All hard for the arrow's tap area, but the heading (it takes no taps): see arrowSpot.
     const avoid: Block[] = [
       ...this.boardBox.values(),
       ...this.bubbleBox.values(),
-      ...this.covers.map((c) => (c.heading ? { ...c, soft: true } : c)),
-      ...this.pins.filter((p) => this.looks[p.spot] !== 'fixed').map((p) => ({ ...pins[p.spot], soft: true })),
+      ...this.covers,
+      ...this.pins.filter((p) => this.looks[p.spot] !== 'fixed').map((p) => pins[p.spot]),
     ].filter(onView);
     for (const p of this.pins) {
       if (this.looks[p.spot] === 'fixed') continue;
@@ -2033,16 +2067,17 @@ export class CityScreen {
         el.hidden = true;
         return;
       }
-      avoid.push({ x: at.x - EDGE_ARROW.r, y: at.y - EDGE_ARROW.r, w: EDGE_ARROW.r * 2, h: EDGE_ARROW.r * 2 });
+      // The next arrow keeps clear of this one's whole tap area.
+      const r = at.tap / 2;
+      avoid.push({ x: at.x - r, y: at.y - r, w: r * 2, h: r * 2 });
       drawEdgeArrow(g, at.x, at.y, at.angle, a.icon);
-      const r = EDGE_ARROW.r + 4;
       this.placeSign(el, { x: at.x - r, y: at.y - r, w: r * 2, h: r * 2 });
       el.dataset['for'] = a.label;
       el.onclick = (e) => {
         if (this.hooks.ignoreTap(e) || this.busy() || this.cardOpen) return;
         a.go();
       };
-      this.arrowBox.push({ icon: a.icon, x: at.x, y: at.y });
+      this.arrowBox.push({ icon: a.icon, x: at.x, y: at.y, tap: at.tap });
     });
   }
 }
