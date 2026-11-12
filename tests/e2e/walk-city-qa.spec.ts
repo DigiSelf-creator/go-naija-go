@@ -211,6 +211,8 @@ for (const [width, height] of [
         if (name.startsWith('board') || zoom === 'far') expect.soft(b.x >= 0 && b.y >= 0 && b.x + b.w <= map.width + 0.5 && b.y + b.h <= map.height + 0.5, `${zoom}: ${name} on screen`).toBe(true);
         if (!shows) continue;
         for (const [spot, p] of Object.entries(c.pins)) {
+          // city.md W15: a fixed block draws no pin; its tap area is not a pin.
+          if ((sc.city.fixed as readonly string[]).includes(spot)) continue;
           const pinOnScreen = p.x + p.w > 0 && p.y + p.h > 0 && p.x < map.width && p.y < map.height;
           if (pinOnScreen) expect.soft(apart(b, p), `${zoom}: ${name} ${JSON.stringify(b)} over the ${spot} pin ${JSON.stringify(p)}`).toBe(true);
         }
@@ -223,6 +225,51 @@ for (const [width, height] of [
     const k0 = sc.city.kobo;
     await page.locator('[data-place="buka"]').tap();
     await expect.poll(async () => (await city(page)).saved.kobo, { timeout: 15_000 }).toBe(k0 + 150);
+  });
+}
+
+// Round 2: the camera follows the hero, so signs are placed again after a walk. They must still
+// keep off every drawn pin (W2, W9, W15), and a tap on a board must reach that board.
+for (const [width, height] of [
+  [320, 240],
+  [640, 200],
+  [851, 393],
+  [393, 851],
+] as const) {
+  test(`at ${width} x ${height}, after the camera follows a walk: no sign over a drawn pin, and a board tap reaches its board`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    const lamps = SIGN_CASES[2]!;
+    await openCity(page, lamps.city);
+    const map = (await lagos(page).locator('.city-map').boundingBox())!;
+    const on = (b: Box) => b.x + b.w > 0 && b.y + b.h > 0 && b.x < map.width && b.y < map.height;
+    for (const target of ['market', 'lamps', 'mast']) {
+      await page.locator(`[data-build="${target}"]`).tap({ timeout: 10_000 });
+      await stillHero(page);
+      await page.waitForTimeout(600);
+      const c = await city(page);
+      const signs: [string, Box][] = [...Object.entries(c.boards).map(([k, b]) => [`board ${k}`, b] as [string, Box]), ...Object.entries(c.bubbles).map(([k, b]) => [`bubble ${k}`, b] as [string, Box])];
+      for (const [name, b] of signs) {
+        if (!on(b)) continue;
+        for (const [spot, p] of Object.entries(c.pins)) {
+          if ((lamps.city.fixed as readonly string[]).includes(spot) || !on(p)) continue;
+          expect.soft(apart(b, p), `after walking to ${target}: ${name} ${JSON.stringify(b)} under the ${spot} pin ${JSON.stringify(p)}`).toBe(true);
+        }
+      }
+      // What a finger hits at each board's middle is that board.
+      for (const el of await page.locator('[data-build]').all()) {
+        const id = await el.getAttribute('data-build');
+        const hit = await el.evaluate((e) => {
+          const r = e.getBoundingClientRect();
+          return e.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+        });
+        expect.soft(hit, `after walking to ${target}: the middle of the ${id} board is covered`).toBe(true);
+      }
+      const card = page.getByRole('dialog').filter({ hasNot: page.locator('.city-map') });
+      if (await card.count()) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+      }
+    }
   });
 }
 
