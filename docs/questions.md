@@ -1,5 +1,10 @@
 # Open questions for the product owner
 
+## po note, 12 Nov 2026 (latest): win prize top-up on "Play again"
+
+- Ruled by po (docs settle it, nothing waits for Tp): keep the top-up as built. See "po ruling, 12 Nov 2026: the win top-up counts what you bring home, not the bucket" below.
+- Accepted: nothing new. Waits for Tp: nothing new (older items below still stand).
+
 ## po note, 12 Nov 2026 (later): Street cleared card buttons
 
 - Ruled by po (docs settle it, nothing waits for Tp): "Streets" stays as the third small button. See "po ruling, 12 Nov 2026: keep Streets on the Street cleared card" below.
@@ -17,6 +22,16 @@
 Lines for Tp to paste into docs/decisions.md:
 44. In Lagos the hero walks around the city seen from above: tap or drag where to go and the camera follows (drag no longer moves the map; double tap to zoom is dropped). Each fix or build has a pay spot on the ground: stand on it to pay, and if you have only part of the price, you pay part and the board shows what is left ("₦4 left"). Fixed places such as the Mama Put and the Market keep making money while you play (never while the game is closed); it waits in a tray, up to a cap, until you walk over to collect it. Built before the lane run. (W1 to W4, W13 questions 1, 2, 3, 5)
 45. The Booming meter counts points: 4 for each fix or build, 1 for each full collect (at most 4 from collecting per boom). The first boom is at 20, replacing "after 3 fixes". A won challenge always brings home at least the price of the fix you came for; the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4). (W13 questions 4 and 6)
+
+### po ruling, 12 Nov 2026: the win top-up counts what you bring home, not the bucket (asked by qa, walk the city)
+
+**Ruling: stay as is.** While the road is not built and you came for it, each street 1 win brings home at least ₦10, even if the Naira bucket already holds ₦14. No code change.
+Why (docs quoted):
+1. city.md part 5W, W5: "the win prize is ₦5, or more if needed so the money you bring home reaches the price." The rule measures the money this win brings home, not what is already in the bucket.
+2. Tp's own words, W13 question 6 (answered "Yes to all", 12 Nov): "a win always brings home at least the price of the fix you came for". Same measure: the win, not the bucket.
+3. The ₦14 first win (road ₦10, Mama Put ₦4) is for the first street 1 win only, and stays that way.
+Reasoned: the extra over the normal prize is at most about 40 kobo a win (qa, reported), and city.md W3 says "Capped so runs stay the main way to earn"; a bigger win prize on a run keeps runs the main way, so it fits. One simple rule ("a win pays for what you came for") is easier for a 10 year old to trust than a prize that shrinks because they saved up. Opinion: a player who keeps replaying instead of paying is having fun on street 1; that is fine.
+qa: add a test that the ₦14 comes only once, and that once the road is built, a street 1 win pays the plain ₦5 prize plus coins.
 
 ### po ruling, 12 Nov 2026: keep Streets on the Street cleared card (asked by gamedev, S3c3)
 
