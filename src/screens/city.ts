@@ -294,6 +294,8 @@ interface SignSpot {
 /** Something a sign keeps clear of. Soft ones (the heading, a fixed spot's tap area, which has no pin drawn) are given up only when a tiny screen has no other room. */
 interface Block extends ScreenBox {
   soft?: boolean;
+  /** The "Lagos" heading: hard for signs, soft for an edge arrow that has no clear spot. */
+  heading?: boolean;
 }
 
 export class CityScreen {
@@ -635,6 +637,9 @@ export class CityScreen {
   private signCache = new Map<string, { dx: number; dy: number; tag: string; zoom: Zoom; short: boolean }>();
   /** The last layout and what it was worked out for (the camera, the screen, the pins, the words). */
   private signLayout: { key: string; spots: Map<string, SignSpot> } | null = null;
+  /** When the quick placer last began leaving a sign over something (-1: it is not), and when the full search last ran (seconds). */
+  private badSince = -1;
+  private lastFit = -1;
   /** A sign's size round its foot, by its words (measuring words is slow on a cheap phone: once per words). */
   private signSizes = new Map<string, ScreenBox>();
 
@@ -675,7 +680,14 @@ export class CityScreen {
     // No clear place for one of them (a tiny screen, many signs): once the hero stands still, look
     // at every way to fit them all, at full size first, then with boards on short sticks. While the
     // hero walks the quick placing above is kept (it runs every frame the camera slides).
-    if (settled && [...out.values()].some((sp) => sp.bad)) {
+    // Mid-walk, a sign that has covered something for a few frames (a drawn pin, a chip, another
+    // sign) gets the full search too, at most a few times a second, so it never parks on a pin.
+    const bad = [...out.values()].some((sp) => sp.bad);
+    if (!bad) this.badSince = -1;
+    else if (this.badSince < 0) this.badSince = this.time;
+    const longBad = bad && !settled && this.time - this.badSince >= 0.1 && this.time - this.lastFit >= 0.2;
+    if (bad && (settled || longBad)) {
+      this.lastFit = this.time;
       const found = this.fitAllSigns(asks, pins);
       if (found) out = found;
     }
@@ -1394,10 +1406,11 @@ export class CityScreen {
     this.hintEl.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
     this.banner.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
     // The heading, chips and buttons over the map: boards keep clear of them.
-    // The heading is soft: a tiny screen with no other room may put a sign over it (never over a chip or a button).
+    // All of them are hard: a sign never sits under the heading (it would hide the sign's words
+    // and catch its tap), a chip or a button.
     this.covers = [...this.el.querySelectorAll<HTMLElement>('.city-top h2, .city-chip, .city-top button, .city-bottom button')].map((e) => {
       const b = e.getBoundingClientRect();
-      return { x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height, soft: e.tagName === 'H2' };
+      return { x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height, heading: e.tagName === 'H2' };
     });
     const bottom = this.el.querySelector<HTMLElement>('.city-bottom');
     this.bottomCover = bottom ? Math.max(0, r.bottom - bottom.getBoundingClientRect().top) : 0;
@@ -1908,38 +1921,63 @@ export class CityScreen {
   }
 
   /**
-   * Where an edge arrow goes: its own spot on the edge band if that is clear of everything in
-   * `avoid`; else the nearest clear spot along the band's edges (pointing at the thing from
-   * there); else nowhere (null: no arrow, rather than one over a sign or a button).
+   * Where an edge arrow goes (a pin, board or tray fully off screen always gets one): its own
+   * spot on the edge band if that is clear of everything in `avoid`; else the nearest clear spot
+   * along the band's edges, then along a band nearer the edge (the smallest inset); else, when
+   * nothing is fully clear, the spot that covers the least, where only soft things (a drawn
+   * pin, the heading) may be covered much, and never the middle of a hard thing (a chip, a
+   * button, a board, a bubble, another arrow). Null only when every spot would cover one.
    */
-  private arrowSpot(base: { x: number; y: number; angle: number } | null, to: Pt, avoid: readonly ScreenBox[], inset: number, top: number, bottomH: number): { x: number; y: number; angle: number } | null {
+  private arrowSpot(base: { x: number; y: number; angle: number } | null, to: Pt, avoid: readonly Block[], inset: number, top: number, bottomH: number): { x: number; y: number; angle: number } | null {
     if (!base) return null;
     const r = EDGE_ARROW.r + 2;
     const clear = (x: number, y: number): boolean => avoid.every((o) => x + r <= o.x || o.x + o.w <= x - r || y + r <= o.y || o.y + o.h <= y - r);
     if (clear(base.x, base.y)) return base;
-    const x0 = inset;
-    const x1 = Math.max(x0, this.view.w - inset);
-    const y0 = top + inset;
-    const y1 = Math.max(y0, bottomH - inset);
+    // The cost of an arrow at (x, y): 0 when clear; Infinity over a hard thing's middle.
+    const cost = (x: number, y: number): number => {
+      let c = 0;
+      for (const o of avoid) {
+        const ov = Math.max(0, Math.min(x + r, o.x + o.w) - Math.max(x - r, o.x)) * Math.max(0, Math.min(y + r, o.y + o.h) - Math.max(y - r, o.y));
+        if (!ov) continue;
+        if (!o.soft) {
+          if (Math.abs(o.x + o.w / 2 - x) < r && Math.abs(o.y + o.h / 2 - y) < r) return Infinity;
+          c += ov * 400;
+        } else c += ov * (o.heading ? 5 : 1);
+      }
+      return c;
+    };
     let pick: Pt | null = null;
     let best = Infinity;
-    const tryAt = (x: number, y: number): void => {
-      const d = (x - base.x) ** 2 + (y - base.y) ** 2;
-      if (d < best && clear(x, y)) {
-        best = d;
-        pick = { x, y };
+    let bestD = Infinity;
+    const small = EDGE_ARROW.r + 2;
+    const insets = inset > small ? [inset, small] : [inset];
+    insets.forEach((ins, k) => {
+      const x0 = ins;
+      const x1 = Math.max(x0, this.view.w - ins);
+      const y0 = top + ins;
+      const y1 = Math.max(y0, bottomH - ins);
+      const tryAt = (x: number, y: number): void => {
+        // Fully clear on the usual band beats the nearer band, which beats any overlap.
+        const c = cost(x, y);
+        const score = c > 0 ? 2 + c : k;
+        const d = (x - base.x) ** 2 + (y - base.y) ** 2;
+        if (score < best || (score === best && d < bestD)) {
+          best = score;
+          bestD = d;
+          pick = { x, y };
+        }
+      };
+      for (let x = x0; x <= x1; x += 4) {
+        tryAt(x, y0);
+        tryAt(x, y1);
       }
-    };
-    for (let x = x0; x <= x1; x += 4) {
-      tryAt(x, y0);
-      tryAt(x, y1);
-    }
-    for (let y = y0; y <= y1; y += 4) {
-      tryAt(x0, y);
-      tryAt(x1, y);
-    }
+      for (let y = y0; y <= y1; y += 4) {
+        tryAt(x0, y);
+        tryAt(x1, y);
+      }
+    });
     const p = pick as Pt | null;
-    return p ? { x: p.x, y: p.y, angle: Math.atan2(to.y - p.y, to.x - p.x) } : null;
+    return p && Number.isFinite(best) ? { x: p.x, y: p.y, angle: Math.atan2(to.y - p.y, to.x - p.x) } : null;
   }
 
   /** Pins, boards and trays off the screen get a round sign at the edge with their icon (W1). */
@@ -1960,7 +1998,13 @@ export class CityScreen {
     const pins = this.pinBoxes();
     // An arrow is a sign too: never over a board, a bubble, a drawn pin, a chip, a button or another arrow.
     const onView = (b: ScreenBox): boolean => b.x + b.w > 0 && b.y + b.h > 0 && b.x < this.view.w && b.y < this.view.h;
-    const avoid: ScreenBox[] = [...this.boardBox.values(), ...this.bubbleBox.values(), ...this.covers, ...this.pins.filter((p) => this.looks[p.spot] !== 'fixed').map((p) => pins[p.spot])].filter(onView);
+    // Soft (may be covered when nothing else is clear): drawn pins and the heading.
+    const avoid: Block[] = [
+      ...this.boardBox.values(),
+      ...this.bubbleBox.values(),
+      ...this.covers.map((c) => (c.heading ? { ...c, soft: true } : c)),
+      ...this.pins.filter((p) => this.looks[p.spot] !== 'fixed').map((p) => ({ ...pins[p.spot], soft: true })),
+    ].filter(onView);
     for (const p of this.pins) {
       if (this.looks[p.spot] === 'fixed') continue;
       const b = pins[p.spot];
