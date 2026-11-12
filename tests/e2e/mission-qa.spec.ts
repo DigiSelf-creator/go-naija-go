@@ -8,6 +8,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand } from './hands';
 import { PAST_DOUBLE_TAP_MS, screenNow, startRun, waitOutTapLock } from './helpers';
+import { formatMoney } from '../../src/game/money';
 
 const city = (page: Page) => page.evaluate(() => window.__game!.city!);
 
@@ -69,4 +70,60 @@ test('Mission complete with reduced motion: the end picture at once, paid and bu
   await expect.poll(() => screenNow(page)).toBe('city');
   await expect.poll(async () => (await city(page)).mission, { timeout: 2000 }).toBe('end');
   await checkEnd(page, home);
+});
+
+/** Plays street 1 by hand to the Street cleared card; returns the coins' kobo. */
+async function playToCleared(page: Page): Promise<number> {
+  const h = hands(await page.context().newCDPSession(page));
+  await playStreetByHand(page, h);
+  await h.upAll();
+  await expect(page.getByRole('dialog', { name: 'Street cleared!' })).toBeVisible({ timeout: 6000 });
+  return (await page.evaluate(() => window.__game!.run.kobo)) * 10;
+}
+const savedKobo = (page: Page) =>
+  page.evaluate(() => (JSON.parse(localStorage.getItem('gidi-progress') ?? 'null') as { city?: { kobo?: number } } | null)?.city?.kobo ?? null);
+
+// po ruling 12 Nov 2026 (docs/questions.md, "the win top-up counts what you bring home"): the ₦14
+// first win comes once; later wins for the unbuilt road bring at least ₦10.
+test('po ruling: the ₦14 first win comes only once; after "Play again" a street 1 win for the road brings at least ₦10', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.goto('./');
+  await startRun(page);
+  const c1 = await playToCleared(page);
+  const home1 = Math.max(1400, c1 + 500);
+  const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
+  await expect(cleared.getByText(`You got ${formatMoney(home1)}.`, { exact: false })).toBeVisible();
+  expect(await savedKobo(page)).toBe(home1);
+  await waitOutTapLock(page);
+  await cleared.getByRole('button', { name: 'Play again' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('play');
+  const c2 = await playToCleared(page);
+  // Not ₦14 again: the plain ₦5 prize, topped up so the win reaches the ₦10 road.
+  const home2 = Math.max(1000, c2 + 500);
+  await expect(cleared.getByText(`You got ${formatMoney(home2)}.`, { exact: false })).toBeVisible();
+  expect(await savedKobo(page)).toBe(home1 + home2);
+});
+
+test('po ruling: once the road is built, a street 1 win pays the plain ₦5 prize plus coins', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto('./');
+  // The road built, street 1 never won: no ₦14 and no top-up.
+  const city0 = { kobo: 0, power: 0, tech: 0, fixed: ['potholes'], fixes: 1, built: [], trays: {}, boom: 4, hints: ['walk', 'buka', 'collect'] };
+  await page.evaluate((p) => {
+    localStorage.setItem('gidi-look', '{"skin":2,"hair":0,"outfit":0,"body":0,"age":1}');
+    localStorage.setItem('gidi-intro', '"seen"');
+    localStorage.setItem('gidi-progress', p);
+  }, JSON.stringify({ v: 2, states: {}, city: city0 }));
+  await page.reload();
+  await page.getByRole('button', { name: 'Play' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Lagos' }).getByRole('button', { name: 'Streets' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('streets');
+  await page.locator('[data-where="0"]').tap();
+  await expect.poll(() => screenNow(page)).toBe('play');
+  const c = await playToCleared(page);
+  const cleared = page.getByRole('dialog', { name: 'Street cleared!' });
+  await expect(cleared.getByText(`You got ${formatMoney(c + 500)}.`, { exact: false })).toBeVisible();
+  expect(await savedKobo(page)).toBe(c + 500);
 });
