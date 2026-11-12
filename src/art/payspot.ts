@@ -274,9 +274,9 @@ function boardLayout(g: CanvasRenderingContext2D, build: BuildId, left: number, 
   const top = done ? 'Done' : part ? `${priceWords(b.bucket, l)} left` : priceWords(b.bucket, l);
   const maxW = st.short ? BOARD.tightW : BOARD.maxW;
   const room = maxW - 12;
-  const tries: [number, boolean][] = [[14, true], [13, true], [12, true]];
-  if (b.bucket !== 'naira') tries.push([14, false], [13, false], [12, false]);
-  let pick: [number, boolean] = [12, b.bucket === 'naira'];
+  // W16: drop the bucket icon first, then (only if still needed) 12 px bold. The words never change.
+  const tries: [number, boolean][] = [[14, true], [14, false], [12, false]];
+  let pick: [number, boolean] = [12, false];
   let need = 0;
   for (const [size, icon] of tries) {
     g.font = `bold ${size}px sans-serif`;
@@ -310,7 +310,7 @@ export function priceBoardBox(g: CanvasRenderingContext2D, x: number, y: number,
  * The chalk price board for `build`, its stick's foot at (x, y) in screen px. `left` is what
  * is still to pay (whole naira or units): the full price shows "₦10" / "New road"; less
  * shows "₦4 left"; 0 (or st.done) shows "Done ✓". Bucket icon on the first line (a Power or
- * Tech board drops it only if the words would not fit; the word Power or Tech stays).
+ * any board drops it first if the words would not fit, then goes to 12 px bold: W16).
  */
 export function drawPriceBoard(g: CanvasRenderingContext2D, x: number, y: number, build: BuildId, left: number, st: BoardState = {}): void {
   g.save();
