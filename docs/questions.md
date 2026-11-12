@@ -1,5 +1,11 @@
 # Open questions for the product owner
 
+## po note, 12 Nov 2026 (later): Street cleared card buttons
+
+- Ruled by po (docs settle it, nothing waits for Tp): "Streets" stays as the third small button. See "po ruling, 12 Nov 2026: keep Streets on the Street cleared card" below.
+- Accepted: nothing new today (the card waits for qa's S3c3 pass).
+- Waits for Tp: nothing new. Older items below still stand (pasting decisions 44 and 45; the sound check and first play).
+
 ## po, 12 Nov 2026: Tp's answers on walking the city (W1 to W4, W13)
 
 **Answered by Tp: W1 a, W2 a, W3 a, W4 a (11 Nov 2026), and "Yes to all" to the six W13 questions in docs/city.md part 5W (12 Nov 2026).**
@@ -11,6 +17,17 @@
 Lines for Tp to paste into docs/decisions.md:
 44. In Lagos the hero walks around the city seen from above: tap or drag where to go and the camera follows (drag no longer moves the map; double tap to zoom is dropped). Each fix or build has a pay spot on the ground: stand on it to pay, and if you have only part of the price, you pay part and the board shows what is left ("₦4 left"). Fixed places such as the Mama Put and the Market keep making money while you play (never while the game is closed); it waits in a tray, up to a cap, until you walk over to collect it. Built before the lane run. (W1 to W4, W13 questions 1, 2, 3, 5)
 45. The Booming meter counts points: 4 for each fix or build, 1 for each full collect (at most 4 from collecting per boom). The first boom is at 20, replacing "after 3 fixes". A won challenge always brings home at least the price of the fix you came for; the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4). (W13 questions 4 and 6)
+
+### po ruling, 12 Nov 2026: keep Streets on the Street cleared card (asked by gamedev, S3c3)
+
+**Ruling: keep "Streets".** The card is: big "Take it home"; small "Next street" (or "Go to Go-Slow Hall"), "Play again", "Streets".
+Why (docs quoted):
+1. city.md part 5 (c): "Big button "Take it home" (replaces "Next street"; "Next street" becomes small)." It changes only the big button and moves "Next street" down. It drops nothing.
+2. design.md S2.10, Street cleared row: "Small "Play again", "Streets"". Those two stay; with "Next street" moved down, that makes three small buttons.
+3. city.md part 5 (e): the challenge road "replaces the Streets screen". So the third button is renamed "Challenge road" in S3e1. It is not removed now.
+4. One clear main action: there is still one big button, and it is "Take it home" (verified by gamedev's report). Small screens: qa's short-screen card-fit checks pass (reported by gamedev). qa checks it again in S3c3 at 320 x 240, 480 x 200 and 640 x 200, with "Computer Village", the parcel line and a 3-digit amount, all buttons at least 44 x 44 px.
+Reasoned: taking "Streets" off would hide the street list. A player who wants to replay street 1 for more money would have to go home first, then come back. Opinion: three short words in one row still read at a glance. If qa finds the row wraps or a button falls under 44 px, keep the big button and "Next street", and move "Streets" before "Play again". Do not drop it without asking Tp.
+designer: nothing to change in design.md S2.10 now. In S3e1, rename "Streets" to "Challenge road" on this card and on the Win card.
 
 ## po acceptance, 11 Nov 2026: round 2 (intro, Lagos city home, F1/F2, S2.16 B1 to B5)
 
