@@ -220,6 +220,8 @@ for (const [width, height] of [
         for (const [other, o] of signs) if (other !== name && o.x + o.w > 0 && o.y + o.h > 0 && o.x < map.width && o.y < map.height) expect.soft(apart(b, o), `${zoom}: ${name} over ${other}`).toBe(true);
       }
       for (const a of c.arrows) for (const o of covers) expect.soft(apart({ x: a.x - 22, y: a.y - 22, w: 44, h: 44 }, o), `${zoom}: edge arrow ${a.icon} under "${o.name}"`).toBe(true);
+      // Round 2: an edge arrow is a sign too; it never sits over a board or a bubble.
+      for (const a of c.arrows) for (const [name, b] of signs) if (b.x + b.w > 0 && b.y + b.h > 0 && b.x < map.width && b.y < map.height) expect.soft(apart({ x: a.x - 22, y: a.y - 22, w: 44, h: 44 }, b), `${zoom}: edge arrow ${a.icon} at ${Math.round(a.x)},${Math.round(a.y)} over ${name}`).toBe(true);
     }
     // The bubble is tappable: the hero walks over and collects.
     const k0 = sc.city.kobo;
