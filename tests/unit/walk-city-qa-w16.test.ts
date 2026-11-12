@@ -9,7 +9,7 @@ import { BOARD, BUILD_IDS, BUILDS, drawPriceBoard, priceWords } from '../../src/
 /** A context that measures bold sans text like a phone does (about 0.5 em a letter, near what Chromium measures for these words) and keeps the font each word was written in. */
 function measuring() {
   let font = '';
-  const writes: { text: string; x: number; font: string; maxW?: number }[] = [];
+  const writes: { text: string; x: number; font: string; maxW?: number | undefined }[] = [];
   const size = () => Number(/(\d+)px/.exec(font)?.[1] ?? 10);
   const props: Record<string, unknown> = {
     globalAlpha: 1,
