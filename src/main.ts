@@ -282,7 +282,7 @@ function startGame(): void {
       sound.play('cogRatchet');
       window.setTimeout(() => sound.play('cogBell'), 320);
     } else if (to === 'city') {
-      cityLife.set({ ...cityLife.state, at: { ...HERO_START } });
+      if (cityLife.state.at) cityLife.set({ ...cityLife.state, at: { ...HERO_START } });
       menus.showCity(mission);
     } else menus.show(to);
   }
@@ -305,7 +305,7 @@ function startGame(): void {
     if (paidHome) return;
     paidHome = true;
     brought = kobo;
-    cityLife.set(addKobo(cityLife.state, kobo), true);
+    if (kobo > 0) cityLife.set(addKobo(cityLife.state, kobo), true);
   }
   const menus = new Menus(document.body, store, game.look, {
     // city.md (b) flow: "Play" (and the builder's "Start running") opens Lagos from above, the

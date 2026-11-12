@@ -236,12 +236,13 @@ export function findPath(a: Pt, b: Pt): Pt[] {
   const cells = gridPath(cellOf(start), cellOf(end));
   if (!cells) return [];
   const pts: Pt[] = [start, ...cells.slice(1, -1).map(cellMid), end];
-  // Cut corners where nothing is in the way.
   const out: Pt[] = [];
   let at = 0;
+  // Cut corners where nothing is in the way: from each corner, go on while the straight line
+  // stays clear (one check per point, so a long way stays cheap on a slow phone).
   while (at < pts.length - 1) {
-    let next = pts.length - 1;
-    while (next > at + 1 && !lineClear(pts[at]!, pts[next]!)) next--;
+    let next = at + 1;
+    while (next + 1 < pts.length && lineClear(pts[at]!, pts[next + 1]!)) next++;
     out.push(pts[next]!);
     at = next;
   }

@@ -130,8 +130,12 @@ let lastCam: CityCam | null = null;
  */
 const painted = new Map<string, { img: HTMLCanvasElement; scale: number }>();
 
-/** Most device pixels a CSS px for the map canvas. */
+/**
+ * Most device pixels a CSS px for the map canvas: 1.5 standing still, 1 while the hero walks or
+ * the bus pulls in (a slow phone keeps 45 fps or more at 4x CPU; it sharpens again on the stop).
+ */
 const MAP_DPR = 1.5;
+const MAP_DPR_MOVING = 1;
 /** A finger that moves this far, or stays down this long, is a hold (W1). */
 const HOLD_PX = 8;
 const HOLD_MS = 150;
@@ -365,6 +369,10 @@ export class CityScreen {
     this.pickHint();
     this.requestDraw();
     this.idle();
+    // Paint the walking picture early, so the first step does not wait for it.
+    window.setTimeout(() => {
+      if (!this.closed) this.picture(Math.min(window.devicePixelRatio || 1, MAP_DPR_MOVING));
+    }, 700);
   }
 
   close(): void {
@@ -586,19 +594,22 @@ export class CityScreen {
   }
 
   /** The board's stick foot on screen: beside its mat, kept clear of the pins and the covered edges. */
-  private footCache = new Map<BuildId, { key: string; foot: { x: number; y: number; box: ScreenBox } }>();
+  private footCache = new Map<BuildId, { key: string; foot: { x: number; y: number; box: ScreenBox }; dx: number; dy: number; left: number; zoom: Zoom }>();
 
   /** boardFoot, worked out again only when the camera, the screen, the price or the signs around change. */
   private boardFootCached(g: CanvasRenderingContext2D, b: BuildId, left: number, taken: ScreenBox[]): { x: number; y: number; box: ScreenBox } {
     const key = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, left, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet, ...taken.map((t) => `${Math.round(t.x)},${Math.round(t.y)}`)].join('|');
     const had = this.footCache.get(b);
     if (had && had.key === key) return had.foot;
-    const foot = this.boardFoot(g, b, left, taken);
-    this.footCache.set(b, { key, foot });
+    // While the camera slides, the board keeps its place beside the mat as long as it still fits.
+    const m = toScreen(this.cam, this.view, MATS[b]);
+    const prev = had && had.left === left && had.zoom === this.cam.zoom ? { x: m.x + had.dx, y: m.y + had.dy } : null;
+    const foot = this.boardFoot(g, b, left, taken, prev);
+    this.footCache.set(b, { key, foot, dx: foot.x - m.x, dy: foot.y - m.y, left, zoom: this.cam.zoom });
     return foot;
   }
 
-  private boardFoot(g: CanvasRenderingContext2D, b: BuildId, left: number, taken: ScreenBox[]): { x: number; y: number; box: ScreenBox } {
+  private boardFoot(g: CanvasRenderingContext2D, b: BuildId, left: number, taken: ScreenBox[], prev: Pt | null = null): { x: number; y: number; box: ScreenBox } {
     const s = camScale(this.cam.zoom, this.view);
     const m = toScreen(this.cam, this.view, MATS[b]);
     const hw = (MAT.w * s) / 2;
@@ -624,7 +635,7 @@ export class CityScreen {
     };
     // Beside the mat if it fits; else the nearest free place round it (rings 8 px apart).
     const beside: Pt = { x: m.x + hw + 4 + bw / 2, y: m.y + hh };
-    let pick: Pt | null = fits(beside) ? beside : null;
+    let pick: Pt | null = prev && fits(prev) ? prev : fits(beside) ? beside : null;
     const other: Pt = { x: m.x - hw - 4 - bw / 2, y: m.y + hh };
     if (!pick && fits(other)) pick = other;
     for (let r = 8; !pick && r <= 240; r += 8) {
@@ -786,14 +797,17 @@ export class CityScreen {
 
   private stopped(): void {
     this.hero.moving = false;
+    // Sharp again now the hero stands still.
+    this.needDraw = true;
     this.arrived = true;
     this.stand = 0;
     this.saveAt();
   }
 
   private saveAt(): void {
-    const at = this.life.state.at;
-    if (!at || Math.round(at.x) !== Math.round(this.hero.x) || Math.round(at.y) !== Math.round(this.hero.y)) this.life.set({ ...this.life.state, at: { x: Math.round(this.hero.x), y: Math.round(this.hero.y) } });
+    // Only a real move is saved (a first visit that never walked writes nothing).
+    const at = this.life.state.at ?? HERO_START;
+    if (Math.round(at.x) !== Math.round(this.hero.x) || Math.round(at.y) !== Math.round(this.hero.y)) this.life.set({ ...this.life.state, at: { x: Math.round(this.hero.x), y: Math.round(this.hero.y) } });
   }
 
   private moveHero(dt: number): void {
@@ -1453,7 +1467,7 @@ export class CityScreen {
     const st = this.shown;
     const market = st.built.includes('market') || this.building?.build === 'market';
     const looks = `${this.looks.potholes}|${this.looks.lightsOut}|${this.looks.slowInternet}|${market}`;
-    const key = `${looks}|${this.cam.zoom}`;
+    const key = `${looks}|${this.cam.zoom}|${dpr}`;
     const have = painted.get(key);
     if (have && Math.abs(have.scale - want) < 1e-6) return have;
     for (const k of painted.keys()) if (!k.startsWith(`${looks}|`)) painted.delete(k);
@@ -1467,7 +1481,8 @@ export class CityScreen {
   private draw(): void {
     if (this.closed) return;
     this.needDraw = false;
-    const dpr = Math.min(window.devicePixelRatio || 1, MAP_DPR);
+    const moving = this.hero.moving || this.mission?.phase === 'bus' || this.hold?.on === true;
+    const dpr = Math.min(window.devicePixelRatio || 1, moving ? MAP_DPR_MOVING : MAP_DPR);
     const pw = Math.round(this.view.w * dpr);
     const ph = Math.round(this.view.h * dpr);
     if (this.map.width !== pw) this.map.width = pw;
@@ -1548,7 +1563,24 @@ export class CityScreen {
     } else {
       if (ms && ms.phase === 'walk') items.push({ y: ms.bus.y, draw: () => drawCityBus(g, ms.bus.x, ms.bus.y, 'e') });
       const hero = this.hero;
-      items.push({ y: hero.y, draw: () => drawCityHero(g, this.hooks.look(), hero.x, hero.y, { dir: hero.dir, phase: hero.phase, moving: hero.moving, time: this.time, still, size }) });
+      items.push({
+        y: hero.y,
+        draw: () => {
+          // Walking: a copy of the frame's picture; standing (rare redraws): drawn as is, with the breath.
+          const look = this.hooks.look();
+          if (!hero.moving) {
+            drawCityHero(g, look, hero.x, hero.y, { dir: hero.dir, moving: false, time: this.time, still, size });
+            return;
+          }
+          const px = k; // device px a map unit
+          const f = Math.floor((hero.phase - Math.floor(hero.phase)) * 4) % 4;
+          const sz = size;
+          const key = `hero|${JSON.stringify(look)}|${hero.dir}|${f}|${sz.toFixed(2)}|${px.toFixed(3)}`;
+          const sp = this.sprite(key, sz * 1.1, sz * 1.5, sz * 0.55, sz * 1.3, px, (c) => drawCityHero(c, look, 0, 0, { dir: hero.dir, phase: f / 4 + 0.01, moving: true, size: sz }));
+          if (sp) g.drawImage(sp.img, hero.x - sp.ox, hero.y - sp.oy, sz * 1.1, sz * 1.5);
+          else drawCityHero(g, look, hero.x, hero.y, { dir: hero.dir, phase: hero.phase, moving: true, size: sz });
+        },
+      });
     }
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
@@ -1569,7 +1601,10 @@ export class CityScreen {
       const foot = this.boardFootCached(g, b, left, taken);
       taken.push(foot.box);
       const wob = this.wobble?.build === b ? boardWobble(this.wobble.t) : 0;
-      drawPriceBoard(g, foot.x, foot.y, b, units, { wobble: wob, done: this.building?.build === b || (pay?.build === b && pay.done && pay.landed === pay.pieces) });
+      const done = this.building?.build === b || (pay?.build === b && pay.done && pay.landed === pay.pieces);
+      const sp = wob ? null : this.sprite(`board|${b}|${units}|${done}|${dpr}`, foot.box.w + 16, foot.box.h + 16, foot.x - foot.box.x + 8, foot.y - foot.box.y + 8, dpr, (c) => drawPriceBoard(c, 0, 0, b, units, { done }));
+      if (sp) g.drawImage(sp.img, foot.x - sp.ox, foot.y - sp.oy, foot.box.w + 16, foot.box.h + 16);
+      else drawPriceBoard(g, foot.x, foot.y, b, units, { wobble: wob, done });
       this.boardBox.set(b, foot.box);
       this.placeSign(this.boardEls.get(b), foot.box);
     }
@@ -1610,11 +1645,39 @@ export class CityScreen {
     }
   }
 
+  /** Moves a sign's button over its picture (style written only when it changes: no layout work per frame). */
   private placeSign(el: HTMLElement | undefined, box: ScreenBox): void {
     if (!el) return;
-    el.style.width = `${Math.round(box.w)}px`;
-    el.style.height = `${Math.round(box.h)}px`;
-    el.style.transform = `translate(${Math.round(box.x)}px, ${Math.round(box.y)}px)`;
+    const w = `${Math.round(box.w)}px`;
+    const h = `${Math.round(box.h)}px`;
+    const t = `translate(${Math.round(box.x)}px, ${Math.round(box.y)}px)`;
+    if (el.style.width !== w) el.style.width = w;
+    if (el.style.height !== h) el.style.height = h;
+    if (el.style.transform !== t) el.style.transform = t;
+  }
+
+  /**
+   * A small picture drawn once and copied after: the walking hero (one per view, frame and size)
+   * and the price boards (one per price). Copying is far cheaper on a slow phone than drawing
+   * the shapes and words every frame.
+   */
+  private readonly sprites = new Map<string, { img: HTMLCanvasElement; ox: number; oy: number }>();
+
+  private sprite(key: string, w: number, h: number, ox: number, oy: number, scale: number, paint: (c: CanvasRenderingContext2D) => void): { img: HTMLCanvasElement; ox: number; oy: number } | null {
+    const have = this.sprites.get(key);
+    if (have) return have;
+    if (this.sprites.size > 80) this.sprites.clear();
+    const img = document.createElement('canvas');
+    img.width = Math.max(1, Math.ceil(w * scale));
+    img.height = Math.max(1, Math.ceil(h * scale));
+    const c = img.getContext('2d');
+    if (!c) return null;
+    c.scale(scale, scale);
+    c.translate(ox, oy);
+    paint(c);
+    const made = { img, ox, oy };
+    this.sprites.set(key, made);
+    return made;
   }
 
   /** Pins, boards and trays off the screen get a round sign at the edge with their icon (W1). */
