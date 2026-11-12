@@ -320,3 +320,66 @@ test('a pin off the screen gets an edge arrow that opens its card', async ({ pag
   await page.touchscreen.tap(map.x + a.x, map.y + a.y);
   await expect(page.getByRole('dialog', { name: 'Potholes' })).toBeVisible();
 });
+
+// W15 + "Big targets": an edge arrow's middle and the square tap area round it (48 x 48 when there
+// is room anywhere; smaller only on a screen packed with signs) never overlap a drawn pin's tap
+// area, a board, a bubble, a chip, a button or another arrow, and a tap anywhere in it lands on
+// the arrow.
+for (const [width, height] of [
+  [320, 240],
+  [640, 200],
+  [851, 393],
+] as const) {
+  test(`at ${width} x ${height} with four signs up, zoomed in: every edge arrow's tap square is clear and takes the tap`, async ({ page }) => {
+    type Box = { x: number; y: number; w: number; h: number };
+    await page.setViewportSize({ width, height });
+    await openCity(page, { kobo: 300, power: 4, tech: 2, fixed: ['potholes'], fixes: 1, built: ['buka'], trays: { buka: 150 }, boom: 8, hints: ['walk', 'buka', 'collect'] });
+    const map = (await lagos(page).locator('.city-map').boundingBox())!;
+    const covers: Box[] = [];
+    for (const el of await lagos(page).locator('.city-chip, .city-top button, .city-bottom button').all()) {
+      const r = (await el.boundingBox())!;
+      covers.push({ x: r.x - map.x, y: r.y - map.y, w: r.width, h: r.height });
+    }
+    await page.keyboard.press('+');
+    await page.waitForTimeout(800);
+    const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+    const taps: number[] = [];
+    for (const key of ['', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowLeft', 'ArrowUp', 'ArrowUp']) {
+      if (key) {
+        await page.keyboard.down(key);
+        await page.waitForTimeout(1200);
+        await page.keyboard.up(key);
+        await stillHero(page);
+        await page.waitForTimeout(400);
+      }
+      const c = await city(page);
+      if (c.open) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+        continue;
+      }
+      const things: [string, Box][] = [
+        ...(Object.entries(c.pins) as [string, Box][]).filter(([s]) => s !== 'potholes').map(([s, b]) => [`pin ${s}`, b] as [string, Box]),
+        ...(Object.entries(c.boards) as [string, Box][]).map(([s, b]) => [`board ${s}`, b] as [string, Box]),
+        ...(Object.entries(c.bubbles) as [string, Box][]).map(([s, b]) => [`bubble ${s}`, b] as [string, Box]),
+        ...covers.map((b, i) => [`cover ${i}`, b] as [string, Box]),
+      ];
+      const squares = c.arrows.map((a) => ({ a, sq: { x: a.x - a.tap / 2, y: a.y - a.tap / 2, w: a.tap, h: a.tap } }));
+      for (const [i, { a, sq }] of squares.entries()) {
+        taps.push(a.tap);
+        expect(a.tap, `${a.icon} arrow tap square`).toBeGreaterThanOrEqual(36);
+        expect(sq.x >= 0 && sq.y >= 0 && sq.x + sq.w <= map.width && sq.y + sq.h <= map.height, `${a.icon} arrow square on the map`).toBe(true);
+        for (const [name, b] of things) expect(overlap(sq, b), `after ${key || 'zoom'}: ${a.icon} arrow square ${JSON.stringify(sq)} over ${name} ${JSON.stringify(b)}`).toBeLessThan(1);
+        for (const { a: o, sq: s2 } of squares.slice(i + 1)) expect(overlap(sq, s2), `${a.icon} arrow over the ${o.icon} arrow`).toBeLessThan(1);
+        // Its middle and four points near its corners land on the arrow.
+        const d = a.tap / 2 - 3;
+        for (const [dx, dy] of [[0, 0], [-d, -d], [d, -d], [-d, d], [d, d]] as const) {
+          const hit = await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.className ?? '', [map.x + a.x + dx, map.y + a.y + dy]);
+          expect(hit, `after ${key || 'zoom'}: a tap at (${dx}, ${dy}) from the ${a.icon} arrow's middle`).toContain('city-arrow');
+        }
+      }
+    }
+    test.info().annotations.push({ type: 'arrow tap squares seen', description: taps.join(', ') || 'none' });
+    expect(taps.length, 'no arrow showed').toBeGreaterThan(0);
+  });
+}
