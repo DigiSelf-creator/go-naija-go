@@ -637,9 +637,9 @@ export class CityScreen {
   private signCache = new Map<string, { dx: number; dy: number; tag: string; zoom: Zoom; short: boolean }>();
   /** The last layout and what it was worked out for (the camera, the screen, the pins, the words). */
   private signLayout: { key: string; spots: Map<string, SignSpot> } | null = null;
-  /** When the quick placer last began leaving a sign over something (-1: it is not), and when the full search last ran (seconds). */
+  /** When the quick placer last began leaving a sign over something (-1: it is not), and when the full search may next run mid-walk (seconds). */
   private badSince = -1;
-  private lastFit = -1;
+  private nextFit = 0;
   /** A sign's size round its foot, by its words (measuring words is slow on a cheap phone: once per words). */
   private signSizes = new Map<string, ScreenBox>();
 
@@ -681,15 +681,16 @@ export class CityScreen {
     // at every way to fit them all, at full size first, then with boards on short sticks. While the
     // hero walks the quick placing above is kept (it runs every frame the camera slides).
     // Mid-walk, a sign that has covered something for a few frames (a drawn pin, a chip, another
-    // sign) gets the full search too, at most a few times a second, so it never parks on a pin.
+    // sign) gets the full search too, a few times a second (less often after a try that found no
+    // way), so it never parks on a pin.
     const bad = [...out.values()].some((sp) => sp.bad);
     if (!bad) this.badSince = -1;
     else if (this.badSince < 0) this.badSince = this.time;
-    const longBad = bad && !settled && this.time - this.badSince >= 0.1 && this.time - this.lastFit >= 0.2;
+    const longBad = bad && !settled && this.time - this.badSince >= 0.1 && this.time >= this.nextFit;
     if (bad && (settled || longBad)) {
-      this.lastFit = this.time;
-      const found = this.fitAllSigns(asks, pins);
+      const found = this.fitAllSigns(asks, pins, settled ? 8 : 16);
       if (found) out = found;
+      this.nextFit = this.time + (found ? 0.2 : 0.5);
     }
     for (const ask of asks) {
       const sp = out.get(ask.id)!;
@@ -704,7 +705,7 @@ export class CityScreen {
    * W15): each sign's free places on screen (one per 16 px square, the nearest its own place),
    * then a search over them, the sign with the fewest places first. Null when there is none.
    */
-  private fitAllSigns(asks: readonly SignAsk[], pins: readonly Block[]): Map<string, SignSpot> | null {
+  private fitAllSigns(asks: readonly SignAsk[], pins: readonly Block[], grid = 8): Map<string, SignSpot> | null {
     const vw = this.view.w;
     const vh = this.view.h;
     const blocks: Block[] = [...pins, ...this.covers];
@@ -749,8 +750,8 @@ export class CityScreen {
           xs.add(Math.ceil(o.x + o.w + 2)).add(Math.floor(o.x - b0.w - 2));
           ys.add(Math.ceil(o.y + o.h + 2)).add(Math.floor(o.y - b0.h - 2));
         }
-        for (let v = 0; v + b0.w <= vw; v += 8) xs.add(v);
-        for (let v = 0; v + b0.h <= vh; v += 8) ys.add(v);
+        for (let v = 0; v + b0.w <= vw; v += grid) xs.add(v);
+        for (let v = 0; v + b0.h <= vh; v += grid) ys.add(v);
         for (const by of ys) for (const bx of xs) tryAt(boxAt({ x: bx - b0.x, y: by - b0.y }, true));
         const list = found.sort((a, b) => a.cost - b.cost).map((e) => e.sp);
         if (!list.length) break;
@@ -809,14 +810,16 @@ export class CityScreen {
       return true;
     };
     const fits = (sp: SignSpot): boolean => fitsIn(sp, blocks, 4);
+    // Its last place while still clear, by the 2 px the tight placing below and the full fit
+    // use, so a fitted sign stays put while the camera slides.
     if (prev) {
       const sp = at(prev, !isHome(prev));
-      if (fits(sp)) return sp;
+      if (fitsIn(sp, blocks, 2)) return sp;
       // It stood on its short stick (W15): keep that while it still fits.
       const b0 = prev.short ? ask.boxShort : undefined;
       if (b0) {
         const ss = { x: prev.x, y: prev.y, box: { x: prev.x + b0.x, y: prev.y + b0.y, w: b0.w, h: b0.h }, away: true, short: true };
-        if (fits(ss)) return ss;
+        if (fitsIn(ss, blocks, 2)) return ss;
       }
     }
     for (const c of ask.prefer) {
@@ -837,13 +840,15 @@ export class CityScreen {
         if (fits(sp)) return sp;
       }
     }
-    // A tight screen (320 x 240, 640 x 200): every free place on screen, 2 px apart; the nearest
-    // wins. First clear of everything; then clear of all but the soft things.
+    // A tight screen (320 x 240, 640 x 200): every free place on screen, 2 px apart (6 while the
+    // hero walks: this runs every frame then, and the full fit follows soon); the nearest wins.
+    // First clear of everything; then clear of all but the soft things.
+    const step = this.hero.moving ? 6 : 2;
     for (const list of [blocks, hard]) {
       let pick: SignSpot | null = null;
       let best = Infinity;
-      for (let by = 0; by + bh <= vh; by += 2)
-        for (let bx = 0; bx + bw <= vw; bx += 2) {
+      for (let by = 0; by + bh <= vh; by += step)
+        for (let bx = 0; bx + bw <= vw; bx += step) {
           const c = { x: bx - b0.x, y: by - b0.y };
           const d = (c.x - home.x) ** 2 + (c.y - home.y) ** 2;
           if (d >= best) continue;
@@ -858,8 +863,8 @@ export class CityScreen {
     // Nowhere is free: on screen where it covers the least (a soft thing before a pin, a pin before a button).
     let pick: SignSpot | null = null;
     let least = Infinity;
-    for (let by = 0; by + bh <= vh; by += 4)
-      for (let bx = 0; bx + bw <= vw; bx += 4) {
+    for (let by = 0; by + bh <= vh; by += step * 2)
+      for (let bx = 0; bx + bw <= vw; bx += step * 2) {
         const sp = at({ x: bx - b0.x, y: by - b0.y }, true);
         const b = sp.box;
         let over = 0;
