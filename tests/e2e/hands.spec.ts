@@ -112,7 +112,8 @@ test('street 1 by hand with two thumbs: walk, run, potholes, the big pit by a ru
   await expect(cleared).toBeVisible({ timeout: 5000 });
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
   expect(kobo).toBeGreaterThanOrEqual(last.r.kobo);
-  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${formatMoney(kobo * 10)}.`)).toBeVisible();
+  // 5W W5: the first street 1 win from the Potholes card brings ₦14 home.
+  await expect(cleared.getByText(`Alausa is moving again, thanks to you! You got ${formatMoney(Math.max(1400, kobo * 10 + 500))}.`)).toBeVisible();
   await waitOutTapLock(page);
   await cleared.getByRole('button', { name: 'Next street' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('lagos-2');

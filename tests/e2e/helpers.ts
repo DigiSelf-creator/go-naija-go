@@ -37,10 +37,13 @@ export async function skipIntro(page: Page): Promise<void> {
   await expect.poll(() => screenNow(page)).not.toBe('intro');
 }
 
-/** Slice 3 (city.md (b)): from Lagos from above into street 1, by the Potholes pin and "Run Alausa". */
+/**
+ * Slice 3 (city.md (b), 5W): from Lagos from above into street 1, by the Potholes pin and "Run
+ * Alausa" (the big button with nothing in the bucket, a small one beside "Walk there" with some).
+ */
 export async function cityToStreet1(page: Page): Promise<void> {
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await page.getByRole('button', { name: 'Potholes, problem' }).tap();
+  await page.getByRole('button', { name: /^Potholes, (problem|ready to fix)$/ }).tap();
   await page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Alausa' }).tap();
 }
 

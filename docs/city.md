@@ -21,8 +21,9 @@ Owner: designer. First written 9 Nov 2026 from Tp's words in chat. Updated 10 No
 | Not now: the herder's staff. Fufu and egusi plug potholes, after slice 3 (R3, R4) | 10 Nov 2026 | Part 2D |
 | **Fufu now, not after slice 3** (changes R3's timing only): hot fufu balls thrown with a Throw button, never fire. Corn tune. The city starts now, beside the polish (po's reading of Tp's 10 Nov play; decision line 42 waits to be pasted) | 10 Nov 2026 | Parts 2C, 2D, 5; design S2.9, S2.15 |
 | Hausa, Igbo and Yoruba get an equal share over the updates; next regions north and east (R5) | 10 Nov 2026 | Part 2D, part 1 "It never ends" |
+| W1a to W4a: the hero walks Lagos from above; pay spots on the ground replace the Fix button; fixed places earn into a capped tray you walk over to collect; built as step (c), before the lane run | 11 Nov 2026 | Part 5W |
 
-Still a draft (not confirmed): the challenge road map (part 1), and the five questions at the end.
+Still a draft (not confirmed): the challenge road map (part 1), and the five questions at the end. Part 5W has six small questions of its own (W13), built on the recommended answers until Tp says otherwise.
 
 ## 0. What Tp asked for, in short
 
@@ -103,13 +104,13 @@ Exact words (one line under the heading, 40 characters or fewer for 320 x 240):
 
 ### The Booming meter (Tp, L7, 10 Nov)
 
-A bar at the top of the city screen with the word **"Booming"** and a small rising-building icon. It is in steps, not colour: each fix fills one step. At set marks Lagos grows: new buildings rise, the skyline gets busier, more people and buses, and new needs show up as new pins. It never goes down by itself.
+A bar at the top of the city screen with the word **"Booming"** and a small rising-building icon. It is in steps, not colour: each fix or build fills 4 points, and a full collect fills 1 (W6, Tp 12 Nov 2026). At set marks Lagos grows: new buildings rise, the skyline gets busier, more people and buses, and new needs show up as new pins. It never goes down by itself.
 
 Exact words:
-- Label on the bar: "Booming" and under it "Next boom: 2 fixes".
+- Label on the bar: "Booming" and under it "9 of 20" (W6; replaces "Next boom: 2 fixes").
 - At a mark (a short card, tap to close): "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." Button "See Lagos".
-- Screen readers: "Booming meter. 1 of 3 fixes to the next boom."
-- Slice 3 marks: the first boom after 3 fixes (this also turns Lagos's cog on Nigeria's wheel). Later marks come further apart.
+- Screen readers: "Booming meter. 9 of 20 to the next boom."
+- Slice 3 marks: the first boom at 20 points (W6, Tp 12 Nov 2026; replaces "after 3 fixes"). This also turns Lagos's cog on Nigeria's wheel. Later marks come further apart.
 
 The meter replaces the old "Lagos: 1,200 new people" counter (question 4).
 
@@ -361,8 +362,8 @@ The place in brackets is where the pin sits on the map, never words on the card.
 |---|---|---|---|
 | Intro (6 frames) | A first-time player, before the hero builder; later anyone from Settings, "Watch the story" | Tell the story in 20 seconds | See "The intro" below. "Skip" on every frame; a tap moves on |
 | Title | Everyone who opens the game | Start | "Gbese!" / "Build up Lagos. Get Nigeria working." Button "Play". "Sound: on", "Music: on" |
-| City | Anyone who taps "Play" | Pick a problem to fix | Heading "Lagos". Bucket chips "₦24.50", "Power 6", "Tech 3". "Booming" bar, "Next boom: 2 fixes". Pins with one word each. Buttons "Nigeria's wheel", "Hero", "Settings" (and "Challenge road" if Tp says yes) |
-| Problem card | A player who taps a pin | Say what is wrong, the cost and how to help | Potholes: "Potholes on this road." / "Fixing it costs ₦10." / Big "Run Alausa", or "Fix it (₦10)" when you have enough. Lights out: "Lamps are out here." / "Switching them on costs Power 10." / Big "Lane run", or "Switch on (Power 10)". Slow internet: "The internet is slow here." / "Fixing it costs Tech 6." / Big "Lane run", or "Fix it (Tech 6)". Small "Back" on each |
+| City | Anyone who taps "Play" | Pick a problem to fix | Heading "Lagos". Bucket chips "₦24.50", "Power 6", "Tech 3". "Booming" bar, "9 of 20" (W6). Pins with one word each. Buttons "Nigeria's wheel", "Hero", "Settings" (and "Challenge road" if Tp says yes) |
+| Problem card | A player who taps a pin | Say what is wrong, the cost and how to help | Potholes: "Potholes on this road." / "Fixing it costs ₦10." / Big "Run Alausa", or "Walk there" when you have some of the price (part 5W replaces "Fix it"). Lights out: "Lamps are out here." / "Switching them on costs Power 10." / Big "Lane run", or "Switch on (Power 10)". Slow internet: "The internet is slow here." / "Fixing it costs Tech 6." / Big "Lane run", or "Fix it (Tech 6)". Small "Back" on each |
 | Lane run HUD | A player in the lane run | Show what you have and how close the Blackout is | "₦3.40" "Power 6" "Tech 2" / "Blackout: 40 m behind" / "To the bus stop: 420 m" |
 | Lane run end | A player who reached the goal or was caught | Bring it home | Goal: "You made it to the bus stop!" / "You got ₦6.20, Power 12 and Tech 7." Big "Take it home", small "Keep running for more". Caught before the goal: "The Blackout caught up." / "You keep it all: ₦3.10, Power 5 and Tech 2." Big "Run again", small "Take it home" |
 | Mission complete | A player who just won a challenge | Show what the win did | "Mission complete!" plus the line for that fix (part 1). "Tap to skip" |
@@ -395,7 +396,7 @@ Slice 3 starts now, beside the slice 2 polish (po's reading of Tp's 10 Nov play,
 | (a) The intro story | 6 frames, Skip, plays once, "Watch the story" in Settings | **Ready to start now** |
 | (b) Lagos from above | the city screen, drag and zoom, three pins, the bucket counters, saved on the phone | **Ready to start now** |
 | (c) Wins go home | a street win pays Naira, fixes the Potholes pin, "Mission complete!" and the new road | after (b) |
-| (d) The Booming meter | the bar fills with each fix; at 3 fixes "Lagos is booming!" | after (c) |
+| (d) The Booming meter | the bar fills with each fix, build and full collect; at 20 points "Lagos is booming!" (W6) | after (c) |
 | (e) The challenge road | the road of bus stops replaces the Streets list | after (c) |
 | (f) The lane run and the Blackout | the second kind of challenge; pins 2 and 3 can be fixed | designer note first (f0), then art and gamedev |
 
@@ -440,6 +441,8 @@ Done when: drag stays at 45 fps or more at 4x CPU slowdown and idle draws nothin
 
 #### (c) Street wins go home, and "Mission complete!"
 
+**Replaced by part 5W (11 Nov 2026).** The money rules below stand; the Fix button, the Mission complete scene and the S3c tasks are now as in 5W (W2, W5, W12).
+
 - **Coins become money.** A coin is 10 kobo (N1). The street HUD's kobo chip shows money: "80 kobo", then "₦1.20". The coin count rules do not change.
 - **Street cleared card.** Big button "Take it home" (replaces "Next street"; "Next street" becomes small). The line becomes "{street name} is moving again, thanks to you! You got {money}." A win adds the coins plus a ₦5 prize; the hall win adds ₦15.
 - **Losing keeps it all (Tp, question 2).** Street Game over: "Out of lives" / "You keep {money} for Lagos. The street is still here. Try again!"
@@ -451,9 +454,9 @@ Done when: a first-timer goes city, card, street 1, win, Mission complete, back 
 
 #### (d) The Booming meter
 
-Words and rules: part 1 "The Booming meter". A bar at the top centre of the city screen with the word "Booming", 3 steps to the first boom ("Next boom: 2 fixes"). At 3 fixes, the card "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." / button "See Lagos", then two new pins marked "Coming soon". The first boom turns Lagos's cog on Nigeria's wheel; a player whose cog already turns from the hall keeps it (the cog never turns off).
+Words and rules: part 1 "The Booming meter". A bar at the top centre of the city screen with the word "Booming" and "9 of 20" under it, five big steps of four notches to the first boom (W6). At 20 points, the card "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." / button "See Lagos", then two new pins marked "Coming soon". The first boom turns Lagos's cog on Nigeria's wheel; a player whose cog already turns from the hall keeps it (the cog never turns off).
 Owners and budgets: art draws the bar, the rising-building icon and the grown-city pictures (under 8 KB with (c)'s blocks reused). gamedev builds the bar, the card and the cog link (under 3 KB).
-Done when: the meter never goes down, survives reload, reads "Booming meter. 1 of 3 fixes to the next boom." to screen readers, and the steps show without colour.
+Done when: the meter never goes down, survives reload, reads "Booming meter. 9 of 20 to the next boom." to screen readers, and the steps show without colour.
 
 #### (e) The challenge road
 
@@ -469,6 +472,226 @@ Rules: part 2B, all confirmed. Built in four steps:
 - f2 gamedev: the lane run engine on the 2D canvas (pool of 20 things, 60 fps on a mid phone), swipes, keys and "Buttons instead of swipes" (under 30 KB).
 - f3 gamedev: the Blackout, buckets, HUD, end card, "Keep running", best distance; pins 2 and 3 open (under 15 KB).
 Done when: everything is visible 1.5 s before it arrives at every speed; first-timers reach the bus stop in 3 tries or fewer; at least 45 fps at 4x CPU; part 2B's "must NOT copy" list passes; goats are never hurt.
+
+## 5W. Walk the city (W1–W4)
+
+Owner: designer. Written 11 Nov 2026 from Tp's four city choices of that day (W1a to W4a). Tp saw an arcade "walk and build" game in an advert and liked the general mechanic: walk your hero around the town, stand on a spot to pay for a build, and walk back later to collect what the built place made. **We take only that general mechanic, never that game's look** (see "Original only" below).
+
+This section replaces the plain "Fix it (₦10)" button and the S3c tasks. It is built as slice 3 step (c), before the lane run. Where it changes earlier parts of this file, it says so; everything else in parts 1 to 5 stands.
+
+| Tp chose (11 Nov 2026) | What it means here |
+|---|---|
+| W1a. The hero walks around Lagos from above | Tap (or hold) where to go; the hero walks there on the roads and pavements; the camera follows. One thumb. |
+| W2a. Pay spots on the ground | Each fix or build has a price board on the ground. Stand on it and the money flies off the hero into it; then the fix is built. No more "Fix it" button. |
+| W3a. Fixed places keep working and make money | A Mama Put serves a queue, a market fills, danfos come for goods. Their money waits in a tray until the hero walks over to collect it. A tray stops filling when full. Feeds the Booming meter. Money only comes from runs and fixed places: no ads, no real money. |
+| W4a. In the plan now, in place of the plain Fix screen | Build order below replaces S3c1 and S3c2 in docs/plan.md. |
+
+### W1. How the hero moves
+
+**One rule for a 10 year old: the hero walks to your finger.**
+
+- **Tap the ground.** The hero walks there along the roads and pavements. A small ring shows where they will stop (0.5 s, then it fades).
+- **Hold and slide.** Keep your finger down and the hero keeps walking to wherever your finger is. Let go and they finish the last few steps. This is the "drag where to go". No joystick is drawn.
+- **Tap a pin** (Potholes, Lights out, Slow internet): the problem card opens, as now. The hero does not move.
+- **Tap a price board or a tray bubble:** the hero walks there and then pays or collects by itself.
+- **When a tap counts as "hold":** the finger stays down 150 ms or moves more than 8 px. A quick tap is always a tap.
+- **What changes in (b).** One-finger drag no longer moves the map: it moves the hero, and the camera follows the hero. Double tap to zoom is dropped (it would make every tap wait 300 ms). Pinch and the "+" and "−" buttons still zoom. "−" (far) still shows the whole area, and on narrow screens the first look still shows every pin (qa F2). A pin off the screen gets a small arrow sign at the screen edge with its icon (at least 44 x 44 px); tapping it opens that pin's card.
+
+**The path.**
+- The map has a walk grid of 25 x 25 map unit cells (64 x 40 cells). Roads, pavements, the bus park, the jetty and the lots in front of each block are walkable. Building blocks, the lagoon and the bridge rails are not.
+- A tap on something you cannot walk onto (a roof, the lagoon) walks to the nearest walkable cell, and a tap on a building walks to its front door.
+- The path is found once per tap (a plain shortest path on the grid, then corners cut where nothing is in the way), well under 2 ms on a cheap phone. While holding, it is found again at most 5 times a second.
+- Buses and cars stop and wait when the hero is in front of them. Nobody is ever hit, and the hero never has to dodge in the city.
+
+**Speed.** 240 map units a second, in every mode. From the bus park to the Potholes board is about 3.5 s; across the whole map is about 7 s. No running, no stamina, no tiredness.
+
+**The hero.** The hero you built, every body, skin, hair and outfit, at least 24 px tall on screen at any zoom (drawn bigger than map size when zoomed far out), with a soft shadow under the feet so they are easy to find. Walking left or right uses the side walk (flipped), walking down the screen shows the front, walking up shows the back (the same "from behind" pose the lane run needs). 4 walk frames. Standing still: a small breath, none with reduced motion.
+
+**Where the hero is.** A first-timer starts at the bus park. After that the hero stands where you left them (saved). After a challenge, they arrive by bus (see W5).
+
+**The camera follows.** The hero stays in a middle box (the middle half of the screen, under the top row). When the hero walks out of it, the camera slides to keep them in, never faster than the hero walks, and never past the map edge rule of (b). It never swoops or zooms by itself, except the Mission complete arrival.
+
+**Keys.** Arrow keys walk the hero (hold to keep walking; two arrows walk on a slant). Tab moves through the pins, price boards and tray bubbles on screen; Enter on a board or bubble walks there and pays or collects; Enter on a pin opens its card. + and − zoom. Escape closes a card.
+
+### W2. Pay spots
+
+Every fix or build has a **pay spot** on the ground next to its place.
+
+**What it looks like (our own).** A woven mat on the ground (80 x 56 map units), with a faint chalk outline of what will be built standing behind it, and beside it a small **price board on a stick**, like the chalk price boards at a Nigerian market stall. The board shows the bucket's icon, the price and the name of what it builds:
+
+| Board | Bucket | Builds |
+|---|---|---|
+| coin "₦10" / "New road" | Naira | Fresh tarmac on the Alausa road (the Potholes fix) |
+| coin "₦4" / "Mama Put" | Naira | A Mama Put food stall |
+| coin "₦8" / "Market" | Naira | A row of market stalls |
+| bulb "Power 10" / "Lamps" | Power | The Lights out fix (after the lane run is built) |
+| chip "Tech 6" / "Mast" | Tech | The Slow internet fix (after the lane run is built) |
+
+**Size.** The mat is drawn in map units. The board's tap area is drawn at screen size, like the pins: at least 48 x 48 px at every zoom, two lines (price bold 14 px, name 12 px), at most 96 px wide so "Power 10" fits at 320 px. The board never sits over a pin, a chip row or a button (the pin and board positions below keep them apart; tests check it at 320 x 240, 393 x 851 and 851 x 393).
+
+**Stand to pay (not hold to pay).**
+1. The hero stops on the mat (tapped there, walked there by holding, or by keys).
+2. After 0.3 s standing still, paying starts. Walking across a mat on the way somewhere else never pays.
+3. Money flies off the hero into the board: coins for Naira, bulbs for Power, chips for Tech, in small arcs, one every 60 ms, at most 12 drawn whatever the price. The price on the board counts down and the counter chip at the top counts down with it. A soft "chink" for each (only with Sound on).
+4. Paying takes 0.8 s, plus 0.1 s for each ₦1 (or each 1 Power or Tech), at most 1.6 s.
+5. When the price reaches 0, the board says "Done ✓", the chalk outline fills in and the place is built in 1 to 2 s (tarmac rolls, the stall goes up, lamps switch on one by one). The board and the mat go away. A short line shows for 2 s (words in W8). The Booming meter moves (W6).
+
+Why stand, not hold: holding the finger already steers the hero; a second "hold" meaning would confuse. Standing still also works the same for touch, keys and screen readers.
+
+**Not enough.**
+- **Nothing in that bucket:** the board gives one small wobble (none with reduced motion), and a small card opens at the bottom: "You need ₦10 for this." / "Run Alausa to earn more." Big "Run Alausa" (or "Lane run", or "Lane run: coming soon" as plain text until (f)), small "Back".
+- **Some, not all (partial pay):** the hero pays what they have, and the board keeps the rest as its new price: "₦4 left". A line shows: "You paid ₦6. ₦4 more to go." Money paid into a board is never lost; it stays there (saved) until the build is done. This is the "Halfway there" rule from Tp's answer to question 3, for any board.
+- A board never takes money from the wrong bucket.
+
+**The problem card changes.** "Fix it (₦10)", "Switch on (Power 10)" and "Fix it (Tech 6)" become one big button **"Walk there"** when you have some of the price; the hero walks to the board and pays. The challenge button ("Run Alausa", "Lane run") stays as the small button then. With nothing in the bucket, the challenge button stays big and "Walk there" is small.
+
+### W3. The places that work and make money
+
+Only builds that make sense as a working place earn. Fixes like the road and the lamps help Lagos in other ways (the road brings the danfos back; the lamps light the street).
+
+**Money is counted in play time, never on a clock.** A place fills only while you are playing: the city screen is open or a challenge is running, the game is not paused, and the tab is in front. Closing the game stops it; nothing fills while you are away and nothing spoils or breaks. No clocks or countdowns are shown, only the amount waiting. (This keeps part 1: "no waiting clocks, no come back in 4 hours".)
+
+**The first places (slice 3).**
+
+| Place | Price | What you see it do | Earns | Cap (tray full) | Full in |
+|---|---|---|---|---|---|
+| New road (Potholes fix) | ₦10 | Danfos drive the Alausa road again | nothing itself; danfos now reach the market | | |
+| Mama Put (food stall by the bus park) | ₦4 | A cook serves a queue of up to 4 people; each takes a plate and walks off happy | 10 kobo a plate, one plate every 6 s of play | ₦1.50 (15 plates) | 1.5 minutes |
+| Market (stall row by the shore road) | ₦8 | Stalls fill up with tomatoes, peppers, onions, yams and plantain; a danfo pulls up, loads goods and drives off | 30 kobo a danfo, one danfo every 15 s of play (only once the New road is built) | ₦2.40 (8 danfos) | 2 minutes |
+| Lamps (Lights out fix) | Power 10 | The street switches on | nothing in slice 3 | | |
+| Mast (Slow internet fix) | Tech 6 | Shop screens light up | nothing in slice 3 | | |
+
+Later places (after slice 3, numbers to be tuned): a phone charging kiosk that earns Power (needs the Lamps), a repair stall in Computer Village that earns Tech (needs the Mast), a suya spot, a bus stop with a queue. Each new state brings its own food places from its own region, so over time the trays show food from the north, east, west and south.
+
+**Capped so runs stay the main way to earn.** One street win gives about ₦10 to ₦15 in 60 to 120 s. Both slice 3 trays together hold at most ₦3.90, and fill in about 2 minutes of play: always less than half of one street win. Rule for every later place: one tray, full, is worth at most a quarter of the challenge that pays for that bucket, and all trays together at most half of it.
+
+**When a tray is full.** It stops filling until you collect. Not colour alone: the bubble says "Full". The place rests instead of serving: the Mama Put cook sits and fans herself and the queue chats; the market stalls are piled high and the danfo waits with its door open. Nothing is lost and nothing goes bad.
+
+**The tray bubble.** Over each working place, once it holds at least 10 kobo: a small bubble with the bucket icon and the amount ("80 kobo", "₦1.20"), or "₦1.50 Full". At least 48 x 48 px tap area. The amount changes in steps (once a plate or once a danfo), never as a running number.
+
+### W4. Collecting
+
+- Walk into the place's front (within 48 map units of its door), or tap its bubble to walk there. No standing wait: collecting is instant on arrival.
+- The money flies from the place to the hero (the same arcs as paying, the other way), the counter chip counts up, a short "+₦1.20 from Mama Put" shows for 1.5 s.
+- A tray under 10 kobo shows no bubble and is not collected (no tiny pickups).
+- The trays are part of the save. They are saved on every collect, every 10 s of play, and when the tab is hidden.
+
+### W5. How it links to Mission complete
+
+Mission complete (part 1) now plays **in the walkable city**, and the pay board is how the win pays:
+1. The yellow bus pulls up at the bus stop nearest the place the challenge was for, and the hero gets off.
+2. The heading shows **"Mission complete!"**
+3. The hero walks to that place's pay board by themselves and stands on it; the money flies in; the fix plays out (W2 step 5). 4 to 6 s in all, as before.
+4. The camera stays with the hero (no pull-back to the far view); the Booming meter moves; the hero is now free to walk.
+
+**A win pays for the fix you came for (Tp, question 3).** So a first-timer always sees the road fixed, the win prize is ₦5, or more if needed so the money you bring home reaches the price. The **first** street 1 win from the Potholes card tops up to ₦14: ₦10 pays the road and ₦4 is left for the Mama Put (W7). (Street 1 has 46 coins, ₦4.60; a first-timer who picks up 30 coins brings ₦3 plus an ₦11 prize.) For a later, bigger fix where one win is not enough, the hero pays what they have: "Mission complete!" / "₦4 more to finish it."
+
+**A win from somewhere else** (the challenge road, or a street with no pin): the bus pulls up at the bus park; "Mission complete!" / "You brought ₦12 home." The hero gets off and you walk from there.
+
+**Losing keeps it all** (question 2): no Mission complete; "Back to Lagos" puts the hero at the bus park with the money in the chips.
+
+Tap anywhere (or Space, Enter or Escape) skips to the end: paid, built, hero standing on the finished spot. Reduce motion shows the end picture.
+
+### W6. The Booming meter, with walking and collecting
+
+Part 1 and step (d) stand, with this change, so working places feed the meter as Tp asked:
+- A fix or a build fills **4** on the meter. Collecting a **full** tray fills **1**, at most 4 from collecting for each boom (so a boom always needs real fixes too).
+- The first boom is at **20**: the five slice 3 boards (road, Mama Put, market, lamps, mast) are 20 on their own. A player who has not reached the lane run yet can get there with three builds and four full collects (12 + 4 = 16, so not yet: they still need one lane-run fix). The cog still turns at the first boom, and a cog already turned by the hall stays turned.
+- It never goes down.
+- Words (replace "Next boom: 2 fixes"): bar label "Booming", under it "9 of 20". Screen readers: "Booming meter. 9 of 20 to the next boom." The bar is drawn as five big steps of four notches, so it reads without colour.
+
+### W7. The walk-in for a first-timer (one new thing at a time)
+
+1. **First city visit** (after the intro and the builder): the hero stands at the bus park. After 1 s: "Tap where you want to go." (keys: "Use the arrow keys to walk."). It goes away after the first walk.
+2. The Potholes pin bobs; tapping it opens its card: "Potholes on this road." / "Fixing it costs ₦10." / big "Run Alausa". (The road's price board is already on the ground: "₦10 / New road".) If they walk onto it with ₦0, they get the "You need ₦10" card, which also says "Run Alausa".
+3. **They win street 1.** Mission complete (W5): the bus brings them home, they walk onto the board by themselves, the coins fly in, the road is built. This shows paying before asking them to do it.
+4. **Back in the city, the Mama Put board appears** (₦4) by the bus park, with the hint: "Walk onto the ₦4 board to build a Mama Put." Every first-timer has ₦4 left after the first win (the W5 top-up). They pay by themselves for the first time.
+5. **The Mama Put serves.** When its tray first holds ₦1 or more, the hint: "Mama Put made money! Walk over to collect it." They collect for the first time.
+6. **Then the market board** (₦8) shows, then the lane run pins later. Each board appears only after the one before is built, so there is never more than one new board at a time.
+
+Hints show once each (saved), in the bar under the top row, real text, never over the hero or a board.
+
+### W8. Screens and exact words
+
+| Screen or piece | Who sees it | One job | Exact words |
+|---|---|---|---|
+| City (walking) | Anyone at home in Lagos | Walk to a problem, a board or a tray | Heading "Lagos". Chips "₦24.50", "Power 6", "Tech 3". Bar "Booming" / "9 of 20". First hint "Tap where you want to go." (keys: "Use the arrow keys to walk.") Map's spoken name: "Lagos from above. Tap where you want to go." |
+| Price board | A player near a fix or build | Show the price and what it builds | "₦10" / "New road"; "₦4" / "Mama Put"; "₦8" / "Market"; "Power 10" / "Lamps"; "Tech 6" / "Mast". Part paid: "₦4 left". Done: "Done ✓". Spoken: "New road. Costs 10 naira. You have 6 naira. Walk there." |
+| Not enough card | A player on a board with nothing in that bucket | Say how to earn it | "You need ₦10 for this." / "Run Alausa to earn more." Big "Run Alausa" (or "Lane run"; until (f): "Lane run: coming soon", plain text), small "Back" |
+| Part paid line | A player who paid some | Say what is left | "You paid ₦6. ₦4 more to go." |
+| Built lines (2 s) | A player who just finished a board | Show what the build does | "New road! Danfos are back." / "Mama Put is open! Food for the queue." / "The market is open! Danfos come for goods." / "Lamps on! The street is awake." / "Fast internet! Shops are busy." |
+| Tray bubble | Anyone who can see a working place | Show money waiting | "80 kobo", "₦1.20", "₦1.50 Full". Spoken: "Mama Put has 1 naira 20 kobo for you. Full." |
+| Collect line (1.5 s) | A player who collected | Say what came in | "+₦1.20 from Mama Put", "+₦2.40 from the market" |
+| Hints (once each) | A first-timer | Teach one thing | "Walk onto the ₦4 board to build a Mama Put." / "Mama Put made money! Walk over to collect it." |
+| Problem card | A player who taps a pin | As part 5, but the fix button changes | Big "Walk there" when you have some of the price (small "Run Alausa"); else big "Run Alausa" (small "Walk there"). Small "Back" |
+| Mission complete | A player who just won | Show the win doing its job | "Mission complete!" plus the line for that fix (part 1). Not enough: "₦4 more to finish it." From elsewhere: "You brought ₦12 home." "Tap to skip" |
+
+Every line fits 320 x 240 on one or two lines; none over 40 characters except the card lines, which wrap.
+
+### W9. Accessibility
+
+- **Big targets.** Price boards, tray bubbles, pins and pin edge arrows: at least 48 x 48 px at every zoom; buttons at least 44 px. The hero can always be reached by tapping anywhere: no small target is ever needed to move.
+- **One thumb, one hand.** Everything works with one finger. Pinch is never needed ("+" and "−").
+- **Keys and screen readers.** Arrows walk; Tab and Enter reach every pin, board and bubble and do the walking for you. Boards and bubbles are real buttons with spoken words (W8). After a pay or collect, the new amounts are read out once ("Naira: 2 naira").
+- **Not colour alone.** Boards carry the bucket icon and a word; "Full" is a word; "Done ✓" is a word and a tick; the meter has notches.
+- **Sound off.** Chinks and the build sound follow the Sound switch (on the city screen top right, as now).
+- **Gentle mode.** Paying starts on arrival (no 0.3 s wait); the collect reach doubles to 96 map units; the hero also collects any tray they walk past within that reach. Prices and caps stay the same (Gentle is about ease, never about more money).
+- **Reduced motion.** No flying coins (the numbers just count, with a tick), no bob, no breath, still queue people, no camera ease (the camera moves only with the hero, at the hero's speed), Mission complete shows the end picture. Builds appear in one step.
+- **No timers.** Nothing to wait for and no clock shown, ever.
+
+### W10. Size and speed limits
+
+- All new art is drawn in code, like the rest of the city. Budget: art under 18 KB, code under 14 KB, gzipped. First load stays near 500 KB, far under 1.5 MB and 3 MB.
+- The still city picture stays painted once (part 3). The hero, the boards, the bubbles, the queue and the danfo are drawn on top, a handful of shapes each.
+- **Draw only when something moves.** While the hero walks, coins fly or a build plays: up to 60 fps, at least 45 fps at 4x CPU slowdown. Standing still: at most 2 small redraws a second for the queue and stalls (a plate served, a danfo arriving), and none with reduced motion except when an amount changes. No drawing while the tab is hidden.
+- At most 8 small moving people and 2 moving danfos on screen at once.
+- Path search under 2 ms; at most 5 a second while holding.
+- Save writes: at most one every 10 s while playing, plus on pay, collect and tab hide.
+- Save shape (merged into the `city` part, never overwriting): `"at": {"x":820,"y":700}` (the hero's place), `"paid": {"potholes": 600}` (money in a board so far, whole kobo or units), `"built": ["buka"]` (builds that are not problem fixes), `"trays": {"buka": 120, "market": 240}` (whole kobo), `"boom": 9` (meter points), `"hints": ["walk"]`. A broken or missing part starts empty, as now.
+
+**Where things stand on the map** (map units, about; art and gamedev may move them a little to keep boards clear of pins):
+
+| Thing | Pin | Board and mat | Door (collect) |
+|---|---|---|---|
+| New road (Potholes) | 101, 430 (as now) | 101, 480, on the Alausa road | |
+| Mama Put | | 905, 790, pavement by the bus park | 905, 760 |
+| Market | | 1320, 818, on the shore road | 1320, 800 |
+| Lamps (Lights out) | 640, 760 (as now) | 640, 818 | |
+| Mast (Slow internet) | 1300, 486 (as now) | 1300, 540, on the main road | |
+| Hero start | | the bus park, 820, 700 | |
+
+### W11. Original only
+
+On top of part 6:
+1. From the arcade "walk and build" game Tp saw: the general mechanic only (walk, stand to pay, collect). **None of its look:** no snow, ice, cold, furnaces or heaters; no fish, meat or logs; no log fences or wooden palisades; no dollar signs, dollar tiles or green banknote tiles; no dashed square build plots; no floating joystick; no its icons, fonts, button shapes, colours or screen layouts; no workers you hire or "survivors"; no troops, heroes to recruit, gems, speed-ups, build clocks, ads or real-money shop.
+2. Our pay spot is a woven mat and a chalk market price board on a stick; our money is Naira and kobo coins, Power bulbs and Tech chips, all drawn our own way.
+3. Not an idle tycoon: no managers, no "offline earnings", no tap-to-earn, no numbers that grow by thousands.
+4. Not a top-down adventure game: no grass to cut, no pots, no dungeons, no hearts over the hero.
+5. Our own: Lagos roads and the bus park, danfos, a Mama Put, a market of real Nigerian produce, our hero, our drawn style.
+6. People in the queue and the market are every age and dress, from every part of Nigeria, drawn in our own style, never a real person. The cook is proud and busy, never a joke. No brand on any stall, plate, bag or danfo.
+
+### W12. Build order (replaces slice 3 step (c))
+
+| Step | Owner | What Tp sees when it is done | Size |
+|---|---|---|---|
+| c0 | designer | This section (done 11 Nov 2026) | |
+| c1 | art | The hero walking from above (front, back, side, every body), getting off the bus; the mat and price board (three buckets, part-paid and "Done ✓" looks); the chalk outlines; the Mama Put with its cook and queue; the market stalls empty, filling and full; the danfo loading goods; tray bubbles; flying coins, bulbs and chips; the "chink", "built" and "collect" sounds | 18 KB |
+| c2 | gamedev | **Walk:** the walk grid and path, tap and hold to walk, arrow keys, the camera follows, pin edge arrows, the hero's saved place, first hint. Drag no longer pans; double tap dropped | 6 KB |
+| c3 | gamedev | **Pay:** boards, stand to pay, part pay, the not-enough card, "Walk there" on the cards; coins as money, "Take it home", keep everything on a loss, the prize top-up; Mission complete in the walkable city | 5 KB |
+| c4 | gamedev | **Earn and collect:** Mama Put and market, play-time filling, caps and "Full", trays saved, collecting, boom points (the bar itself stays step (d)), the two hints | 3 KB |
+| cq | qa | Each of c2 to c4 on the phone profile, 4x CPU, offline, 320 x 240 and both phone turns, keys only, screen reader, Gentle, reduced motion, the W11 list, first-timers: city to fixed road to built Mama Put to first collect in one go | |
+
+Done when (whole step): a first-timer walks, fixes the road through Mission complete, builds the Mama Put by standing on its board, and collects from it, with no help; boards and bubbles are 48 px at every zoom; walking stays at 45 fps or more at 4x CPU and a still city draws at most 2 small redraws a second; money adds up right in tests (pay, part pay, collect, caps, prize top-up, nothing fills while the game is closed); everything survives a reload; the W11 list passes.
+
+### W13. Questions for Tp
+
+**Answered by Tp, 12 Nov 2026: "Yes to all" (1 a, 2 a, 3 a, 4 a, 5 a, 6 a).** Places fill only while you play; part pay with "₦4 left"; drag moves the hero, the camera follows, double tap to zoom is dropped; Booming points 4 per fix or build, 1 per full collect (at most 4 a boom), first boom at 20; names "Mama Put" and "Market"; a win always brings home at least the price of the fix you came for, and the first street 1 win brings ₦14. Decision lines 44 and 45 are in docs/questions.md for Tp to paste.
+1. **Do places fill while the game is closed?** a) No, only while you play (recommended: no clocks, no "come back later", nothing to cheat with the phone's clock). b) Yes, up to the cap.
+2. **Part pay:** if you do not have the whole price, the hero pays what they have and the board keeps the rest. a) Yes (recommended: nothing is wasted, and it matches "Halfway there"). b) No, pay only with the whole price.
+3. **Drag moves the hero, not the map;** the camera follows the hero and double tap to zoom goes. a) Yes (recommended: one rule, one thumb). b) Keep drag to look around, and walk by tapping only.
+4. **Booming meter points:** a fix or build is 4, a full collect is 1 (at most 4 a boom), first boom at 20. a) Yes (recommended: working places feed the meter, but fixes still matter most). b) Only fixes and builds count.
+5. **Names on the boards:** "Mama Put" and "Market" for the first two places. a) Yes (recommended: Mama Put is already on our street signs in the brief). b) Other names.
+6. **Win prize top-up:** a win always brings home at least the price of the fix you came for, and the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4). a) Yes (recommended: keeps your question 3 answer true for a first-timer and lets them build the Mama Put by themselves straight after). b) No top-up; lower the road to ₦6 and the Mama Put to ₦2 instead.
 
 ## 6. Original only: the check list for every new piece
 
@@ -497,6 +720,8 @@ Numbers follow docs/questions.md, "City direction (9 Nov 2026)".
 | 9. Art and Blender | a) code art; Blender side test on one city picture | 10 Nov 2026 |
 | 10. Title line | a) "Build up Lagos. Get Nigeria working." | 9 Nov 2026 |
 | L1 to L7 | all a): buckets, the Blackout, keep everything when caught, view from above, Mission complete, the Shadow, the Booming meter | 10 Nov 2026 |
+| W1 to W4 | all a): walk the city, pay spots, places that earn, in the plan now before the lane run | 11 Nov 2026 |
+| W13 1 to 6 | all a): fill only while playing, part pay, drag moves the hero, boom points (first boom at 20), "Mama Put" and "Market", win top-up (first street 1 win ₦14) | 12 Nov 2026 |
 
 ## Lines for Tp
 

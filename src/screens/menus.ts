@@ -22,10 +22,10 @@ import {
 } from '../game/save';
 import type { StateProgress } from '../game/progress';
 import type { SpotId } from '../art/city';
-import type { CityState } from '../game/city';
+import type { CityLife } from '../game/cityLife';
 import { introDue, introSeen, markIntroSeen, type IntroFrom } from '../game/intro';
 import type { Store } from '../storage';
-import { CityScreen } from './city';
+import { CityScreen, type CitySound, type Mission } from './city';
 import { IntroScreen } from './intro';
 import { button, h } from './dom';
 import { streetCards, wheelFit, type Where } from './streets';
@@ -55,7 +55,7 @@ export interface TapPoint {
 }
 
 /** Sounds the menus play (S2.12 sounds 13 and 14). */
-export type MenuSound = 'lockedTuk' | 'cogRatchet' | 'cogBell';
+export type MenuSound = 'lockedTuk' | 'cogRatchet' | 'cogBell' | CitySound;
 
 /** What the Streets screen and the wheel read (S2.8). */
 export interface ProgressView {
@@ -97,12 +97,12 @@ export interface MenuHooks {
   playSound(name: MenuSound): void;
   /** The player asked for less motion: the wheel's cogs stand still (S2.11). */
   stillWanted(): boolean;
-  /** The saved city (city.md (b)): buckets and fixed spots. */
-  city(): CityState;
+  /** The live city (city.md (b), 5W): buckets, boards, trays and the hero's place. */
+  cityLife: CityLife;
   /** A problem card's big button: the challenge that helps (street 1 for Potholes). */
   runSpot(spot: SpotId, at: TapPoint | null): void;
-  /** A problem card's "Fix it": pays from the bucket and saves. True when paid. */
-  fix(spot: SpotId): boolean;
+  /** Street cleared's "Take it home" (5W W5): home to Lagos with Mission complete. */
+  takeHome(): void;
 }
 
 /** What the game over and win screens show. */
@@ -151,6 +151,8 @@ export class Menus {
   private cleanup: (() => void) | null = null;
   private introScreen: IntroScreen | null = null;
   private cityScreen: CityScreen | null = null;
+  /** Mission complete for the next city screen (5W W5), played once. */
+  private mission: Mission | null = null;
   /** Lays out the wheel screen again (on resize while it shows). */
   private refit: (() => void) | null = null;
   /** S2.2: the title shows the touch words when the phone buttons are shown, else the key words. */
@@ -235,6 +237,12 @@ export class Menus {
   showWheel(back: 'title' | 'streets' | 'city'): void {
     this.wheelBack = back;
     this.show('wheel');
+  }
+
+  /** Opens Lagos from above; with a mission, Mission complete plays there first (5W W5). */
+  showCity(mission: Mission | null = null): void {
+    this.mission = mission;
+    this.show('city');
   }
 
   /** Opens Settings; its "Back" goes to `back`. */
@@ -408,8 +416,10 @@ export class Menus {
       h('h2', {}, w.heading),
       h('p', {}, w.text(c.name, c.kobo)),
       c.parcel && h('p', { class: 'parcel-line' }, w.parcel),
+      // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
       this.actions(
-        this.guarded(c.last ? w.toHall : w.next, 'go', (e) => this.hooks.next(tapPoint(e))),
+        this.guarded(w.takeHome, 'go', () => this.hooks.takeHome()),
+        this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),
         this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
         this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),
       ),
@@ -646,8 +656,16 @@ export class Menus {
       sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
       this.hooks.soundChanged(this.settings.sound);
     });
+    const mission = this.mission;
+    this.mission = null;
     const screen = new CityScreen({
-      city: () => this.hooks.city(),
+      life: this.hooks.cityLife,
+      look: () => this.look,
+      sound: (name) => this.hooks.playSound(name),
+      gentle: () => this.settings.gentle,
+      still: () => this.hooks.stillWanted(),
+      touch: () => this.touchWords(),
+      mission,
       topRight: [sound, button(w.settings, 'minor', () => this.showSettings('city'))],
       bottom: [
         button(w.streets, 'minor', () => this.show('streets')),
@@ -655,7 +673,6 @@ export class Menus {
         button(w.wheel, 'minor', () => this.showWheel('city')),
       ],
       run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
-      fix: (spot) => this.hooks.fix(spot),
       ignoreTap: (e) => this.ignoreTap(e),
     });
     this.cityScreen = screen;

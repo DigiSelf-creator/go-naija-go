@@ -35,7 +35,8 @@ test('out of lives: game over, then Play again starts the level fresh', async ({
   expect(r.phase).toBe('over');
   expect(r.lives).toBe(0);
   // N2 (slice 3): money words, a coin is 10 kobo.
-  await expect(over.getByText(`You got ${formatMoney(r.kobo * 10)}. The street is still here. Try again!`)).toBeVisible();
+  // (c) Losing keeps it all: the money goes home to Lagos.
+  await expect(over.getByText(`You keep ${formatMoney(r.kobo * 10)} for Lagos. The street is still here. Try again!`)).toBeVisible();
   await expect(over.getByText('Want more tries? Gentle mode gives you 5 lives, and you climb out of holes.')).toBeVisible();
   // Taps meant as jumps do nothing to a stopped run.
   const steps = await page.evaluate(() => window.__game!.steps);

@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { CITY_BLOCKS, CITY_MAP, CITY_SPOTS, SPOT_WORDS, pinHitBox } from '../../src/art/city';
-import { FIX_COST, canFix, emptyCity, payFix, readCity, spotLook, spotLooks } from '../../src/game/city';
+import { FIX_COST, canFix, emptyCity, payBoard, readCity, spotLook, spotLooks } from '../../src/game/city';
 import {
   EDGE,
   blockAt,
@@ -175,7 +175,7 @@ describe('Naira and kobo (N1 to N4)', () => {
 
   it('the city and card words', () => {
     expect(WORDS.city.cards.potholes.line2(formatMoney(FIX_COST.potholes.amount, '₦'))).toBe('Fixing it costs ₦10.');
-    expect(WORDS.city.cards.potholes.fix('₦10')).toBe('Fix it (₦10)');
+    expect(WORDS.city.walkThere).toBe('Walk there');
     expect(WORDS.city.spokenNaira(spokenMoney(340))).toBe('Naira: 3 naira 40 kobo');
     expect(WORDS.city.power(6)).toBe('Power 6');
     expect(WORDS.city.tech(2)).toBe('Tech 2');
@@ -232,7 +232,8 @@ describe('moving old saves to Naira (N3 a)', () => {
 describe('the city part of the save (city.md (b))', () => {
   it('missing or broken reads as zeros', () => {
     for (const v of [undefined, null, 7, 'x', [], { kobo: -3, power: 'lots', tech: Number.NaN, fixed: 'potholes', fixes: -1 }]) expect(readCity(v)).toEqual(emptyCity());
-    expect(readCity({ kobo: 340.7, power: 6, tech: 2, fixed: ['potholes', 'nope', 'potholes'], fixes: 0 })).toEqual({ kobo: 340, power: 6, tech: 2, fixed: ['potholes'], fixes: 1 });
+    // 5W: an older part (no walking yet) reads with the hero at the bus park and 4 Booming points a fix.
+    expect(readCity({ kobo: 340.7, power: 6, tech: 2, fixed: ['potholes', 'nope', 'potholes'], fixes: 0 })).toEqual({ ...emptyCity(), kobo: 340, power: 6, tech: 2, fixed: ['potholes'], fixes: 1, boom: 4 });
   });
 
   it('saved as a part, merged into the newest copy, never overwriting the streets', () => {
@@ -251,13 +252,15 @@ describe('the city part of the save (city.md (b))', () => {
     expect(FIX_COST).toEqual({ potholes: { bucket: 'naira', amount: 1000 }, lightsOut: { bucket: 'power', amount: 10 }, slowInternet: { bucket: 'tech', amount: 6 } });
     const c = { ...emptyCity(), kobo: 999, power: 10, tech: 5 };
     expect(spotLooks(c)).toEqual({ potholes: 'problem', lightsOut: 'ready', slowInternet: 'problem' });
-    expect(payFix(c, 'potholes')).toBeNull();
-    const paid = payFix(c, 'lightsOut')!;
-    expect(paid).toEqual({ kobo: 999, power: 0, tech: 5, fixed: ['lightsOut'], fixes: 1 });
+    // 5W W2: a board takes only from its own bucket; part pay keeps the rest on the board.
+    expect(payBoard({ ...c, kobo: 0 }, 'road')).toBeNull();
+    const paid = payBoard(c, 'lamps')!.next;
+    expect(paid).toEqual({ ...emptyCity(), kobo: 999, power: 0, tech: 5, fixed: ['lightsOut'], fixes: 1, boom: 4 });
     expect(spotLook(paid, 'lightsOut')).toBe('fixed');
     expect(canFix(paid, 'lightsOut')).toBe(false); // never twice
+    expect(payBoard(paid, 'lamps')).toBeNull();
     expect(c.power).toBe(10); // pure
-    const rich = payFix({ ...emptyCity(), kobo: 1250 }, 'potholes')!;
+    const rich = payBoard({ ...emptyCity(), kobo: 1250 }, 'road')!.next;
     expect(rich.kobo).toBe(250);
   });
 });
