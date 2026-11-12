@@ -119,6 +119,23 @@ describe('pay spots', () => {
     }
   });
 
+  it('a board on its short stick (W15, tiny screens): the same words, 48 px tall, 48 px to 84 px wide', () => {
+    for (const id of BUILD_IDS) {
+      const full = BUILDS[id].price;
+      for (const left of [full, Math.ceil(full / 2), 1, 0]) {
+        const r = clean((g) => drawPriceBoard(g, 160, 240, id, left, { short: true }));
+        const want = left === 0 ? 'Done' : left < full ? `${priceWords(BUILDS[id].bucket, left)} left` : priceWords(BUILDS[id].bucket, left);
+        expect(r.texts).toEqual([want, BUILDS[id].name]);
+        const box = priceBoardBox(recorder().g, 160, 240, id, left, { short: true });
+        expect(box.h).toBe(48);
+        expect(box.w).toBeGreaterThanOrEqual(48);
+        expect(box.w).toBeLessThanOrEqual(84);
+        // The foot stays where the stick stands.
+        expect(box.y + box.h).toBe(242);
+      }
+    }
+  });
+
   it('the mat, the chalk outlines and the road build draw cleanly', () => {
     expect(MAT).toEqual({ w: 80, h: 56 });
     clean((g) => drawPayMat(g, 0, 0));

@@ -233,6 +233,8 @@ export const BOARD = {
   stickH: 13,
   minW: 56,
   maxW: 96,
+  /** At most this wide on a short stick (a tiny screen with no other room): the price may drop to 12 px. */
+  tightW: 84,
   price: 14,
   name: 12,
   icon: 15,
@@ -246,6 +248,13 @@ export interface BoardState {
   done?: boolean;
   /** Sideways wobble in px (boardWobble(t)); 0 with reduced motion. */
   wobble?: number;
+  /** A short stick (5 px less, so the board is 48 px tall) and at most BOARD.tightW wide: for a tiny screen with no other room. */
+  short?: boolean;
+}
+
+/** The stick's height for this board. */
+function stickOf(st: BoardState): number {
+  return st.short ? BOARD.stickH - 5 : BOARD.stickH;
 }
 
 interface BoardLayout {
@@ -263,7 +272,8 @@ function boardLayout(g: CanvasRenderingContext2D, build: BuildId, left: number, 
   const done = st.done === true || l <= 0;
   const part = !done && l < b.price;
   const top = done ? 'Done' : part ? `${priceWords(b.bucket, l)} left` : priceWords(b.bucket, l);
-  const room = BOARD.maxW - 12;
+  const maxW = st.short ? BOARD.tightW : BOARD.maxW;
+  const room = maxW - 12;
   const tries: [number, boolean][] = [[14, true], [13, true], [12, true]];
   if (b.bucket !== 'naira') tries.push([14, false], [13, false], [12, false]);
   let pick: [number, boolean] = [12, b.bucket === 'naira'];
@@ -280,7 +290,7 @@ function boardLayout(g: CanvasRenderingContext2D, build: BuildId, left: number, 
   need = textW(g, top, pick[0]) + (pick[1] || done ? BOARD.icon + 3 : 0);
   g.font = `${BOARD.name}px sans-serif`;
   const nw = textW(g, b.name, BOARD.name);
-  const w = Math.min(BOARD.maxW, Math.max(BOARD.minW, Math.ceil(Math.max(need, nw) + 14)));
+  const w = Math.min(maxW, Math.max(BOARD.minW, Math.ceil(Math.max(need, nw) + 14)));
   return { w, top, name: b.name, size: pick[0], icon: pick[1], done };
 }
 
@@ -292,7 +302,7 @@ export function priceBoardBox(g: CanvasRenderingContext2D, x: number, y: number,
   g.save();
   const { w } = boardLayout(g, build, left, st);
   g.restore();
-  const h = BOARD.faceH + BOARD.stickH + 2;
+  const h = BOARD.faceH + stickOf(st) + 2;
   return { x: x - w / 2, y: y - h + 2, w, h: Math.max(48, h) };
 }
 
@@ -314,10 +324,11 @@ export function drawPriceBoard(g: CanvasRenderingContext2D, x: number, y: number
   g.translate(x, y);
   g.rotate(wob * 0.03);
   g.translate(wob, 0);
-  line(g, INK, 5, [0, 0, 0, -BOARD.stickH - 4]);
-  line(g, BOARD.frame, 3, [0, 0, 0, -BOARD.stickH - 4]);
+  const stick = stickOf(st);
+  line(g, INK, 5, [0, 0, 0, -stick - 4]);
+  line(g, BOARD.frame, 3, [0, 0, 0, -stick - 4]);
   // Face: wooden frame round a slate
-  const top = -BOARD.stickH - BOARD.faceH;
+  const top = -stick - BOARD.faceH;
   g.fillStyle = BOARD.frame;
   g.strokeStyle = INK;
   g.lineWidth = 1.5;
@@ -341,11 +352,12 @@ export function drawPriceBoard(g: CanvasRenderingContext2D, x: number, y: number
   g.fillStyle = BOARD.chalk;
   g.textAlign = 'left';
   g.textBaseline = 'middle';
-  g.fillText(L.top, lx + iconW, ly + 0.5, BOARD.maxW - 10 - iconW);
+  const fit = (st.short ? BOARD.tightW : BOARD.maxW) - 10;
+  g.fillText(L.top, lx + iconW, ly + 0.5, fit - iconW);
   // Line 2: the name
   g.font = `${BOARD.name}px sans-serif`;
   g.textAlign = 'center';
-  g.fillText(L.name, 0, top + 28.5, BOARD.maxW - 10);
+  g.fillText(L.name, 0, top + 28.5, fit);
   g.restore();
 }
 
