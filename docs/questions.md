@@ -1,5 +1,24 @@
 # Open questions for the product owner
 
+## po note, 12 Nov 2026 (newest): walk the city accepted
+
+- Accepted: "Walk the city" (city.md part 5W, W1 to W16; plan S3c0 to S3c4), after qa round 5 and the lead's arrow-corner fix (e114cb8). See "po acceptance, 12 Nov 2026: walk the city" below.
+- Waits for Tp: nothing new. Still waiting: paste decision lines 44 and 45 (recommend: paste as written), a play on a real phone, and the new sounds by ear.
+
+## po acceptance, 12 Nov 2026: walk the city (5W, S3c0 to S3c4)
+
+**Verdict: accepted.** Two small things carry to step (f) as conditions, not blockers.
+Reported (qa round 5, tests at fdeb9cc, pushed 3e4ee29, tests/e2e/walk-city-qa5.spec.ts): passed. Reported (lead): qa's minor follow-up fixed in e114cb8 (every corner of an arrow's 48 x 48 square takes the tap). Reported: first load about 542 KB (under 3 MB).
+Checked by po (verified by reading the code and docs):
+1. Tp's answers are what was built: walk by tap or hold and slide, camera follows, double tap dropped (W13 q3); pay mats, part pay "₦4 left" (q2); trays fill only while playing (q1); Booming points 4 and 1, first boom 20, saved only, bar is step (d) (q4); "Mama Put" and "Market" (q5); first street 1 win ₦14 and the top-up (q6, and po's top-up ruling). Loss keeps your coins (part 5 (c), Tp question 2). Boards one at a time road, Mama Put, Market (W7).
+2. Words (src/screens/words.ts, city part): every line matches city.md W8 and W14 q2 word for word, is plain, warm and short. "Lane runs earn Power." names the bucket, good for a 10 year old.
+3. Rules: no network calls, trackers, ads, accounts or photo access in src (grep of the source). The pay spot is a woven mat and a chalk board; no dollar tiles, plots, joystick, snow or furnaces (W11); no brands on stalls or danfos; no real people; nothing mocks anyone. Nothing from Mario or any Nintendo game. The "wrong premise" line is not used on these screens.
+4. The W14 to W16 changes are fair: the hero on top of roofs keeps "the hero walks to your finger" true on a small phone; Lamps and Mast boards wait until you have Power or Tech, so nothing shows that you cannot start.
+Carried to step (f) (reasoned; only reachable after the lane run, so no player meets them yet):
+- The packed 320 x 240 layout with Power and Tech: arrows must get back to 48 x 48, the Tech chip and "+" must stop cutting the Lights out pin ("Lights ou"), and the drawn arrow must match its tap square. po will not accept step (f) with a 36 px arrow or a cut pin word.
+- Opinion: "New road here. Buses are moving again." and "Danfos are back." are said while no bus moves in the city yet (W14). Fine for now as story words; when moving buses come, show at least one danfo on the new road so the words come true.
+Not tested yet (open, not blocking): a real cheap phone, the chink, built and collect sounds by ear, Tp's own first play of the walk.
+
 ## po note, 12 Nov 2026 (latest): win prize top-up on "Play again"
 
 - Ruled by po (docs settle it, nothing waits for Tp): keep the top-up as built. See "po ruling, 12 Nov 2026: the win top-up counts what you bring home, not the bucket" below.
