@@ -82,7 +82,7 @@ import {
 import type { CityLife } from '../game/cityLife';
 import { camScale, clampCam, pinTapBox, pinchStep, startCam, toMap, toScreen, zoomCam, type CityCam, type CityView, type Zoom } from '../game/cityCamera';
 import { formatMoney, spokenMoney } from '../game/money';
-import { findPath, nearestOpen, tapTarget, walkable, type Pt } from '../game/walkGrid';
+import { findPath, lineClear, nearestOpen, tapTarget, walkable, type Pt } from '../game/walkGrid';
 import { button, h } from './dom';
 import { WORDS } from './words';
 
@@ -820,7 +820,7 @@ export class CityScreen {
       const step = WALKER.speed * dt;
       const nx = hero.x + keyDir.x * step;
       const ny = hero.y + keyDir.y * step;
-      if (walkable({ x: nx, y: ny })) {
+      if (lineClear(hero, { x: nx, y: ny })) {
         hero.x = nx;
         hero.y = ny;
       } else if (walkable({ x: nx, y: hero.y })) hero.x = nx;

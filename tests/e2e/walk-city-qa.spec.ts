@@ -277,12 +277,15 @@ test('the hero is never stranded: after a tap on the bridge, a tap on the bus pa
   await page.waitForTimeout(400);
   await stillHero(page);
   const on = (await city(page)).hero;
-  const park = await onPage(page, { x: 820, y: 700 });
+  // gamedev: the pavement by the bus park (by the Mama Put). At this size the "Lights out" pin's tap
+  // area covers the bus park (820, 700) up to x 828, and a tap on or just beside a pin opens its card
+  // (the phone snaps a tap to a button a few px away) instead of walking.
+  const park = await onPage(page, { x: 905, y: 720 });
   await page.touchscreen.tap(park.x, park.y);
   await page.waitForTimeout(600);
   await stillHero(page);
   const back = (await city(page)).hero;
-  expect(Math.hypot(back.x - 820, back.y - 700), `stranded at ${JSON.stringify(on)}`).toBeLessThan(40);
+  expect(Math.hypot(back.x - 905, back.y - 720), `stranded at ${JSON.stringify(on)}`).toBeLessThan(40);
 });
 
 test('the walker never enters the lagoon by keys: holding down along the shore stays on land', async ({ page }) => {

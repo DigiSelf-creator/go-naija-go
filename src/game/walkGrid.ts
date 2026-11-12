@@ -46,10 +46,56 @@ export function groundOpen(x: number, y: number): boolean {
   return false;
 }
 
-/** 1 for each walkable cell (judged at the cell's middle), row by row. Made once. */
+/** Where the hero starts (the bus park); every walkable cell can walk back here. Same as city HERO_START. */
+const HOME: Pt = { x: 820, y: 700 };
+
+/**
+ * 1 for each walkable cell, row by row. Made once:
+ * 1. a cell is open when its middle is open ground;
+ * 2. the bridge deck runs slant, so judged by middles it is a chain of cells that touch only at
+ *    corners (the hero could stand there but never leave). Every cell the deck covers by 6 map
+ *    units or more is opened, so the deck is a joined strip;
+ * 3. any cell the bus park cannot reach (moving as the path does: 8 ways, never past a blocked
+ *    corner) is shut, so nowhere on the walk grid can strand the hero.
+ */
 export const GRID: Uint8Array = (() => {
   const g = new Uint8Array(COLS * ROWS);
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) g[r * COLS + c] = groundOpen(c * CELL + CELL / 2, r * CELL + CELL / 2) ? 1 : 0;
+  // 2. The bridge deck.
+  const slope = BRIDGE.dx / BRIDGE.dy;
+  for (let r = 0; r < ROWS; r++) {
+    const top = Math.max(r * CELL, BRIDGE.y0);
+    const bot = Math.min((r + 1) * CELL, CITY_MAP.h);
+    if (bot <= top) continue;
+    const lo = BRIDGE.x0 + (top - BRIDGE.y0) * slope;
+    const hi = BRIDGE.x1 + (bot - BRIDGE.y0) * slope;
+    for (let c = 0; c < COLS; c++) {
+      const over = Math.min(hi, (c + 1) * CELL) - Math.max(lo, c * CELL);
+      if (over >= 6) g[r * COLS + c] = 1;
+    }
+  }
+  // 3. Shut every cell the bus park cannot reach.
+  const seen = new Uint8Array(COLS * ROWS);
+  const home = Math.floor(HOME.y / CELL) * COLS + Math.floor(HOME.x / CELL);
+  const todo = [home];
+  seen[home] = 1;
+  while (todo.length) {
+    const i = todo.pop()!;
+    const c = i % COLS;
+    const r = Math.floor(i / COLS);
+    for (let dr = -1; dr <= 1; dr++)
+      for (let dc = -1; dc <= 1; dc++) {
+        const nc = c + dc;
+        const nr = r + dr;
+        if ((dc === 0 && dr === 0) || nc < 0 || nr < 0 || nc >= COLS || nr >= ROWS) continue;
+        const j = nr * COLS + nc;
+        if (seen[j] || g[j] !== 1) continue;
+        if (dc !== 0 && dr !== 0 && (g[r * COLS + nc] !== 1 || g[nr * COLS + c] !== 1)) continue;
+        seen[j] = 1;
+        todo.push(j);
+      }
+  }
+  for (let i = 0; i < g.length; i++) if (!seen[i]) g[i] = 0;
   return g;
 })();
 
@@ -119,13 +165,26 @@ export function tapTarget(m: Pt): Pt {
   return doorAt(m) ?? nearestOpen(m);
 }
 
-/** Nothing blocks the straight walk from a to b (checked every 6 map units). */
+/**
+ * Nothing blocks the straight walk from a to b. Checked every 6 map units; where the line goes
+ * from one cell to a cell at its corner, both cells beside that corner must be open too (the same
+ * "never past a blocked corner" rule as the path search, so a straight walk never reaches a spot
+ * the path could not).
+ */
 export function lineClear(a: Pt, b: Pt): boolean {
   const d = Math.hypot(b.x - a.x, b.y - a.y);
   const n = Math.max(1, Math.ceil(d / 6));
+  let pc = clampI(a.x / CELL, COLS);
+  let pr = clampI(a.y / CELL, ROWS);
   for (let k = 1; k <= n; k++) {
     const t = k / n;
-    if (!walkable({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })) return false;
+    const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    if (!walkable(p)) return false;
+    const c = clampI(p.x / CELL, COLS);
+    const r = clampI(p.y / CELL, ROWS);
+    if (c !== pc && r !== pr && (GRID[pr * COLS + c] !== 1 || GRID[r * COLS + pc] !== 1)) return false;
+    pc = c;
+    pr = r;
   }
   return true;
 }
