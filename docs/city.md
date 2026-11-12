@@ -617,7 +617,7 @@ Hints show once each (saved), in the bar under the top row, real text, never ove
 |---|---|---|---|
 | City (walking) | Anyone at home in Lagos | Walk to a problem, a board or a tray | Heading "Lagos". Chips "₦24.50", "Power 6", "Tech 3". Bar "Booming" / "9 of 20". First hint "Tap where you want to go." (keys: "Use the arrow keys to walk.") Map's spoken name: "Lagos from above. Tap where you want to go." |
 | Price board | A player near a fix or build | Show the price and what it builds | "₦10" / "New road"; "₦4" / "Mama Put"; "₦8" / "Market"; "Power 10" / "Lamps"; "Tech 6" / "Mast". Part paid: "₦4 left". Done: "Done ✓". Spoken: "New road. Costs 10 naira. You have 6 naira. Walk there." |
-| Not enough card | A player on a board with nothing in that bucket | Say how to earn it | "You need ₦10 for this." / "Run Alausa to earn more." Big "Run Alausa" (or "Lane run"; until (f): "Lane run: coming soon", plain text), small "Back" |
+| Not enough card | A player on a board with nothing in that bucket | Say how to earn it | "You need ₦10 for this." / "Run Alausa to earn more." Big "Run Alausa". Power: "You need Power 10 for this." / "Lane runs earn Power." Tech: "You need Tech 6 for this." / "Lane runs earn Tech." Big "Lane run" (until (f): "Lane run: coming soon", plain text). Small "Back" (W14) |
 | Part paid line | A player who paid some | Say what is left | "You paid ₦6. ₦4 more to go." |
 | Built lines (2 s) | A player who just finished a board | Show what the build does | "New road! Danfos are back." / "Mama Put is open! Food for the queue." / "The market is open! Danfos come for goods." / "Lamps on! The street is awake." / "Fast internet! Shops are busy." |
 | Tray bubble | Anyone who can see a working place | Show money waiting | "80 kobo", "₦1.20", "₦1.50 Full". Spoken: "Mama Put has 1 naira 20 kobo for you. Full." |
@@ -692,6 +692,25 @@ Done when (whole step): a first-timer walks, fixes the road through Mission comp
 4. **Booming meter points:** a fix or build is 4, a full collect is 1 (at most 4 a boom), first boom at 20. a) Yes (recommended: working places feed the meter, but fixes still matter most). b) Only fixes and builds count.
 5. **Names on the boards:** "Mama Put" and "Market" for the first two places. a) Yes (recommended: Mama Put is already on our street signs in the brief). b) Other names.
 6. **Win prize top-up:** a win always brings home at least the price of the fix you came for, and the first street 1 win brings ₦14 (road ₦10, Mama Put ₦4). a) Yes (recommended: keeps your question 3 answer true for a first-timer and lets them build the Mama Put by themselves straight after). b) No top-up; lower the road to ₦6 and the Mama Put to ₦2 instead.
+
+### W14. gamedev questions, 12 Nov
+
+Answers from designer, 12 Nov 2026, after gamedev built steps c2 to c4.
+
+1. **Later Booming marks.** Keep gamedev's 20, 50, 90, 140, and carry on the same way: each gap is 10 bigger than the one before (200, 270, 350, ...). Bigger gaps match a growing city with more boards and trays, and the "at most 4 from collecting for each boom" rule still holds for every boom. The numbers will be tuned once later places exist. **No gamedev change.**
+2. **Not-enough card for Power or Tech.** Change the second line so it names the bucket. "Will earn more" leaves a child asking "more what?". Exact words:
+   - Power: "You need Power 10 for this." / "Lane runs earn Power."
+   - Tech: "You need Tech 6 for this." / "Lane runs earn Tech."
+   - Then, as now: "Lane run: coming soon" as plain text (not a button) until step (f), then a big "Lane run" button; small "Back".
+   - The first line always shows the board's price left now (for example "You need Power 4 for this." after a part pay).
+   **Small gamedev change: one line of words.**
+3. **Should the hero hide behind buildings?** **No, not now; maybe later, and only with an outline.** On a 320 px phone the hero is about 24 px tall, and losing them behind a roof breaks the one rule "the hero walks to your finger". Clarity wins over looks. Keep the hero drawn on top of roofs. Later (after slice 3, with art), we may try drawing roofs in front of the hero, but only if the hero then shows as a clear outline in the hero's shape through the roof (shape, not colour alone), and only if qa finds it easy to follow at 320 x 240. **No gamedev change now.**
+
+**gamedev's changes from this section, on record (designer agrees to each):**
+- **No buses stop for the hero.** No bus or car moves in the city yet, so there is nothing to stop. The W1 rule stands: when moving buses or cars come, they stop and wait for the hero, and nobody is ever hit.
+- **Lamps and Mast boards appear only once the player has some Power or Tech.** This fits W7 (never more than one new board at a time, and nothing you cannot start yet). The pins and their cards still show from the start.
+- **The map draws at 1 dpr while the hero walks, for speed.** Agreed, as long as the hero, boards, bubbles, chips and all words stay sharp at full dpr, and the still map is painted sharp again once the hero stops. qa checks this on the slow phone profile.
+- **The Market's front umbrella row is hidden once the Market is built.** Agreed: it keeps the door, the bubble and the hero clear. The built stalls take its place.
 
 ## 6. Original only: the check list for every new piece
 
