@@ -25,8 +25,9 @@ import type { SpotId } from '../art/city';
 import type { CityLife } from '../game/cityLife';
 import { introDue, introSeen, markIntroSeen, type IntroFrom } from '../game/intro';
 import type { Store } from '../storage';
+import type { SoundName } from '../engine/sound';
 import { CityScreen, type CitySound, type Mission } from './city';
-import { IntroScreen } from './intro';
+import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
 import { button, h } from './dom';
 import { streetCards, wheelFit, type Where } from './streets';
 import { GAME_NAME, WORDS } from './words';
@@ -103,6 +104,10 @@ export interface MenuHooks {
   runSpot(spot: SpotId, at: TapPoint | null): void;
   /** Street cleared's "Take it home" (5W W5): home to Lagos with Mission complete. */
   takeHome(): void;
+  /** city.md a2.6: the moving intro's sounds (any sound name; the Sound switch still rules). */
+  introSound?(name: SoundName): void;
+  /** city.md a2.6: the moving intro's music (the menu tune's level, restart and pause). */
+  introMusic?(m: IntroMusic): void;
 }
 
 /** What the game over and win screens show. */
@@ -581,6 +586,8 @@ export class Menus {
   private title(): HTMLElement {
     const saved = hasSavedLook(this.store);
     const w = WORDS.title;
+    // city.md a2: the moving story is its own chunk; fetch it soon for a player who will see it.
+    if (!introSeen(this.store)) window.setTimeout(() => void loadIntroScene().catch(() => undefined), 1500);
     return h(
       'div',
       { class: 'card narrow', role: 'dialog', 'aria-label': GAME_NAME },
@@ -637,6 +644,8 @@ export class Menus {
       still: () => this.hooks.stillWanted(),
       touch: () => this.touchWords(),
       ignoreTap: (e) => this.ignoreTap(e),
+      sound: (name) => this.hooks.introSound?.(name),
+      music: (m) => this.hooks.introMusic?.(m),
       end: () => {
         markIntroSeen(this.store);
         this.afterIntro();

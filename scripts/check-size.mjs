@@ -34,6 +34,21 @@ for (const f of files) {
 
 const kb = (n) => `${(n / 1000).toFixed(1)} KB`;
 console.log(`First load: ${kb(first)} of ${kb(BUDGET)} budget (${files.length} files). Later worlds: ${kb(later)}.`);
+// For information (the budget above counts them): script chunks the page itself does not name
+// load only when needed (the moving intro, the art gallery); the offline cache still holds them.
+let page = '';
+try {
+  page = readFileSync(join(DIST, 'index.html'), 'utf8');
+} catch {
+  /* reported below as a missing cache entry */
+}
+const lazy = files
+  .map((f) => relative(DIST, f).split(sep).join('/'))
+  .filter((r) => /^assets\/.+\.js$/.test(r) && !page.includes(r));
+if (lazy.length > 0) {
+  const lazyBytes = lazy.reduce((n, r) => n + statSync(join(DIST, r)).size, 0);
+  console.log(`Of that, loaded only when needed: ${kb(lazyBytes)} (${lazy.map((r) => `${r.replace(/^assets\//, '')} ${kb(statSync(join(DIST, r)).size)}`).join(', ')}). The page itself: ${kb(first - lazyBytes)}.`);
+}
 if (first >= BUDGET) {
   console.error('Over the 3 MB first-load budget.');
   process.exit(1);

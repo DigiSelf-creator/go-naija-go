@@ -31,6 +31,7 @@ import { CornCount, Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
+import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
 
@@ -186,7 +187,8 @@ function startGame(): void {
     render: () => {
       // The city fills the whole screen and draws itself: the street under it is not drawn
       // (on a slow phone that was a second full-screen picture every frame while walking).
-      if (menus.current !== 'city') game.render(g, view);
+      // The intro story covers the whole screen too (city.md a2.9).
+      if (menus.current !== 'city' && menus.current !== 'intro') game.render(g, view);
       if (playing) {
         hud.update(game.run, menus.sound);
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
@@ -363,6 +365,16 @@ function startGame(): void {
       }
     },
     stillWanted: () => reduceMotion.matches,
+    introSound: (name) => sound.play(name),
+    // city.md a2.6: the menu tune follows the story (it is already playing for this screen).
+    introMusic: (m) => {
+      if (m.kind === 'level') music.setLevel(m.level, m.ramp);
+      else if (m.kind === 'restart') {
+        music.setLevel(m.level, 0);
+        music.restart('menu');
+      } else if (m.kind === 'hold') music.pause();
+      else if (!document.hidden) music.resume();
+    },
   });
   const hud = new Hud(document.body, {
     pause: () => pause(),
@@ -1070,15 +1082,29 @@ function startGame(): void {
       }
       return out;
     },
+    get introDraws() {
+      // city.md a2.9: every intro picture drawn so far (none after Skip or "Let's go").
+      return IntroScreen.drawsTotal;
+    },
     get intro() {
       // city.md (a): the story frame showing, its time, paused, the caption and the hint.
       const s = menus.intro;
       if (!s) return null;
+      // a2: moving, the frame is the beat (1 to 6), time is story time and beat 6 is the hold.
+      const m = s.scene;
       return {
-        frame: s.flow.frame,
-        time: s.flow.time,
-        paused: s.flow.paused,
-        caption: s.el.querySelector('.intro-caption')?.textContent ?? '',
+        mode: s.mode,
+        frame: m ? Math.min(6, m.beat + 1) : s.flow.frame,
+        time: m ? m.t : s.flow.time,
+        paused: m ? m.paused : s.flow.paused,
+        beat: m ? m.beat : -1,
+        hold: m ? m.inHold : false,
+        jumps: m ? m.jumps : 0,
+        draws: s.draws,
+        ratio: s.ratioCap,
+        played: [...s.played],
+        log: [...s.el.querySelectorAll('.intro-log p')].map((p) => p.textContent ?? ''),
+        caption: s.mode === 'moving' ? '' : (s.el.querySelector('.intro-caption')?.textContent ?? ''),
         hint: s.el.querySelector('.intro-hint')?.textContent ?? '',
       };
     },
@@ -1287,8 +1313,30 @@ declare global {
         readonly held: boolean;
         readonly started: boolean;
       };
+      /** Intro pictures drawn so far by every intro screen (city.md a2.9). */
+      readonly introDraws: number;
       /** The intro story now, or null when it is not showing. */
-      readonly intro: { readonly frame: number; readonly time: number; readonly paused: boolean; readonly caption: string; readonly hint: string } | null;
+      readonly intro: {
+        /** 'still' (six frames), 'loading' (the moving scene's chunk) or 'moving' (a2). */
+        readonly mode: 'still' | 'loading' | 'moving';
+        readonly frame: number;
+        readonly time: number;
+        readonly paused: boolean;
+        /** Moving: 0 to 5, 6 in the hold; -1 otherwise. */
+        readonly beat: number;
+        readonly hold: boolean;
+        readonly jumps: number;
+        /** Pictures drawn so far. */
+        readonly draws: number;
+        /** The canvas pixel ratio cap: 2, or 1.5 on a phone that drew the moving scene slowly (a2.9). */
+        readonly ratio: number;
+        /** The moving intro's cues played, "t sound" or "t music level", in order. */
+        readonly played: string[];
+        /** The hidden log's lines (a2.5). */
+        readonly log: string[];
+        readonly caption: string;
+        readonly hint: string;
+      } | null;
       /** Lagos from above now, or null when it is not showing. */
       readonly city: {
         readonly cam: { readonly zoom: 'far' | 'near'; readonly x: number; readonly y: number };
