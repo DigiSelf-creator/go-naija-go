@@ -244,6 +244,49 @@ test('S3d1 ruling 4 at 320 x 240: a coming-soon pin a sign covers is hidden whol
   expect(checked, 'a hidden pin came back').toBeGreaterThan(0);
 });
 
+// qa round 2: the rewrite above checks a returned pin by focus and Enter, because the two
+// coming-soon pins overlap each other at 320 x 240. A child taps, so check by touch too: a tap on
+// a part of each shown pin that nothing else covers opens that pin's own card (W15: what a child
+// sees is what a tap does).
+test('S3d1 ruling 4 at 320 x 240, by touch: a tap on the uncovered part of each shown coming-soon pin opens its own card', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 240 });
+  await openCity(page, SOON_SAVE);
+  await page.locator('[data-place="buka"]').tap();
+  await expect.poll(async () => (await city(page)).saved.kobo, { timeout: 15_000 }).toBe(150);
+  await expect.poll(async () => (await city(page)).hero.moving, { timeout: 5000 }).toBe(false);
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  const c = await city(page);
+  const map = (await lagos(page).locator('.city-map').boundingBox())!;
+  const covers: QBox[] = [...Object.values(c.boards), ...Object.values(c.bubbles), ...Object.values(c.pins)];
+  for (const e of await lagos(page).locator('.city-chip, .city-top h2, .city-top button, .city-bottom button').all()) {
+    const r = (await e.boundingBox())!;
+    covers.push({ x: r.x - map.x, y: r.y - map.y, w: r.width, h: r.height });
+  }
+  const names: Record<string, string> = { goSlow: 'Go-slow', crowdedBuses: 'Crowded buses' };
+  let tapped = 0;
+  for (const [id, s] of Object.entries(c.watch.soon)) {
+    if (c.watch.soonHidden.includes(id)) continue;
+    const others = [...covers, ...Object.entries(c.watch.soon).filter(([k]) => k !== id).map(([, b]) => b)];
+    // The first point on a 4 px grid inside its tap area that nothing else covers and is on screen.
+    let at: { x: number; y: number } | null = null;
+    for (let y = s.y + 4; y < s.y + s.h - 4 && !at; y += 4) {
+      for (let x = s.x + 4; x < s.x + s.w - 4 && !at; x += 4) {
+        if (x < 0 || y < 0 || x > map.width || y > map.height) continue;
+        if (others.every((o) => x < o.x || x > o.x + o.w || y < o.y || y > o.y + o.h)) at = { x, y };
+      }
+    }
+    expect(at, `some part of the shown ${id} pin is uncovered`).not.toBeNull();
+    await page.touchscreen.tap(map.x + at!.x, map.y + at!.y);
+    const card = page.getByRole('dialog', { name: names[id]! });
+    await expect(card, `a tap on the ${id} pin opens its card`).toBeVisible({ timeout: 3000 });
+    await card.getByRole('button', { name: 'Back' }).tap();
+    await expect(card).toHaveCount(0);
+    await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+    tapped++;
+  }
+  expect(tapped).toBeGreaterThan(0);
+});
+
 test('S3d1 ruling 5: the next board does not pay during the moment or the boom; a tap skips the wait', async ({ page }) => {
   test.setTimeout(90_000);
   // Lamps and Mast both affordable, Lamps take the meter to 20: moment, then the boom.
