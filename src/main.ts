@@ -7,7 +7,7 @@ import street2Data from './data/levels/lagos-2.json';
 import street3Data from './data/levels/lagos-3.json';
 import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
-import { Sound } from './engine/sound';
+import { Sound, soundLength } from './engine/sound';
 import { Music } from './engine/music';
 import { CORN_GAIN, CORN_LOUD, CornDirector, MusicDirector, cornCount } from './game/music-cue';
 import { listenForAudioGestures } from './engine/audio-unlock';
@@ -21,7 +21,7 @@ import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
-import { HALL_PRIZE, HERO_START, KEY_CITY, addKobo, isBuilt, leftOf, winPrize, writeCity } from './game/city';
+import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, isBuilt, leftOf, winPrize, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
 import type { BuildId } from './art/payspot';
 import type { Mission } from './screens/city';
@@ -296,6 +296,8 @@ function startGame(): void {
     save: (part) => (progress.broken && progress.raw === null ? false : progress.savePart(KEY_CITY, part)),
   });
   const city = () => cityLife.state;
+  /** The music dip under the sting or the boom (city.md d7). */
+  let musicDip = 0;
   /** The board the challenge being played was for (the Potholes card's "Run Alausa": the New road), or null. */
   let missionFor: BuildId | null = null;
   /** Money the last win brought home (whole kobo), for "Mission complete!". */
@@ -348,9 +350,18 @@ function startGame(): void {
       lagos: progress.state(LAGOS),
       names: streets.map((l) => l.name),
       themes: streets.map((l) => l.theme),
-      working: progress.working(),
+      // city.md (d) d4: the first boom also turns Lagos's cog (a cog the hall turned stays turned).
+      working: [...new Set([...progress.working(), ...(cityLife.state.boomSeen >= FIRST_BOOM ? [LAGOS] : [])])],
     }),
-    playSound: (name) => sound.play(name),
+    playSound: (name) => {
+      sound.play(name);
+      // city.md d7: the music dips to half while the sting or the boom plays.
+      if ((name === 'sting' || name === 'boom') && sound.enabled) {
+        music.setLevel(0.5, 0.1);
+        window.clearTimeout(musicDip);
+        musicDip = window.setTimeout(() => music.setLevel(1, 0.3), soundLength(name) * 1000);
+      }
+    },
     stillWanted: () => reduceMotion.matches,
   });
   const hud = new Hud(document.body, {
@@ -1088,6 +1099,8 @@ function startGame(): void {
         mission: c.missionPhase,
         paying: c.paying,
         writes: cityLife.writes,
+        // city.md (d): the moment, the boom, people walking in, the danfo, the coming-soon pins, what is bright.
+        watch: c.watch,
         // The city part as it would be saved now (plain JSON).
         saved: writeCity(city()) as never,
       };
@@ -1289,6 +1302,16 @@ declare global {
         readonly mission: string | null;
         readonly paying: boolean;
         readonly writes: number;
+        readonly watch: {
+          readonly moment: { readonly build: string | null; readonly t: number } | null;
+          readonly boom: { readonly mark: number; readonly t: number } | null;
+          readonly walkers: number;
+          readonly standing: number;
+          readonly danfo: { readonly x: number; readonly y: number } | null;
+          readonly soon: Readonly<Record<string, { readonly x: number; readonly y: number; readonly w: number; readonly h: number }>>;
+          readonly soonHidden: readonly string[];
+          readonly bright: readonly string[];
+        };
         readonly saved: {
           readonly kobo: number;
           readonly power: number;
@@ -1302,6 +1325,7 @@ declare global {
           readonly boom: number;
           readonly boomCollect: number;
           readonly hints: readonly string[];
+          readonly boomSeen?: number;
         };
       } | null;
       /** The "BUS PARK" board's drawn box on screen, CSS px; null when the level has no bus park. */

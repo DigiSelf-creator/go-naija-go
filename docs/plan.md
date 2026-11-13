@@ -279,20 +279,26 @@ Source: docs/questions.md top block "Tp, 10 Nov 2026 (after playing the PR #3 bu
 | S3b1 | art | City blocks (12, before and after for the 3 pin spots), roads, lagoon, bridge, buses, pins, bucket icons | none: **ready now** | city.md (b); not like any game's map (part 6) | 40 KB |
 | S3b2 | gamedev | City screen: drag, pinch, + and −, double tap, pins, problem cards, counters, money words, `city` save part | S3a2, S3b1 | city.md (b) done checks; 45 fps drag at 4x CPU; idle draws nothing | 20 KB |
 | S3c0 | designer | Walk the city note (city.md part 5W) | none | written, with exact numbers and words (done 11 Nov 2026) | |
-| S3c1 | art | Hero walking from above (front, back, side, every body) and off the bus; mat and chalk price board (three buckets, part paid, "Done ✓"); chalk outlines; Mama Put with cook and queue; market stalls empty, filling, full; danfo loading goods; tray bubbles; flying coins, bulbs, chips; chink, built, collect sounds; the Potholes fix | S3b1, S3c0 | city.md 5W W1, W2, W3, W11; nothing like the arcade game's look | 18 KB |
-| S3c2 | gamedev | Walk: walk grid and path, tap and hold to walk, arrow keys, camera follows, pin edge arrows, hero's saved place, first hint; drag no longer pans, double tap dropped | S3b2, S3c1 | city.md 5W W1, W9, W10; 45 fps walking at 4x CPU | 6 KB |
-| S3c3 | gamedev | Pay: boards, stand to pay, part pay, not-enough card, "Walk there" on cards; coins as money, "Take it home", keep everything on a loss, prize top-up; Mission complete in the walkable city | S3c2 | city.md 5W W2, W5, W8; money tests | 5 KB |
-| S3c4 | gamedev | Earn and collect: Mama Put and market, play-time filling, caps and "Full", trays saved, collecting, boom points, the two hints | S3c3 | city.md 5W W3, W4, W6, W7; nothing fills while closed; still city at most 2 small redraws a second | 3 KB |
-| S3d1 | art and gamedev | The Booming meter (points: 4 a fix or build, 1 a full collect, first boom at 20), the boom card, the cog link | S3c4 | city.md (d) and 5W W6 | 11 KB |
-| S3e1 | art and gamedev | The challenge road (replaces the Streets screen) | S3c3 | city.md (e) | 12 KB |
+| S3c1 | art | Hero walking from above (front, back, side, every body) and off the bus; mat and chalk price board (three buckets, part paid, "Done ✓"); chalk outlines; Mama Put with cook and queue; market stalls empty, filling, full; danfo loading goods; tray bubbles; flying coins, bulbs, chips; chink, built, collect sounds; the Potholes fix | S3b1, S3c0 | city.md 5W W1, W2, W3, W11; nothing like the arcade game's look (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 18 KB |
+| S3c2 | gamedev | Walk: walk grid and path, tap and hold to walk, arrow keys, camera follows, pin edge arrows, hero's saved place, first hint; drag no longer pans, double tap dropped | S3b2, S3c1 | city.md 5W W1, W9, W10; 45 fps walking at 4x CPU (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 6 KB |
+| S3c3 | gamedev | Pay: boards, stand to pay, part pay, not-enough card, "Walk there" on cards; coins as money, "Take it home", keep everything on a loss, prize top-up; Mission complete in the walkable city | S3c2 | city.md 5W W2, W5, W8; money tests (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 5 KB |
+| S3c4 | gamedev | Earn and collect: Mama Put and market, play-time filling, caps and "Full", trays saved, collecting, boom points, the two hints | S3c3 | city.md 5W W3, W4, W6, W7; nothing fills while closed; still city at most 2 small redraws a second (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 3 KB |
+| S3d1a | art | The Booming meter you can see, pictures and sounds: tired ("a bit faded but still warm and proud") and bright pieces for all 12 blocks and the bus park; people per block; market umbrellas; meter icon and bar; first-boom flats, bus shelter, coming-soon padlock pin badge; sounds sting (short highlife, our own), step, boom, horn (src/art/city*.ts, src/engine/sound.ts, docs/assets.md) | S3c4 (done) | city.md (d) d2, d4, d5, d7, d11; d12 item 10 (mock no one); gallery shows 0, 8 and 20 point looks | ~12 KB |
+| S3d1b | gamedev | Booming meter you can see, code: brightness rules (d3); meter in the "Lagos" heading box; small layout up to 640 px (d5); hide a pin at "Done ✓"; the watch-it-change moment and the boom, with skip and reduced motion (d6), at least one danfo drives the new road; boom card and cog link; coming-soon pins and cards; `boomSeen`; bright hint (d8, d9) | S3d1a | city.md (d) d12 items 1 to 9; 45 fps at 4x CPU in the moment, boom and walking; still city at most 2 small redraws a second | ~11 KB |
+| S3e1 | art and gamedev | The challenge road (replaces the Streets screen), plus W17 C "same street, city and run": stop card with the spot from above, run's first screen tired or bright to match its city spot, plain street sign (Alausa follows New road, Computer Village r1c3, Ikeja r2c1) | S3c3, S3d1b | city.md (e), including the W17 C brief; no level gets harder or easier | 12 KB + ~6 KB (W17 C) |
 | S3f0 | designer | Lane run note in docs/design.md | none | written, with exact numbers and words | |
 | S3f1 | art | Lane run pictures, sounds, tune | S3f0 | city.md (f) | 50 KB |
 | S3f2 | gamedev | Lane run engine, swipes, keys, buttons | S3f0, S3f1 | 60 fps mid phone, 45 at 4x CPU | 30 KB |
 | S3f3 | gamedev | Blackout, buckets, HUD, end card, keep running; pins 2 and 3 open | S3f2 | city.md (f) done checks; first-timers reach the goal in 3 tries | 15 KB |
+| S3f4 | gamedev | Follow-ups from qa round 5 and po (12 Nov) for step (f): packed 320 x 240 layout with Power and Tech, arrows back to 48 x 48 and the drawn arrow matches its tap square; Tech chip and "+" must not cut the Lights out pin word ("Lights ou") | S3f3 | qa at 320 x 240 with all three buckets; po will not accept (f) without it | small |
 | S3q | qa | Test each step on the phone profile, 4x CPU, offline, size, originality | each step | report per step | |
 | S3p | po | Accept each step; then "slice 3 done" (city.md part 5 goal) | S3q | note in docs/questions.md | |
 
-Suggested gamedev order (one at a time): P5, S3a2, P8, P10, S3b2, S3c2, S3c3, S3c4 (walk the city, 5W), then S3d1, S3e1, S3f2, S3f3. Art can run P6, P7, P9, S3a1, S3b1, S3c1 side by side (sound tasks one at a time in src/engine/sound.ts).
+Lagos first (Tp, 13 Nov, decision line 46 waiting to be pasted): finish (d), (e) and (f) and get them accepted before any second state.
+
+Designer rulings taken under Tp's "I take all you guys recommendations" (13 Nov): Mission complete grows to about 7 to 9 s with the moment (was 4 to 6 s), everything after the bus skippable with one tap; no special message for returning players.
+
+Suggested gamedev order (one at a time): S3c2 to S3c4 done; next S3d1b (after S3d1a), then S3e1, S3f2, S3f3, S3f4. Art can run P6, P7, P9, S3a1, S3b1, S3c1 side by side (sound tasks one at a time in src/engine/sound.ts).
 
 ### B1 to B5: birds, the strong look, the tech suit, the dash, thorny gutters (design S2.16; Tp, 10 Nov)
 
@@ -317,7 +323,9 @@ Added by designer. The street changes sit on top of P5 (S2.14) and P8 (S2.15), s
 ## Status
 
 Done: slice 1 A to F and G1. Slice 2 H (85741b9), I (53a659d), J (8636479), K (5ee5f06), L (cc8e594), M (ae69d29): each qa passed and po accepted. Tp answered Q16 to Q25 on 8 Nov.
-Next: N1 (art: Streets cards, wheel, fixed street look, music icons, wheel sounds), then N2 (gamedev: saves, screens, Tp's street names and cleared line, the four M3 bugs, the new Win line, the saved parcel). Then O2, P.
+Done (13 Nov update): walk the city S3c0 to S3c4, merged to main 12 Nov (PR #8), qa round 5 passed, po accepted.
+Next: S3d1a (art, ready now: city.md (d) note is build-ready), then S3d1b (gamedev). Then S3e1 with W17 C, then S3f0 to S3f4. No second state until Lagos (d) to (f) is accepted.
+Waiting on Tp: paste decision lines 44 to 48; play on a real phone; the new sounds by ear, and later the highlife sting once S3d1a makes it.
 Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked.
 P2 (designer, 10 Nov): design.md S2.13 has the P2 doc fixes (foods 12 s, corn hazard rule, pothole signs, Gentle mode climb-out) and the tasks for gamedev and art; the hall difficulty part of P2 is still to do.
 Note for Tp: until N2, the Win card says "with 0 kobo" and the parcel is lost when the page closes.

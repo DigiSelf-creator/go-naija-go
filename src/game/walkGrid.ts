@@ -99,6 +99,19 @@ export const GRID: Uint8Array = (() => {
   return g;
 })();
 
+/** The walk cells out over the water that only the jetty's walkway makes walkable. */
+const JETTY_CELLS: number[] = [];
+for (let i = 0; i < GRID.length; i++) {
+  const x = (i % COLS) * CELL + CELL / 2;
+  const y = Math.floor(i / COLS) * CELL + CELL / 2;
+  if (GRID[i] === 1 && y >= LAGOON_Y - 4 && x >= JETTY.x && x <= JETTY.x + JETTY.w) JETTY_CELLS.push(i);
+}
+
+/** The jetty is drawn only from the first boom (city.md d4): until then its walkway is water. */
+export function setJetty(open: boolean): void {
+  for (const i of JETTY_CELLS) GRID[i] = open ? 1 : 0;
+}
+
 const clampI = (n: number, hi: number): number => Math.min(hi - 1, Math.max(0, Math.floor(n)));
 
 export function cellOf(p: Pt): number {

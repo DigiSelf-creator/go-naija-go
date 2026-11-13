@@ -86,7 +86,12 @@ export type SoundName =
   | 'payChip'
   | 'built'
   | 'collect'
-  | 'notEnough';
+  | 'notEnough'
+  // Slice 3 (d): the Booming meter you can see (city.md d7)
+  | 'sting'
+  | 'step'
+  | 'boom'
+  | 'horn';
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
@@ -120,6 +125,23 @@ interface Recipe {
 const horn = (lo: number, hi: number, len: number, at: number, sag = 0.97): Tone[] => [
   { f: lo, len, wave: 'sawtooth', to: lo * sag, at, vol: 0.025 },
   { f: hi, len, wave: 'sawtooth', to: hi * sag, at, vol: 0.025 },
+];
+
+/** The sting's notes: [Hz, start s, length s]. D5 E5 G5 A5 B5, highlife lilt, the last held. */
+const STING: readonly (readonly [number, number, number])[] = [
+  [587, 0, 0.13],
+  [659, 0.14, 0.13],
+  [784, 0.28, 0.2],
+  [880, 0.5, 0.13],
+  [988, 0.64, 0.56],
+];
+/** The boom's notes: the sting's tune, slower; the last held to the 2 s end. */
+const BOOM: readonly (readonly [number, number, number])[] = [
+  [587, 0, 0.2],
+  [659, 0.22, 0.2],
+  [784, 0.44, 0.28],
+  [880, 0.75, 0.2],
+  [988, 0.97, 1.03],
 ];
 
 /**
@@ -531,8 +553,60 @@ const SOUNDS: Record<SoundName, Recipe> = {
   // Not enough in the bucket: two gentle low wood knocks (never a buzzer).
   notEnough: {
     tones: [0, 1].map((i): Tone => ({ f: 320, len: 0.05, wave: 'triangle', to: 260, at: i * 0.11, vol: 0.05 })),
+  },  // The Booming meter (city.md d7). Our own little highlife guitar line: five plucked notes
+  // rising on a pentatonic (D E G A B), the off-beat lilt of highlife, a soft bass under it and
+  // a bell on the last note. Not any real song or advert jingle.
+  sting: {
+    tones: [
+      ...STING.flatMap(([f, at, len]): Tone[] => [
+        { f, len, at, wave: 'triangle', to: f * 0.995, vol: 0.05 },
+        { f: f * 0.75, len, at, wave: 'triangle', to: f * 0.75 * 0.995, vol: 0.02 }, // a fourth below, like a second guitar
+      ]),
+      { f: 196, len: 0.3, at: 0, wave: 'sine', to: 194, vol: 0.05 },
+      { f: 147, len: 0.4, at: 0.5, wave: 'sine', to: 146, vol: 0.05 },
+      { f: 1976, len: 0.5, at: 0.64, wave: 'sine', to: 1972, vol: 0.022 }, // the bell
+    ],
+    hiss: [0.07, 0.35, 0.57, 0.85].map((at): Hiss => ({ len: 0.04, hp: 5000, at, vol: 0.02 })),
+  },
+  // A meter step: three soft rising wooden notes (marimba-like: sine, quick to fade).
+  step: {
+    tones: [
+      { f: 659, len: 0.1, at: 0, wave: 'sine', to: 655, vol: 0.05 },
+      { f: 784, len: 0.1, at: 0.13, wave: 'sine', to: 780, vol: 0.05 },
+      { f: 880, len: 0.22, at: 0.26, wave: 'sine', to: 876, vol: 0.05 },
+    ],
+  },
+  // A boom: the sting's tune slower and bigger (an octave below doubling it), talking-drum
+  // bends under it and a shaker all the way through.
+  boom: {
+    tones: [
+      ...BOOM.flatMap(([f, at, len]): Tone[] => [
+        { f, len, at, wave: 'triangle', to: f * 0.995, vol: 0.055 },
+        { f: f / 2, len, at, wave: 'triangle', to: (f / 2) * 0.995, vol: 0.035 },
+      ]),
+      ...[0, 0.44, 0.75, 0.97].map((at): Tone => ({ f: 110, peak: 165, to: 100, len: 0.2, at, wave: 'sine', vol: 0.08 })),
+      { f: 1976, len: 0.9, at: 0.97, wave: 'sine', to: 1970, vol: 0.022 },
+      { f: 120, peak: 180, to: 105, len: 0.3, at: 1.45, wave: 'sine', vol: 0.07 },
+    ],
+    hiss: Array.from({ length: 12 }, (_, i): Hiss => ({ len: 0.05, hp: 5000, at: i * 0.15, vol: i % 2 ? 0.015 : 0.025 })),
+  },
+  // The danfo starts to drive: a soft low "pom-pom", two short horn chords, quieter than a chink.
+  horn: {
+    tones: [0, 0.15].flatMap((at, i): Tone[] => [
+      { f: 233, len: 0.11 + i * 0.03, at, wave: 'triangle', to: 230, vol: 0.016 },
+      { f: 294, len: 0.11 + i * 0.03, at, wave: 'triangle', to: 291, vol: 0.016 },
+    ]),
   },
 };
+
+/** How long a sound lasts, in seconds (its last tone or hiss end). For the music dip under the sting and the boom. */
+export function soundLength(name: SoundName): number {
+  const r = SOUNDS[name];
+  let end = 0;
+  for (const t of r.tones) end = Math.max(end, (t.at ?? 0) + t.len);
+  for (const h of r.hiss ?? []) end = Math.max(end, (h.at ?? 0) + h.len);
+  return end;
+}
 
 /** Every tone and hiss fades in over this long from near silence, so none starts with a tick. */
 export const ATTACK = 0.003;

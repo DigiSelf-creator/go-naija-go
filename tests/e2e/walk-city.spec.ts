@@ -144,7 +144,7 @@ test('pay in full: "Walk there" on the Potholes card, the hero pays the ₦10 bo
   await expect(lagos(page).locator('.city-chip').first()).toContainText('₦2.50');
   await expect(page.getByRole('button', { name: 'New road, fixed' })).toBeAttached();
   // W7: the Mama Put board comes next, with its hint.
-  await expect(lagos(page).locator('.city-hint')).toHaveText('Walk onto the ₦4 board to build a Mama Put.');
+  await expect(lagos(page).locator('.city-hint')).toHaveText('Walk onto the ₦4 board to build a Mama Put.', { timeout: 10_000 }); // after the 3.6 s moment and the 3 s "brighter" hint (d6)
   const saved = await savedCity(page);
   expect(saved).toMatchObject({ kobo: 250, fixed: ['potholes'], fixes: 1, boom: 4, paid: {} });
 });

@@ -1,6 +1,66 @@
 # Open questions for the product owner
 
-## po note, 12 Nov 2026 (newest): walk the city accepted
+## po note, 13 Nov 2026 (latest): S3d1 "The Booming meter you can see" accepted
+
+- Accepted: S3d1 (city.md step (d), d1 to d12; plan S3d1a and S3d1b), after qa passed it (c67b197). See "po acceptance, 13 Nov 2026: S3d1" below.
+- Waits for Tp: paste decision lines 44 to 48 (recommend: paste as written); a play on a real phone; by ear, the four new sounds (sting, step, boom, horn; recommend: say yes unless one sounds like a known game, advert or song); a look at the tired Lagos (far view at 0 points) on a real phone (recommend: keep it, it reads faded but warm).
+- Carried to step (f), not blockers now: at 320 x 240 the two coming-soon pins overlap; the Mast board covers the Slow internet pin; the packed 320 x 240 layout still cuts pin words ("Slow intern", "Lights out" under the bottom buttons).
+
+## po acceptance, 13 Nov 2026: S3d1 "The Booming meter you can see" (city.md (d), d1 to d12)
+
+**Verdict: accepted.** Checked against Tp's answers above ("po, 13 Nov 2026: Tp's answers on finishing Lagos and feeling the city get better", items 1 to 5) and the waiting decision lines 46 to 48.
+Reported (qa): passed S3d1 at c67b197, with the designer rulings on the folded heading and soft coming-soon pins at 360 x 300 or smaller (both accepted by po). Reported (qa, 527aca9): Mission complete with the moment measured 8.09 s on the phone profile, inside 7 to 9 s; one tap ends it. Reported (designer, gamedev): S3d1 about 23 KB; first load under 600 KB, far under 3 MB.
+Checked by po (verified by reading src/screens/words.ts, src/art/city.ts, docs/city.md (d) and qa's screenshots):
+1. Words: every line matches d8 word for word: "Booming", "9 of 20", "Lagos is getting brighter!", "Each fix makes Lagos brighter!", "Tap to skip" / "Press Space to skip", the boom card ("Lagos is booming!", "New buildings are going up. More people are coming, and they need more.", "Lagos's cog is turning on Nigeria's wheel!", "See Lagos"), coming-soon pins "Go-slow" and "Crowded buses" with "Coming soon", cards "The traffic is stuck here." and "More people need buses here." Plain, warm, short. No real place is named in a line that says something is wrong.
+2. Tired, never run-down (Tp item 3 and item 5, line 47): the far view at 0 points is warm sand and faded paint, shutters down, a few small neat sacks, dry grass, a few people; no grey street, no mess, no one shown as the problem. Opinion: it reads "a bit faded but still warm and proud". The two problem blocks (Lights out, Slow internet) are darker because of their own dim cover, which is their job to fix, and they brighten when fixed.
+3. Clearly different at 0, 8 and 20 points (verified, qa screenshots side by side): left side and middle bright at 8, whole area bright at 20 with only the Slow internet block tired, as d3 says. A danfo drives the new Alausa road (verified in the 8-point and moment shots), so "New road! Danfos are back." is now true (the 12 Nov step (f) condition on buses is met).
+4. Pin hides at "Done ✓" (Tp item 4): verified in the moment shot at 0.3 s: the board says "Done New road" and the Potholes pin is gone.
+5. Mission complete about 7 to 9 s and skippable: reported by qa (8.09 s, one tap ends it).
+6. Rules: no network calls but the offline cache, no trackers, ads, accounts or photo access (grep of src). Nothing from Mario or any Nintendo game; the sounds are code-made and our own. No real people, brands or party colours; the new flats, shelter and stalls carry no writing or logos. Nothing mocks anyone. The "wrong premise" line is not used.
+Carried to step (f) (reasoned; only after the lane run, so no first-timer meets them in slice 3): the two coming-soon pins overlap at 320 x 240; the Mast board covers the Slow internet pin; packed 320 x 240 cuts pin words. po will not accept step (f) with any of these.
+Not tested yet (open, not blocking): a real cheap phone, the four sounds by ear, Tp's own first look at tired Lagos.
+
+## po note, 13 Nov 2026 (newest): Tp's answers on finishing Lagos and feeling the city get better
+
+- Answered by Tp (13 Nov): finish Lagos first (option A), and W17 questions 1 and 2 as recommended. See the section below.
+- Accepted: nothing new to accept (no new build since the walk the city acceptance).
+- Waits for Tp: paste decision lines 44 and 45 (12 Nov) and the new lines 46 to 48 below (recommend: paste as written); a play on a real phone; the new sounds by ear. Later, by ear: the short highlife sting from W17 B, once art makes it (recommend: say yes unless it sounds like a known game or song).
+
+## po, 13 Nov 2026: Tp's answers on finishing Lagos and feeling the city get better
+
+**Answered by Tp, 13 Nov 2026: "I take all you guys recommendations."**
+What Tp chose (Tp's words and city.md part 5W, W17):
+1. **Finish Lagos first** (option A): step (d) the Booming meter, (e) the challenge road, (f) the lane run, before any second state. A second state waits until Lagos (d) to (f) is done and accepted.
+2. **W17 question 1: a)** A + B together now, as **S3d1 "The Booming meter you can see"**; then C folded into **S3e1**.
+   - A: Lagos starts faded and brightens step by step. Each fix brightens its own block and the blocks next to it, for good. The meter has 5 steps to the first boom (20 points); each step lights a set part of Lagos, so by the first boom the whole first area is bright and busy.
+   - B: a "watch it change" moment at every fix. The pin goes, the camera frames the whole spot (a cut with reduced motion), colour spreads out from the mat in about 1.5 s, 4 to 6 people walk in, one danfo drives up a new road, and a short highlife sting plays (our own, Sound on only).
+   - C (in S3e1): the run looks like the same place as the city spot: a small card shows the spot from above, the run's first screen matches it ("Alausa" on a plain street sign, "Potholes on this road"), and after the fix the run starts on fresh tarmac with open shops.
+3. **W17 question 2: a)**, in Tp's words: Lagos starts **"a bit faded but still warm and proud", not run-down.** Faded paint, some dark windows, some shutters down, a few small neat rubbish heaps by the kerb, dry grass, fewer people. Never sad, ugly or dirty-looking; never people shown as the problem; no real place drawn as worse than another, and every later state starts faded the same way.
+4. **Also now (in S3d1):** hide a pin as soon as its board says "Done ✓", so the fix is never covered.
+5. **Tp, 13 Nov: tired look made stronger after seeing the first pictures (option a).** Still warm and proud, never run-down; built by art in ed8e742, exact look in city.md (d) d2.
+
+po read (microscope):
+- Reasoned: B's moving danfo also settles the step (f) condition from the 12 Nov acceptance ("New road here. Buses are moving again." said while no bus moves). In S3d1, at least one danfo must drive on the new road after the road fix.
+- Reasoned: Tp said "warm and proud", which is softer than the word "tired" in W17. designer: in city.md and art notes, read "tired" as "a bit faded but warm and proud"; rubbish heaps stay small and few, and a faded block still has some people and some colour. No player-facing word says "dirty", "broken city" or names a place as bad.
+- Opinion: the highlife sting must be short (about 1 s), our own tune, never a known song or another game's "level up" sound. Tp checks it by ear.
+- Scope: nothing here is out of scope for version 1. No accounts, photos, trackers or ads. No new state is started.
+- Size (reported by designer): S3d1 grows from 11 KB to about 23 KB; first load stays near 560 KB, far under 3 MB.
+
+Done when (S3d1, from W17, po will hold to it): a first-timer, looking at the far view before and after the road fix, can point to what changed without help; the far view at 0, 8 and 20 points looks clearly different (qa puts the three side by side); walking stays at 45 fps or more at 4x CPU and a still city draws at most 2 small redraws a second; reduced motion shows each step as a still before and after; nothing is shown by colour alone; a "Done ✓" board has no pin over it; at least one danfo drives the new road; city.md part 6 and W11 pass; qa passes it.
+
+What is unblocked now:
+- designer: write the S3d1 note (A + B, the 5 meter steps and what each lights, the faded and bright look per block) and the C part of the S3e1 note.
+- pm: update docs/plan.md S3d1 to "The Booming meter you can see" (A + B + hide "Done ✓" pins, about 23 KB) and add C to S3e1 (about 6 KB more). Order stays S3d1, S3e1, then S3f.
+- art: faded and bright looks for each block, small shutter, rubbish and dry grass shapes, the highlife sting (code-made).
+- gamedev: build after the designer's note.
+- Done by po (13 Nov): W17 marked answered in docs/city.md part 5W and part 7.
+
+Lines for Tp to paste into docs/decisions.md:
+46. Lagos is finished first: the Booming meter, the challenge road and the lane run come before any second state. (Tp, 13 Nov)
+47. Lagos starts a bit faded but still warm and proud, never run-down. Each fix brightens its own block and the blocks next to it for good, and the Booming meter lights a set part of Lagos at each of its 5 steps, so by the first boom the first area is bright and busy. Every fix plays a short "watch it change" moment: colour spreads from the pay spot, people walk in, a danfo drives a new road, and a short highlife sting plays. A pin hides as soon as its board says "Done ✓". Built as S3d1, "The Booming meter you can see". (W17 questions 1 and 2)
+48. On the challenge road, each stop's run looks like the same street as its city spot, before and after the fix. Built in S3e1. (W17 option C)
+
+## po note, 12 Nov 2026: walk the city accepted
 
 - Accepted: "Walk the city" (city.md part 5W, W1 to W16; plan S3c0 to S3c4), after qa round 5 and the lead's arrow-corner fix (e114cb8). See "po acceptance, 12 Nov 2026: walk the city" below.
 - Waits for Tp: nothing new. Still waiting: paste decision lines 44 and 45 (recommend: paste as written), a play on a real phone, and the new sounds by ear.

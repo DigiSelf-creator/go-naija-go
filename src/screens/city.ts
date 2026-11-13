@@ -21,16 +21,25 @@ import {
   CITY_COLOURS,
   CITY_MAP,
   CITY_SPOTS,
+  SOON_IDS,
+  SOON_PINS,
+  SOON_WORDS,
   SPOT_IDS,
   SPOT_WORDS,
   bucketIconSvg,
+  drawBoomFlats,
   drawCityBus,
+  drawCityFolk,
+  drawComingSoonPin,
+  drawJetty,
   drawProblemPin,
   makeCityCanvas,
   type BucketKind,
+  type SoonId,
   type SpotId,
   type SpotLooks,
 } from '../art/city';
+import { boomBarSvg, boomIconSvg } from '../art/boomMeter';
 import type { HeroLook } from '../art/hero';
 import {
   ALAUSA_ROAD,
@@ -59,7 +68,33 @@ import {
 } from '../art/payspot';
 import { MAMA_PUT, MARKET_PLACE, danfoTrip, drawMamaPut, drawMarketDanfo, drawMarketPlace, drawPorter } from '../art/places';
 import { BUS_ARRIVAL, WALKER, busArrivalHero, drawBusArrival, drawCityHero, drawWalkRing, walkDir, walkerSize, type WalkDir } from '../art/walker';
+import { boomDue, meterOf, shownBoom, stepBlock } from '../game/boom';
 import {
+  BOOM,
+  BRIDGE_FOOT,
+  DANFO_ROUTE,
+  MOMENT,
+  MOVING_PEOPLE,
+  areaRect,
+  around,
+  driveOn,
+  ease,
+  fixRects,
+  middle,
+  planWalkers,
+  ringReach,
+  routeAt,
+  routeLength,
+  span,
+  walkTargets,
+  walkerAt,
+  type Rect,
+  type Route,
+  type Walker,
+} from '../game/moment';
+import {
+  BUILD_KEY,
+  FIRST_BOOM,
   HERO_START,
   PLACES,
   PLACE_BUILD,
@@ -81,14 +116,14 @@ import {
   type PlaceId,
 } from '../game/city';
 import type { CityLife } from '../game/cityLife';
-import { camScale, clampCam, pinTapBox, pinchStep, startCam, toMap, toScreen, zoomCam, type CityCam, type CityView, type Zoom } from '../game/cityCamera';
+import { camScale, centreOn, clampCam, pinTapBox, pinchStep, startCam, toMap, toScreen, zoomCam, type CityCam, type CityView, type Zoom } from '../game/cityCamera';
 import { formatMoney, spokenMoney } from '../game/money';
-import { findPath, lineClear, nearestOpen, tapTarget, walkable, type Pt } from '../game/walkGrid';
+import { findPath, lineClear, nearestOpen, setJetty, tapTarget, walkable, type Pt } from '../game/walkGrid';
 import { button, h } from './dom';
 import { WORDS } from './words';
 
 /** The sounds this screen plays (src/engine/sound.ts). */
-export type CitySound = 'payChink' | 'payBulb' | 'payChip' | 'built' | 'collect' | 'notEnough';
+export type CitySound = 'payChink' | 'payBulb' | 'payChip' | 'built' | 'collect' | 'notEnough' | 'sting' | 'step' | 'boom' | 'horn' | 'cogRatchet' | 'cogBell';
 
 /**
  * Mission complete after a won challenge (W5): `build` is the board the challenge was for (the
@@ -121,6 +156,8 @@ export interface CityScreenHooks {
   touch(): boolean;
   /** Mission complete to play as the screen opens (once), or null. */
   mission: Mission | null;
+  /** Lagos's cog already turns on Nigeria's wheel (the hall is won): the boom then plays no cog sounds. */
+  cogOn?(): boolean;
 }
 
 /** The camera is kept between visits (this page load only). */
@@ -247,6 +284,72 @@ interface Line {
   text: string;
   t: number;
   dur: number;
+  /** Seconds before it shows (a line queued after another). */
+  wait: number;
+}
+
+/** A coming-soon pin's tap area, wide enough for its "Coming soon" line (bold 11 px) too. */
+function soonBox(x: number, y: number): ScreenBox {
+  return { x: x - SOON_TAP.w / 2, y: y - SOON_TAP.up, w: SOON_TAP.w, h: SOON_TAP.h };
+}
+/** S3d1 ruling: a coming-soon pin taps 94 x 56 (92 to 96 wide), from its round sign's lower half to the foot of its "Coming soon" line. */
+const SOON_TAP = { w: 94, h: 56, up: 66 } as const;
+/** The whole drawn coming-soon pin round its foot (its picture is bigger than its tap area). */
+const SOON_PIC = { x: -60, y: -90, w: 120, h: 96 } as const;
+
+/** The jetty's picture round drawJetty(410, 838): walkway left of `cut`, the ferry right of it (map units). */
+const JETTY_PIC = { x: 400, y: 830, w: 150, h: 112, cut: 452 } as const;
+
+/** What the still city picture is painted with. */
+interface Paint {
+  looks: SpotLooks;
+  bright: string[];
+  boom: boolean;
+  market: boolean;
+  /** False: the boom's flats and jetty left off (they come in live). */
+  flats?: boolean;
+}
+const paintKey = (p: Paint): string => `${p.looks.potholes}|${p.looks.lightsOut}|${p.looks.slowInternet}|${p.market}|${p.boom}|${p.flats !== false}|${p.bright.join(',')}`;
+function paintOf(st: CityState, market = st.built.includes('market')): Paint {
+  return { looks: spotLooks(st), market, ...shownBoom(st) };
+}
+function paintImg(p: Paint, scale: number): HTMLCanvasElement | null {
+  return makeCityCanvas(p.looks, scale, 2048, { market: p.market, bright: p.bright, boom: p.boom, flats: p.flats !== false, jetty: p.boom && p.flats !== false });
+}
+
+/** d6: the "watch it change" moment (a build, or a full collect that crossed a step). */
+interface MomentRun {
+  build: BuildId | null;
+  t: number;
+  still: boolean;
+  before: CityState;
+  after: CityState;
+  /** The tired picture until the end; the bright one (at the moving screen scale, at most 1 map unit a px) inside the rings. */
+  paint: Paint;
+  img: HTMLCanvasElement | null;
+  from: Pt;
+  rects: Rect[];
+  reach: number;
+  step: { rect: Rect; at: Pt; reach: number; id: string } | null;
+  /** When the step ring starts, and when the moment ends. */
+  stepAt: number;
+  end: number;
+  cam: { from: CityCam; to: CityCam } | null;
+  fired: Set<string>;
+}
+
+/** d6: the boom after a mark. */
+interface BoomRun {
+  mark: number;
+  t: number;
+  still: boolean;
+  paint: Paint;
+  img: HTMLCanvasElement | null;
+  reach: number;
+  cam: { from: CityCam; to: CityCam } | null;
+  fired: Set<string>;
+  /** The jetty and its ferry, painted once (the ferry glides in as a copy), and its scale. */
+  jetty: { img: HTMLCanvasElement; k: number } | null;
 }
 
 interface MissionRun {
@@ -358,11 +461,36 @@ export class CityScreen {
   private hintId: string | null = null;
   private hintAt = 0;
   private chipText = '';
+  /** The "Lagos" heading box with the Booming meter (d5). */
+  private readonly head: HTMLElement;
+  private readonly skipEl: HTMLElement;
+  private soonPins: { id: SoonId; el: HTMLButtonElement; pic: HTMLCanvasElement }[] = [];
+  /** The spot whose board just said "Done ✓": its pin goes at once (d6). */
+  private hiddenSpot: SpotId | null = null;
+  /** The coming-soon pins wait for the boom card to close, then drop in. */
+  private soonWait = false;
+  private soonDrop = false;
+  /** Coming-soon pins a sign covers on a tiny screen: hidden whole while covered (designer ruling, d5). */
+  private soonHidden = new Set<SoonId>();
+  private moment: MomentRun | null = null;
+  private boomRun: BoomRun | null = null;
+  /** People walking in (at most 8 moving, W10), and those who have arrived and stand. */
+  private walkers: Walker[] = [];
+  private standing: { x: number; y: number; look: number }[] = [];
+  private danfo: { r: Route; d: number; speed: number; bus: boolean } | null = null;
+  /** The meter's points while its notches fill one by one (null: the saved points). */
+  private meterShown: number | null = null;
+  private meterKey = '';
+  /** Runs when the open card closes (the boom card's "See Lagos"). */
+  private onClose: (() => void) | null = null;
+  /** Arrow keys that skipped: they walk only once pressed again. */
+  private readonly skipHeld = new Set<string>();
 
   constructor(private readonly hooks: CityScreenHooks) {
     const w = WORDS.city;
     const st = hooks.life.state;
     this.looks = spotLooks(st);
+    setJetty(shownBoom(st).boom);
     const at = st.at && walkable(st.at) ? st.at : st.at ? nearestOpen(st.at) : { ...HERO_START };
     this.hero = { x: at.x, y: at.y, dir: 's', phase: 0, moving: false };
     this.map = h('canvas', { class: 'city-map', role: 'img', 'aria-label': w.map });
@@ -373,20 +501,24 @@ export class CityScreen {
     this.hintEl = h('p', { class: 'city-hint', hidden: true, 'aria-live': 'polite' });
     this.banner = h('div', { class: 'city-banner', hidden: true, role: 'status' });
     this.say = h('p', { class: 'sr-only', 'aria-live': 'polite' });
+    this.head = h('h2', { class: 'city-head' });
+    this.skipEl = h('p', { class: 'city-skipline', hidden: true, 'aria-hidden': 'true' });
     const zoomIn = button(w.zoomIn, 'minor city-zoom-btn', () => this.zoom('near'), { 'aria-label': w.zoomInSpoken });
     const zoomOut = button(w.zoomOut, 'minor city-zoom-btn', () => this.zoom('far'), { 'aria-label': w.zoomOutSpoken });
     this.el = h(
       'div',
       { class: 'card city-card', role: 'dialog', 'aria-label': w.heading },
       h('div', { class: 'city-stage' }, this.map, this.signLayer, this.pinLayer),
-      h('div', { class: 'city-top' }, h('h2', {}, w.heading), this.chips, h('div', { class: 'city-top-right' }, ...hooks.topRight)),
+      h('div', { class: 'city-top' }, this.head, this.chips, h('div', { class: 'city-top-right' }, ...hooks.topRight)),
       this.hintEl,
       h('div', { class: 'city-bottom' }, h('div', { class: 'city-buttons' }, ...hooks.bottom), h('div', { class: 'city-zoom' }, zoomOut, zoomIn)),
       this.banner,
+      this.skipEl,
       this.say,
       this.cardSpot,
     );
     this.cam = lastCam ?? { zoom: 'far', x: 0, y: 0 };
+    this.fillMeter();
     this.fillChips();
     this.makePins();
     this.makeSigns();
@@ -405,8 +537,11 @@ export class CityScreen {
   /** Call once the screen is in the page (it needs its size). */
   start(): void {
     this.measure();
+    this.fitHead();
     this.cam = lastCam ? clampCam(lastCam, this.view) : startCam(this.view);
     if (this.hooks.mission) this.startMission(this.hooks.mission);
+    // d9: a boom whose card never showed (the tab closed mid-boom) plays now.
+    else if (boomDue(this.life.state)) this.startBoom();
     this.last = performance.now();
     this.pickHint();
     this.requestDraw();
@@ -422,6 +557,7 @@ export class CityScreen {
     this.closed = true;
     if (this.mission && this.mission.phase !== 'end') this.skipMission();
     this.finishAnims();
+    this.boomRun = null;
     this.saveAt();
     this.hooks.life.flush();
     lastCam = this.cam;
@@ -449,6 +585,7 @@ export class CityScreen {
   /** The saved city changed: counters, pins, boards and the painted city follow. */
   refresh(): void {
     this.looks = spotLooks(this.shown);
+    this.fillMeter();
     this.fillChips();
     this.makePins();
     this.makeSigns();
@@ -481,6 +618,24 @@ export class CityScreen {
     this.chips.replaceChildren(...BUCKETS.map((b) => made[b]));
   }
 
+  /**
+   * d5: the heading box. Line 1 "Lagos", the rising-building icon and "Booming"; line 2 the bar
+   * and "9 of 20". Spoken as one heading: "Lagos. Booming meter. 9 of 20 to the next boom."
+   */
+  private fillMeter(): void {
+    const w = WORDS.city;
+    const st = this.life.state;
+    const m = meterOf(this.meterShown ?? this.shown.boom, st.boomSeen);
+    const small = typeof matchMedia === 'function' && matchMedia('(max-width: 640px), (max-height: 300px)').matches;
+    const key = `${m.points}|${m.next}|${small}`;
+    if (key === this.meterKey) return;
+    this.meterKey = key;
+    this.head.setAttribute('aria-label', `${w.heading}. ${w.meterSpoken(m.points, m.next)}`);
+    this.head.innerHTML =
+      `<span class="city-head-row"><span>${w.heading}</span><span class="boom-icon">${boomIconSvg(small ? 14 : 16)}</span><b class="boom-word">${w.booming}</b></span>` +
+      `<span class="city-head-row">${boomBarSvg(m.filled, m.per, small)}<b class="boom-num">${w.meter(m.points, m.next)}</b></span>`;
+  }
+
   private collectLanded(): number {
     const c = this.collecting;
     if (!c) return 1;
@@ -494,13 +649,13 @@ export class CityScreen {
 
   private makePins(): void {
     const w = WORDS.city;
-    this.pins = SPOT_IDS.map((spot) => {
+    this.pins = SPOT_IDS.filter((spot) => spot !== this.hiddenSpot).map((spot) => {
       const look = this.looks[spot];
       const fixed = look === 'fixed';
       const word = look === 'ready' ? 'Ready' : SPOT_WORDS[spot];
       const label = fixed ? w.pinFixed(w.fixedName[spot]) : look === 'ready' ? w.pinReady(SPOT_WORDS[spot]) : w.pinProblem(SPOT_WORDS[spot]);
       const el = button('', `city-pin ${look}`, (e) => {
-        if (this.hooks.ignoreTap(e) || this.mission?.phase === 'bus' || this.mission?.phase === 'walk') return;
+        if (this.hooks.ignoreTap(e) || this.skipped() || this.paying) return;
         this.openCard(spot);
       }, { 'aria-label': label, 'data-spot': spot });
       let pic: HTMLCanvasElement | null = null;
@@ -510,7 +665,20 @@ export class CityScreen {
       }
       return { spot, el, pic, word };
     });
-    this.pinLayer.replaceChildren(...this.pins.map((p) => p.el));
+    // d4: the coming-soon pins, from the first boom (once its card has closed).
+    const soon = shownBoom(this.life.state).boom && !this.soonWait ? SOON_IDS : [];
+    this.soonPins = soon.map((id) => {
+      const pic = h('canvas', { 'aria-hidden': 'true' });
+      const el = button('', `city-pin soon${this.soonDrop && !this.hooks.still() ? ' drop' : ''}`, (e) => {
+        if (this.hooks.ignoreTap(e) || this.skipped() || this.paying) return;
+        this.openSoon(id);
+      }, { 'aria-label': w.soon.spoken(SOON_WORDS[id]), 'data-soon': id });
+      el.append(pic);
+      return { id, el, pic };
+    });
+    this.soonDrop = false;
+    this.soonHidden.clear();
+    this.pinLayer.replaceChildren(...this.pins.map((p) => p.el), ...this.soonPins.map((p) => p.el));
     this.paintPins();
   }
 
@@ -532,6 +700,22 @@ export class CityScreen {
       g.clearRect(0, 0, box.w, box.h);
       drawProblemPin(g, -box.x, -box.y, p.spot, this.looks[p.spot] === 'ready' ? 'ready' : 'problem', 0);
     }
+    for (const p of this.soonPins) {
+      const box = soonBox(0, 0);
+      const pic = SOON_PIC;
+      p.el.style.width = `${box.w}px`;
+      p.el.style.height = `${box.h}px`;
+      p.pic.width = Math.round(pic.w * dpr);
+      p.pic.height = Math.round(pic.h * dpr);
+      p.pic.style.width = `${pic.w}px`;
+      p.pic.style.height = `${pic.h}px`;
+      p.pic.style.left = `${pic.x - box.x}px`;
+      p.pic.style.top = `${pic.y - box.y}px`;
+      const g = p.pic.getContext('2d');
+      if (!g) continue;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawComingSoonPin(g, -pic.x, -pic.y, p.id, 0);
+    }
   }
 
   private placePins(): void {
@@ -542,6 +726,44 @@ export class CityScreen {
       const t = `translate(${Math.round(box.x)}px, ${Math.round(box.y)}px)`;
       if (p.el.style.transform !== t) p.el.style.transform = t;
     }
+    for (const [id, box] of Object.entries(this.soonBoxes())) {
+      const el = this.soonPins.find((p) => p.id === id)!.el;
+      const t = `translate(${Math.round(box.x)}px, ${Math.round(box.y)}px)`;
+      if (el.style.transform !== t) el.style.transform = t;
+    }
+  }
+
+  /** 360 x 300 or smaller: the fold and the soft coming-soon pins (d5). */
+  private tiny(): boolean {
+    return this.view.w <= 360 && this.view.h <= 300;
+  }
+
+  /**
+   * d5 ruling: on a tiny screen a coming-soon pin that a sign's box touches is hidden whole (not
+   * drawn, no taps, out of Tab order and hidden from screen readers) until the sign moves or goes.
+   */
+  private hideCoveredSoon(signs: readonly ScreenBox[]): void {
+    const boxes = this.soonBoxes();
+    const touch = (a: ScreenBox, b: ScreenBox): boolean => !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
+    for (const p of this.soonPins) {
+      const box = boxes[p.id]!;
+      const hide = this.tiny() && signs.some((b) => touch(b, box));
+      if (hide !== this.soonHidden.has(p.id)) {
+        if (hide) this.soonHidden.add(p.id);
+        else this.soonHidden.delete(p.id);
+        p.el.hidden = hide;
+      }
+    }
+  }
+
+  /** The coming-soon pins' tap areas on screen now (CSS px, in the map area): drawn pins, for signs, arrows and tests. */
+  soonBoxes(): Partial<Record<SoonId, ScreenBox>> {
+    const out: Partial<Record<SoonId, ScreenBox>> = {};
+    for (const p of this.soonPins) {
+      const at = toScreen(this.cam, this.view, SOON_PINS[p.id]);
+      out[p.id] = soonBox(at.x, at.y);
+    }
+    return out;
   }
 
   /** Where each pin's tap area is on screen now (CSS px, inside the map area), for tests. */
@@ -568,6 +790,19 @@ export class CityScreen {
   get missionPhase(): string | null {
     return this.mission ? this.mission.phase : null;
   }
+  /** The moment and the boom now (d6), for tests. */
+  get watch(): { moment: { build: string | null; t: number } | null; boom: { mark: number; t: number } | null; walkers: number; standing: number; danfo: Pt | null; soon: Partial<Record<SoonId, ScreenBox>>; soonHidden: string[]; bright: string[] } {
+    return {
+      moment: this.moment ? { build: this.moment.build, t: this.moment.t } : null,
+      boom: this.boomRun ? { mark: this.boomRun.mark, t: this.boomRun.t } : null,
+      walkers: this.walkers.length,
+      standing: this.standing.length,
+      danfo: this.danfo ? routeAt(this.danfo.r, this.danfo.d) : null,
+      soon: this.soonBoxes(),
+      soonHidden: [...this.soonHidden],
+      bright: (this.moment?.paint ?? this.boomRun?.paint ?? paintOf(this.life.state)).bright,
+    };
+  }
   get paying(): boolean {
     return this.pay !== null || this.building !== null;
   }
@@ -575,6 +810,9 @@ export class CityScreen {
   // ---------- Boards, bubbles and edge arrows (buttons over the map) ----------
 
   private boards(): BuildId[] {
+    // During a moment the next board waits for its end (one new thing at a time).
+    const mo = this.moment?.build ? this.moment : null;
+    if (mo && !this.building) return boardsShown(mo.before).filter((b) => b !== mo.build && !isBuilt(this.life.state, b));
     const st = this.shown;
     const out = boardsShown(st);
     // A board stays up, "Done ✓", while its build goes up.
@@ -602,7 +840,7 @@ export class CityScreen {
       let el = this.boardEls.get(b);
       if (!el) {
         el = button('', 'city-sign city-board', (e) => {
-          if (this.hooks.ignoreTap(e) || this.busy()) return;
+          if (this.hooks.ignoreTap(e) || this.skipped()) return;
           this.goPay(b);
         }, { 'data-build': b });
         this.boardEls.set(b, el);
@@ -623,7 +861,7 @@ export class CityScreen {
       let el = this.bubbleEls.get(p);
       if (!el) {
         el = button('', 'city-sign city-bubble', (e) => {
-          if (this.hooks.ignoreTap(e) || this.busy()) return;
+          if (this.hooks.ignoreTap(e) || this.skipped()) return;
           this.goCollect(p);
         }, { 'data-place': p });
         this.bubbleEls.set(p, el);
@@ -631,11 +869,43 @@ export class CityScreen {
       }
       el.setAttribute('aria-label', w.traySpoken(PLACES[p].name, spokenMoney(st.trays[p] ?? 0), trayFull(st, p)));
     }
+    this.fitHead();
   }
 
-  /** The Mission complete arrival or a pay in flight: walking errands wait. */
+  /**
+   * A tiny screen (320 x 240) with four signs up (Power and Tech in hand, after the lane run) has
+   * room for them only beside a short "Lagos" heading (W15, W16): the meter's picture folds away
+   * there, and the spoken heading keeps it. Everywhere else the heading box shows the meter (d5).
+   */
+  private fitHead(): void {
+    const done = this.building?.build ?? (this.pay?.done ? this.pay.build : null);
+    const boards = [...this.boardEls.keys()].filter((b) => b !== done).length;
+    const compact = this.view.w <= 360 && this.view.h <= 300 && boards + this.bubbleEls.size >= 4;
+    if (compact === this.head.classList.contains('compact')) return;
+    this.head.classList.toggle('compact', compact);
+    if (this.view.w > 1) {
+      this.measure();
+      this.cam = clampCam(this.cam, this.view);
+      this.requestDraw();
+    }
+  }
+
+  /** The Mission complete arrival, a build's moment or a boom: walking errands wait, and a tap skips (d6). */
   private busy(): boolean {
-    return this.mission !== null && this.mission.phase !== 'end';
+    return (this.mission !== null && this.mission.phase !== 'end') || !!this.moment?.build || this.boomRun !== null;
+  }
+
+  /** A tap or key while busy skips to the end and does nothing else (d6). */
+  private skipped(): boolean {
+    if (!this.busy()) return false;
+    this.skip();
+    return true;
+  }
+
+  private skip(): void {
+    if (this.mission && this.mission.phase !== 'end') this.skipMission();
+    else if (this.moment) this.endMoment(true);
+    else if (this.boomRun) this.finishBoom(true);
   }
 
   /** Where each sign (board or bubble) sat last, and why, so it is worked out again only when something around it changes. */
@@ -669,12 +939,14 @@ export class CityScreen {
     // Worked out again whenever the camera, the screen, the pins or the words change (so a walk
     // that slides the camera places them again), and once more when the hero stops.
     const settled = !this.hero.moving;
-    const key = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, this.view.top ?? 0, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet, settled ? 's' : 'm', this.covers.map((c) => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.w)}`).join(';'), ...asks.map((a) => `${a.id}=${a.tag}`)].join('|');
+    const key = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, this.view.top ?? 0, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet, this.hiddenSpot, this.soonPins.length, settled ? 's' : 'm', this.covers.map((c) => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.w)}`).join(';'), ...asks.map((a) => `${a.id}=${a.tag}`)].join('|');
     if (this.signLayout && this.signLayout.key === key) return this.signLayout.spots;
     let out = new Map<string, SignSpot>();
     const taken: ScreenBox[] = [];
     const all = this.pinBoxes();
-    const pins: Block[] = SPOT_IDS.map((spot) => ({ ...all[spot], soft: this.looks[spot] === 'fixed' }));
+    // Coming-soon pins are drawn pins too (W15): hard; on a tiny screen soft (tried clear first, d5 ruling).
+    const tiny = this.tiny();
+    const pins: Block[] = [...(Object.entries(all) as [SpotId, ScreenBox][]).map(([spot, b]) => ({ ...b, soft: this.looks[spot] === 'fixed' })), ...Object.values(this.soonBoxes()).map((b) => ({ ...b, soft: tiny }))];
     for (const ask of asks) {
       const had = this.signCache.get(ask.id);
       const prev = had && had.tag === ask.tag && had.zoom === this.cam.zoom ? { x: ask.anchor.x + had.dx, y: ask.anchor.y + had.dy, short: had.short } : null;
@@ -928,6 +1200,15 @@ export class CityScreen {
     (card.querySelector<HTMLElement>('.go') ?? back).focus({ preventScroll: true });
   }
 
+  /** d8: a coming-soon pin's card. */
+  private openSoon(id: SoonId): void {
+    const w = WORDS.city;
+    const back = button(w.back, 'minor', () => this.closeCard());
+    this.showCard(null, SOON_WORDS[id], [h('h2', {}, SOON_WORDS[id]), h('p', {}, w.soon[id]), h('p', { class: 'city-soon' }, w.soon.line)], [back]);
+    this.onClose = () => this.soonPins.find((p) => p.id === id)?.el.focus({ preventScroll: true });
+    back.focus({ preventScroll: true });
+  }
+
   private showCard(spot: SpotId | null, name: string, body: HTMLElement[], small: HTMLElement[]): HTMLElement {
     const card = h('div', { class: 'card narrow city-problem', role: 'dialog', 'aria-label': name, 'data-spot': spot ?? undefined }, ...body, h('div', { class: 'minor-row' }, ...small));
     this.cardSpot.replaceChildren(card);
@@ -967,6 +1248,10 @@ export class CityScreen {
     this.cardSpot.replaceChildren();
     if (was) this.pins.find((p) => p.spot === was)?.el.focus({ preventScroll: true });
     else if (ne) this.boardEls.get(ne)?.focus({ preventScroll: true });
+    const then = this.onClose;
+    this.onClose = null;
+    then?.();
+    if (!this.closed && !this.cardOpen && !this.busy() && !this.pay && boomDue(this.life.state)) this.startBoom();
   }
 
   private get cardOpen(): boolean {
@@ -1196,6 +1481,7 @@ export class CityScreen {
     if (p.done) {
       this.hooks.sound('built');
       this.building = { build: p.build, t: 0, before: p.before };
+      this.startMoment(p.build, p.before);
       if (this.hooks.still()) this.endBuild();
     } else {
       this.addLine(w.partPaid(priceText(p.bucket, p.amount), priceText(p.bucket, p.leftAfter)));
@@ -1204,14 +1490,324 @@ export class CityScreen {
     }
   }
 
+  /** The build is up: its board goes. The moment (d6) says the built line and paints the bright city. */
   private endBuild(): void {
-    const b = this.building;
-    if (!b) return;
+    if (!this.building) return;
     this.building = null;
-    this.addLine(WORDS.city.builtLine[b.build]);
-    this.announce();
+    this.makeSigns();
+    this.needDraw = true;
+  }
+
+  // ---------- The "watch it change" moment and the boom (d6) ----------
+
+  /**
+   * A board said "Done ✓" (`build`), or a full collect crossed a meter step (`build` null): the
+   * pin goes at once, the camera eases to the fix, a ring of colour spreads the bright city from
+   * the mat, people walk in, a danfo drives, the sting plays. `before` is the city before the pay.
+   */
+  private startMoment(build: BuildId | null, before: CityState): void {
+    if (this.moment) this.endMoment(true);
+    const after = this.life.state;
+    const step = stepBlock(before, after);
+    if (!build && !step) return;
+    const still = this.hooks.still();
+    const rects = build ? fixRects(build) : [];
+    const from = build ? MATS[build] : this.hero;
+    const sr = step ? areaRect(step) : null;
+    const mo: MomentRun = {
+      build,
+      t: 0,
+      still,
+      before,
+      after,
+      paint: paintOf(before, before.built.includes('market') || build === 'market'),
+      img: null,
+      from,
+      rects,
+      reach: ringReach(from, rects),
+      step: step && sr ? { id: step, rect: sr, at: middle(sr), reach: ringReach(middle(sr), [sr]) } : null,
+      stepAt: build ? MOMENT.sting : 0,
+      end: still ? MOMENT.hold : build ? MOMENT.end : MOMENT.stepRing,
+      cam: null,
+      fired: new Set(),
+    };
+    if (build && this.cardOpen) this.closeCard();
+    this.moment = mo;
+    if (!build) {
+      if (!still) mo.img = this.ringImg(paintOf(after), this.cam.zoom);
+      // A collect: the step ring, the step sound and the step line, where it is (no camera move).
+      this.momentWords(mo);
+      return;
+    }
+    this.meterShown = before.boom;
+    this.fitHead();
+    const spot = (SPOT_IDS as readonly string[]).includes(BUILD_KEY[build]) ? (BUILD_KEY[build] as SpotId) : null;
+    if (spot) {
+      this.hiddenSpot = spot;
+      this.makePins();
+    }
+    // The camera: the whole fix set and the hero on screen, keeping the zoom if they fit, else far
+    // (never in). Mission complete keeps the hero in the middle.
+    const s0 = camScale(this.cam.zoom, this.view);
+    const box = around(rects, [this.hero]);
+    const top = this.view.top ?? 0;
+    const room = this.view.h - top - this.bottomCover;
+    const zoom: Zoom = box.w * s0 <= this.view.w - 16 && box.h * s0 <= room - 16 ? this.cam.zoom : 'far';
+    if (zoom !== this.cam.zoom) this.cam = zoomCam(this.cam, this.view, zoom, toScreen(this.cam, this.view, this.hero));
+    const s = camScale(zoom, this.view);
+    const c = this.mission ? this.hero : middle(box);
+    const to = clampCam({ zoom, x: this.view.w / 2 - c.x * s, y: top + room / 2 - c.y * s }, this.view);
+    if (still) this.cam = to;
+    else {
+      mo.cam = { from: { ...this.cam }, to };
+      mo.img = this.ringImg(paintOf(after), zoom);
+    }
+    this.wake();
+  }
+
+  /**
+   * The bright picture a ring shows, painted once at the scale the map is drawn at while things
+   * move (at most 1 map unit a px, d10), so each frame copies it without resizing.
+   */
+  private ringImg(p: Paint, zoom: Zoom): HTMLCanvasElement | null {
+    const scale = Math.min(1, camScale(zoom, this.view) * Math.min(window.devicePixelRatio || 1, MAP_DPR_MOVING));
+    return paintImg(p, scale);
+  }
+
+  private stepMoment(dt: number): void {
+    const mo = this.moment;
+    if (!mo) return;
+    mo.t += dt;
+    this.needDraw = true;
+    const t = mo.t;
+    const once = (k: string, at: number): boolean => {
+      if (t < at || mo.fired.has(k)) return false;
+      mo.fired.add(k);
+      return true;
+    };
+    if (mo.cam) {
+      const k = ease(t / MOMENT.camera);
+      const { from, to } = mo.cam;
+      this.cam = { zoom: to.zoom, x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k };
+      if (k >= 1) mo.cam = null;
+    }
+    if (mo.build && !mo.still) {
+      // The meter's notches, one each 0.1 s.
+      const n = Math.max(0, Math.min(mo.after.boom - mo.before.boom, Math.floor((t - MOMENT.notches) / MOMENT.notch) + 1));
+      if (this.meterShown !== mo.before.boom + n) {
+        this.meterShown = mo.before.boom + n;
+        this.fillMeter();
+      }
+      if (once('walk', MOMENT.walk[0])) this.addWalkers(this.newAreas(mo), mo.build === 'road' ? 6 : 4, MOMENT.walk[1] - MOMENT.walk[0]);
+      if (once('drive', MOMENT.drive[0])) {
+        let r = DANFO_ROUTE[mo.build];
+        // Mission complete: the bus that brought the hero is the danfo, when it stands on that road.
+        const bus = this.mission?.phase === 'walk' ? this.mission.bus : null;
+        const across = r.dir === 'e' || r.dir === 'w';
+        const own = !!bus && Math.abs(across ? bus.y - r.from.y : bus.x - r.from.x) < 40;
+        if (bus && own) r = { ...r, from: across ? { x: bus.x, y: r.from.y } : { x: r.from.x, y: bus.y } };
+        this.hooks.sound('horn');
+        this.danfo = { r, d: 0, speed: routeLength(r) / (MOMENT.drive[1] - MOMENT.drive[0]), bus: own };
+      }
+      if (once('words', MOMENT.sting)) this.momentWords(mo);
+    }
+    if (t >= mo.end) this.endMoment(false);
+  }
+
+  /** The blocks this moment brightens (where its walkers go). */
+  private newAreas(mo: MomentRun): string[] {
+    const was = shownBoom(mo.before).bright;
+    return shownBoom(mo.after).bright.filter((a) => !was.includes(a) && a !== 'shore');
+  }
+
+  /** d6, d8: the sting and the built line, then the step sound and line; the spoken words. */
+  private momentWords(mo: MomentRun): void {
+    mo.fired.add('words');
+    const w = WORDS.city;
+    const said: string[] = [];
+    if (mo.build) {
+      this.hooks.sound('sting');
+      this.addLine(w.builtLine[mo.build]);
+      said.push(w.builtLine[mo.build]);
+    } else if (this.lines[0]) said.push(this.lines[0].text);
+    if (mo.step) {
+      this.hooks.sound('step');
+      this.addLine(w.stepLine, 1.5, true);
+      said.push(w.stepSpoken);
+    }
+    const st = this.life.state;
+    const m = meterOf(st.boom, st.boomSeen);
+    this.say.textContent = [...said, w.meterSpoken(m.points, m.next), `${w.spokenNaira(spokenMoney(st.kobo))}.`].join(' ');
+  }
+
+  /** The moment ends (or is skipped): everything bright, the walkers standing, the still city painted once. */
+  private endMoment(skip: boolean): void {
+    const mo = this.moment;
+    if (!mo) return;
+    if (!mo.fired.has('words')) this.momentWords(mo);
+    if (this.building) this.endBuild();
+    this.moment = null;
+    if (mo.img) {
+      const dpr = Math.min(window.devicePixelRatio || 1, MAP_DPR_MOVING);
+      const p = paintOf(this.life.state);
+      const want = Math.min(camScale(this.cam.zoom, this.view) * dpr, 2048 / CITY_MAP.w);
+      if (paintKey(p) === paintKey(paintOf(mo.after)) && Math.abs(Math.ceil(CITY_MAP.w * want) - mo.img.width) < 1) painted.set(`${paintKey(p)}|${this.cam.zoom}|${dpr}`, { img: mo.img, scale: want });
+      else mo.img.width = 0;
+    }
+    this.danfo = null;
+    if (mo.cam) this.cam = mo.cam.to;
+    if (mo.build) {
+      if (!mo.fired.has('walk')) this.addWalkers(this.newAreas(mo), mo.build === 'road' ? 6 : 4, 0, undefined, true);
+      if (skip) this.finishWalkers();
+    }
+    this.meterShown = null;
+    this.hiddenSpot = null;
     this.refresh();
-    if (this.mission && this.mission.phase === 'walk') this.endMission();
+    if (this.mission?.phase === 'walk') this.endMission();
+    if (!this.closed && boomDue(this.life.state)) this.startBoom(skip);
+    this.wake();
+  }
+
+  /** d6: the boom after a mark. Later marks (50, 90, ...) show the card only, until later areas exist. */
+  private startBoom(skip = false): void {
+    const st = this.life.state;
+    const mark = boomDue(st);
+    if (!mark || this.boomRun || this.cardOpen || this.moment?.build) return;
+    this.stopWalking();
+    this.banner.hidden = true;
+    if (mark > FIRST_BOOM || skip || st.boomSeen >= FIRST_BOOM) {
+      if (mark === FIRST_BOOM) this.addWalkers(['busPark'], 6, 0, undefined, true);
+      this.openBoomCard(mark);
+      return;
+    }
+    const still = this.hooks.still();
+    const run: BoomRun = {
+      mark,
+      t: 0,
+      still,
+      paint: paintOf(st),
+      img: still ? null : this.ringImg({ ...paintOf({ ...st, boomSeen: mark }), flats: false }, 'far'),
+      reach: ringReach(BOOM.from, [{ x: 0, y: 0, w: 1600, h: 1000 }]),
+      cam: null,
+      fired: new Set(),
+      jetty: null,
+    };
+    const to = centreOn({ x: 800, y: 560 }, 'far', this.view);
+    if (this.cam.zoom !== 'far') this.cam = zoomCam(this.cam, this.view, 'far', toScreen(this.cam, this.view, this.hero));
+    if (still) this.cam = to;
+    else run.cam = { from: { ...this.cam }, to };
+    this.boomRun = run;
+    this.wake();
+  }
+
+  private stepBoom(dt: number): void {
+    const r = this.boomRun;
+    if (!r) return;
+    r.t += dt;
+    this.needDraw = true;
+    if (r.still) {
+      // Reduced motion: the picture holds still, then everything appears in one cut.
+      if (r.t >= MOMENT.hold) {
+        this.hooks.sound('boom');
+        this.finishBoom(true);
+      }
+      return;
+    }
+    if (r.cam) {
+      const k = ease(r.t / BOOM.camera);
+      this.cam = { zoom: 'far', x: r.cam.from.x + (r.cam.to.x - r.cam.from.x) * k, y: r.cam.from.y + (r.cam.to.y - r.cam.from.y) * k };
+      if (k >= 1) r.cam = null;
+    }
+    if (r.t >= BOOM.tune && !r.fired.has('tune')) {
+      r.fired.add('tune');
+      this.hooks.sound('boom');
+    }
+    if (r.t >= BOOM.walk[0] && !r.fired.has('walk')) {
+      r.fired.add('walk');
+      this.addWalkers(['busPark'], 6, BOOM.walk[1] - BOOM.walk[0], BRIDGE_FOOT);
+    }
+    if (r.t >= BOOM.card) this.finishBoom(false);
+  }
+
+  /** The boom's end, or a skip: straight to the open boom card. */
+  private finishBoom(skip: boolean): void {
+    const r = this.boomRun;
+    if (!r) return;
+    this.boomRun = null;
+    if (r.img) r.img.width = 0;
+    if (r.cam) this.cam = r.cam.to;
+    if (!r.fired.has('walk')) this.addWalkers(['busPark'], 6, 0, undefined, true);
+    if (skip) this.finishWalkers();
+    this.openBoomCard(r.mark);
+  }
+
+  /** d8: "Lagos is booming!"; saved as seen at once (d9), the cog turns at the first boom. */
+  private openBoomCard(mark: number): void {
+    const w = WORDS.city.boom;
+    const st = this.life.state;
+    const cog = mark === FIRST_BOOM && st.boomSeen < FIRST_BOOM && !(this.hooks.cogOn?.() ?? false);
+    this.life.set({ ...st, boomSeen: Math.max(st.boomSeen, mark) }, true);
+    setJetty(shownBoom(this.life.state).boom);
+    this.soonWait = true;
+    this.refresh();
+    const go = button(w.go, 'go', () => this.closeCard());
+    this.showCard(null, w.heading, [h('h2', {}, w.heading), h('p', {}, w.body), ...(cog ? [h('p', { class: 'city-fixed' }, w.cog)] : []), go], []);
+    this.onClose = () => {
+      this.soonWait = false;
+      this.soonDrop = true;
+      this.makePins();
+      this.requestDraw();
+    };
+    go.focus({ preventScroll: true });
+    this.say.textContent = [w.heading, w.body, ...(cog ? [w.cog] : [])].join(' ');
+    if (cog) {
+      this.hooks.sound('cogRatchet');
+      window.setTimeout(() => {
+        if (!this.closed) this.hooks.sound('cogBell');
+      }, 320);
+    }
+  }
+
+  /**
+   * People walk in to the fronts of `areas` (from `from`, else the bus park or the nearest road
+   * end), arriving about `dur` s later. Never more than 8 moving (W10): the rest are left out.
+   * `now`: they are already standing there (reduced motion, a skip).
+   */
+  private addWalkers(areas: readonly string[], want: number, dur: number, from?: Pt, now = false): void {
+    if (now || this.hooks.still()) {
+      for (const [k, p] of walkTargets(areas, want).entries()) this.standAt({ ...p, look: k * 3 + 1 });
+      return;
+    }
+    const porter = this.life.state.built.includes('market') && this.life.state.fixed.includes('potholes') ? 1 : 0;
+    const n = Math.max(0, Math.min(want, MOVING_PEOPLE - porter - this.walkers.length));
+    this.walkers.push(...planWalkers(areas, n, dur, from));
+  }
+
+  private standAt(p: { x: number; y: number; look: number }): void {
+    this.standing.push(p);
+    if (this.standing.length > 24) this.standing.shift();
+  }
+
+  private finishWalkers(): void {
+    for (const w of this.walkers) this.standAt({ ...w.pts[w.pts.length - 1]!, look: w.look });
+    this.walkers = [];
+  }
+
+  private stepLife(dt: number): void {
+    if (this.walkers.length) {
+      this.needDraw = true;
+      this.walkers = this.walkers.filter((w) => {
+        w.t += dt;
+        const at = walkerAt(w);
+        if (at.done) this.standAt({ x: at.x, y: at.y, look: w.look });
+        return !at.done;
+      });
+    }
+    const d = this.danfo;
+    if (d && d.d < routeLength(d.r)) {
+      d.d = driveOn(d.r, d.d, d.speed * dt, this.hero);
+      this.needDraw = true;
+    }
   }
 
   private stepBuild(dt: number): void {
@@ -1232,6 +1828,7 @@ export class CityScreen {
       const r = collectTray(this.life.state, p);
       if (!r) continue;
       if (!stop && !this.hooks.gentle()) continue;
+      const before = this.life.state;
       this.life.set(r.next, true);
       this.collecting = { place: p, amount: r.amount, t: 0, pieces: flyingCount(r.amount / 100) };
       this.hooks.sound('collect');
@@ -1241,6 +1838,15 @@ export class CityScreen {
       this.fillChips();
       this.announce();
       if (this.hooks.still()) this.collecting = null;
+      if (r.full) {
+        this.fillMeter();
+        this.startMoment(null, before);
+        if (!this.moment && r.next.boom > before.boom) {
+          const m = meterOf(r.next.boom, r.next.boomSeen);
+          this.say.textContent = `${this.say.textContent ?? ''} ${WORDS.city.meterSpoken(m.points, m.next)}`.trim();
+          this.startBoom();
+        }
+      }
       this.wake();
       return true;
     }
@@ -1259,9 +1865,14 @@ export class CityScreen {
     }
   }
 
-  private addLine(text: string, dur = LINE_TIME): void {
-    this.lines = [{ text, t: 0, dur }];
-    this.say.textContent = text;
+  /** A line over the hero; `after`: it waits for the line showing now to end. */
+  private addLine(text: string, dur = LINE_TIME, after = false): void {
+    const last = this.lines[this.lines.length - 1];
+    if (after && last) this.lines.push({ text, t: 0, dur, wait: last.wait + (1 - last.t) * last.dur });
+    else {
+      this.lines = [{ text, t: 0, dur, wait: 0 }];
+      this.say.textContent = text;
+    }
   }
 
   /** After a pay or a collect, the new amounts are read out once (W9). */
@@ -1280,6 +1891,7 @@ export class CityScreen {
       this.stepPay(0);
     }
     if (this.building) this.endBuild();
+    if (this.moment) this.endMoment(true);
     this.collecting = null;
   }
 
@@ -1327,7 +1939,7 @@ export class CityScreen {
     } else if (ms.phase === 'walk') {
       ms.t += dt;
       // A part pay ends the mission as the money lands (nothing to build yet).
-      if (!this.pay && !this.building && !this.hero.moving && !this.arrived && ms.t > BUS_ARRIVAL.time + 0.5) this.endMission();
+      if (!this.pay && !this.building && !this.moment && !this.hero.moving && !this.arrived && ms.t > BUS_ARRIVAL.time + 0.5) this.endMission();
     } else {
       ms.after += dt;
       if (ms.after >= MISSION_LINGER) {
@@ -1379,6 +1991,7 @@ export class CityScreen {
     this.endMission();
     this.announce();
     this.refresh();
+    if (boomDue(this.life.state)) this.startBoom(true);
     this.wake();
   }
 
@@ -1387,7 +2000,7 @@ export class CityScreen {
   private setHint(id: string | null): void {
     this.hintId = id;
     const w = WORDS.city;
-    const text = id === 'walk' ? (this.hooks.touch() ? w.hintWalk : w.hintWalkKeys) : id === 'buka' ? w.hintBuka() : id === 'collect' ? w.hintCollect : '';
+    const text = id === 'walk' ? (this.hooks.touch() ? w.hintWalk : w.hintWalkKeys) : id === 'buka' ? w.hintBuka() : id === 'collect' ? w.hintCollect : id === 'bright' ? w.hintBright : '';
     this.hintEl.textContent = text;
     this.hintEl.hidden = !text;
     if (id && id !== 'walk') this.life.set(withHint(this.life.state, id));
@@ -1402,13 +2015,29 @@ export class CityScreen {
       this.hintAt = this.time + 1;
       return;
     }
-    if (!st.hints.includes('buka') && boardsShown(st).includes('mamaPut')) this.setHint('buka');
+    // d6: after the first moment, once: "Each fix makes Lagos brighter!" for 3 s, and the
+    // Booming box gives one short pulse.
+    if (!st.hints.includes('bright') && st.fixed.length + st.built.length > 0) {
+      this.setHint('bright');
+      this.hintAt = this.time + 3;
+      if (!this.hooks.still()) {
+        this.head.classList.remove('pulse');
+        void this.head.offsetWidth;
+        this.head.classList.add('pulse');
+      }
+    } else if (!st.hints.includes('buka') && boardsShown(st).includes('mamaPut')) this.setHint('buka');
     else if (!st.hints.includes('collect') && (st.trays.buka ?? 0) >= 100) this.setHint('collect');
   }
 
   // ---------- Looking around ----------
 
   private measure(): void {
+    this.fillMeter();
+    // d5: when the first row does not fit (320 px with "Sound: off"), "Booming" goes from line 1.
+    const head = this.head;
+    head.classList.remove('tight');
+    const right = this.el.querySelector<HTMLElement>('.city-top-right');
+    if (right && right.getBoundingClientRect().top > head.getBoundingClientRect().top + 4) head.classList.add('tight');
     const r = this.map.getBoundingClientRect();
     const top = this.el.querySelector<HTMLElement>('.city-top');
     const covered = Math.max(top ? top.getBoundingClientRect().bottom : r.top, this.chips.getBoundingClientRect().bottom) - r.top;
@@ -1424,11 +2053,13 @@ export class CityScreen {
     });
     const bottom = this.el.querySelector<HTMLElement>('.city-bottom');
     this.bottomCover = bottom ? Math.max(0, r.bottom - bottom.getBoundingClientRect().top) : 0;
+    this.skipEl.style.bottom = `${Math.round(this.bottomCover + 6)}px`;
     this.view = { w: Math.max(1, r.width), h: Math.max(1, r.height), top: Math.max(0, covered) };
   }
 
   private readonly onResize = (): void => {
     this.measure();
+    this.fitHead();
     this.cam = clampCam(this.cam, this.view);
     this.paintPins();
     this.requestDraw();
@@ -1473,8 +2104,8 @@ export class CityScreen {
     // Pins, boards, bubbles and arrows are buttons: their click does the work.
     if (e.target instanceof Element && e.target.closest('button')) return;
     if (this.busy()) {
-      // Tap anywhere skips Mission complete.
-      if (!this.hooks.ignoreTap(e)) this.skipMission();
+      // Tap anywhere skips Mission complete, the moment or the boom (d6), and does nothing else.
+      if (!this.hooks.ignoreTap(e)) this.skip();
       return;
     }
     const p = this.local(e);
@@ -1548,11 +2179,18 @@ export class CityScreen {
 
   private readonly onKey = (e: KeyboardEvent): void => {
     if (this.closed) return;
+    const arrow = e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown';
     if (this.busy()) {
-      if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+      // d6: Space, Enter, Escape or an arrow skips; it does nothing else (an arrow walks only once pressed again).
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape' || arrow) {
         e.preventDefault();
-        this.skipMission();
+        if (arrow) this.skipHeld.add(e.key);
+        if (!e.repeat) this.skip();
       }
+      return;
+    }
+    if (arrow && this.skipHeld.has(e.key)) {
+      e.preventDefault();
       return;
     }
     if (this.cardOpen) {
@@ -1576,6 +2214,7 @@ export class CityScreen {
   };
 
   private readonly onKeyUp = (e: KeyboardEvent): void => {
+    this.skipHeld.delete(e.key);
     if (this.keys.delete(e.key)) this.wake();
   };
 
@@ -1595,6 +2234,10 @@ export class CityScreen {
       this.lines.length > 0 ||
       this.wobble !== null ||
       this.mission !== null ||
+      this.moment !== null ||
+      this.boomRun !== null ||
+      this.walkers.length > 0 ||
+      (this.danfo !== null && this.danfo.d < routeLength(this.danfo.r)) ||
       this.arrived ||
       this.hintId === 'walk-wait'
     );
@@ -1661,7 +2304,7 @@ export class CityScreen {
       else this.setHint('walk');
     }
     this.stepMission(dt);
-    if (this.mission?.phase !== 'bus') {
+    if (this.mission?.phase !== 'bus' && !this.moment?.build && !this.boomRun) {
       this.stepHold();
       this.moveHero(dt);
       this.onStand(dt);
@@ -1669,6 +2312,16 @@ export class CityScreen {
     this.stepPay(dt);
     this.stepBuild(dt);
     this.stepCollect(dt);
+    this.stepMoment(dt);
+    this.stepBoom(dt);
+    this.stepLife(dt);
+    if (this.hintId === 'bright' && this.time >= this.hintAt) this.setHint(null);
+    // "Tap to skip" (small, bottom middle) while a moment or a boom plays; Mission complete has its own.
+    const skip = (!!this.moment?.build || !!this.boomRun) && !(this.mission && this.mission.phase !== 'end');
+    if (this.skipEl.hidden === skip) {
+      this.skipEl.textContent = this.hooks.touch() ? WORDS.city.skip : WORDS.city.skipKeys;
+      this.skipEl.hidden = !skip;
+    }
     if (this.ring) {
       this.ring.t += dt / WALKER.ringTime;
       if (this.ring.t >= 1) this.ring = null;
@@ -1680,24 +2333,28 @@ export class CityScreen {
       this.needDraw = true;
     }
     if (this.lines.length) {
-      for (const l of this.lines) l.t += dt / l.dur;
+      for (const l of this.lines) {
+        if (l.wait > 0) l.wait -= dt;
+        else l.t += dt / l.dur;
+      }
       this.lines = this.lines.filter((l) => l.t < 1);
       this.needDraw = true;
     }
-    if (!this.mission && !this.hintId && !this.pay && !this.building) this.pickHint();
+    if (!this.mission && !this.hintId && !this.pay && !this.building && !this.moment && !this.boomRun && !this.cardOpen) this.pickHint();
   }
 
   /** The painted still city for these looks at this zoom step (made again only when a look or the size changes). */
   private picture(dpr: number): { img: HTMLCanvasElement; scale: number } | null {
     const want = Math.min(camScale(this.cam.zoom, this.view) * dpr, 2048 / CITY_MAP.w);
     const st = this.shown;
-    const market = st.built.includes('market') || this.building?.build === 'market';
-    const looks = `${this.looks.potholes}|${this.looks.lightsOut}|${this.looks.slowInternet}|${market}`;
+    // A moment or a boom shows the city as it was until it ends (the rings show the bright one).
+    const paint = this.moment?.paint ?? this.boomRun?.paint ?? paintOf(st, st.built.includes('market') || this.building?.build === 'market');
+    const looks = paintKey(paint);
     const key = `${looks}|${this.cam.zoom}|${dpr}`;
     const have = painted.get(key);
     if (have && Math.abs(have.scale - want) < 1e-6) return have;
     for (const k of painted.keys()) if (!k.startsWith(`${looks}|`)) painted.delete(k);
-    const img = makeCityCanvas(this.looks, want, 2048, { market });
+    const img = paintImg(paint, want);
     if (!img) return null;
     const made = { img, scale: want };
     painted.set(key, made);
@@ -1707,7 +2364,7 @@ export class CityScreen {
   private draw(): void {
     if (this.closed) return;
     this.needDraw = false;
-    const moving = this.hero.moving || this.mission?.phase === 'bus' || this.hold?.on === true;
+    const moving = this.hero.moving || this.mission?.phase === 'bus' || this.hold?.on === true || this.moment !== null || this.boomRun !== null || this.walkers.length > 0;
     const dpr = Math.min(window.devicePixelRatio || 1, moving ? MAP_DPR_MOVING : MAP_DPR);
     const pw = Math.round(this.view.w * dpr);
     const ph = Math.round(this.view.h * dpr);
@@ -1719,8 +2376,9 @@ export class CityScreen {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = CITY_COLOURS.water;
     g.fillRect(0, 0, pw, ph);
-    const pic = this.picture(dpr);
     const s = camScale(this.cam.zoom, this.view);
+    const covered = this.boomCovers();
+    const pic = covered ? { img: covered, scale: covered.width / CITY_MAP.w } : this.picture(dpr);
     if (pic) {
       const x = Math.round(this.cam.x * dpr);
       const y = Math.round(this.cam.y * dpr);
@@ -1731,8 +2389,75 @@ export class CityScreen {
       const sh = Math.min(pic.img.height - sy, (ph - Math.max(0, y)) / k);
       if (sw > 0 && sh > 0) g.drawImage(pic.img, sx, sy, sw, sh, Math.max(0, x), Math.max(0, y), sw * k, sh * k);
     }
+    if (!covered) this.drawRings(g, dpr, s);
     this.drawLive(g, dpr, s);
     this.placePins();
+  }
+
+  /**
+   * d6, d10: the colour rings. The bright picture (1 map unit a px) is drawn only inside each ring
+   * (and, for a fix or a step, only over its own blocks), with a soft cream-gold edge while it grows.
+   */
+  /** The boom's bright picture once its ring has passed every corner of the screen (then it is the only copy a frame needs). */
+  private boomCovers(): HTMLCanvasElement | null {
+    const bo = this.boomRun;
+    if (!bo?.img) return null;
+    const r = bo.reach * ease(span(bo.t, BOOM.ring));
+    const a = toMap(this.cam, this.view, { x: 0, y: 0 });
+    const b = toMap(this.cam, this.view, { x: this.view.w, y: this.view.h });
+    for (const [x, y] of [[a.x, a.y], [b.x, a.y], [a.x, b.y], [b.x, b.y]] as const) if (Math.hypot(x - BOOM.from.x, y - BOOM.from.y) > r - 8) return null;
+    return bo.img;
+  }
+
+  private drawRings(g: CanvasRenderingContext2D, dpr: number, s: number): void {
+    const mo = this.moment;
+    const bo = this.boomRun;
+    const img = mo?.img ?? bo?.img;
+    if (!img) return;
+    const parts: { x: number; y: number; r: number; k: number; rects: Rect[] | null }[] = [];
+    if (mo) {
+      const k = span(mo.t, MOMENT.ring);
+      if (mo.rects.length && k > 0) parts.push({ ...mo.from, r: mo.reach * ease(k), k, rects: mo.rects });
+      const st = mo.step;
+      const ks = st ? Math.max(0, Math.min(1, (mo.t - mo.stepAt) / MOMENT.stepRing)) : 0;
+      if (st && ks > 0) parts.push({ ...st.at, r: st.reach * ease(ks), k: ks, rects: [st.rect] });
+    } else if (bo) {
+      const k = span(bo.t, BOOM.ring);
+      if (k > 0) parts.push({ ...BOOM.from, r: bo.reach * ease(k), k, rects: null });
+    }
+    if (!parts.length) return;
+    const k = s * dpr;
+    const sc = img.width / CITY_MAP.w;
+    const a = toMap(this.cam, this.view, { x: 0, y: 0 });
+    const b = toMap(this.cam, this.view, { x: this.view.w, y: this.view.h });
+    const sx = Math.max(0, Math.floor(a.x));
+    const sy = Math.max(0, Math.floor(a.y));
+    const sw = Math.min(CITY_MAP.w, Math.ceil(b.x)) - sx;
+    const sh = Math.min(CITY_MAP.h, Math.ceil(b.y)) - sy;
+    if (sw <= 0 || sh <= 0) return;
+    g.save();
+    g.setTransform(k, 0, 0, k, this.cam.x * dpr, this.cam.y * dpr);
+    for (const p of parts) {
+      g.save();
+      if (p.rects) {
+        g.beginPath();
+        for (const q of p.rects) g.rect(q.x, q.y, q.w, q.h);
+        g.clip();
+      }
+      g.beginPath();
+      g.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      g.save();
+      g.clip();
+      g.drawImage(img, sx * sc, sy * sc, sw * sc, sh * sc, sx, sy, sw, sh);
+      g.restore();
+      if (p.k < 1) {
+        g.strokeStyle = 'rgba(255,236,170,0.85)';
+        g.lineWidth = 6 / s;
+        g.stroke();
+      }
+      g.restore();
+    }
+    g.restore();
   }
 
   /** Everything that moves, over the still city. */
@@ -1753,6 +2478,31 @@ export class CityScreen {
       if (!this.building || this.building.build !== b || building < 0.5) drawPayMat(g, MATS[b].x, MATS[b].y, onMat === b || this.pay?.build === b);
     }
     if (this.ring) drawWalkRing(g, this.ring.x, this.ring.y, still ? 0 : this.ring.t);
+    // The boom (d6): the flats grow up from the ground; the ferry glides in to the jetty.
+    const bo = this.boomRun;
+    if (bo && !bo.still) {
+      if (bo.t >= BOOM.flats[0]) drawBoomFlats(g, ease(span(bo.t, BOOM.flats)));
+      if (bo.t >= BOOM.ferry[0]) {
+        const J = JETTY_PIC;
+        if (!bo.jetty || Math.abs(bo.jetty.k - k) > 1e-6) {
+          const img = document.createElement('canvas');
+          img.width = Math.ceil(J.w * k);
+          img.height = Math.ceil(J.h * k);
+          const c = img.getContext('2d');
+          if (c) {
+            c.scale(k, k);
+            c.translate(-J.x, -J.y);
+            drawJetty(c, 410, 838);
+          }
+          bo.jetty = { img, k };
+        }
+        const jk = bo.jetty.img.width / J.w;
+        const cut = J.cut - J.x;
+        const dx = (1 - ease(span(bo.t, BOOM.ferry))) * 260;
+        g.drawImage(bo.jetty.img, 0, 0, cut * jk, J.h * jk, J.x, J.y, cut, J.h);
+        g.drawImage(bo.jetty.img, cut * jk, 0, (J.w - cut) * jk, J.h * jk, J.cut + dx, J.y, J.w - cut, J.h);
+      }
+    }
     // Standing things, back to front: the places, the hero (or the bus bringing them).
     type Item = { y: number; draw: () => void };
     const items: Item[] = [];
@@ -1781,13 +2531,25 @@ export class CityScreen {
         },
       });
     }
+    // People who walked in (moving, then standing) and the moment's danfo.
+    for (const p of this.standing) items.push({ y: p.y, draw: () => drawCityFolk(g, p.x, p.y, p.look) });
+    for (const w of this.walkers) {
+      const at = walkerAt(w);
+      const bob = still ? 0 : Math.abs(Math.sin((w.t - w.wait) * 12)) * 1.2;
+      items.push({ y: at.y, draw: () => drawCityFolk(g, at.x, at.y - bob, w.look) });
+    }
+    const dv = this.danfo;
+    if (dv) {
+      const at = routeAt(dv.r, dv.d);
+      items.push({ y: at.y + 6, draw: () => drawCityBus(g, at.x, at.y, dv.r.dir) });
+    }
     const size = walkerSize(s);
     const ms = this.mission;
     if (ms && ms.phase === 'bus') {
       const kk = still ? 1 : Math.min(1, ms.t / BUS_ARRIVAL.time);
       items.push({ y: ms.bus.y + 25, draw: () => drawBusArrival(g, this.hooks.look(), ms.bus.x, ms.bus.y, kk, size) });
     } else {
-      if (ms && ms.phase === 'walk') items.push({ y: ms.bus.y, draw: () => drawCityBus(g, ms.bus.x, ms.bus.y, 'e') });
+      if (ms && ms.phase === 'walk' && !this.danfo?.bus) items.push({ y: ms.bus.y, draw: () => drawCityBus(g, ms.bus.x, ms.bus.y, 'e') });
       const hero = this.hero;
       items.push({
         y: hero.y,
@@ -1839,6 +2601,7 @@ export class CityScreen {
       return { id: `board ${b}`, tag: `${units}`, anchor: m, prefer: [beside, other], box0, boxShort, hw, hh, mayHide: false, b, units, done };
     });
     const spots = this.layoutSigns(bubbleAsks, boardAsks);
+    this.hideCoveredSoon([...spots.values()].map((sp) => sp.box));
     for (const a of boardAsks) {
       const foot = spots.get(a.id)!;
       const { b, units, done } = a;
@@ -1880,7 +2643,7 @@ export class CityScreen {
       const from = toScreen(this.cam, this.view, BUBBLE_AT[col.place]);
       this.drawPieces(g, 'naira', from, body, col.t, payTime(col.amount / 100), col.pieces);
     }
-    for (const l of this.lines) drawCollectLine(g, heroAt.x, heroAt.y - size * s - 18, l.text, l.t, still);
+    for (const l of this.lines) if (l.wait <= 0) drawCollectLine(g, heroAt.x, heroAt.y - size * s - 18, l.text, l.t, still);
     this.drawArrows(g);
     g.restore();
   }
@@ -2043,6 +2806,9 @@ export class CityScreen {
       ...this.bubbleBox.values(),
       ...this.covers,
       ...this.pins.filter((p) => this.looks[p.spot] !== 'fixed').map((p) => pins[p.spot]),
+      ...Object.entries(this.soonBoxes())
+        .filter(([id]) => !this.soonHidden.has(id as SoonId))
+        .map(([, b]) => b),
     ].filter(onView);
     for (const p of this.pins) {
       if (this.looks[p.spot] === 'fixed') continue;
@@ -2074,7 +2840,7 @@ export class CityScreen {
       this.placeSign(el, { x: at.x - r, y: at.y - r, w: r * 2, h: r * 2 });
       el.dataset['for'] = a.label;
       el.onclick = (e) => {
-        if (this.hooks.ignoreTap(e) || this.busy() || this.cardOpen) return;
+        if (this.hooks.ignoreTap(e) || this.cardOpen || this.skipped() || this.paying) return;
         a.go();
       };
       this.arrowBox.push({ icon: a.icon, x: at.x, y: at.y, tap: at.tap });

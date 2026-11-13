@@ -22,6 +22,7 @@ Owner: designer. First written 9 Nov 2026 from Tp's words in chat. Updated 10 No
 | **Fufu now, not after slice 3** (changes R3's timing only): hot fufu balls thrown with a Throw button, never fire. Corn tune. The city starts now, beside the polish (po's reading of Tp's 10 Nov play; decision line 42 waits to be pasted) | 10 Nov 2026 | Parts 2C, 2D, 5; design S2.9, S2.15 |
 | Hausa, Igbo and Yoruba get an equal share over the updates; next regions north and east (R5) | 10 Nov 2026 | Part 2D, part 1 "It never ends" |
 | W1a to W4a: the hero walks Lagos from above; pay spots on the ground replace the Fix button; fixed places earn into a capped tray you walk over to collect; built as step (c), before the lane run | 11 Nov 2026 | Part 5W |
+| W17: A + B together now as S3d1 "The Booming meter you can see"; C in S3e1; Lagos starts "a bit faded but still warm and proud"; hide a pin as soon as its board says "Done ✓"; finish Lagos (d, e, f) before a second state | 13 Nov 2026 | Part 5 (d) and (e), W17 |
 
 Still a draft (not confirmed): the challenge road map (part 1), and the five questions at the end. Part 5W has six small questions of its own (W13), built on the recommended answers until Tp says otherwise.
 
@@ -113,6 +114,8 @@ Exact words:
 - Slice 3 marks: the first boom at 20 points (W6, Tp 12 Nov 2026; replaces "after 3 fixes"). This also turns Lagos's cog on Nigeria's wheel. Later marks come further apart.
 
 The meter replaces the old "Lagos: 1,200 new people" counter (question 4).
+
+The build-ready note (Tp, 13 Nov 2026) is part 5 step (d): the meter now sits inside the "Lagos" heading box, and Lagos starts tired and brightens with each fix and each step of the meter (W17 A + B).
 
 ### The challenge road (draft, for Tp to say yes or no: question 1)
 
@@ -396,8 +399,8 @@ Slice 3 starts now, beside the slice 2 polish (po's reading of Tp's 10 Nov play,
 | (a) The intro story | 6 frames, Skip, plays once, "Watch the story" in Settings | **Ready to start now** |
 | (b) Lagos from above | the city screen, drag and zoom, three pins, the bucket counters, saved on the phone | **Ready to start now** |
 | (c) Wins go home | a street win pays Naira, fixes the Potholes pin, "Mission complete!" and the new road | after (b) |
-| (d) The Booming meter | the bar fills with each fix, build and full collect; at 20 points "Lagos is booming!" (W6) | after (c) |
-| (e) The challenge road | the road of bus stops replaces the Streets list | after (c) |
+| (d) The Booming meter you can see | Lagos starts tired; each fix brightens its part while you watch; the meter in the "Lagos" box fills; at 20 points the area is bright, new buildings rise, "Lagos is booming!" (W6, W17 A + B) | **Build-ready (13 Nov)** |
+| (e) The challenge road | the road of bus stops replaces the Streets list; each stop's run starts on the same street as its city spot, tired or bright (W17 C) | after (c) |
 | (f) The lane run and the Blackout | the second kind of challenge; pins 2 and 3 can be fixed | designer note first (f0), then art and gamedev |
 
 Size: the first load is 336.6 KB today. Budgets below are for the gzipped first load, code and code-drawn art together. All six together: about +216 KB, so about 553 KB, well under the 1.5 MB slice 3 aim and the 3 MB rule.
@@ -452,17 +455,236 @@ Done when: drag stays at 45 fps or more at 4x CPU slowdown and idle draws nothin
 Owners and budgets: art makes the hero getting off the bus (every body, S2.3) and the Potholes fix (under 12 KB). gamedev builds the money, the card changes, the pay-at-once rule and the Mission complete scene (under 8 KB).
 Done when: a first-timer goes city, card, street 1, win, Mission complete, back to a fixed road, in one go; losing keeps the money; money adds up right in tests; the scene skips by tap and key; nothing is lost on reload.
 
-#### (d) The Booming meter
+#### (d) The Booming meter you can see (S3d1, build-ready 13 Nov 2026)
 
-Words and rules: part 1 "The Booming meter". A bar at the top centre of the city screen with the word "Booming" and "9 of 20" under it, five big steps of four notches to the first boom (W6). At 20 points, the card "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." / button "See Lagos", then two new pins marked "Coming soon". The first boom turns Lagos's cog on Nigeria's wheel; a player whose cog already turns from the hall keeps it (the cog never turns off).
-Owners and budgets: art draws the bar, the rising-building icon and the grown-city pictures (under 8 KB with (c)'s blocks reused). gamedev builds the bar, the card and the cog link (under 3 KB).
-Done when: the meter never goes down, survives reload, reads "Booming meter. 9 of 20 to the next boom." to screen readers, and the steps show without colour.
+Owner: designer. Tp, 13 Nov 2026: yes to W17 A + B together as S3d1; Lagos starts "a bit faded but still warm and proud"; hide a pin as soon as its board says "Done ✓". This note merges the old step (d) (part 1 "The Booming meter", W6, W14 answer 1) with W17 A and B. It replaces every earlier (d) line. Part 1, W6 and W17 stay as the reasons; where they differ, this note wins.
+
+**The idea in one line:** Lagos starts tired; every fix brightens its own part of the city while you watch, every step of the Booming meter brightens one more block, and at 20 points the whole area is bright, new buildings rise and Lagos's cog turns.
+
+##### d1. Points and marks (unchanged, now in one place)
+
+- A fix or a build fills **4**. Collecting a **full** tray fills **1**, at most 4 from collecting for each boom (`boomCollect`, reset at each mark). It never goes down.
+- Marks: **20**, then **50, 90, 140**, then each gap 10 bigger than the one before (200, 270, 350, ...). Code: `nextBoom()` in src/game/city.ts, already right.
+- The bar always shows the stretch from the last mark to the next one in **5 big steps**. Each step holds (gap ÷ 5) notches: 4 notches a step to 20; 6 a step from 20 to 50; 8 from 50 to 90; 10 from 90 to 140.
+- In slice 3 the most a player can reach is 24 (five boards = 20, plus 4 from collecting after the boom). So only the first boom needs pictures now. Later marks show the card only, until later areas exist.
+
+##### d2. Tired Lagos (W17 A): the exact look
+
+**Rule for the art: tired, never bad.** Lagos is a busy, proud city having a slow day: sun out, warm faded colours, some shops not open yet, rubbish waiting to be collected. Every block, tired or bright, has at least one person doing something proud (sweeping their front, opening a shutter, setting out goods, reading on a bench). No broken glass, no writing on walls, no one begging, no one idle as "the problem", no stray animals, no flies or smell lines, never grey or gloomy. Every state will start tired in exactly this way, so no place is drawn worse than another.
+
+Shared tired pieces (drawn in code, our own shapes, each readable by **shape**, not colour alone):
+| Piece | Tired | Bright |
+|---|---|---|
+| Walls and roofs | Each colour mixed 50% toward warm sand `#c9b48c` (a colour that goes greyish fades once more, so it stays warm); roofs then a further 22% toward dusty brown `#9a8262`, so tired roofs are darker than bright ones in greyscale too. Never grey, never blue. Shadows stay. | The block's own colours with 18% more saturation (same lightness) |
+| Windows | 2 of every 3 windows filled warm brown `#5a4a3a`, **no glint** | Today's glass colour plus a 1 px white glint line in each |
+| Shop fronts | Some have a **roll-down shutter**: brown-grey with 4 flat lines across | Shutter rolled up (a thin roll at the top), goods out front: a crate of tomatoes, a rack of cloth, a stack of plain boxes (no brand, no writing) |
+| Kerb rubbish | One **neat tied sack and a box** by the kerb, waiting for collection (never spilled, never a dump) | Gone |
+| Trees | 80% size, dull olive-ochre leaves `#968a50` | Today's size and green |
+| Park grass | Grass and pitch mixed 35% toward the sand, with dry patches `#bba468` over about 60% of it; the pitch lines faint | All green, lines bright white |
+| Pavement | Lot `#e6d4ae`, kerb `#b49e74` (a little dustier); the bus park's tarmac mixed 22% toward the sand | Lot `#f3ead3`, kerb `#c9b994` |
+| Lamps on ordinary blocks | Lamp heads drawn off (no glow ring) | On |
+| People | A few still people (counts below) | More still people (counts below), plus the walkers who walked in |
+
+Block by block (ids as in src/art/city.ts `CITY_BLOCKS`; rows top to bottom, columns left to right; "fronts" means shop fronts, one per box):
+| Block | What it is | Fronts | Tired: shutters down | Tired: kerb sacks | Tired: people (what they do) | Bright: people | Bright: extra |
+|---|---|---|---|---|---|---|---|
+| r0c0 | back row, left | 3 | 2 | 1 | 1 (a trader at the open shop) | 4 | 2 potted plants by the doors |
+| r0c1 | back row | 2 | 1 | 1 | 1 (a woman sweeping her front) | 4 | a fruit seller's umbrella |
+| r0c2 | the park | 1 kiosk | 0 (kiosk half open) | 0 | 1 (an elder reading on a bench) | 3 (two children with a ball, the elder) | green grass, bright pitch lines |
+| r0c3 | back row, right | 3 | 2 | 1 | 1 (a man opening his shutter) | 4 | washing on a line on one roof |
+| r1c0 | beside the Alausa road | 3 | 2 | 1 | 1 (a tailor at a machine) | 4 | goods out front |
+| r1c1 | middle row | 2 | 1 | 1 | 1 (a trader setting out goods) | 4 | the new flats rise here at the first boom (d4) |
+| r1c2 | middle row | 2 | 1 | 1 | 1 (a girl with a school bag) | 4 | goods out front |
+| r1c3 | Computer Village, the Slow internet spot | 3 | 2 | 1 | 1 (a repairer at a table) | 9 (as today) | shop screens lit, mast on (today's fixed look) |
+| r2c0 | front row, left | 3 | 2 | 1 | 1 (a woman with a basket) | 4 | goods out front |
+| r2c1 | by the Ikeja bus stop, the Lights out spot | 2 | 1 | 1 | 1 (a man waiting at the stop) | 9 (as today) | lamps glow (today's fixed look) |
+| r2c2 | beside the bus park, behind the Mama Put | 2 | 1 | 0 (food is served here) | 1 (a man with a newspaper) | 4 | goods out front |
+| r2c3 | the market block | 3 shallow | 0; umbrellas **folded** (drawn as closed poles) | 0 (food is sold here) | 1 (a trader setting up) | 5 | umbrellas open (the front row stays hidden once the Market is built, W14) |
+| Bus park | ground | | | 0 | 1 parked danfo; lane paint faded | 3 parked danfos, 4 people waiting | fresh lane paint |
+
+Totals when all tired: 15 shutters, 9 kerb sacks, 12 people. All painted into the still city picture once, never per frame.
+
+The two spot blocks (r1c3, r2c1) while still a problem: the tired look **plus** their own problem marks (dark lamps, the one-bar mast, today's dim cover). The Potholes spot is a road, so it keeps its own cracked look and cones.
+
+##### d3. What brightens, and when
+
+Each block is **tired** or **bright**. Bright is never lost.
+
+**A fix or build brightens its own set at once:**
+| Board | Its set (blocks and ground) |
+|---|---|
+| New road (Potholes) | the Alausa road, r0c0, r1c0, r2c0 (the whole left side: the first fix must be easy to see) |
+| Mama Put | r2c2 and the bus park |
+| Market | r2c3 and the shore road's kerbs |
+| Lamps (Lights out) | r2c1 and r1c1 |
+| Mast (Slow internet) | r1c3 and r0c3 |
+
+**Each meter step (4, 8, 12, 16 points) brightens one more block,** the first one in this **step order** that is not bright already and is not a spot block: **r1c1, r1c2, r0c1, r0c2, r0c3, r2c2, r2c3, r0c0, r1c0, r2c0** (from the middle of Lagos outward).
+
+**The first boom (20)** brightens every block that is left, except a spot block whose problem is still not fixed (it keeps its pin; it is a real job still to do).
+
+**How code works it out (no new save field):** `steps` = how many of 4, 8, 12, 16 the meter has passed. `fixSet` = the sets of everything fixed or built. `bright` = `fixSet` plus the first `steps` blocks of the step order after removing spot blocks and blocks in `fixSet`; if the meter is at 20 or more, every block but unfixed spot blocks. This only ever grows, so it never goes darker, and it comes back the same after a reload.
+
+**A first-timer's usual path, as a check:**
+| After | Points | Bright blocks (of 12) |
+|---|---|---|
+| Start | 0 | none |
+| New road | 4 | r0c0, r1c0, r2c0 + step: r1c1 = 4 |
+| Mama Put | 8 | + r2c2 (and the bus park) + step: r1c2 = 6 |
+| Market, then a full collect or two | 12 to 14 | + r2c3 + step: r0c1 = 8 |
+| Two more full collects | 16 | + step: r0c2 (the park) = 9 |
+| Lamps (after the lane run) | 20, boom | + r2c1, then the boom: r0c3 = 11; r1c3 stays tired with its pin until the Mast |
+| Mast | 24 | + r1c3 = 12 |
+
+##### d4. The first boom: what is new
+
+- **New flats** rise on r1c1's back box: 3 more floors (48 map units taller), two water tanks on top, balconies with plants. Our own plain shape, no real building.
+- **A bus shelter** at the bus park (a long roof on posts, a bench, 3 waiting people) and 1 more parked danfo.
+- **The ferry jetty and its ferry** come in at the shore (the existing `jetty` look, shown only from the first boom). This is also the ferry from part 1 "The challenge road".
+- **Two "Coming soon" pins:** "Go-slow" at the main road junction left of the bus park (map 488, 559) and "Crowded buses" at the bus park (map 821, 640). A coming-soon pin is the normal pin with a small padlock badge and a second word line "Coming soon" (bold 11 px). Same 48 x 56 px tap area, same sign-clearance rules as other drawn pins.
+- **Lagos's cog** turns on Nigeria's wheel (existing switch-on, with the existing `cogRatchet` and `cogBell` sounds). A cog already turned by the hall stays turned; nothing plays twice.
+
+##### d5. The meter on screen
+
+The meter lives **inside the "Lagos" heading box**, so it needs no new place on the map, never covers a pin and is already a cover that signs and edge arrows keep clear of (W15).
+
+- **Box:** two lines. Line 1: "Lagos" (as now), then the rising-building icon and the word "Booming". Line 2: the bar, then "9 of 20".
+- **Icon:** our own, 16 px (14 px small): a tall plain block with three windows and a small up-arrow beside it. Not a castle, not a skyscraper logo.
+- **Bar:** 5 step boxes in a row, 2 px gaps, each with a 2 px dark outline `#1d1a14`. Inside each step, thin lines split it into its notches. A filled notch is solid danfo yellow `#f2b300`; an empty one is cream `#fffaf0`, so filled and empty differ by fill **and** the words "9 of 20" say it in numbers. A full step also gets a small dark tick on top (shape).
+- **Sizes:**
+  | Screen | Box | Step box | Words |
+  |---|---|---|---|
+  | wide (over 640 px wide and over 300 px tall), e.g. 851 x 393 | about 176 x 48 px | 18 x 10 px | "Lagos" 1.1 rem; "Booming" bold 13 px; "9 of 20" bold 13 px |
+  | small (640 px wide or less, or 300 px tall or less), e.g. 320 x 240 and 393 x 851 | at most 132 x 44 px | 12 x 8 px | "Lagos" 0.95 rem; "Booming" bold 11 px; "9 of 20" bold 11 px |
+- **Where:** top left, as the heading is now. On small screens the first row stays heading box, then Sound and Settings on the right; the chips stay on their own row under it (qa F1). The small layout now applies up to 640 px wide (was 480), so at 568 x 320 and 640 x 360 the chips never wrap under the wider box.
+- **If row 1 still does not fit at 320 px** (a long "Sound: off"), drop the word "Booming" from line 1; the icon, bar and numbers stay, and the spoken words keep "Booming". qa checks 320 x 240 with "Sound: off".
+- **Taps:** the box takes no taps (as the heading today); a tap there goes to the map. Nothing new to tap.
+- **Spoken:** the box is one image with the label "Lagos. Booming meter. 9 of 20 to the next boom." An `aria-live="polite"` line reads changes (d8).
+- **The first look still shows every pin** (qa F2) with the taller box: the camera's clear area starts under the chips row as now.
+- **The fold (designer ruling, 13 Nov 2026, S3d1b): accepted.** Only at 360 x 300 px or smaller **and** with four or more signs up (boards plus bubbles; Power and Tech in hand, so after the lane run), the box folds to just "Lagos", as the heading was before (d). The meter picture hides; the spoken label stays the full "Lagos. Booming meter. 9 of 20 to the next boom." and the `aria-live` line still reads every change. Why: a sign with its full words beats the meter picture on the one smallest screen in one rare case, and the meter is back as soon as a sign goes. Limits:
+  - It unfolds as soon as fewer than four signs are up. A board that says "Done ✓" goes away, so the meter is showing again before its notches fill in the moment (d6 0.3 s); qa checks this at 320 x 240.
+  - A full collect that crosses a step while folded still shows "Lagos is getting brighter!", so the change is never silent on screen.
+  - Every other screen and every other case keeps the full box. Dropping "Booming" (above) is still tried first.
+  - Revisit at step (f) with the packed 320 x 240 layout (W15, W16).
+- **Other gamedev choices in S3d1b, confirmed (13 Nov 2026):**
+  - **Camera in the moment:** the zoom cuts at the start (there are only two zoom steps, near and far), then the position eases. Fine. It still never zooms in (d6).
+  - **The next board waits:** a board you stand on does not start paying until the moment (and any boom) ends. Fine: one change at a time, and a tap skips the wait.
+  - **Coming-soon pin tap area:** 92 x 56 px, so the "Coming soon" line can be tapped too (was 48 x 56 in d4). Fine: never wider than 96 px, and the same sign-clearance rules use the wider area. qa round 1 (5254553) made it 94 x 56: fine, still inside 92 to 96.
+- **Soft coming-soon pins on tiny screens (designer ruling, 13 Nov 2026, S3d1b qa round 1): accepted, with limits.** The case: 320 x 240 after the first boom with Tech in hand (Power 0, Tech 3, boom 20, both trays full). The map strip between the chips and the bottom buttons is about 104 px tall and holds the Slow internet pin, both coming-soon pins and three signs; no spot keeps every sign clear of the 94 x 56 coming-soon tap areas. A coming-soon pin is a teaser with nothing to do yet, so it gives way. Real pins and signs (boards and bubbles) never do.
+  - **Where:** only at 360 x 300 px or smaller (the same tiny-screen line as the fold). Everywhere else coming-soon pins stay hard: no sign over them, as d4.
+  - **Try clear first.** Signs still look for a spot clear of coming-soon pins. Only when none is left may a sign sit over one.
+  - **All or nothing.** A coming-soon pin that a sign's box touches at all is hidden whole while covered: not drawn (no half icon, no cut "Coming soon" line), takes no taps (the sign on top takes them), out of Tab order and hidden from screen readers, and it gets no edge arrow. What a child sees is what a tap does (W15). It comes back, drawn, tappable and spoken, as soon as the sign moves or goes.
+  - **Not covered:** "the first look shows every pin" (qa F2) counts only the coming-soon pins that are shown.
+  - **Unchanged:** a sign still never sits over a real drawn pin, a chip or a button (W2, W9, W15). The Mast board over the Slow internet pin in this same save is that rule broken, not this one; it stays on the step (f) list with the packed 320 x 240 layout (W15, W16), and qa logs it as a known follow-up, not a fail of this ruling.
+  - **qa's ruling-4 test at 320 x 240** (same save): (1) every coming-soon pin that is shown taps 92 to 96 wide and at least 56 tall; (2) every coming-soon pin that a board or bubble box overlaps (using `watch.soon`) is hidden: its `[data-soon]` element is not visible and not focusable, and a tap at the middle of the overlap opens the sign's action, not the "Coming soon" card; (3) every shown coming-soon pin is clear of every board and bubble; (4) every board and bubble is still clear of the chips and the bottom buttons; (5) taking a sign away (for example collect the Mama Put tray) brings a hidden coming-soon pin back, shown and tappable. At 851 x 393 the test stays as it is: both coming-soon pins shown, 92 to 96 x 56, and every sign clear of both.
+
+##### d6. The "watch it change" moment (W17 B)
+
+Plays whenever a board reaches "Done ✓": a build you paid for by standing on it, or the end of Mission complete. Times are seconds from the moment the board says "Done ✓".
+
+| Time | What happens |
+|---|---|
+| 0.0 | The board says "Done ✓". **The spot's pin goes at once** (Tp, 13 Nov). The "Tap to skip" line shows (small, bottom middle). |
+| 0.0 to 0.5 | **Camera:** eases (slow-fast-slow) so the whole fix set and the hero are on screen. It keeps the zoom if they fit; else it eases to far. It never zooms in. Mission complete keeps the hero centred as before; only the ease is added. |
+| 0.0 to 1.5 | The build plays at the mat as today (tarmac rolls, the stall goes up, lamps on one by one, the mast blinks on). |
+| 0.3 to 0.7 | The meter's notches fill one by one (0.1 s each). |
+| 0.5 to 2.0 | **Colour ring:** from the middle of the mat, a circle grows until it covers the far corner of the fix set. Inside it: the bright picture. Outside it: the tired picture. The ring's edge is a soft 6 px cream-gold line. |
+| 2.0 | **Sting** (Sound on only). The built line shows for 2 s, as today ("New road! Danfos are back."). |
+| 2.0 to 2.8 | **Only if a meter step was crossed:** a second, smaller ring from the middle of the step's block (0.8 s), the `step` sound, and the line "Lagos is getting brighter!" after the built line (1.5 s). If the step's block is off screen, the camera does not move again; the line and sound still play. |
+| 1.5 to 3.5 | **People walk in:** 4 walkers (6 for the New road and the boom) come from the nearest road end or the bus park along the pavements to the bright blocks' fronts, then stand still and join the still picture. Never more than 8 moving people on screen in all (walkers = 8 minus people already moving). |
+| 1.5 to 3.6 | **One danfo drives** the nearest road: New road, up the Alausa road and off the top; Mama Put, into the bus park and parks; Market, along the shore road to the market (the existing loading danfo); Lamps and Mast, along the main road past the block. One soft "pom-pom" horn at the start. Never more than 2 moving danfos on screen. If the hero stands in its way, it stops 40 map units short and waits (W1: nobody is ever hit). |
+| 3.6 | The moment ends. The still city is painted once with the new bright blocks and the standing walkers. The hero is free. |
+
+If the meter reaches a mark (20), the **boom** follows straight after:
+| Time after the moment | What happens |
+|---|---|
+| 0.0 to 0.6 | Camera eases out to far (the whole area). |
+| 0.6 | `boom` tune (2 s). |
+| 0.6 to 2.4 | A big ring from the bus park (map 820, 700) brightens every block that is left (d3). The flats grow up from the ground (1.0 to 2.2). The bus shelter appears. The ferry glides in to the jetty (1.0 to 2.4). |
+| 1.6 to 3.0 | 6 walkers come over the bridge to the bus park: more people are coming. |
+| 3.0 | The boom card opens (d8). Cog sounds if the cog just turned. |
+| After "See Lagos" | The card closes; the two "Coming soon" pins drop in (a 4 px bounce). |
+
+A full collect that crosses a step (no build) plays only the step ring, the step sound and the step line, where it is. No camera move.
+
+**Skip:** a tap anywhere, or Space, Enter or Escape, jumps to the end: everything bright, walkers standing, the danfo at its end (gone off the map, or parked), the built line showing for its last part. During the boom, skip jumps to the open boom card. A tap that skips does nothing else (it does not walk the hero). Arrow keys also skip, and do not walk until pressed again.
+
+**Reduced motion:** no camera ease (it cuts), no ring, no walking, no driving, no notch-by-notch fill, no bounce. Instead: the tired picture holds still for 0.5 s, then cuts to the bright picture with the walkers already standing and the danfo already parked at its end. The meter jumps to its new number. The flats, shelter and ferry appear in one cut. Sounds still play (they are not motion). Lines and spoken words as usual.
+
+**First-timer:** after the first moment ends (the New road, in Mission complete), one hint, once (saved as `bright` in `hints`): "Each fix makes Lagos brighter!" in the hint bar, 3 s, while the "Booming" box gives one 0.3 s pulse (none with reduced motion).
+
+##### d7. Sounds (code-made, our own, all follow the Sound switch)
+
+| Name | When | What it sounds like |
+|---|---|---|
+| `sting` | every fix or build, at the ring's end | 1.2 s, a bright highlife guitar line of 5 notes, rising, with a bell on the last note |
+| `step` | a meter step fills | 0.5 s, 3 soft rising wooden (marimba-like) notes |
+| `boom` | a boom mark | 2.0 s, the sting's tune played bigger, with a talking-drum pitch bend and a shaker |
+| `horn` | the danfo starts to drive | 0.3 s, two soft low horn tones, quieter than the chinks |
+Music dips to half while `sting` or `boom` plays. Existing `built`, `cogRatchet` and `cogBell` stay. Original only: no tune or sound from any other game or advert; no real song.
+
+##### d8. Plain words (every new line a player sees or hears)
+
+| Where | Words |
+|---|---|
+| Meter box | "Booming", "9 of 20" (after the first boom: "24 of 50") |
+| Meter, spoken | "Lagos. Booming meter. 9 of 20 to the next boom." |
+| Step line (1.5 s) | "Lagos is getting brighter!" |
+| First hint (once) | "Each fix makes Lagos brighter!" |
+| Skip | "Tap to skip" (keys: "Press Space to skip") |
+| Boom card | Heading "Lagos is booming!" / "New buildings are going up. More people are coming, and they need more." / only when the cog has just turned: "Lagos's cog is turning on Nigeria's wheel!" / button "See Lagos" |
+| Coming-soon pins | "Go-slow" / "Coming soon"; "Crowded buses" / "Coming soon". Spoken: "Go-slow, coming soon." |
+| Coming-soon cards | Go-slow: "The traffic is stuck here." / "Coming soon." / "Back". Crowded buses: "More people need buses here." / "Coming soon." / "Back" |
+| Spoken after a moment | the built line, then "Booming meter. 12 of 20 to the next boom." (after a step: "Lagos is getting brighter." first) |
+All lines are 40 characters or fewer except the boom card's body, which wraps. No real place name sits in any line that says something is wrong.
+
+##### d9. Saves
+
+- No field for brightness: it is worked out from `fixed`, `built` and `boom` (d3).
+- New: `"boomSeen": 0`, the highest mark whose boom card has been shown. On opening the city, if `boom` has passed a mark above `boomSeen`, the boom plays then (so a closed tab mid-boom never loses the card). Missing or broken reads as 0.
+- New hint id `bright` in `hints`.
+- The cog keeps using the existing switched-on list in `gidi-progress`.
+- Merged into the `city` part as always, never overwriting. An old save loads tired, with its own fixes and steps already bright (no moment replays for old fixes).
+
+##### d10. Light on a cheap phone
+
+- **Two still pictures, painted only when something changes:** tired and bright looks are drawn into the one still city picture, as now. It is repainted only when a block changes (a moment ends, a reload), never per frame.
+- **The ring:** for its 1.5 s, keep a second picture (the after look) at 1 map unit a pixel (about 6.4 MB, freed when the ring ends). Each frame draws only the on-screen part of the before picture, then the after picture inside a round clip: 2 image draws plus the hero layer. The boom ring is the same.
+- **Speed:** at least 45 fps at 4x CPU slowdown during the moment and the boom, and while walking. A still city still does at most 2 small redraws a second (W10), none while the tab is hidden.
+- **Moving at once:** at most 8 people and 2 danfos (W10).
+- **Size (gzipped, S3d1 in all about 23 KB):** art about 12 KB (tired pieces about 6, meter box and icon about 1, flats, shelter and coming-soon pin about 3, sounds about 2); gamedev about 11 KB (meter, card, cog link and `boomSeen` about 3; brightness about 2; the moment and the boom about 5; layout change about 1). First load stays under 600 KB, far under 1.5 MB and 3 MB.
+
+##### d11. Owners
+
+- **art (S3d1a):** the tired and bright pieces of d2 for all 12 blocks and the bus park; the meter box, icon and bar (d5); the flats, bus shelter and coming-soon pin badge (d4); walkers reuse `drawCityFolk`, the danfo reuses `drawCityBus`; the four sounds of d7.
+- **gamedev (S3d1b):** brightness rules (d3), the meter in the heading box and the 640 px layout (d5), the moment and the boom with skip and reduced motion (d6), hide the pin at "Done ✓", the boom card, coming-soon pins and cards, the cog link, `boomSeen` and the hint (d8, d9), the speed rules (d10).
+
+##### d12. Done when (qa)
+
+1. **Before and after:** qa puts the far view at 0, 8 and 20 points side by side; each looks clearly different. A first-timer shown the far view before and after the New road can point to what changed, with no help.
+2. **Rules:** unit tests for d3: the table in d3 comes out exactly; every order of the five boards and collects gives a bright set that only grows; 20 points with the Mast unfixed leaves only r1c3 tired; reload gives the same set.
+3. **Meter:** fills 4 for a fix or build, 1 for a full collect (at most 4 a boom); reads "9 of 20", then "24 of 50" after the boom; never goes down; steps show by fill, tick and numbers (check in greyscale).
+4. **Layout:** at 320 x 240 (also with "Sound: off"), 393 x 851, 568 x 320, 640 x 360 and 851 x 393, the box fits its row, no chip wraps, no sign, arrow or pin sits under it, and the first look shows every pin.
+5. **Moment:** the pin goes at "Done ✓"; times as d6 (within 0.1 s); skip by tap, Space, Enter, Escape and an arrow key, and the skipping input does nothing else; reduced motion gives the still before (0.5 s) and after with no movement.
+6. **Boom:** at 20 the boom plays once, the card opens, the cog turns (or stays turned from the hall), the flats, shelter, ferry and two coming-soon pins show; closing the tab mid-boom and reopening shows the card.
+7. **Speed and size:** at least 45 fps at 4x CPU in the moment, the boom and walking; a still city at most 2 small redraws a second; S3d1 adds no more than about 23 KB gzipped.
+8. **Sound:** all four sounds silent with Sound off; music dips under the sting.
+9. **Screen reader:** hears the meter, the built line, the step line and the boom card; coming-soon pins as "Go-slow, coming soon."
+10. **Mock no one:** the tired look passes d2's rule and part 6 and W11: no sad or ugly street, no person shown as the problem, kerb sacks never near food, every block has someone doing something proud.
+
+**Mission complete length:** with the moment, Mission complete runs about 7 to 9 s from the bus to the end (was 4 to 6 s). Everything after the bus can be skipped with one tap.
 
 #### (e) The challenge road
 
 Words and rules: part 1 "The challenge road" (Tp said yes). Stops in slice 3: "Alausa", "Computer Village", "Ikeja", "Go-Slow Hall", then "Lane run" (locked until (f)). It replaces the Streets screen; the city's "Streets" button becomes "Challenge road".
 Owners and budgets: art draws the road, the danfo-yellow stop signs and the ferry jetty (under 6 KB). gamedev builds the screen and the list for screen readers (under 6 KB).
 Done when: it fits 320 x 240 with stops at least 44 px; screen readers hear it as a list; it is not a path-and-dots world map (part 6 rule 4).
+
+**Same street, city and run (W17 C, Tp 13 Nov 2026; brief now, full note before S3e1 starts).**
+- **Before a run:** tapping a stop opens a small card with that city spot seen from above (cut from the still city picture, so it is tired or bright as it is now) and the hero getting on a danfo there. The place name is only on a street sign in the picture. The card's words follow part 1 "Words": "Potholes on this road." never "Alausa road. Potholes." (W17 C's draft line is replaced, because it put a place name next to a problem).
+- **The run's first screen matches the spot:** the first screen width of the street, before the first hazard, has a tired look while the spot is unfixed (cracked road, two cones, one dark street lamp, 2 of 4 shops with shutters down, one neat kerb sack, 1 person) and a bright look once it is fixed (fresh tarmac, shops open with goods out, lamps on, 4 people). A plain street sign with the name ("Alausa") stands at the start in both. Same tired rule as (d) d2: warm, proud, nobody is the problem.
+- **Which spot each street follows:** street 1 Alausa follows the New road; street 2 Computer Village follows block r1c3; street 3 Ikeja follows block r2c1. The rest of each run, its hazards, coins and speed do not change, so no level gets harder or easier.
+- **Size:** art about 4 KB, code about 2 KB, inside S3e1.
 
 #### (f) The lane run and the Blackout
 
@@ -745,6 +967,49 @@ The case: 320 x 240 with the Lamps, Market and Mast boards and the Mama Put bubb
 
 **No gamedev change now.**
 
+### W17. Feeling the city get better (Tp, 13 Nov)
+
+Owner: designer, 13 Nov 2026. Tp played "Walk the city" and said: "I don't feel the connection to the city getting cleaned up." Tp's first idea was "building a city to its glorious state": you watch Lagos go from broken to glorious as you play. Tp also chose to finish Lagos first: (d) Booming meter, (e) challenge road, (f) lane run.
+
+**Answered by Tp, 13 Nov 2026: yes to the recommendations.** Question 1: a) A + B as S3d1 "The Booming meter you can see", then C in S3e1. Question 2: a), in Tp's words "a bit faded but still warm and proud", not run-down. Also: hide a pin as soon as its board says "Done ✓" (in S3d1). See docs/questions.md, "po, 13 Nov 2026". The build-ready note is part 5 step (d); C's brief is in step (e). The options below are kept as the reasons.
+
+Tp, 13 Nov: tired look made stronger after seeing the first pictures (option a).
+
+Screenshots (the live build of 13 Nov, phone sideways 851 x 393), in `/tmp/claude-0/-home-user-go-naija-go/8f053298-216f-5365-a405-cc199ad5be18/scratchpad/clean/`: `01-before-far.png` (new player), `03-after-mamaput-market-far.png` (road, Mama Put and Market built), `06-road-before-zoom.png`, `07-road-build-3.png` (the road going in), `08-road-after-zoom.png`, `09-mamaput-market-zoom.png`, `05-alausa-run.png` (the Alausa street run).
+
+**What is weak today (checked in the game and the code):**
+1. **Lagos already looks glorious at the start.** 9 of the 12 blocks are bright, tidy and tree-lined from minute one (`drawCity` draws every block without a problem as "fixed"). Only 3 spots are dim, under a thin grey cover. Put `01-before-far.png` next to `03-after-mamaput-market-far.png`: they look almost the same. There is no "broken" to climb out of.
+2. **Each fix is small and easy to miss.** The road fix is one short strip turning a darker grey with one parked bus (`06` then `08`). While it goes in, the "Ready" pin still stands over the strip and the camera does not frame it, so the strip rolls up mostly off the top of the screen (`07-road-build-3.png`). The Mama Put and the Market are about 40 px at far zoom (`03`). Nothing around the fix changes: the next block, the pavement, the people all stay the same.
+3. **No city-wide "how good is Lagos" picture.** The Booming meter (d) is not built yet, and as planned it is a bar. Nothing on the map grows with it until the first boom at 20 points.
+4. **Life does not come back.** No bus or car moves in the city yet (W14). Fixed spots get 9 still people; nobody walks in. The line "New road! Danfos are back." shows, but no danfo drives.
+5. **The run is not the same place as the spot.** The Alausa run is a sunny street of open, tidy shops with no "Alausa" on screen and no broken road at the start (`05-alausa-run.png`). The city spot is a cracked road with cones. Nothing says "this is the road you saw", and after the fix the run looks the same as before.
+6. **The before-and-after moment is short.** "Mission complete!", a 1.5 s roll, a low "built" sound, then back to the same-looking city.
+
+Rule for every option: Lagos starts **tired, never bad**. Tired means faded paint, dark windows, empty pavements, rubbish by the kerb, broken lamps, cracked roads. Never people shown as the problem, never a group, area or job made fun of, no real place drawn as worse than another (every state starts tired the same way). All drawn in code, our own style, nothing from any other game.
+
+**Option A. Lagos starts tired, and brightens step by step (city-wide).**
+What the player sees: on the first visit, all of Lagos is faded: paint washed out, many windows dark, shop shutters down, little rubbish heaps by the kerbs, dry brown grass in the park, few people. Each fix brightens its own block **and the blocks next to it** for good (colour back, shutters up, trees green, rubbish gone, 3 to 6 people on the pavement). The Booming meter has 5 steps to the first boom; each step lights a set part of Lagos, so by the first boom (20 points) the whole first area is bright and busy, and new buildings rise. Later booms add a skyline, more buses, a busier lagoon. The meter is the picture, not just a bar.
+Size: art about 6 KB (a "tired" paint for each block and a few small rubbish, shutter and dry-grass shapes), code about 2 KB. The still city is still painted once and only again when a step changes, so a cheap phone does no extra work while walking.
+Plan step: fold into **S3d1** (the Booming meter), which grows from 11 KB to about 19 KB.
+
+**Option B. A big "watch it change" moment at every fix.**
+What the player sees: when a build starts, its pin goes away and the camera eases so the whole spot is on screen (none with reduced motion: then it cuts). The fix spreads out from the mat as a ring of colour, about 1.5 s: tired on the outside, bright on the inside. As it ends, 4 to 6 people walk in from the edges, one danfo drives up the new road and on, and a short happy highlife sting plays (our own, Sound on only). The words stay as now ("New road! Danfos are back."), and now you see it happen.
+Size: code about 3 KB, sound about 1 KB (code-made), art about 1 KB (moving danfo and walkers reuse `drawCityBus` and `drawFolk`). On a cheap phone the ring draws two still pictures with a round clip for 1.5 s; the second picture is kept at 1 map unit a pixel so memory stays small.
+Plan step: **S3d1** too (it needs A's "tired" picture to spread from), or a small polish task after S3c4. Without A it can only spread the small dim cover of the 3 spots, so it is much weaker alone.
+
+**Option C. The run is the same place as the city spot.**
+What the player sees: before a run, a small card shows that city spot from above ("Alausa road. Potholes.") and the hero getting on the bus there. The street run's first screen matches: cracked road, cones, a dark street lamp, a few shops with shutters down, the name "Alausa" on a street sign. Once the road is fixed in the city, playing Alausa again shows fresh tarmac, open shops and more people at the start. Words in the run never blame a place: "Potholes on this road" sits on the problem, the name sits on a plain street sign.
+Size: art about 4 KB (a "tired" and a "fixed" look for the first screen of each street), code about 2 KB. Run speed is not touched.
+Plan step: **S3e1** (the challenge road already shows each stop's name and state).
+
+**Combo A + B, then C (recommended).** A gives Lagos somewhere to go (tired to glorious), which is Tp's first idea and the main thing missing. B makes each fix a moment you watch, and it only shines once A is in. Build both as **S3d1, "The Booming meter you can see"**: about 23 KB in all (meter 11 + A 8 + B 4 or so), first load still near 560 KB, far under 1.5 MB and 3 MB. Then fold C into **S3e1** so each stop on the challenge road and its run look like the same street. Also, now: hide a pin as soon as its board says "Done ✓", so the fix is never covered (a one-line gamedev change, can go in S3d1).
+
+Done when (for A + B): a first-timer looking at the far view before and after the road fix can point to what changed without help; the far view at 0, 8 and 20 points looks clearly different (qa puts the three side by side); walking stays at 45 fps or more at 4x CPU, and a still city still draws at most 2 small redraws a second; reduced motion shows each step as a still before and after; nothing is shown by colour alone (shutters, rubbish, dark windows and people show it by shape too); part 6 and W11 pass.
+
+**Questions for Tp (po copies them to docs/questions.md):**
+1. Which way? a) A + B in S3d1, then C in S3e1 (recommended). b) A only. c) B only. d) C only.
+2. How tired is Lagos at the start? a) Faded but friendly: washed-out paint, dark windows, shutters, small rubbish heaps, few people (recommended: clearly "before", never sad or ugly). b) Only faded colour, no rubbish or shutters.
+
 ## 6. Original only: the check list for every new piece
 
 On top of design R8 and part 2B's "must NOT copy" list:
@@ -774,6 +1039,8 @@ Numbers follow docs/questions.md, "City direction (9 Nov 2026)".
 | L1 to L7 | all a): buckets, the Blackout, keep everything when caught, view from above, Mission complete, the Shadow, the Booming meter | 10 Nov 2026 |
 | W1 to W4 | all a): walk the city, pay spots, places that earn, in the plan now before the lane run | 11 Nov 2026 |
 | W13 1 to 6 | all a): fill only while playing, part pay, drag moves the hero, boom points (first boom at 20), "Mama Put" and "Market", win top-up (first street 1 win ₦14) | 12 Nov 2026 |
+| Finish Lagos first | A: (d) Booming meter, (e) challenge road, (f) lane run before any second state | 13 Nov 2026 |
+| W17 1 and 2 | a) and a): A + B as S3d1 "The Booming meter you can see", C in S3e1; Lagos starts "a bit faded but still warm and proud"; hide a pin once its board says "Done ✓" | 13 Nov 2026 |
 
 ## Lines for Tp
 

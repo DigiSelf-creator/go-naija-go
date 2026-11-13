@@ -20,8 +20,43 @@
  * Never colour alone: the pins carry an icon and a word, and each look changes shapes too
  * (holes and cones, dark lamp heads, a single signal bar; tools waiting; lamps with light
  * pools, fresh lane paint, signal arcs and people).
+ *
+ * Tired and bright Lagos (city.md (d), S3d1a). gamedev works out the bright set (d3) and passes
+ * it in; art only draws it:
+ *   makeCityCanvas(looks, scale, maxPx, { bright: ['r0c0', 'busPark', ...], boom, market, jetty })
+ *   - bright: ids from CITY_AREAS (12 blocks, 'busPark', 'shore'); the rest is tired.
+ *     Left out: everything bright (the look before S3d1).
+ *   - boom: the first boom's flats on r1c1, the long bus shelter and a 4th danfo (jetty stays `jetty`).
+ *   - the colour ring: paint a before and an after picture and clip the after one to the ring.
+ *   - the flats growing: paint the after picture with { boom: true, flats: false } and draw
+ *     drawBoomFlats(g, k) on top (map units), then repaint with { boom: true } at the end.
+ *   Coming-soon pins: drawComingSoonPin, SOON_PINS. The meter is src/art/boomMeter.ts.
  */
+import {
+  BLOCK_LIFE,
+  GOODS_KINDS,
+  TIRED_COLOURS,
+  drawChildrenWithBall,
+  drawCityFolk,
+  drawCityPalm,
+  drawCityTree,
+  drawFoldedUmbrella,
+  drawFruitUmbrella,
+  drawGoods,
+  drawKerbSack,
+  drawPottedPlant,
+  drawProudFolk,
+  drawShutter,
+  drawWashingLine,
+  brightColour,
+  fadeColour,
+  tiredColour,
+  tiredRoof,
+  type BlockLife,
+} from './bright';
 import { CAR_COLOURS, CREAM, INK, KOBO, KOBO_DARK, KOBO_SHINE, SHOP_WALLS, WHITE } from './palette';
+
+export { drawCityFolk } from './bright';
 
 const TAU = Math.PI * 2;
 
@@ -257,22 +292,8 @@ function stroke(g: CanvasRenderingContext2D, colour: string, w: number, pts: rea
   g.stroke();
 }
 
-function tree(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  oval(g, x + 3, y + 2, r, r * 0.5, 'rgba(0,0,0,0.12)');
-  rect(g, x - 1.5, y - 8, 3, 8, '#7a5a3a');
-  disc(g, x, y - 12, r, K.grassDark);
-  disc(g, x - r * 0.3, y - 14, r * 0.6, '#a6cf72');
-}
-
-function palm(g: CanvasRenderingContext2D, x: number, y: number): void {
-  stroke(g, '#7a5a3a', 2.2, [x, y, x + 1, y - 22]);
-  g.fillStyle = '#3f8f4a';
-  for (let i = 0; i < 6; i++) {
-    const a = (i * TAU) / 6;
-    g.beginPath();
-    g.ellipse(x + 1 + Math.cos(a) * 6, y - 22 + Math.sin(a) * 3, 7, 2, a, 0, TAU);
-    g.fill();
-  }
+function tree(g: CanvasRenderingContext2D, x: number, y: number, r: number, tired = false): void {
+  drawCityTree(g, x, y, r, tired);
 }
 
 /** A street lamp standing at (x, y), 33 units tall, head to the right. On: a warm head and a light pool. */
@@ -288,15 +309,6 @@ export function drawCityLamp(g: CanvasRenderingContext2D, x0: number, y0: number
   if (on) disc(g, x + 6, y - 22, 6, 'rgba(255,226,122,0.35)');
   else stroke(g, INK, 0.8, [x + 3, y - 20.5, x + 9, y - 20.5]);
   g.restore();
-}
-
-/** A tiny person seen from above at an angle (fixed blocks are busy again). */
-export function drawCityFolk(g: CanvasRenderingContext2D, x: number, y: number, i: number): void {
-  const skins = ['#f1c9a5', '#d9a172', '#a8693f', '#7a4a2a', '#4b2c1a'];
-  const tops = ['#e0572b', '#2b59c3', '#f2b300', '#1aa39a', '#9b59b6', '#e9e1cf', '#d6336c'];
-  oval(g, x + 1, y + 0.5, 3, 1.2, 'rgba(0,0,0,0.15)');
-  oval(g, x, y - 3.5, 2.6, 3.8, tops[i % tops.length]!);
-  disc(g, x, y - 8.5, 2.2, skins[(i * 3) % skins.length]!);
 }
 
 // ---------- Ground: land, roads, lagoon, jetty, bridge, bus park ----------
@@ -426,24 +438,54 @@ export function drawJetty(g: CanvasRenderingContext2D, x: number, y: number): vo
   g.fillRect(fx - 6, fy + 28, 90, 2);
 }
 
-/** The bus park in the middle: a tarmac yard with bays, a shelter and two parked buses. */
-function busPark(g: CanvasRenderingContext2D): void {
+/**
+ * The bus park in the middle: a tarmac yard with bays and a shelter by the main road.
+ * Tired (d2): faded lane paint and one faded parked danfo. Bright: fresh paint, 3 parked
+ * danfos and 4 people waiting. Boom (d4): a long bus shelter (roof on posts, a bench, 3 people
+ * waiting) by the shore road and a 4th danfo.
+ */
+function busPark(g: CanvasRenderingContext2D, bright: boolean, boom: boolean): void {
   const { x, y, w, h } = BUS_PARK;
-  rect(g, x, y, w, h, '#6a6a71');
-  g.fillStyle = 'rgba(244,241,230,0.7)';
+  rect(g, x, y, w, h, bright ? '#6a6a71' : fadeColour('#6a6a71', TIRED_COLOURS.roadDust));
+  g.fillStyle = bright ? 'rgba(244,241,230,0.85)' : 'rgba(244,241,230,0.28)';
   for (let k = 0; k < 4; k++) g.fillRect(x + 8, y + 60 + k * 36, w - 16, 2);
   // Shelter by the main road
-  rect(g, x + 10, y + 8, 4, 18, '#7d8a96');
-  rect(g, x + w - 14, y + 8, 4, 18, '#7d8a96');
-  rect(g, x + 6, y + 2, w - 12, 10, '#4f7cac', INK, 1);
+  const post = bright ? '#7d8a96' : fadeColour('#7d8a96');
+  rect(g, x + 10, y + 8, 4, 18, post);
+  rect(g, x + w - 14, y + 8, 4, 18, post);
+  rect(g, x + 6, y + 2, w - 12, 10, bright ? '#4f7cac' : fadeColour('#4f7cac'), INK, 1);
   rect(g, x + 16, y + 20, w - 32, 4, '#8a5d36');
-  // Two parked buses
+  if (!bright) {
+    // One faded danfo waiting for the day
+    drawCityBus(g, x + 36, y + 92, 's', true);
+    return;
+  }
   drawCityBus(g, x + 36, y + 92, 's');
   drawCityBus(g, x + 82, y + 128, 's');
+  drawCityBus(g, x + 82, y + 64, 's');
+  // 4 people waiting under the shelter
+  for (let k = 0; k < 4; k++) drawCityFolk(g, x + 20 + k * 11 + (k > 1 ? 40 : 0), y + 30 + (k % 2) * 3, k * 2 + 1);
+  if (!boom) return;
+  drawCityBus(g, x + 36, y + 160, 's');
+  drawBusShelter(g, x + 8, y + h - 24, w - 16);
 }
 
-/** The roads, lots, trees, lagoon, jetty, bridge and bus park: everything but the blocks. */
-export function drawCityGround(g: CanvasRenderingContext2D, opts: { jetty?: boolean } = {}): void {
+/** The long bus shelter of the first boom: a roof on four posts, a bench and 3 people waiting. */
+export function drawBusShelter(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  oval(g, x + w / 2 + 4, y + 20, w / 2, 3, 'rgba(0,0,0,0.15)');
+  for (let k = 0; k < 4; k++) rect(g, x + 3 + (k * (w - 9)) / 3, y + 6, 3, 14, '#7d8a96');
+  rect(g, x + 8, y + 13, w - 16, 3, '#9a6a3c', INK, 0.6);
+  for (let k = 0; k < 3; k++) drawCityFolk(g, x + 16 + k * 14, y + 16, k * 3 + 2);
+  rect(g, x, y, w, 7, '#2f8f86', INK, 1);
+  g.fillStyle = 'rgba(255,255,255,0.35)';
+  g.fillRect(x + 2, y + 1.5, w - 4, 1.5);
+}
+
+/**
+ * The roads, lots, trees, lagoon, jetty, bridge and bus park: everything but the blocks.
+ * `opts.bright` (see CityOpts) picks the bus park's and the shore's look.
+ */
+export function drawCityGround(g: CanvasRenderingContext2D, opts: CityOpts = {}): void {
   const W = CITY_MAP.w;
   rect(g, 0, 0, W, CITY_MAP.h, K.land);
   // A park strip at the top, with trees (more of Lagos lies beyond)
@@ -456,10 +498,13 @@ export function drawCityGround(g: CanvasRenderingContext2D, opts: { jetty?: bool
   zebra(g, 760, 524, 10, 70, 'y');
   zebra(g, 860, 524, 10, 70, 'y');
   zebra(g, 794, 498, 54, 10, 'x');
-  busPark(g);
+  busPark(g, areaBright(opts, 'busPark'), opts.boom === true);
   lagoon(g);
+  const shore = areaBright(opts, 'shore');
+  // The shore road's kerb: fresh white and grey stones when bright
+  if (shore) for (let x = 0; x < W; x += 12) rect(g, x, 834, 10, 3, x % 24 === 0 ? WHITE : '#d9d2c3');
   // Palms along the shore promenade
-  for (let x = 30; x < W; x += 110) if (x < 380 || x > 480) palm(g, x, 852);
+  for (let x = 30; x < W; x += 110) if (x < 380 || x > 480) drawCityPalm(g, x, 852, !shore);
   if (opts.jetty !== false) drawJetty(g, 410, 838);
   bridge(g);
 }
@@ -468,38 +513,79 @@ export function drawCityGround(g: CanvasRenderingContext2D, opts: { jetty?: bool
 
 const AWNINGS = ['#c8641e', '#2b59c3', '#13703a', '#9b59b6', '#b4561c'] as const;
 
-function drawBox(g: CanvasRenderingContext2D, b: CityBox, lit: 'day' | 'dim' | 'glow'): void {
-  const top = b.y - b.h;
-  const frontY = b.y + b.d - b.h;
-  // Shadow on the ground to the east
-  g.fillStyle = 'rgba(0,0,0,0.12)';
-  g.beginPath();
-  g.moveTo(b.x + b.w, b.y + b.d);
-  g.lineTo(b.x + b.w + b.h * 0.35, b.y + b.d);
-  g.lineTo(b.x + b.w + b.h * 0.35, b.y + b.d - b.h * 0.5);
-  g.lineTo(b.x + b.w, frontY);
-  g.closePath();
-  g.fill();
+/** How a box is drawn: tired (faded, dark windows), its shutter, flats (0 to 1 of the boom's 3 floors), its shadow. */
+interface BoxLook {
+  tired?: boolean;
+  shutter?: 'down' | 'half' | 'up' | 'none';
+  flats?: number;
+  shadow?: boolean;
+}
+
+/** The first boom's new flats (d4): on r1c1's back box, 3 more floors (48 map units). */
+export const FLATS = { block: 'r1c1', rise: 48 } as const;
+
+function drawBox(g: CanvasRenderingContext2D, b: CityBox, lit: 'day' | 'dim' | 'glow', o: BoxLook = {}): void {
+  const flats = o.flats !== undefined && Number.isFinite(o.flats) ? Math.max(0, Math.min(1, o.flats)) : 0;
+  const h = b.h + FLATS.rise * flats;
+  const tired = o.tired === true;
+  const top = b.y - h;
+  const frontY = b.y + b.d - h;
+  if (o.shadow !== false) {
+    // Shadow on the ground to the east
+    g.fillStyle = 'rgba(0,0,0,0.12)';
+    g.beginPath();
+    g.moveTo(b.x + b.w, b.y + b.d);
+    g.lineTo(b.x + b.w + h * 0.35, b.y + b.d);
+    g.lineTo(b.x + b.w + h * 0.35, b.y + b.d - h * 0.5);
+    g.lineTo(b.x + b.w, frontY);
+    g.closePath();
+    g.fill();
+  }
   // Front wall
-  rect(g, b.x, frontY, b.w, b.h, b.wall, INK, 1.2);
-  // Windows, a row every 12 units; the ground floor is a shop front with an awning
+  rect(g, b.x, frontY, b.w, h, tired ? tiredColour(b.wall) : brightColour(b.wall), INK, 1.2);
+  // Windows, a row every 12 units; the ground floor is a shop front with an awning.
+  // Tired day: 2 of every 3 windows warm brown, no glint. Bright day: glass with a white glint.
   const win = lit === 'dim' ? K.windowDark : lit === 'glow' ? K.window : K.glass;
+  const spots: [number, number][] = [];
+  for (let yy = frontY + 6; yy < b.y + b.d - 18; yy += 12) for (let xx = b.x + 5; xx < b.x + b.w - 8; xx += 11) spots.push([xx, yy]);
+  const brown = tired && lit === 'day';
   g.fillStyle = win;
-  for (let yy = frontY + 6; yy < b.y + b.d - 18; yy += 12) for (let xx = b.x + 5; xx < b.x + b.w - 8; xx += 11) g.fillRect(xx, yy, 6, 6);
+  spots.forEach(([xx, yy], k) => {
+    if (!brown || k % 3 === 2) g.fillRect(xx, yy, 6, 6);
+  });
+  if (brown) {
+    g.fillStyle = TIRED_COLOURS.window;
+    spots.forEach(([xx, yy], k) => {
+      if (k % 3 !== 2) g.fillRect(xx, yy, 6, 6);
+    });
+  } else if (lit === 'day') {
+    g.fillStyle = WHITE;
+    for (const [xx, yy] of spots) g.fillRect(xx + 1, yy + 1, 3, 1);
+  }
+  if (flats > 0) {
+    // Balconies with plants on the new floors
+    for (const [xx, yy] of spots) {
+      if (yy > frontY + FLATS.rise * flats) continue;
+      rect(g, xx - 1, yy + 6, 8, 1.6, '#e9e1cf', INK, 0.4);
+      disc(g, xx + 5.5, yy + 5.4, 1.5, '#3f8f4a');
+    }
+  }
   if (b.h > 20) {
-    rect(g, b.x + 2, b.y + b.d - 13, b.w - 4, 4, AWNINGS[Math.floor(b.x / 7) % AWNINGS.length]!);
-    g.fillStyle = lit === 'dim' ? K.windowDark : lit === 'glow' ? K.window : K.glass;
+    const awn = AWNINGS[Math.floor(b.x / 7) % AWNINGS.length]!;
+    rect(g, b.x + 2, b.y + b.d - 13, b.w - 4, 4, tired ? tiredColour(awn) : brightColour(awn));
+    g.fillStyle = win;
     g.fillRect(b.x + 6, b.y + b.d - 8, Math.max(4, b.w - 22), 7);
+    if (o.shutter && o.shutter !== 'none') drawShutter(g, b.x + 5, b.y + b.d - 9, Math.max(5, b.w - 20), 9, o.shutter);
     rect(g, b.x + b.w - 12, b.y + b.d - 9, 6, 9, '#5b4636');
   }
   // Roof
-  rect(g, b.x, top, b.w, b.d, b.roof, INK, 1.2);
+  rect(g, b.x, top, b.w, b.d, tired ? tiredRoof(b.roof) : brightColour(b.roof), INK, 1.2);
   g.strokeStyle = 'rgba(29,26,20,0.18)';
   g.lineWidth = 1;
   g.strokeRect(b.x + 4, top + 4, b.w - 8, b.d - 8);
-  if (b.tank) {
+  const tanks = flats > 0 ? [b.x + 14, b.x + b.w - 14] : b.tank ? [b.x + b.w - 14] : [];
+  for (const tx of tanks) {
     // A rooftop water tank
-    const tx = b.x + b.w - 14;
     const ty = top + 12;
     rect(g, tx - 6, ty - 8, 12, 8, '#3b4f6b');
     oval(g, tx, ty - 8, 6, 2.5, '#5a7396');
@@ -589,8 +675,12 @@ function cone(g: CanvasRenderingContext2D, x: number, y: number): void {
   g.fillRect(x - 1.8, y - 6, 3.6, 1.6);
 }
 
-/** Market umbrellas in rows in front of the shops (our umbrella colours, no writing). */
-function marketStalls(g: CanvasRenderingContext2D, b: CityBlock, front = true): void {
+/**
+ * Market umbrellas in rows in front of the shops (our umbrella colours, no writing). Tired: the
+ * umbrellas are folded (closed poles) and nobody is at the stalls yet. Bright: open, with a
+ * trader at every fifth stall (d2: 5 people with the proud one).
+ */
+function marketStalls(g: CanvasRenderingContext2D, b: CityBlock, front = true, bright = true): void {
   const cols = ['#f2b300', '#9b59b6', '#16a3b8', '#d63d6c', '#f39c12'];
   const y0 = b.y + Math.round(b.d * 0.32) + 34;
   // Without the front row: the Market's stall row (5W W3) stands there once it is built.
@@ -600,8 +690,12 @@ function marketStalls(g: CanvasRenderingContext2D, b: CityBlock, front = true): 
     for (let x = b.x + 30 + ((y - y0) % 68 ? 18 : 0); x < b.x + b.w - 24; x += 40) {
       oval(g, x + 3, y + 4, 14, 5, 'rgba(0,0,0,0.15)');
       rect(g, x - 9, y - 6, 18, 6, '#8a5d36');
-      stroke(g, '#5d6670', 1.2, [x, y, x, y - 14]);
       const c = cols[i++ % cols.length]!;
+      if (!bright) {
+        drawFoldedUmbrella(g, x, y, fadeColour(c));
+        continue;
+      }
+      stroke(g, '#5d6670', 1.2, [x, y, x, y - 14]);
       oval(g, x, y - 16, 14, 6, c);
       g.strokeStyle = INK;
       g.lineWidth = 0.8;
@@ -612,46 +706,150 @@ function marketStalls(g: CanvasRenderingContext2D, b: CityBlock, front = true): 
       g.moveTo(x, y - 22);
       g.lineTo(x, y - 10);
       g.stroke();
-      drawCityFolk(g, x + 12, y + 2, i);
+      if (i % 5 === 1) drawCityFolk(g, x + 12, y + 2, i);
     }
 }
 
+/** Is this area drawn bright? (No `bright` list: everything is bright, the look before S3d1.) */
+export function areaBright(opts: CityOpts, id: string): boolean {
+  return opts.bright === undefined || opts.bright.includes(id);
+}
+
+/** The shutter on box `idx` of a block (d2): down on every front but the open one when tired; rolled up when bright. */
+function shutterFor(life: BlockLife | undefined, idx: number, tired: boolean): 'down' | 'half' | 'up' | 'none' {
+  if (!life || life.shutters === 0) return 'none';
+  const opener = life.proud === 'opener' && idx === life.open;
+  if (tired) return opener ? 'half' : idx === life.open ? 'none' : 'down';
+  return idx !== life.open || opener ? 'up' : 'none';
+}
+
+/** The r1c1 box that grows into flats at the first boom: its back box (the one whose front is furthest back). */
+export function flatsBox(): CityBox {
+  const b = CITY_BLOCKS.find((q) => q.id === FLATS.block)!;
+  return [...b.boxes].sort((p, q) => p.y + p.d - (q.y + q.d) || q.w - p.w)[0]!;
+}
+
+/** Where the proud person of a block stands (feet), map units. */
+export function proudSpot(b: CityBlock): { x: number; y: number } {
+  const life = BLOCK_LIFE[b.id];
+  if (b.kind === 'park') return { x: b.x + b.w * 0.5, y: b.y + b.d - 6 };
+  if (b.kind === 'market' || !life || life.open < 0) return { x: b.x + 16, y: b.y + Math.round(b.d * 0.32) + 40 };
+  const box = b.boxes[Math.min(life.open, b.boxes.length - 1)]!;
+  return { x: box.x + box.w * 0.3, y: box.y + box.d + 10 };
+}
+
+/** Where a block's neat kerb sack stands when tired, or null (d2: none where food is sold or served). */
+export function kerbSackSpot(b: CityBlock): { x: number; y: number } | null {
+  const life = BLOCK_LIFE[b.id];
+  if (!life || life.sacks === 0) return null;
+  const idx = b.boxes.findIndex((_, k) => k !== life.open);
+  const box = b.boxes[idx < 0 ? 0 : idx]!;
+  return { x: box.x + box.w * 0.7, y: b.y + b.d - 4 };
+}
+
+/** The street lamp of an ordinary block (between its first two buildings). */
+function blockLampX(b: CityBlock): number {
+  return b.kind === 'park' ? b.x + 58 : b.boxes.length > 1 ? b.boxes[1]!.x - 4 : b.x + 10;
+}
+
 /**
- * One block. A block with a spot takes that spot's look; any other block is a plain, bright
- * day block (look ignored). Draw blocks in CITY_BLOCKS order (back row first).
+ * One block. A block with a spot takes that spot's look; any other block ignores look.
+ * `opts.bright` says whether it is tired or bright (d2); `opts.boom` adds the flats on r1c1.
+ * Draw blocks in CITY_BLOCKS order (back row first).
  */
 export function drawCityBlock(g: CanvasRenderingContext2D, b: CityBlock, look: SpotLook = 'fixed', opts: CityOpts = {}): void {
   const spot = b.spot;
-  // The lot: pavement with a kerb and a little green
-  rect(g, b.x, b.y, b.w, b.d, K.lot, K.kerb, 1.5);
+  const bright = areaBright(opts, b.id);
+  const tired = !bright;
+  const life = BLOCK_LIFE[b.id];
+  // The lot: pavement with a kerb and a little green (a little dustier when tired)
+  rect(g, b.x, b.y, b.w, b.d, tired ? TIRED_COLOURS.lot : K.lot, tired ? TIRED_COLOURS.kerb : K.kerb, 1.5);
   const front = b.y + b.d;
   if (b.kind === 'park') {
-    rect(g, b.x + 6, b.y + 6, b.w - 12, b.d - 12, K.grass);
+    rect(g, b.x + 6, b.y + 6, b.w - 12, b.d - 12, tired ? fadeColour(K.grass, TIRED_COLOURS.grassFade) : K.grass);
     // A small football pitch
     const px = b.x + 80;
     const py = b.y + 34;
-    rect(g, px, py, b.w - 120, b.d - 70, '#9ccc6a', WHITE, 2);
-    stroke(g, WHITE, 2, [px + (b.w - 120) / 2, py, px + (b.w - 120) / 2, py + b.d - 70]);
-    g.strokeStyle = WHITE;
+    const pw = b.w - 120;
+    const ph = b.d - 70;
+    g.fillStyle = tired ? fadeColour('#9ccc6a', TIRED_COLOURS.grassFade) : '#9ccc6a';
+    g.fillRect(px, py, pw, ph);
+    if (tired) {
+      // Dry patches over about 60% of the grass (kept inside the grass)
+      g.save();
+      g.beginPath();
+      g.rect(b.x + 6, b.y + 6, b.w - 12, b.d - 12);
+      g.clip();
+      for (let k = 0; k < 14; k++) {
+        const rx = 16 + hash(k + 70) * 22;
+        oval(g, b.x + 14 + hash(k + 50) * (b.w - 28), b.y + 14 + hash(k + 60) * (b.d - 28), rx, rx * 0.55, TIRED_COLOURS.dryGrass);
+      }
+      g.restore();
+    }
+    const lineCol = tired ? 'rgba(255,255,255,0.35)' : WHITE;
+    g.strokeStyle = lineCol;
+    g.lineWidth = 2;
+    g.strokeRect(px, py, pw, ph);
+    stroke(g, lineCol, 2, [px + pw / 2, py, px + pw / 2, py + ph]);
+    g.strokeStyle = lineCol;
     g.beginPath();
-    g.arc(px + (b.w - 120) / 2, py + (b.d - 70) / 2, 14, 0, TAU);
+    g.arc(px + pw / 2, py + ph / 2, 14, 0, TAU);
     g.stroke();
-    for (let k = 0; k < 7; k++) tree(g, b.x + 22 + k * ((b.w - 44) / 6), k % 2 ? b.y + 26 : front - 10, 9 + (k % 3));
+    for (let k = 0; k < 7; k++) tree(g, b.x + 22 + k * ((b.w - 44) / 6), k % 2 ? b.y + 26 : front - 10, 9 + (k % 3), tired);
+    if (bright) drawChildrenWithBall(g, px + pw * 0.3, py + ph * 0.6, b.x);
   } else if (!spot) {
-    tree(g, b.x + b.w - 22, front - 8, 9);
-    if (b.w > 300) tree(g, b.x + 24, front - 8, 8);
+    tree(g, b.x + b.w - 22, front - 8, 9, tired);
+    if (b.w > 300) tree(g, b.x + 24, front - 8, 8, tired);
   }
   const lit = spot === 'lightsOut' ? (look === 'fixed' ? 'glow' : 'dim') : spot === 'slowInternet' && look !== 'fixed' ? 'dim' : 'day';
+  const fb = opts.boom === true && opts.flats !== false && b.id === FLATS.block ? flatsBox() : null;
   const boxes = [...b.boxes].sort((p, q) => p.y + p.d - (q.y + q.d));
-  for (const box of boxes) drawBox(g, box, lit);
-  if (b.kind === 'market') marketStalls(g, b, opts.market !== true);
+  for (const box of boxes) drawBox(g, box, lit, { tired, shutter: b.kind ? 'none' : shutterFor(life, b.boxes.indexOf(box), tired), flats: box === fb ? 1 : 0 });
+  if (b.kind === 'park') {
+    // The kiosk: half open when tired, open with its counter when bright
+    const k = b.boxes[0]!;
+    const ky = k.y + k.d;
+    rect(g, k.x + 6, ky - 13, k.w - 16, 8, '#5b4636');
+    if (tired) drawShutter(g, k.x + 5, ky - 14, k.w - 14, 9, 'half');
+    else {
+      drawShutter(g, k.x + 5, ky - 14, k.w - 14, 9, 'up');
+      rect(g, k.x + 5, ky - 6, k.w - 14, 2, CREAM, INK, 0.4);
+      for (let q = 0; q < 4; q++) disc(g, k.x + 10 + q * 6, ky - 7, 1.4, q % 2 ? '#f39c12' : '#d8342a');
+    }
+  }
+  if (b.kind === 'market') marketStalls(g, b, opts.market !== true, bright);
+  if (!spot) drawCityLamp(g, blockLampX(b), front - 3, bright);
   if (spot === 'lightsOut' && look === 'fixed') for (const x of lampXs(b)) drawCityLamp(g, x, front - 6, true);
   if (spot === 'slowInternet' && look === 'fixed') {
     const m = mastAt(b);
     drawMast(g, m.x, m.y, look);
-    {
-      // Shop screens lit along the front: a busy phone market street, made-up signs only
-      for (let x = b.x + 16; x < b.x + b.w - 20; x += 34) rect(g, x, front - 20, 22, 8, '#7fe0ff', INK, 0.8);
+    // Shop screens lit along the front: a busy phone market street, made-up signs only
+    for (let x = b.x + 16; x < b.x + b.w - 20; x += 34) rect(g, x, front - 20, 22, 8, '#7fe0ff', INK, 0.8);
+  }
+  if (life && !spot && b.kind !== 'park') {
+    if (tired) {
+      const sack = kerbSackSpot(b);
+      if (sack) drawKerbSack(g, sack.x, sack.y);
+    } else {
+      if (!b.kind)
+        b.boxes.forEach((box, k) => {
+          if (box.h <= 20) return;
+          drawGoods(g, box.x + box.w * 0.6, box.y + box.d + 7, GOODS_KINDS[(k + b.boxes.length) % GOODS_KINDS.length]!);
+          if (life.extra === 'plants') {
+            drawPottedPlant(g, box.x + box.w - 15, box.y + box.d + 4);
+            drawPottedPlant(g, box.x + box.w - 3, box.y + box.d + 4);
+          }
+        });
+      if (life.extra === 'fruit') drawFruitUmbrella(g, b.x + b.w * 0.24, front - 5, b.x + 3);
+      if (life.extra === 'washing') {
+        const big = [...b.boxes].sort((p, q) => q.w * q.d - p.w * p.d)[0]!;
+        drawWashingLine(g, big.x + 8, big.x + big.w - 26, big.y - big.h + big.d * 0.5);
+      }
+      if (b.kind !== 'market') {
+        // More people out on the pavement (the proud one is drawn below)
+        const n = life.people - 1;
+        for (let k = 0; k < n; k++) drawCityFolk(g, b.x + 14 + ((k + 0.5) * (b.w - 28)) / n + (k % 2) * 6, front - 3 - (k % 2) * 7, k * 2 + b.x);
+      }
     }
   }
   if (spot && look !== 'fixed') {
@@ -666,10 +864,34 @@ export function drawCityBlock(g: CanvasRenderingContext2D, b: CityBlock, look: S
     }
     if (look === 'ready') toolsWaiting(g, spot === 'lightsOut' ? b.x + b.w - 70 : b.x + 40, front - 10);
   }
-  if (spot && look === 'fixed') {
+  if (spot && tired) {
+    const sack = kerbSackSpot(b);
+    if (sack) drawKerbSack(g, sack.x, sack.y);
+  }
+  if (spot && look === 'fixed' && bright) {
     // People are back
     for (let k = 0; k < 9; k++) drawCityFolk(g, b.x + 18 + k * ((b.w - 36) / 8) + (k % 3) * 3, front - 3 - (k % 2) * 7, k + b.x);
+  } else if (life) {
+    // The proud person: there in both looks, never under the dim cover
+    const p = proudSpot(b);
+    drawProudFolk(g, p.x, p.y, life.proud, CITY_BLOCKS.indexOf(b) * 3 + 1);
   }
+}
+
+/**
+ * The first boom's flats growing (d6 boom, 1.0 to 2.2 s): r1c1's back box drawn with `k` (0 to 1)
+ * of its 3 new floors, then the box in front of it again so the flats stand behind it. Draw on
+ * top of a still picture painted with `{ boom: true, flats: false }`; once grown, paint the
+ * still picture again with `{ boom: true }`.
+ */
+export function drawBoomFlats(g: CanvasRenderingContext2D, k: number): void {
+  const b = CITY_BLOCKS.find((q) => q.id === FLATS.block)!;
+  const fb = flatsBox();
+  const kk = Number.isFinite(k) ? Math.max(0, Math.min(1, k)) : 1;
+  const life = BLOCK_LIFE[b.id];
+  drawBox(g, fb, 'day', { flats: kk, shadow: false, shutter: shutterFor(life, b.boxes.indexOf(fb), false) });
+  for (const box of b.boxes)
+    if (box !== fb && box.y + box.d > fb.y + fb.d) drawBox(g, box, 'day', { shadow: false, shutter: shutterFor(life, b.boxes.indexOf(box), false) });
 }
 
 // ---------- The potholes spot (a road) ----------
@@ -734,13 +956,26 @@ export function drawPotholeSpot(g: CanvasRenderingContext2D, look: SpotLook): vo
 /** Default looks: every spot shows its problem. */
 export const START_LOOKS: SpotLooks = { potholes: 'problem', lightsOut: 'problem', slowInternet: 'problem' };
 
-/** The whole still city in map units: ground, the potholes spot, then every block back to front. */
 /** Still-picture options: `jetty` false hides the ferry jetty; `market` true clears the market block's front umbrella row for the built Market (5W). */
 export interface CityOpts {
   jetty?: boolean;
   market?: boolean;
+  /**
+   * Tired or bright Lagos (city.md (d), d2 and d3). The areas drawn bright: block ids
+   * ('r0c0' ... 'r2c3'), 'busPark' and 'shore' (the shore road's kerbs and palms); every other
+   * area is drawn tired. Leave it out to draw everything bright. See CITY_AREAS.
+   */
+  bright?: readonly string[];
+  /** From the first boom (d4): the new flats on r1c1, the long bus shelter and a 4th danfo. The jetty is `jetty`. */
+  boom?: boolean;
+  /** With `boom`: false leaves the flats off, for the picture under drawBoomFlats while the flats grow. */
+  flats?: boolean;
 }
 
+/** Every area id `CityOpts.bright` understands: the 12 blocks, the bus park and the shore. */
+export const CITY_AREAS: readonly string[] = [...CITY_BLOCKS.map((b) => b.id), 'busPark', 'shore'];
+
+/** The whole still city in map units: ground, the potholes spot, then every block back to front. */
 export function drawCity(g: CanvasRenderingContext2D, looks: SpotLooks = START_LOOKS, opts: CityOpts = {}): void {
   g.save();
   drawCityGround(g, opts);
@@ -774,15 +1009,17 @@ export function makeCityCanvas(looks: SpotLooks = START_LOOKS, scale = 1, maxPx 
  * A yellow bus seen from above at an angle, centred on (x, y) on the ground. 'e' and 'w' go
  * across the map (about 46 x 14 on the ground), 'n' and 's' up and down (about 16 x 34).
  */
-export function drawCityBus(g: CanvasRenderingContext2D, x: number, y: number, dir: 'e' | 'w' | 'n' | 's'): void {
+export function drawCityBus(g: CanvasRenderingContext2D, x: number, y: number, dir: 'e' | 'w' | 'n' | 's', faded = false): void {
   const H = 10;
+  const side = faded ? fadeColour('#e3b50c') : '#e3b50c';
+  const top = faded ? fadeColour('#f6c90e') : '#f6c90e';
   g.save();
   g.translate(x, y);
   oval(g, 3, 6, dir === 'e' || dir === 'w' ? 26 : 11, 5, 'rgba(0,0,0,0.18)');
   if (dir === 'e' || dir === 'w') {
     const f = dir === 'e' ? 1 : -1;
     // Side wall
-    rect(g, -23, -2, 46, H, '#e3b50c', INK, 1);
+    rect(g, -23, -2, 46, H, side, INK, 1);
     g.fillStyle = '#bfe3f5';
     for (let k = 0; k < 5; k++) g.fillRect(-20 + k * 8, 0, 6, 4);
     g.fillStyle = INK;
@@ -790,12 +1027,12 @@ export function drawCityBus(g: CanvasRenderingContext2D, x: number, y: number, d
     disc(g, -14, H - 1, 2.6, '#222222');
     disc(g, 14, H - 1, 2.6, '#222222');
     // Roof
-    rect(g, -23, -2 - 12, 46, 12, '#f6c90e', INK, 1);
+    rect(g, -23, -2 - 12, 46, 12, top, INK, 1);
     g.fillStyle = '#bfe3f5';
     g.fillRect(f > 0 ? 17 : -23, -13, 6, 10);
   } else {
     // Front or back face
-    rect(g, -8, 6, 16, H, '#e3b50c', INK, 1);
+    rect(g, -8, 6, 16, H, side, INK, 1);
     g.fillStyle = '#bfe3f5';
     g.fillRect(-6, 7.5, 12, dir === 's' ? 5 : 3);
     if (dir === 's') {
@@ -803,7 +1040,7 @@ export function drawCityBus(g: CanvasRenderingContext2D, x: number, y: number, d
       disc(g, 5, 14, 1.2, '#fff3b0');
     }
     // Roof
-    rect(g, -8, -26, 16, 32, '#f6c90e', INK, 1);
+    rect(g, -8, -26, 16, 32, top, INK, 1);
     g.fillStyle = INK;
     g.fillRect(-8, -12, 16, 1.5);
     g.fillStyle = '#bfe3f5';
@@ -918,8 +1155,111 @@ export function drawProblemPin(g: CanvasRenderingContext2D, x: number, y: number
   g.restore();
 }
 
-// ---------- Bucket icons: Naira, Power, Tech ----------
+// ---------- Coming-soon pins (the first boom, d4) ----------
 
+export type SoonId = 'goSlow' | 'crowdedBuses';
+export const SOON_IDS: readonly SoonId[] = ['goSlow', 'crowdedBuses'];
+/** Where each coming-soon pin stands (map units, its foot): d4. */
+export const SOON_PINS: Record<SoonId, { x: number; y: number }> = { goSlow: { x: 488, y: 559 }, crowdedBuses: { x: 821, y: 640 } };
+export const SOON_WORDS: Record<SoonId, string> = { goSlow: 'Go-slow', crowdedBuses: 'Crowded buses' };
+/** The second word line on a coming-soon pin, and its font (d4: bold 11 px). */
+export const SOON_LINE = 'Coming soon';
+export const SOON_TAG = { lineH: 13, font: 'bold 11px sans-serif' } as const;
+
+/** A coming-soon icon centred on (x, y), about 24 across: a short queue of plain cars, or a bus full of people. */
+export function drawSoonIcon(g: CanvasRenderingContext2D, id: SoonId, x: number, y: number): void {
+  if (id === 'goSlow') {
+    // Three plain cars nose to tail on a strip of road
+    rect(g, x - 12, y - 2, 24, 12, '#5b5b62', INK, 1);
+    const cols = ['#e0572b', '#2b59c3', '#2fa36b'];
+    for (let k = 0; k < 3; k++) {
+      const cx = x - 8 + k * 8;
+      rect(g, cx - 3.5, y - 6 + k * 2.5, 7, 5, cols[k]!, INK, 0.8);
+      rect(g, cx - 2, y - 8.5 + k * 2.5, 4, 2.5, '#bfe3f5', INK, 0.6);
+    }
+  } else {
+    // A bus seen from the front, full: heads at every window
+    rect(g, x - 10, y - 8, 20, 17, '#f6c90e', INK, 1.2);
+    rect(g, x - 8, y - 6, 16, 7, '#bfe3f5', INK, 0.6);
+    const skins = ['#7a4a2a', '#d9a172', '#4b2c1a', '#a8693f', '#f1c9a5'];
+    for (let k = 0; k < 5; k++) disc(g, x - 6.4 + k * 3.2, y - 1.6, 1.4, skins[k]!);
+    disc(g, x - 6, y + 5, 1.4, '#fff3b0');
+    disc(g, x + 6, y + 5, 1.4, '#fff3b0');
+    rect(g, x - 9, y + 9, 4, 2, '#222222');
+    rect(g, x + 5, y + 9, 4, 2, '#222222');
+  }
+}
+
+/** The tap area round a coming-soon pin standing at (x, y): at least 48 x 56, both word lines included. */
+export function soonPinHitBox(x: number, y: number, id: SoonId): { x: number; y: number; w: number; h: number } {
+  const h = PIN.stem + PIN.tagH + SOON_TAG.lineH + PIN.r * 2 + 6;
+  const w = Math.max(64, SOON_WORDS[id].length * 7.5 + 16);
+  return { x: x - w / 2, y: y - h, w, h: h + 4 };
+}
+
+/**
+ * A coming-soon pin standing at (x, y), screen px (d4): the normal pin (round sign with its icon,
+ * stem, word tag) with a small padlock badge and a second word line "Coming soon" (bold 11 px).
+ * A calm grey-blue ring, not the problem orange. `bob` lifts it (0 to 2 px; 4 px bounce as it drops in).
+ */
+export function drawComingSoonPin(g: CanvasRenderingContext2D, x: number, y: number, id: SoonId, bob = 0): void {
+  const b = Number.isFinite(bob) ? Math.max(0, Math.min(4, bob)) : 0;
+  g.save();
+  oval(g, x, y, 9, 3, 'rgba(0,0,0,0.25)');
+  g.translate(x, y - b);
+  stroke(g, INK, 2.5, [0, 0, 0, -PIN.stem]);
+  const word = SOON_WORDS[id];
+  const measure = (t: string, font: string): number => {
+    g.font = font;
+    return typeof g.measureText === 'function' ? (g.measureText(t)?.width ?? t.length * 7) : t.length * 7;
+  };
+  const tw = Math.max(48, measure(word, PIN.word) + 12, measure(SOON_LINE, SOON_TAG.font) + 12);
+  const tagH = PIN.tagH + SOON_TAG.lineH;
+  const tagY = -PIN.stem - tagH;
+  g.fillStyle = CREAM;
+  g.strokeStyle = INK;
+  g.lineWidth = 1.5;
+  g.beginPath();
+  g.roundRect(-tw / 2, tagY, tw, tagH, 5);
+  g.fill();
+  g.stroke();
+  g.fillStyle = INK;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = PIN.word;
+  g.fillText(word, 0, tagY + PIN.tagH / 2 + 0.5);
+  g.font = SOON_TAG.font;
+  g.fillText(SOON_LINE, 0, tagY + PIN.tagH + SOON_TAG.lineH / 2 - 1.5);
+  const cy = tagY - 2 - PIN.r;
+  disc(g, 0, cy, PIN.r, WHITE);
+  g.strokeStyle = '#5d6670';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.arc(0, cy, PIN.r - 1.5, 0, TAU);
+  g.stroke();
+  g.strokeStyle = INK;
+  g.lineWidth = 1;
+  g.beginPath();
+  g.arc(0, cy, PIN.r, 0, TAU);
+  g.stroke();
+  drawSoonIcon(g, id, 0, cy);
+  // Padlock badge, top right
+  disc(g, 13, cy - 13, 8, CREAM);
+  g.strokeStyle = INK;
+  g.lineWidth = 1;
+  g.beginPath();
+  g.arc(13, cy - 13, 8, 0, TAU);
+  g.stroke();
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.arc(13, cy - 14.5, 2.6, Math.PI, TAU);
+  g.stroke();
+  rect(g, 9.5, cy - 14.5, 7, 6, '#5d6670', INK, 1);
+  disc(g, 13, cy - 11.8, 0.9, CREAM);
+  g.restore();
+}
+
+// ---------- Bucket icons: Naira, Power, Tech ----------
 export type BucketKind = 'naira' | 'power' | 'tech';
 export const BUCKETS: readonly BucketKind[] = ['naira', 'power', 'tech'];
 export const BUCKET_WORDS: Record<BucketKind, string> = { naira: 'Naira', power: 'Power', tech: 'Tech' };

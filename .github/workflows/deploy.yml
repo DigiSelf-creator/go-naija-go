@@ -1,5 +1,7 @@
 # Test, build and put Gbese! on GitHub Pages.
 # Runs on every push to main, and by hand from the Actions tab.
+# The quick checks and phone tests must pass before anything goes online (about 15 minutes).
+# The slow real-time and frame-rate tests run after, in their own job, so they never hold up the test link.
 name: Test and deploy
 
 on:
@@ -9,11 +11,6 @@ on:
 
 permissions:
   contents: read
-
-# One deploy at a time. A newer push waits; a running deploy is not cut off.
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   test:
@@ -39,15 +36,6 @@ jobs:
       - name: Phone tests (end to end)
         run: npx playwright test --project=phone-landscape
 
-      # Real-time play tests, one at a time so a busy runner does not upset their timing.
-      - name: Play tests in real time (end to end)
-        run: npx playwright test --project=timing --no-deps
-
-      # Frame-rate tests. Shared runners are noisy, so a slow run here does not block a deploy.
-      - name: Frame-rate tests (optional)
-        continue-on-error: true
-        run: npx playwright test --project=perf --no-deps
-
       - name: Keep test results if something failed
         if: failure()
         uses: actions/upload-artifact@v4
@@ -65,6 +53,10 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
+    # One deploy at a time. A newer push waits; a running deploy is not cut off.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
@@ -74,3 +66,42 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Slow tests. They run after the quick checks pass, alongside the deploy, and do not block it.
+  # A red result here means: fix it in the next update.
+  slow-tests:
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: slow-tests
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Real-time play tests, one at a time so a busy runner does not upset their timing.
+      - name: Play tests in real time (end to end)
+        run: npx playwright test --project=timing --no-deps
+
+      # Frame-rate tests. Shared runners are noisy, so a slow run here is only a warning.
+      - name: Frame-rate tests (optional)
+        if: always()
+        continue-on-error: true
+        run: npx playwright test --project=perf --no-deps
+
+      - name: Keep test results if something failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slow-test-results
+          path: test-results/
+          retention-days: 7
