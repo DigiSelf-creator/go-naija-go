@@ -1,5 +1,25 @@
 # Open questions for the product owner
 
+## po note, 13 Nov 2026 (latest): S3d1 "The Booming meter you can see" accepted
+
+- Accepted: S3d1 (city.md step (d), d1 to d12; plan S3d1a and S3d1b), after qa passed it (c67b197). See "po acceptance, 13 Nov 2026: S3d1" below.
+- Waits for Tp: paste decision lines 44 to 48 (recommend: paste as written); a play on a real phone; by ear, the four new sounds (sting, step, boom, horn; recommend: say yes unless one sounds like a known game, advert or song); a look at the tired Lagos (far view at 0 points) on a real phone (recommend: keep it, it reads faded but warm).
+- Carried to step (f), not blockers now: at 320 x 240 the two coming-soon pins overlap; the Mast board covers the Slow internet pin; the packed 320 x 240 layout still cuts pin words ("Slow intern", "Lights out" under the bottom buttons).
+
+## po acceptance, 13 Nov 2026: S3d1 "The Booming meter you can see" (city.md (d), d1 to d12)
+
+**Verdict: accepted.** Checked against Tp's answers above ("po, 13 Nov 2026: Tp's answers on finishing Lagos and feeling the city get better", items 1 to 5) and the waiting decision lines 46 to 48.
+Reported (qa): passed S3d1 at c67b197, with the designer rulings on the folded heading and soft coming-soon pins at 360 x 300 or smaller (both accepted by po). Reported (qa, 527aca9): Mission complete with the moment measured 8.09 s on the phone profile, inside 7 to 9 s; one tap ends it. Reported (designer, gamedev): S3d1 about 23 KB; first load under 600 KB, far under 3 MB.
+Checked by po (verified by reading src/screens/words.ts, src/art/city.ts, docs/city.md (d) and qa's screenshots):
+1. Words: every line matches d8 word for word: "Booming", "9 of 20", "Lagos is getting brighter!", "Each fix makes Lagos brighter!", "Tap to skip" / "Press Space to skip", the boom card ("Lagos is booming!", "New buildings are going up. More people are coming, and they need more.", "Lagos's cog is turning on Nigeria's wheel!", "See Lagos"), coming-soon pins "Go-slow" and "Crowded buses" with "Coming soon", cards "The traffic is stuck here." and "More people need buses here." Plain, warm, short. No real place is named in a line that says something is wrong.
+2. Tired, never run-down (Tp item 3 and item 5, line 47): the far view at 0 points is warm sand and faded paint, shutters down, a few small neat sacks, dry grass, a few people; no grey street, no mess, no one shown as the problem. Opinion: it reads "a bit faded but still warm and proud". The two problem blocks (Lights out, Slow internet) are darker because of their own dim cover, which is their job to fix, and they brighten when fixed.
+3. Clearly different at 0, 8 and 20 points (verified, qa screenshots side by side): left side and middle bright at 8, whole area bright at 20 with only the Slow internet block tired, as d3 says. A danfo drives the new Alausa road (verified in the 8-point and moment shots), so "New road! Danfos are back." is now true (the 12 Nov step (f) condition on buses is met).
+4. Pin hides at "Done ✓" (Tp item 4): verified in the moment shot at 0.3 s: the board says "Done New road" and the Potholes pin is gone.
+5. Mission complete about 7 to 9 s and skippable: reported by qa (8.09 s, one tap ends it).
+6. Rules: no network calls but the offline cache, no trackers, ads, accounts or photo access (grep of src). Nothing from Mario or any Nintendo game; the sounds are code-made and our own. No real people, brands or party colours; the new flats, shelter and stalls carry no writing or logos. Nothing mocks anyone. The "wrong premise" line is not used.
+Carried to step (f) (reasoned; only after the lane run, so no first-timer meets them in slice 3): the two coming-soon pins overlap at 320 x 240; the Mast board covers the Slow internet pin; packed 320 x 240 cuts pin words. po will not accept step (f) with any of these.
+Not tested yet (open, not blocking): a real cheap phone, the four sounds by ear, Tp's own first look at tired Lagos.
+
 ## po note, 13 Nov 2026 (newest): Tp's answers on finishing Lagos and feeling the city get better
 
 - Answered by Tp (13 Nov): finish Lagos first (option A), and W17 questions 1 and 2 as recommended. See the section below.
