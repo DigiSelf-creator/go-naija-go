@@ -1309,6 +1309,7 @@ declare global {
           readonly standing: number;
           readonly danfo: { readonly x: number; readonly y: number } | null;
           readonly soon: Readonly<Record<string, { readonly x: number; readonly y: number; readonly w: number; readonly h: number }>>;
+          readonly soonHidden: readonly string[];
           readonly bright: readonly string[];
         };
         readonly saved: {

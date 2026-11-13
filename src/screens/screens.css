@@ -1880,3 +1880,8 @@
     animation: none;
   }
 }
+
+/* d5 ruling: a coming-soon pin a sign covers on a tiny screen is hidden whole. */
+.screen .city-pin[hidden] {
+  display: none;
+}

@@ -152,29 +152,96 @@ test('S3d1 ruling 3: at 320 x 240, a full collect that crosses a step while fold
   await expect(page.locator('.city-card > .sr-only[aria-live]')).toContainText('Lagos is getting brighter.');
 });
 
+const SOON_SAVE = { kobo: 0, power: 0, tech: 3, fixed: ['potholes', 'lightsOut'], fixes: 2, built: ['buka', 'market'], trays: { buka: 150, market: 240 }, boom: 20, boomSeen: 20, hints: HINTS };
+type QBox = { x: number; y: number; w: number; h: number };
+const clear = (a: QBox, b: QBox): boolean => a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+
 test('S3d1 ruling 4: the coming-soon pins tap 92 x 56 at most 96 wide, and boards keep clear of them', async ({ page }) => {
-  for (const [width, height] of [[851, 393], [320, 240]] as const) {
-    await page.setViewportSize({ width, height });
-    await openCity(page, { kobo: 0, power: 0, tech: 3, fixed: ['potholes', 'lightsOut'], fixes: 2, built: ['buka', 'market'], trays: { buka: 150, market: 240 }, boom: 20, boomSeen: 20, hints: HINTS });
-    const pins = page.locator('[data-soon]');
-    await expect(pins).toHaveCount(2);
-    for (const el of await pins.all()) {
-      const name = await el.getAttribute('aria-label');
+  await page.setViewportSize({ width: 851, height: 393 });
+  await openCity(page, SOON_SAVE);
+  const pins = page.locator('[data-soon]');
+  await expect(pins).toHaveCount(2);
+  for (const el of await pins.all()) {
+    const name = await el.getAttribute('aria-label');
+    const r = (await el.boundingBox())!;
+    expect(r.width, `${name} tap width`).toBeGreaterThanOrEqual(92);
+    expect(r.width, `${name} tap width`).toBeLessThanOrEqual(96);
+    expect(r.height, `${name} tap height`).toBeGreaterThanOrEqual(56);
+  }
+  const c = await city(page);
+  for (const s of Object.values(c.watch.soon)) {
+    expect(s.w, 'the box signs keep clear of is the tap area').toBeGreaterThanOrEqual(92);
+    expect(s.w).toBeLessThanOrEqual(96);
+    for (const [id, b] of [...Object.entries(c.boards), ...Object.entries(c.bubbles)]) expect(clear(b, s), `${id} over a coming-soon pin`).toBe(true);
+  }
+});
+
+// Designer ruling (e79e83d, d5 "Soft coming-soon pins on tiny screens"): at 360 x 300 or smaller a
+// coming-soon pin that a sign covers is hidden whole until the sign moves or goes.
+test('S3d1 ruling 4 at 320 x 240: a coming-soon pin a sign covers is hidden whole; shown ones are clear; it comes back when the sign goes', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 240 });
+  await openCity(page, SOON_SAVE);
+  await page.waitForTimeout(500);
+  const c = await city(page);
+  const map = (await lagos(page).locator('.city-map').boundingBox())!;
+  const signs: [string, QBox][] = [...Object.entries(c.boards).map(([k, b]) => [`board ${k}`, b] as [string, QBox]), ...Object.entries(c.bubbles).map(([k, b]) => [`bubble ${k}`, b] as [string, QBox])];
+  const covered = Object.entries(c.watch.soon).filter(([, s]) => signs.some(([, b]) => !clear(b, s)));
+  expect(covered.length, 'this packed save covers a coming-soon pin').toBeGreaterThan(0);
+  for (const [id, s] of Object.entries(c.watch.soon)) {
+    const el = page.locator(`[data-soon="${id}"]`);
+    const hidden = covered.some(([k]) => k === id);
+    if (hidden) {
+      // (2) Hidden whole: not visible, not focusable; a tap on the overlap does what the sign does.
+      await expect(el).toBeHidden();
+      expect(await el.evaluate((e) => { (e as HTMLElement).focus(); return document.activeElement === e; })).toBe(false);
+      const [name, b] = signs.find(([, q]) => !clear(q, s))!;
+      const x = map.x + (Math.max(b.x, s.x) + Math.min(b.x + b.w, s.x + s.w)) / 2;
+      const y = map.y + (Math.max(b.y, s.y) + Math.min(b.y + b.h, s.y + s.h)) / 2;
+      const hit = await page.evaluate(({ x, y }) => {
+        const e = document.elementFromPoint(x, y)?.closest('[data-build],[data-place],[data-soon]');
+        return e ? e.getAttribute('data-build') ?? e.getAttribute('data-place') ?? `soon ${e.getAttribute('data-soon')}` : null;
+      }, { x, y });
+      expect(hit, `a tap on the overlap of ${name} and ${id}`).toBe(name.split(' ')[1]);
+    } else {
+      // (1) Shown: 92 to 96 wide, at least 56 tall. (3) Clear of every sign.
+      await expect(el).toBeVisible();
       const r = (await el.boundingBox())!;
-      expect(r.width, `${name} tap width at ${width} x ${height}`).toBeGreaterThanOrEqual(92);
-      expect(r.width, `${name} tap width at ${width} x ${height}`).toBeLessThanOrEqual(96);
-      expect(r.height, `${name} tap height`).toBeGreaterThanOrEqual(56);
-    }
-    const c = await city(page);
-    for (const s of Object.values(c.watch.soon)) {
-      expect(s.w, 'the box signs keep clear of is the tap area').toBeGreaterThanOrEqual(92);
-      expect(s.w).toBeLessThanOrEqual(96);
-      for (const [id, b] of [...Object.entries(c.boards), ...Object.entries(c.bubbles)]) {
-        const apart = b.x + b.w <= s.x || s.x + s.w <= b.x || b.y + b.h <= s.y || s.y + s.h <= b.y;
-        expect(apart, `${id} over a coming-soon pin at ${width} x ${height}`).toBe(true);
-      }
+      expect(r.width).toBeGreaterThanOrEqual(92);
+      expect(r.width).toBeLessThanOrEqual(96);
+      expect(r.height).toBeGreaterThanOrEqual(56);
+      for (const [name, b] of signs) expect(clear(b, s), `${name} over the shown ${id} pin`).toBe(true);
     }
   }
+  expect([...c.watch.soonHidden].sort()).toEqual(covered.map(([k]) => k).sort());
+  // (4) Signs stay clear of the chips and the buttons.
+  for (const e of await lagos(page).locator('.city-chip, .city-top button, .city-bottom button').all()) {
+    const r = (await e.boundingBox())!;
+    const o = { x: r.x - map.x, y: r.y - map.y, w: r.width, h: r.height };
+    for (const [name, b] of signs) expect(clear(b, o), `${name} under "${(await e.textContent())?.trim()}"`).toBe(true);
+  }
+  // (5) Collecting the Mama Put tray takes its bubble away: a pin it hid comes back, shown and tappable.
+  const byBuka = covered.filter(([, s]) => !clear(c.bubbles['buka']!, s)).map(([k]) => k);
+  expect(byBuka.length, 'the Mama Put bubble covers a coming-soon pin').toBeGreaterThan(0);
+  await page.locator('[data-place="buka"]').tap();
+  await expect.poll(async () => (await city(page)).saved.kobo, { timeout: 15_000 }).toBe(150);
+  // Straight after the collect (the tray fills again in steps of 6 s), the pins the bubble hid are back.
+  await expect.poll(async () => {
+    const now = await city(page);
+    return now.bubbles['buka'] === undefined && byBuka.every((id) => !now.watch.soonHidden.includes(id));
+  }, { timeout: 4000, intervals: [50] }).toBe(true);
+  let checked = 0;
+  for (const id of byBuka) {
+    const el = page.locator(`[data-soon="${id}"]`);
+    await expect(el).toBeVisible();
+    // Tappable and back in the Tab order: focus it and press Enter (the pins overlap each other at
+    // 320 x 240, so a tap at its middle may land on its neighbour).
+    expect(await el.evaluate((e) => { (e as HTMLElement).focus(); return document.activeElement === e; })).toBe(true);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.city-problem').getByText('Coming soon.')).toBeVisible();
+    await page.keyboard.press('Escape');
+    checked++;
+  }
+  expect(checked, 'a hidden pin came back').toBeGreaterThan(0);
 });
 
 test('S3d1 ruling 5: the next board does not pay during the moment or the boom; a tap skips the wait', async ({ page }) => {

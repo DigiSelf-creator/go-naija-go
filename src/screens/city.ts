@@ -465,6 +465,8 @@ export class CityScreen {
   /** The coming-soon pins wait for the boom card to close, then drop in. */
   private soonWait = false;
   private soonDrop = false;
+  /** Coming-soon pins a sign covers on a tiny screen: hidden whole while covered (designer ruling, d5). */
+  private soonHidden = new Set<SoonId>();
   private moment: MomentRun | null = null;
   private boomRun: BoomRun | null = null;
   /** People walking in (at most 8 moving, W10), and those who have arrived and stand. */
@@ -670,6 +672,7 @@ export class CityScreen {
       return { id, el, pic };
     });
     this.soonDrop = false;
+    this.soonHidden.clear();
     this.pinLayer.replaceChildren(...this.pins.map((p) => p.el), ...this.soonPins.map((p) => p.el));
     this.paintPins();
   }
@@ -725,6 +728,29 @@ export class CityScreen {
     }
   }
 
+  /** 360 x 300 or smaller: the fold and the soft coming-soon pins (d5). */
+  private tiny(): boolean {
+    return this.view.w <= 360 && this.view.h <= 300;
+  }
+
+  /**
+   * d5 ruling: on a tiny screen a coming-soon pin that a sign's box touches is hidden whole (not
+   * drawn, no taps, out of Tab order and hidden from screen readers) until the sign moves or goes.
+   */
+  private hideCoveredSoon(signs: readonly ScreenBox[]): void {
+    const boxes = this.soonBoxes();
+    const touch = (a: ScreenBox, b: ScreenBox): boolean => !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
+    for (const p of this.soonPins) {
+      const box = boxes[p.id]!;
+      const hide = this.tiny() && signs.some((b) => touch(b, box));
+      if (hide !== this.soonHidden.has(p.id)) {
+        if (hide) this.soonHidden.add(p.id);
+        else this.soonHidden.delete(p.id);
+        p.el.hidden = hide;
+      }
+    }
+  }
+
   /** The coming-soon pins' tap areas on screen now (CSS px, in the map area): drawn pins, for signs, arrows and tests. */
   soonBoxes(): Partial<Record<SoonId, ScreenBox>> {
     const out: Partial<Record<SoonId, ScreenBox>> = {};
@@ -760,7 +786,7 @@ export class CityScreen {
     return this.mission ? this.mission.phase : null;
   }
   /** The moment and the boom now (d6), for tests. */
-  get watch(): { moment: { build: string | null; t: number } | null; boom: { mark: number; t: number } | null; walkers: number; standing: number; danfo: Pt | null; soon: Partial<Record<SoonId, ScreenBox>>; bright: string[] } {
+  get watch(): { moment: { build: string | null; t: number } | null; boom: { mark: number; t: number } | null; walkers: number; standing: number; danfo: Pt | null; soon: Partial<Record<SoonId, ScreenBox>>; soonHidden: string[]; bright: string[] } {
     return {
       moment: this.moment ? { build: this.moment.build, t: this.moment.t } : null,
       boom: this.boomRun ? { mark: this.boomRun.mark, t: this.boomRun.t } : null,
@@ -768,6 +794,7 @@ export class CityScreen {
       standing: this.standing.length,
       danfo: this.danfo ? routeAt(this.danfo.r, this.danfo.d) : null,
       soon: this.soonBoxes(),
+      soonHidden: [...this.soonHidden],
       bright: (this.moment?.paint ?? this.boomRun?.paint ?? paintOf(this.life.state)).bright,
     };
   }
@@ -912,8 +939,9 @@ export class CityScreen {
     let out = new Map<string, SignSpot>();
     const taken: ScreenBox[] = [];
     const all = this.pinBoxes();
-    // Coming-soon pins are drawn pins too (W15): hard.
-    const pins: Block[] = [...(Object.entries(all) as [SpotId, ScreenBox][]).map(([spot, b]) => ({ ...b, soft: this.looks[spot] === 'fixed' })), ...Object.values(this.soonBoxes())];
+    // Coming-soon pins are drawn pins too (W15): hard; on a tiny screen soft (tried clear first, d5 ruling).
+    const tiny = this.tiny();
+    const pins: Block[] = [...(Object.entries(all) as [SpotId, ScreenBox][]).map(([spot, b]) => ({ ...b, soft: this.looks[spot] === 'fixed' })), ...Object.values(this.soonBoxes()).map((b) => ({ ...b, soft: tiny }))];
     for (const ask of asks) {
       const had = this.signCache.get(ask.id);
       const prev = had && had.tag === ask.tag && had.zoom === this.cam.zoom ? { x: ask.anchor.x + had.dx, y: ask.anchor.y + had.dy, short: had.short } : null;
@@ -2530,6 +2558,7 @@ export class CityScreen {
       return { id: `board ${b}`, tag: `${units}`, anchor: m, prefer: [beside, other], box0, boxShort, hw, hh, mayHide: false, b, units, done };
     });
     const spots = this.layoutSigns(bubbleAsks, boardAsks);
+    this.hideCoveredSoon([...spots.values()].map((sp) => sp.box));
     for (const a of boardAsks) {
       const foot = spots.get(a.id)!;
       const { b, units, done } = a;
@@ -2734,7 +2763,9 @@ export class CityScreen {
       ...this.bubbleBox.values(),
       ...this.covers,
       ...this.pins.filter((p) => this.looks[p.spot] !== 'fixed').map((p) => pins[p.spot]),
-      ...Object.values(this.soonBoxes()),
+      ...Object.entries(this.soonBoxes())
+        .filter(([id]) => !this.soonHidden.has(id as SoonId))
+        .map(([, b]) => b),
     ].filter(onView);
     for (const p of this.pins) {
       if (this.looks[p.spot] === 'fixed') continue;
