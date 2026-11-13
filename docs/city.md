@@ -363,7 +363,7 @@ The place in brackets is where the pin sits on the map, never words on the card.
 
 | Screen | Who sees it | One job | Exact words |
 |---|---|---|---|
-| Intro (6 frames) | A first-time player, before the hero builder; later anyone from Settings, "Watch the story" | Tell the story in 20 seconds | See "The intro" below. "Skip" on every frame; a tap moves on |
+| Intro (moving scene, step (a2)) | A first-time player, before the hero builder; later anyone from Settings, "Watch the story" | Show the story in about 28 seconds | "Skip" from the start; a tap jumps to the next beat. On screen only "That hero is you." and "Build up Lagos. Get Nigeria working." (if Tp says yes), and "Let's go". Screen readers hear captions 1 to 6. Reduced motion: the six frames with captions. See "The intro" below and (a2) |
 | Title | Everyone who opens the game | Start | "Gbese!" / "Build up Lagos. Get Nigeria working." Button "Play". "Sound: on", "Music: on" |
 | City | Anyone who taps "Play" | Pick a problem to fix | Heading "Lagos". Bucket chips "₦24.50", "Power 6", "Tech 3". "Booming" bar, "9 of 20" (W6). Pins with one word each. Buttons "Nigeria's wheel", "Hero", "Settings" (and "Challenge road" if Tp says yes) |
 | Problem card | A player who taps a pin | Say what is wrong, the cost and how to help | Potholes: "Potholes on this road." / "Fixing it costs ₦10." / Big "Run Alausa", or "Walk there" when you have some of the price (part 5W replaces "Fix it"). Lights out: "Lamps are out here." / "Switching them on costs Power 10." / Big "Lane run", or "Switch on (Power 10)". Slow internet: "The internet is slow here." / "Fixing it costs Tech 6." / Big "Lane run", or "Fix it (Tech 6)". Small "Back" on each |
@@ -374,6 +374,8 @@ The place in brackets is where the pin sits on the map, never words on the card.
 | Pause (lane run) | A player who paused | Get back to playing | "Paused". "Keep playing", "Start again", "Back to Lagos". "Sound: on", "Music: on" |
 
 ### The intro (T1 to T4, confirmed 9 and 10 Nov)
+
+**From 13 Nov (Tp): the intro becomes one moving scene, build step (a2) below. The beats and captions here stay: screen readers hear them, and the six still frames are now the reduced-motion version.**
 
 Six still frames drawn in code (well under 50 KB). "Skip" from the first frame; a tap moves on. Plays once before the first hero build, then lives under Settings as "Watch the story". A call or a turned phone pauses it, and that frame starts again. Real text, so screen readers read it. Long captions may wrap over two lines at 320 x 240; no words are cut. Caption 1 may wrap to 4 lines at 320 x 240 (whole, no scroll), keeping Tp's words (po, 11 Nov). 240 x 180 is below our 320 x 240 minimum: no work for it.
 
@@ -397,6 +399,7 @@ Slice 3 starts now, beside the slice 2 polish (po's reading of Tp's 10 Nov play,
 | Step | What Tp sees when it is done | Ready? |
 |---|---|---|
 | (a) The intro story | 6 frames, Skip, plays once, "Watch the story" in Settings | **Ready to start now** |
+| (a2) The intro that moves | one short moving scene (about 28 s) in place of the six still frames; Skip, a tap jumps a beat, plays once, "Watch the story"; reduced motion keeps the six frames (Tp, 13 Nov) | **Ready to start (13 Nov)**: art S3a3 first |
 | (b) Lagos from above | the city screen, drag and zoom, three pins, the bucket counters, saved on the phone | **Ready to start now** |
 | (c) Wins go home | a street win pays Naira, fixes the Potholes pin, "Mission complete!" and the new road | after (b) |
 | (d) The Booming meter you can see | Lagos starts tired; each fix brightens its part while you watch; the meter in the "Lagos" box fills; at 20 points the area is bright, new buildings rise, "Lagos is booming!" (W6, W17 A + B) | **Build-ready (13 Nov)** |
@@ -418,6 +421,182 @@ Words and frames: "The intro" above (captions 1 to 6, confirmed by Tp).
 
 Owners and budgets: art draws the 6 frames (src/art/intro.ts, under 12 KB). gamedev builds the intro screen, the once rule and Settings (under 6 KB).
 Done when: every caption fits at 320 x 240 and 851 x 393 with no cut and no scroll; Skip and "Let's go" work by touch and keys; it plays once and then only from "Watch the story"; screen readers read every caption; reduced motion gives plain cuts; qa's originality and no-real-people check passes.
+
+#### (a2) The intro that moves (designer, 13 Nov 2026)
+
+**Why.** Tp, 13 Nov: "Can we have the intro not as static images with texts describing it?" The story should be shown, not told. So the six still frames with captions become one short moving scene drawn in code on the canvas. The story beats stay exactly as Tp confirmed them on 9 and 10 Nov (T1 to T4, captions 1 to 6). Only the way they are shown changes.
+
+**What stays the same.** When it plays (once, before the first hero build or on the next "Play"; save key `gidi-intro`: "seen"), "Watch the story" in Settings, Skip from the start (top right, at least 44 x 44 px, and Escape), pause on a call, an app switch or a turned phone, portrait handling as now, and the hero builder after it. The six confirmed captions in `WORDS.intro.captions` stay word for word: screen readers hear them, and the reduced-motion version shows them.
+
+##### a2.1 The idea in one line
+
+One camera, one Wheel. The Wheel is in every beat, so the scene feels like one story, not six pictures: people finish it, it turns and Lagos grows round it, it sits in the middle of Nigeria, the Stoppers jam it, your hero pushes it back into motion, and its turning becomes the wheel of the yellow bus that takes you into Lagos.
+
+##### a2.2 The beat sheet (seconds from the start)
+
+Six beats, one for each confirmed caption. About 28 s from the start to "Let's go", then it waits for the player. Times are for gamedev and qa; art may move any moment inside a beat by up to 0.3 s if it looks better, but the beat starts stay.
+
+**Beat 1, 0.0 to 6.0: the people make the Wheel** (caption 1)
+
+| s | What moves |
+|---|---|
+| 0.0 to 1.0 | Dark blue sky warms to orange; the sun rises from behind the far hills (sun centre y 130 to 92). Land, palms, baobab and river are already there. |
+| 0.5 to 2.5 | People of every age push the nearly done Wheel; it creaks round slowly (0.2 rad/s). Their arms move with each push. The child walks in with the basket of brass pins. |
+| 2.5 to 4.0 | Two people lift the last wooden spoke and slide it into the hub. |
+| 4.0 | The spoke clicks in: a small brass flash at the hub. |
+| 4.0 to 6.0 | The Wheel turns freely, a little faster (0.5 rad/s). Everyone lifts their arms, the elder claps from the stool, the child points up. |
+
+**Beat 2, 6.0 to 11.0: the Wheel turns and Lagos grows** (caption 2)
+
+| s | What moves |
+|---|---|
+| 6.0 to 6.8 | The camera slides right: the savanna slides out to the left, the lagoon and shore slide in. The Wheel moves to the left side and keeps turning (it never leaves the picture). |
+| 6.8 to 9.0 | Buildings grow up from the shore one after another (each rises in 0.4 s, 0.25 s apart); cranes swing on three of them. |
+| 8.0 to 10.5 | Two yellow buses roll in over the bridge from the left and stop. |
+| 8.5 to 11.0 | People walk in along the pavement from the left: a bag on a head, a child holding a hand. Windows light up in the new buildings. |
+
+**Beat 3, 11.0 to 15.5: Nigeria's Wheel, made for everyone** (caption 3)
+
+| s | What moves |
+|---|---|
+| 11.0 to 11.8 | The camera pulls back and up: the city shrinks to a small glowing dot. The dot lands where Lagos really is on the map (the south-west coast). The Wheel slides to the middle of the map and shrinks to the frame 3 size. |
+| 11.8 to 13.0 | Nigeria's outline draws itself round, starting at the Lagos dot. Then the land fills in green, white, green, from west to east (0.6 s). Lake Chad shows at the north-east corner. |
+| 13.0 to 14.2 | The small border cogs pop in one by one all the way round (0.03 s apart), each with a tiny bounce. |
+| 14.2 to 15.5 | All the border cogs turn together, neighbours opposite ways, with the Wheel in the middle. Soft light pulses out from the Wheel twice. |
+
+**Beat 4, 15.5 to 20.0: the Stoppers want it stuck** (caption 4)
+
+| s | What moves |
+|---|---|
+| 15.5 to 16.1 | The camera drops back to the ground: the map fades, the big Wheel stands by a plain road, still turning. |
+| 15.8 to 17.0 | The sky slowly greys to the frame 4 lilac (warm, never dark or scary). |
+| 16.0 | The **jam** of three cars bumps in from the left, with puffs of honk smoke. |
+| 16.7 | The **pothole** opens in the road like a mouth; eyes peek out. |
+| 17.4 | The **dark lamp** springs up; its bulb flickers twice and goes out. |
+| 18.1 | The **stack of forms** hops in on its own, red tape flapping loose. |
+| 18.6 to 19.4 | The stack nudges a wooden wedge under the Wheel. The Wheel shudders, slows and stops with a clunk. The music stops with it (a2.6). |
+| 19.4 to 20.0 | The four Stoppers lean back and pout, pleased with themselves. A silly look, never mean or scary. |
+
+**Beat 5, 20.0 to 24.5: the Wheel Hero, and that hero is you** (caption 5)
+
+| s | What moves |
+|---|---|
+| 20.0 to 21.5 | A warm patch of light opens on the left. The hero walks in to the Wheel (the player's own hero; the plain outline hero on a first visit, since the builder comes after). |
+| 21.5 to 22.0 | The hero stops, looks at the stuck Wheel, sets both hands on it. |
+| 22.0 to 23.0 | The hero pushes. The Wheel creaks, rocks once, then rolls. The wedge pops out and bounces off the screen in a funny spinning arc. |
+| 23.0 to 24.5 | Light floods back, the sky goes gold, the Wheel turns freely. The Stoppers flinch back a step each, blink and grumble, but **stay at the edges**: they are still out there for you to beat in the game. Music back. On-screen line "That hero is you." (if Tp says yes, a2.4). |
+
+**Beat 6, 24.5 to 27.8, then the hold: your journey starts now** (caption 6)
+
+| s | What moves |
+|---|---|
+| 24.5 to 25.3 | The camera rushes in to the turning Wheel's hub. As it pulls back out, the turning wheel is now the front wheel of the yellow bus. A zoom, not a shaped mask or wipe (a2.8). |
+| 25.3 to 26.3 | Morning at the Lagos bus stop (frame 6). The bus rolls in and stops at the stop with a little rock; its door opens. |
+| 25.8 to 27.2 | The people waiting step on. The hero walks in from the left to the bus door and turns to face us. |
+| 27.2 | The line "Build up Lagos. Get Nigeria working." fades in at the top (0.4 s). |
+| 27.8 | The big button "Let's go" fades in at the bottom right. |
+| 27.8 on (the hold) | The bus idles (it bobs gently), the hero breathes. After 3 s of hold the picture stops being drawn and stays still (a2.9) until "Let's go", Skip, or a change of screen size. |
+
+Total about 28 s to "Let's go", inside Tp's 20 to 30 s.
+
+##### a2.3 What a tap does (recommendation)
+
+- **A tap anywhere but a button, or Space, Enter or →, jumps to the start of the next beat.** A curious player can hurry the story without losing it; Skip ends it at once. Six jumps reach the hold. This keeps the old feel ("a tap moves on") for players who learned it, and nothing feels broken.
+- A jump plays the new beat's opening camera move fast (0.3 s), so the picture never pops.
+- In the hold a tap does nothing; Space or Enter presses "Let's go".
+- Escape skips, from the first moment, as now.
+- No "Tap to go on" hint any more: the story moves by itself.
+
+##### a2.4 Words on screen
+
+Very few. Tp asked for none, or at most a short line at a key beat. Recommendation (question for Tp in docs/questions.md):
+- Beat 5, 23.0 to 24.5: **"That hero is you."** It is the one moment a picture cannot say alone.
+- Beat 6, from 27.2: **"Build up Lagos. Get Nigeria working."** (the title line Tp chose, 9 Nov). It stays with the button.
+- Button **"Let's go"**. Top right **"Skip"**.
+- Nothing else: no names on the Stoppers (their looks say it), no "Long ago", no beat titles.
+
+Look: real HTML text over the canvas (not drawn on it), bold, 20 px (16 px under 280 px tall), dark ink on a soft cream pill so it reads on every sky. "Build up Lagos. Get Nigeria working." may wrap to two lines at 320 wide, never cut. New keys in `WORDS.intro`: `heroLine` "That hero is you." and `endLine`, which reuses the title's own words so they cannot drift apart.
+
+##### a2.5 Accessibility
+
+- **Screen readers get the whole story as text.** A visually hidden log (`role="log"`, `aria-live="polite"`) sits under the scene. At the start of each beat gamedev **adds** that beat's confirmed caption (`WORDS.intro.captions`) as a new line. Adding, not replacing, so a reader still speaking line 1 queues line 2 instead of cutting it off. A jump adds only the new beat's line. The canvas stays `aria-hidden`; the two on-screen lines are `aria-hidden` too (the log already says them). The dialog keeps its spoken name "The story".
+- **Focus.** Nothing grabs focus by itself (that can cut the reader off mid-line). Skip is first in the tab order, "Let's go" next once it shows.
+- **Reduced motion: the six still pictures with their captions, exactly as step (a) today** (tap to go on, the hint, plain cuts, "Let's go" on frame 6). No new work, and players who asked for less motion get still pictures and words at their own speed. (Question for Tp, recommended yes.)
+- **No meaning by colour alone.** The Stoppers read by shape (cars, a hole, a lamp, papers) and their pouts; the stuck Wheel reads by stopping, the wedge and the sound; light coming back reads by brightness and movement.
+- **No flashing.** The light pulses in beat 3 and the lamp flicker in beat 4 are at most 2 a second and soft (never a full-screen white).
+- Skip and "Let's go" at least 44 x 44 px.
+- Sound off: no sounds. Music off: no music. Both follow the switches the player already set.
+
+##### a2.6 Sound and music (our engine, no new sound code)
+
+Music: our own `menu` tune (`src/art/tunes.ts`, played by `src/engine/music.ts`, using `setLevel` and `restart`). Sounds: names that already exist in `src/engine/sound.ts`.
+
+| s | Music | Sound |
+|---|---|---|
+| 0.0 | `menu` starts at level 0.6 (soft, while the sun rises) | |
+| 4.0 | level to 1 over 1 s | `cogBell` (the spoke clicks in) |
+| 7.0, 8.6 | | `built` (buildings rise), `honk` (buses arrive) |
+| 13.0, 14.4 | | `cogRatchet` (cogs pop in), `cogBell` (they turn) |
+| 16.0, 16.7, 17.4, 18.1 | level down to 0.5 over 2 s from 16.0 | `honk`, `roomThump`, `lightClunk`, `parcel` (one per Stopper) |
+| 19.2 | level to 0 over 0.3 s: the Wheel stops, the music stops with it | `crateHit` (the clunk) |
+| 20.2, 20.7, 21.2 | silent | `step` (three footfalls) |
+| 22.3 | `menu` restarts from bar 1 at level 1 | `bounce` (the wedge pops out) |
+| 25.4, 26.0 | | `skid` (bus stops), `busBoard` (door) |
+| 27.2 | level to 0.5 | `sting` |
+| Skip or "Let's go" | the `menu` tune goes on into the hero builder, as it does today: no gap, no double start | |
+
+art may swap a sound for another existing name if it fits better; no new recipe in `sound.ts` without a note here first. Each cue plays once. A jump plays no cue that was jumped over, only the new beat's own cues from its start, and sets the music level that beat should have.
+
+##### a2.7 Fits every screen
+
+- The picture is still 320 x 180 drawn units, as big as fits, with sky and ground stretched to the edges (as `drawIntroFrame` does now). With no caption under it, the canvas fills the whole card, so the picture is bigger than today.
+- 320 x 240: picture at 1x; "Skip" top right over the sky; the end line in the top 48 px (two lines at most); "Let's go" bottom right. art keeps the key action (the Wheel, the hero, the bus door) in the middle 240 x 120 units so neither line nor button covers it.
+- 851 x 393 and everything between: the same; the sides show more sky and ground.
+- Portrait: as now (paused, with the turn-your-phone message).
+- **Pause rule:** a call, a switched app or a turned phone pauses it, music too; coming back starts **that beat** again from its start (it used to be "that frame").
+
+##### a2.8 Original only, kind, and real
+
+On top of part 6 and design R8:
+1. Not like any game's or film's intro. In particular: no sunrise with animals gathering, no one lifted high on a rock, no star field or text crawl, no "long ago" title card, no storybook page turns, no studio logo spin, no circle or star-shaped wipe closing on a face. Our moves are plain slides, zooms and fades.
+2. No real people, famous faces, uniforms or officials. The Stoppers are things (cars, a hole, a lamp, papers), never people, never any group or job. In the intro they lose nothing; they just flinch: funny, not cruel. Nobody is hurt; the wedge bounces away and hits no one.
+3. The map in green, white, green as Tp asked (10 Nov), drawn as land, never as a flag: no pole, no waving rectangle, no coat of arms. No party colours or logos.
+4. The people in beats 1, 2 and 6 are of every age and many looks, as in the frames now. No faith signs. No one is a joke.
+5. Real Lagos feel: lagoon, bridge, yellow buses, the bus stop, palms. No real building drawn to look real.
+
+##### a2.9 Light on a cheap phone
+
+- **Size:** at most **+14 KB gzipped** for a2 (art 10 KB, gamedev 4 KB), well under Tp's 20 KB. Reuse every drawing that exists: `drawStoryWheel`, `person`, `palm`, `baobab`, `building`, `drawBusShape`, `drawBusStop`, the Nigeria outline and `borderCogs`, `drawStopper`, `drawOutlineHero`, `drawHero`. The six still frames stay for reduced motion, so nothing is thrown away.
+- **Speed:** 45 fps or better at 4x CPU slowdown through the whole scene. How: draw only the beat on screen (two beats only during a 0.6 to 0.8 s camera move); keep each beat's sky, hills and land in one offscreen canvas made once per beat and size, and draw only moving things on top; `borderCogs()` worked out once; no `shadowBlur`, no filters; pixel ratio capped at 2 as now.
+- **No drawing once it has ended:** after Skip or "Let's go" the screen cancels its animation frame and removes every listener (as `close()` does now). In the hold, drawing stops after 3 s and starts again only for a resize or a turn.
+- Music and sounds are made in code: no files to download.
+
+##### a2.10 The split: art and gamedev
+
+| id | owner | task | done when | size (gzip) |
+|---|---|---|---|---|
+| S3a3 | art | The moving scene, drawn in code: `drawIntroScene(g, w, h, t, { look })` in `src/art/intro.ts` (or a new `src/art/intro-scene.ts`), a pure function of time `t` (0 to 27.8 s, and the hold after). It draws all six beats and the camera moves of a2.2, reusing the frame drawings, with new poses only where needed: push and cheer arms, a walking outline hero, buildings growing, buses rolling in and stopping, the outline drawing itself, cogs popping in, each Stopper's entrance and pout, the wedge in and out, the hub-to-bus-wheel zoom. Also exports `INTRO_BEATS` (the six beat starts and the hold time) and `INTRO_CUES` (the a2.6 list, as `{ t, sound }` or `{ t, music, level, ramp }`). The gallery shows the scene at each beat start and at 2, 19.4, 23 and 27.8 s. | a2.2 matches by eye at 320 x 240 and 851 x 393; the a2.8 list; 45 fps at 4x CPU in the gallery; the same `t` always draws the same picture (unit test) | **10 KB** |
+| S3a4 | gamedev | The screen: an `IntroScene` clock in `src/game/intro.ts` (time, beat, jump to the next beat, pause and restart the beat, the hold, done; no DOM, unit tested). `src/screens/intro.ts` draws the scene, plays the cues, adds the caption lines to the hidden log, shows the two on-screen lines and "Let's go", Skip and Escape, tap and key jumps (a2.3), the 3 s hold stop; reduced motion keeps today's six-frame flow unchanged. New words `heroLine` and `endLine` in `WORDS.intro`. | the "Done when" list below | **4 KB** |
+
+Order: art S3a3 first; gamedev can build the clock and its tests beside it with a stand-in scene. Then qa, then po. Nothing waits on Tp: if Tp picks "no words at all" (question 2), gamedev leaves out the two lines and nothing else changes.
+
+##### a2.11 Done when (qa)
+
+1. **Length:** "Let's go" shows between 26 and 30 s after the start (phone profile, no taps). Each beat starts within 0.5 s of a2.2.
+2. **Shown, not told:** with Sound off and no screen reader, a first-time watcher can say the story back in their own words: people made the Wheel, Lagos grew, the Wheel is Nigeria's, the Stoppers jammed it, the hero (me) got it going, I take the bus into Lagos. Try 3 people, at least one aged 9 to 12; at least 2 of 3 get every part.
+3. **Words:** only "Skip", "Let's go" and, if Tp says yes, "That hero is you." and "Build up Lagos. Get Nigeria working." show on screen. No word is cut at 320 x 240, 568 x 320, 640 x 360 or 851 x 393, and none covers the hero, the bus door or Skip.
+4. **Skip:** Skip and Escape end it from 0.1 s and from every beat; then the hero builder opens (or Settings, after "Watch the story").
+5. **Tap:** a tap anywhere but a button, and Space, Enter and →, jump to the next beat; six jumps reach the hold; a tap in the hold does nothing; Space or Enter in the hold presses "Let's go".
+6. **Once:** it plays once by itself (a new player before the builder; an old player on the next "Play"), never again by itself after it ends or is skipped, and always from Settings, "Watch the story".
+7. **Screen reader** (VoiceOver or TalkBack on a phone, and the browser's accessibility tree): the six captions are heard in order, word for word as `WORDS.intro.captions`, with no line cut off by the next; nothing is read twice; focus does not jump by itself.
+8. **Reduced motion:** with reduce motion on, the six still pictures with their captions play exactly as step (a).
+9. **Sound:** each a2.6 cue plays at its time with Sound on; Sound off is silent; Music off has no music; the music goes on into the builder with no gap or double start.
+10. **Pause:** hiding the page or turning the phone upright pauses picture and music; coming back starts that beat again.
+11. **Speed:** 45 fps or better at 4x CPU slowdown from 0 to 31 s in the trace, including the camera moves at 6, 11, 15.5 and 24.5 s.
+12. **No drawing after the end:** a performance trace shows no intro animation frames after Skip or "Let's go", and none from 3 s into the hold (until a resize).
+13. **Size:** the gzipped first load grows by no more than 20 KB (aim 14 KB) against this branch before a2.
+14. **Rules:** the a2.8 list; part 6; no real people; the Stoppers are things and only flinch; the map is green, white, green land with no pole, crest or flag shape; no party colours; nothing mocks anyone; the "wrong premise" line is not used.
+15. Skip and "Let's go" at least 44 x 44 px; no flash faster than 2 a second.
 
 #### (b) Lagos from above
 
