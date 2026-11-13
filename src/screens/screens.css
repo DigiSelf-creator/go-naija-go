@@ -1847,10 +1847,15 @@
   display: none;
 }
 /* d4: the coming-soon pins drop in after "See Lagos", with a 4 px bounce, then bob. */
+/* Its picture is bigger than its 94 x 56 tap area (placed by the code); it bobs a few times, then rests. */
+.city-pin.soon canvas {
+  position: absolute;
+  animation: city-pin-bob 1s ease-in-out 6 alternate;
+}
 .city-pin.drop canvas {
   animation:
     city-pin-drop 0.5s ease-out,
-    city-pin-bob 1s ease-in-out 0.5s infinite alternate;
+    city-pin-bob 1s ease-in-out 0.5s 6 alternate;
 }
 @keyframes city-pin-drop {
   0% {
@@ -1870,6 +1875,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .city-head.pulse,
+  .city-pin.soon canvas,
   .city-pin.drop canvas {
     animation: none;
   }

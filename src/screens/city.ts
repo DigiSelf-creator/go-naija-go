@@ -34,7 +34,6 @@ import {
   drawJetty,
   drawProblemPin,
   makeCityCanvas,
-  soonPinHitBox,
   type BucketKind,
   type SoonId,
   type SpotId,
@@ -290,11 +289,13 @@ interface Line {
 }
 
 /** A coming-soon pin's tap area, wide enough for its "Coming soon" line (bold 11 px) too. */
-function soonBox(x: number, y: number, id: SoonId): ScreenBox {
-  const b = soonPinHitBox(x, y, id);
-  const w = Math.max(b.w, 92);
-  return { ...b, x: x - w / 2, w };
+function soonBox(x: number, y: number): ScreenBox {
+  return { x: x - SOON_TAP.w / 2, y: y - SOON_TAP.up, w: SOON_TAP.w, h: SOON_TAP.h };
 }
+/** S3d1 ruling: a coming-soon pin taps 94 x 56 (92 to 96 wide), from its round sign's lower half to the foot of its "Coming soon" line. */
+const SOON_TAP = { w: 94, h: 56, up: 66 } as const;
+/** The whole drawn coming-soon pin round its foot (its picture is bigger than its tap area). */
+const SOON_PIC = { x: -60, y: -90, w: 120, h: 96 } as const;
 
 /** What the still city picture is painted with. */
 interface Paint {
@@ -482,6 +483,7 @@ export class CityScreen {
     const w = WORDS.city;
     const st = hooks.life.state;
     this.looks = spotLooks(st);
+    setJetty(shownBoom(st).boom);
     const at = st.at && walkable(st.at) ? st.at : st.at ? nearestOpen(st.at) : { ...HERO_START };
     this.hero = { x: at.x, y: at.y, dir: 's', phase: 0, moving: false };
     this.map = h('canvas', { class: 'city-map', role: 'img', 'aria-label': w.map });
@@ -494,7 +496,6 @@ export class CityScreen {
     this.say = h('p', { class: 'sr-only', 'aria-live': 'polite' });
     this.head = h('h2', { class: 'city-head' });
     this.skipEl = h('p', { class: 'city-skipline', hidden: true, 'aria-hidden': 'true' });
-    setJetty(shownBoom(st).boom);
     const zoomIn = button(w.zoomIn, 'minor city-zoom-btn', () => this.zoom('near'), { 'aria-label': w.zoomInSpoken });
     const zoomOut = button(w.zoomOut, 'minor city-zoom-btn', () => this.zoom('far'), { 'aria-label': w.zoomOutSpoken });
     this.el = h(
@@ -617,7 +618,7 @@ export class CityScreen {
   private fillMeter(): void {
     const w = WORDS.city;
     const st = this.life.state;
-    const m = meterOf(this.meterShown ?? st.boom, st.boomSeen);
+    const m = meterOf(this.meterShown ?? this.shown.boom, st.boomSeen);
     const small = typeof matchMedia === 'function' && matchMedia('(max-width: 640px), (max-height: 300px)').matches;
     const key = `${m.points}|${m.next}|${small}`;
     if (key === this.meterKey) return;
@@ -647,7 +648,7 @@ export class CityScreen {
       const word = look === 'ready' ? 'Ready' : SPOT_WORDS[spot];
       const label = fixed ? w.pinFixed(w.fixedName[spot]) : look === 'ready' ? w.pinReady(SPOT_WORDS[spot]) : w.pinProblem(SPOT_WORDS[spot]);
       const el = button('', `city-pin ${look}`, (e) => {
-        if (this.hooks.ignoreTap(e) || this.skipped()) return;
+        if (this.hooks.ignoreTap(e) || this.skipped() || this.paying) return;
         this.openCard(spot);
       }, { 'aria-label': label, 'data-spot': spot });
       let pic: HTMLCanvasElement | null = null;
@@ -662,7 +663,7 @@ export class CityScreen {
     this.soonPins = soon.map((id) => {
       const pic = h('canvas', { 'aria-hidden': 'true' });
       const el = button('', `city-pin soon${this.soonDrop && !this.hooks.still() ? ' drop' : ''}`, (e) => {
-        if (this.hooks.ignoreTap(e) || this.skipped()) return;
+        if (this.hooks.ignoreTap(e) || this.skipped() || this.paying) return;
         this.openSoon(id);
       }, { 'aria-label': w.soon.spoken(SOON_WORDS[id]), 'data-soon': id });
       el.append(pic);
@@ -692,17 +693,20 @@ export class CityScreen {
       drawProblemPin(g, -box.x, -box.y, p.spot, this.looks[p.spot] === 'ready' ? 'ready' : 'problem', 0);
     }
     for (const p of this.soonPins) {
-      const box = soonBox(0, 0, p.id);
+      const box = soonBox(0, 0);
+      const pic = SOON_PIC;
       p.el.style.width = `${box.w}px`;
       p.el.style.height = `${box.h}px`;
-      p.pic.width = Math.round(box.w * dpr);
-      p.pic.height = Math.round(box.h * dpr);
-      p.pic.style.width = `${box.w}px`;
-      p.pic.style.height = `${box.h}px`;
+      p.pic.width = Math.round(pic.w * dpr);
+      p.pic.height = Math.round(pic.h * dpr);
+      p.pic.style.width = `${pic.w}px`;
+      p.pic.style.height = `${pic.h}px`;
+      p.pic.style.left = `${pic.x - box.x}px`;
+      p.pic.style.top = `${pic.y - box.y}px`;
       const g = p.pic.getContext('2d');
       if (!g) continue;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawComingSoonPin(g, -box.x, -box.y, p.id, 0);
+      drawComingSoonPin(g, -pic.x, -pic.y, p.id, 0);
     }
   }
 
@@ -726,7 +730,7 @@ export class CityScreen {
     const out: Partial<Record<SoonId, ScreenBox>> = {};
     for (const p of this.soonPins) {
       const at = toScreen(this.cam, this.view, SOON_PINS[p.id]);
-      out[p.id] = soonBox(at.x, at.y, p.id);
+      out[p.id] = soonBox(at.x, at.y);
     }
     return out;
   }
@@ -842,7 +846,9 @@ export class CityScreen {
    * there, and the spoken heading keeps it. Everywhere else the heading box shows the meter (d5).
    */
   private fitHead(): void {
-    const compact = this.view.w <= 360 && this.view.h <= 300 && this.boardEls.size + this.bubbleEls.size >= 4;
+    const done = this.building?.build ?? (this.pay?.done ? this.pay.build : null);
+    const boards = [...this.boardEls.keys()].filter((b) => b !== done).length;
+    const compact = this.view.w <= 360 && this.view.h <= 300 && boards + this.bubbleEls.size >= 4;
     if (compact === this.head.classList.contains('compact')) return;
     this.head.classList.toggle('compact', compact);
     if (this.view.w > 1) {
@@ -1212,6 +1218,7 @@ export class CityScreen {
     const then = this.onClose;
     this.onClose = null;
     then?.();
+    if (!this.closed && !this.cardOpen && !this.busy() && !this.pay && boomDue(this.life.state)) this.startBoom();
   }
 
   private get cardOpen(): boolean {
@@ -1491,6 +1498,7 @@ export class CityScreen {
       cam: null,
       fired: new Set(),
     };
+    if (build && this.cardOpen) this.closeCard();
     this.moment = mo;
     if (!build) {
       // A collect: the step ring, the step sound and the step line, where it is (no camera move).
@@ -1498,6 +1506,7 @@ export class CityScreen {
       return;
     }
     this.meterShown = before.boom;
+    this.fitHead();
     const spot = (SPOT_IDS as readonly string[]).includes(BUILD_KEY[build]) ? (BUILD_KEY[build] as SpotId) : null;
     if (spot) {
       this.hiddenSpot = spot;
@@ -1611,7 +1620,7 @@ export class CityScreen {
   private startBoom(skip = false): void {
     const st = this.life.state;
     const mark = boomDue(st);
-    if (!mark || this.boomRun || this.cardOpen) return;
+    if (!mark || this.boomRun || this.cardOpen || this.moment?.build) return;
     this.stopWalking();
     this.banner.hidden = true;
     if (mark > FIRST_BOOM || skip || st.boomSeen >= FIRST_BOOM) {
@@ -2757,7 +2766,7 @@ export class CityScreen {
       this.placeSign(el, { x: at.x - r, y: at.y - r, w: r * 2, h: r * 2 });
       el.dataset['for'] = a.label;
       el.onclick = (e) => {
-        if (this.hooks.ignoreTap(e) || this.cardOpen || this.skipped()) return;
+        if (this.hooks.ignoreTap(e) || this.cardOpen || this.skipped() || this.paying) return;
         a.go();
       };
       this.arrowBox.push({ icon: a.icon, x: at.x, y: at.y, tap: at.tap });
