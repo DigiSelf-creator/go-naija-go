@@ -747,7 +747,9 @@ The case: 320 x 240 with the Lamps, Market and Mast boards and the Mama Put bubb
 
 ### W17. Feeling the city get better (Tp, 13 Nov)
 
-Owner: designer, 13 Nov 2026. Tp played "Walk the city" and said: "I don't feel the connection to the city getting cleaned up." Tp's first idea was "building a city to its glorious state": you watch Lagos go from broken to glorious as you play. Tp also chose to finish Lagos first: (d) Booming meter, (e) challenge road, (f) lane run. **Docs only. Nothing here is decided until Tp picks.**
+Owner: designer, 13 Nov 2026. Tp played "Walk the city" and said: "I don't feel the connection to the city getting cleaned up." Tp's first idea was "building a city to its glorious state": you watch Lagos go from broken to glorious as you play. Tp also chose to finish Lagos first: (d) Booming meter, (e) challenge road, (f) lane run.
+
+**Answered by Tp, 13 Nov 2026: yes to the recommendations.** Question 1: a) A + B as S3d1 "The Booming meter you can see", then C in S3e1. Question 2: a), in Tp's words "a bit faded but still warm and proud", not run-down. Also: hide a pin as soon as its board says "Done ✓" (in S3d1). See docs/questions.md, "po, 13 Nov 2026".
 
 Screenshots (the live build of 13 Nov, phone sideways 851 x 393), in `/tmp/claude-0/-home-user-go-naija-go/8f053298-216f-5365-a405-cc199ad5be18/scratchpad/clean/`: `01-before-far.png` (new player), `03-after-mamaput-market-far.png` (road, Mama Put and Market built), `06-road-before-zoom.png`, `07-road-build-3.png` (the road going in), `08-road-after-zoom.png`, `09-mamaput-market-zoom.png`, `05-alausa-run.png` (the Alausa street run).
 
@@ -813,6 +815,8 @@ Numbers follow docs/questions.md, "City direction (9 Nov 2026)".
 | L1 to L7 | all a): buckets, the Blackout, keep everything when caught, view from above, Mission complete, the Shadow, the Booming meter | 10 Nov 2026 |
 | W1 to W4 | all a): walk the city, pay spots, places that earn, in the plan now before the lane run | 11 Nov 2026 |
 | W13 1 to 6 | all a): fill only while playing, part pay, drag moves the hero, boom points (first boom at 20), "Mama Put" and "Market", win top-up (first street 1 win ₦14) | 12 Nov 2026 |
+| Finish Lagos first | A: (d) Booming meter, (e) challenge road, (f) lane run before any second state | 13 Nov 2026 |
+| W17 1 and 2 | a) and a): A + B as S3d1 "The Booming meter you can see", C in S3e1; Lagos starts "a bit faded but still warm and proud"; hide a pin once its board says "Done ✓" | 13 Nov 2026 |
 
 ## Lines for Tp
 
