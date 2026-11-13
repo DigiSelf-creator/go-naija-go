@@ -72,6 +72,32 @@ test('Mission complete with reduced motion: the end picture at once, paid and bu
   await checkEnd(page, home);
 });
 
+test('qa S3d1: Mission complete with the moment runs about 7 to 9 s from the bus to the end', async ({ page }) => {
+  test.setTimeout(240_000);
+  await winStreet1(page);
+  await expect.poll(() => screenNow(page), { intervals: [20] }).toBe('city');
+  const t0 = Date.now();
+  // The end of Mission complete is the end of the New road's moment (city.md d12).
+  await expect.poll(async () => (await city(page)).mission, { timeout: 15_000, intervals: [50] }).toBe('end');
+  await expect.poll(async () => (await city(page)).watch.moment, { timeout: 10_000, intervals: [50] }).toBeNull();
+  const took = (Date.now() - t0) / 1000;
+  test.info().annotations.push({ type: 'mission seconds', description: took.toFixed(2) });
+  console.log(`Mission complete took ${took.toFixed(2)} s`);
+  expect(took).toBeGreaterThan(6.5);
+  expect(took).toBeLessThan(9.5);
+});
+
+test('qa S3d1: one tap once the moment has begun ends Mission complete and the moment at once', async ({ page }) => {
+  test.setTimeout(240_000);
+  await winStreet1(page);
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await expect.poll(async () => (await city(page)).watch.moment, { timeout: 15_000, intervals: [50] }).not.toBeNull();
+  const vp = page.viewportSize()!;
+  await page.touchscreen.tap(vp.width / 2, vp.height / 2);
+  await expect.poll(async () => (await city(page)).watch.moment, { timeout: 1000 }).toBeNull();
+  expect((await city(page)).saved).toMatchObject({ fixed: ['potholes'], boom: 4 });
+});
+
 /** Plays street 1 by hand to the Street cleared card; returns the coins' kobo. */
 async function playToCleared(page: Page): Promise<number> {
   const h = hands(await page.context().newCDPSession(page));
