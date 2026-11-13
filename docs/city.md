@@ -561,6 +561,15 @@ The meter lives **inside the "Lagos" heading box**, so it needs no new place on 
 - **Taps:** the box takes no taps (as the heading today); a tap there goes to the map. Nothing new to tap.
 - **Spoken:** the box is one image with the label "Lagos. Booming meter. 9 of 20 to the next boom." An `aria-live="polite"` line reads changes (d8).
 - **The first look still shows every pin** (qa F2) with the taller box: the camera's clear area starts under the chips row as now.
+- **The fold (designer ruling, 13 Nov 2026, S3d1b): accepted.** Only at 360 x 300 px or smaller **and** with four or more signs up (boards plus bubbles; Power and Tech in hand, so after the lane run), the box folds to just "Lagos", as the heading was before (d). The meter picture hides; the spoken label stays the full "Lagos. Booming meter. 9 of 20 to the next boom." and the `aria-live` line still reads every change. Why: a sign with its full words beats the meter picture on the one smallest screen in one rare case, and the meter is back as soon as a sign goes. Limits:
+  - It unfolds as soon as fewer than four signs are up. A board that says "Done ✓" goes away, so the meter is showing again before its notches fill in the moment (d6 0.3 s); qa checks this at 320 x 240.
+  - A full collect that crosses a step while folded still shows "Lagos is getting brighter!", so the change is never silent on screen.
+  - Every other screen and every other case keeps the full box. Dropping "Booming" (above) is still tried first.
+  - Revisit at step (f) with the packed 320 x 240 layout (W15, W16).
+- **Other gamedev choices in S3d1b, confirmed (13 Nov 2026):**
+  - **Camera in the moment:** the zoom cuts at the start (there are only two zoom steps, near and far), then the position eases. Fine. It still never zooms in (d6).
+  - **The next board waits:** a board you stand on does not start paying until the moment (and any boom) ends. Fine: one change at a time, and a tap skips the wait.
+  - **Coming-soon pin tap area:** 92 x 56 px, so the "Coming soon" line can be tapped too (was 48 x 56 in d4). Fine: never wider than 96 px, and the same sign-clearance rules use the wider area.
 
 ##### d6. The "watch it change" moment (W17 B)
 
