@@ -4,11 +4,27 @@
  * writes no words on the map, matches the d2 table and never puts a kerb sack near food.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { BLOCK_LIFE, PROUD_KINDS, TIRED_COLOURS, TIRED_MIX, TIRED_SAND, drawProudFolk, fadeColour, tiredTotals } from '../../src/art/bright';
+import {
+  BLOCK_LIFE,
+  BRIGHT_BOOST,
+  PROUD_KINDS,
+  TIRED_COLOURS,
+  TIRED_MIX,
+  TIRED_ROOF_DIM,
+  TIRED_ROOF_DUST,
+  TIRED_SAND,
+  brightColour,
+  drawProudFolk,
+  fadeColour,
+  tiredColour,
+  tiredRoof,
+  tiredTotals,
+} from '../../src/art/bright';
 import { BOOM_BAR, BOOM_EMPTY, BOOM_YELLOW, boomBarParts, boomBarSvg, boomIconSvg, drawBoomBar, drawBoomIcon } from '../../src/art/boomMeter';
 import {
   CITY_AREAS,
   CITY_BLOCKS,
+  CITY_COLOURS,
   FLATS,
   SOON_IDS,
   SOON_LINE,
@@ -41,6 +57,16 @@ function clean(paint: (g: CanvasRenderingContext2D) => void): ReturnType<typeof 
   return r;
 }
 
+/** Relative luminance (0 dark to 1 light) of a #rrggbb colour: what a greyscale picture shows. */
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v: number): number => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+}
+
 const NONE: readonly string[] = [];
 const OPTS: CityOpts[] = [
   {},
@@ -67,21 +93,54 @@ describe('tired and bright Lagos (d2)', () => {
     expect(BLOCK_LIFE['r2c1']!.people).toBe(9);
   });
 
-  it('tired colours lean 30% toward warm sand; the tired-only colours are warm, never blue', () => {
+  it('tired colours lean 50% toward warm sand (Tp, 13 Nov: stronger); the tired-only colours are warm, never blue', () => {
+    expect(TIRED_MIX).toBe(0.5);
+    expect(TIRED_ROOF_DIM).toBe(0.22);
+    expect(BRIGHT_BOOST).toBe(0.18);
     expect(fadeColour('#000000')).toBe(fadeColour('#000000', TIRED_MIX, TIRED_SAND));
     const s = parseInt(TIRED_SAND.slice(1), 16);
     const f = parseInt(fadeColour('#000000').slice(1), 16);
-    expect((f >> 16) & 255).toBe(Math.round(((s >> 16) & 255) * 0.3));
+    expect((f >> 16) & 255).toBe(Math.round(((s >> 16) & 255) * 0.5));
     expect(fadeColour(TIRED_SAND)).toBe(TIRED_SAND);
     expect(fadeColour('not a colour')).toBe('not a colour');
-    for (const c of [TIRED_COLOURS.window, TIRED_COLOURS.leaves, TIRED_COLOURS.dryGrass, TIRED_SAND]) {
+    expect(tiredColour('not a colour')).toBe('not a colour');
+    expect(brightColour('not a colour')).toBe('not a colour');
+    for (const c of [TIRED_COLOURS.window, TIRED_COLOURS.leaves, TIRED_COLOURS.dryGrass, TIRED_COLOURS.lot, TIRED_COLOURS.kerb, TIRED_SAND, TIRED_ROOF_DUST]) {
       const h = hsl(c)!;
       expect(h.h, c).toBeGreaterThanOrEqual(20);
       expect(h.h, c).toBeLessThanOrEqual(70);
       expect(h.s, c).toBeGreaterThan(0.1);
     }
-    // Every wall, faded, keeps colour (never grey)
-    for (const b of CITY_BLOCKS) for (const q of b.boxes) expect(hsl(fadeColour(q.wall))!.s).toBeGreaterThan(0.15);
+    // Every wall and roof, tired, keeps a warm colour (never grey, never cold)
+    for (const b of CITY_BLOCKS)
+      for (const q of b.boxes) {
+        expect(hsl(tiredColour(q.wall))!.s, q.wall).toBeGreaterThan(0.15);
+        const r = hsl(tiredRoof(q.roof))!;
+        expect(r.s, q.roof).toBeGreaterThan(0.12);
+        expect(r.h, q.roof).toBeGreaterThanOrEqual(10);
+        expect(r.h, q.roof).toBeLessThanOrEqual(75);
+      }
+  });
+
+  it('tired and bright differ in lightness, not hue alone (greyscale and colour-blind safe)', () => {
+    let gap = 0;
+    let n = 0;
+    for (const b of CITY_BLOCKS)
+      for (const q of b.boxes) {
+        // Roofs are what you see most at far zoom: tired is darker by at least 0.08 (relative luminance)
+        const d = luminance(brightColour(q.roof)) - luminance(tiredRoof(q.roof));
+        expect(d, q.roof).toBeGreaterThan(0.08);
+        gap += d;
+        n++;
+        // Bright: more colour, same lightness
+        const was = hsl(q.wall)!;
+        const now = hsl(brightColour(q.wall))!;
+        expect(now.s).toBeGreaterThanOrEqual(was.s);
+        expect(Math.abs(now.l - was.l)).toBeLessThan(0.01);
+      }
+    expect(gap / n).toBeGreaterThan(0.15);
+    // The tired pavement is a little dustier (darker) than the bright cream
+    expect(luminance(CITY_COLOURS.lot) - luminance(TIRED_COLOURS.lot)).toBeGreaterThan(0.08);
   });
 
   it('the whole city draws cleanly in every state, with no words on the map', () => {
