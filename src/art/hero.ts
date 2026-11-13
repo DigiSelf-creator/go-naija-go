@@ -241,6 +241,11 @@ export interface HeroPose {
   suit?: SuitLook;
   /** Reduced motion: the glow, the suit's hum, the speed lines and the breath puffs hold still. */
   still?: boolean;
+  /**
+   * Pushing something big in front (the intro's stuck Wheel, S3a3), 0 to 1: both arms out
+   * in front at chest height, a lean in, the back leg braced. Blends over any ground pose.
+   */
+  push?: number;
 }
 
 export interface StrongLook {
@@ -654,8 +659,13 @@ function handAt(arm: number, elbow: number, b: Build): [number, number] {
   return [ex + Math.sin(f) * (FOREARM * b.len + 2.4), ey + Math.cos(f) * (FOREARM * b.len + 2.4)];
 }
 
+/** Pushing: arms out in front, a lean in, back leg braced (elders keep the back straighter). */
+const PUSH: Rig = { thigh: [0.5, -0.38], knee: [0.55, 0.12], foot: [0, 0.35], arm: [1.45, 1.6], elbow: [0.2, 0.12], lean: 0.32, lift: 0, tilt: -0.05 };
+
 function rigFor(pose: HeroPose, t: number, reach: number, upright: boolean): Rig {
   let r = bodyRig(pose, t, reach, upright);
+  const push = !pose.inAir && typeof pose.push === 'number' && Number.isFinite(pose.push) ? clamp01(pose.push) : 0;
+  if (push > 0) r = mix(r, upright ? { ...PUSH, lean: 0.16 } : PUSH, push);
   const busy = pose.rope || dustOffOf(pose) !== null;
   if (!busy && isStrong(pose)) r = withStrong(r, unit(pose.strong?.flex));
   const shake = unit(pose.shakeOut);
