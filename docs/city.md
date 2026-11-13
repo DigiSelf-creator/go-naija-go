@@ -745,6 +745,45 @@ The case: 320 x 240 with the Lamps, Market and Mast boards and the Mama Put bubb
 
 **No gamedev change now.**
 
+### W17. Feeling the city get better (Tp, 13 Nov)
+
+Owner: designer, 13 Nov 2026. Tp played "Walk the city" and said: "I don't feel the connection to the city getting cleaned up." Tp's first idea was "building a city to its glorious state": you watch Lagos go from broken to glorious as you play. Tp also chose to finish Lagos first: (d) Booming meter, (e) challenge road, (f) lane run. **Docs only. Nothing here is decided until Tp picks.**
+
+Screenshots (the live build of 13 Nov, phone sideways 851 x 393), in `/tmp/claude-0/-home-user-go-naija-go/8f053298-216f-5365-a405-cc199ad5be18/scratchpad/clean/`: `01-before-far.png` (new player), `03-after-mamaput-market-far.png` (road, Mama Put and Market built), `06-road-before-zoom.png`, `07-road-build-3.png` (the road going in), `08-road-after-zoom.png`, `09-mamaput-market-zoom.png`, `05-alausa-run.png` (the Alausa street run).
+
+**What is weak today (checked in the game and the code):**
+1. **Lagos already looks glorious at the start.** 9 of the 12 blocks are bright, tidy and tree-lined from minute one (`drawCity` draws every block without a problem as "fixed"). Only 3 spots are dim, under a thin grey cover. Put `01-before-far.png` next to `03-after-mamaput-market-far.png`: they look almost the same. There is no "broken" to climb out of.
+2. **Each fix is small and easy to miss.** The road fix is one short strip turning a darker grey with one parked bus (`06` then `08`). While it goes in, the "Ready" pin still stands over the strip and the camera does not frame it, so the strip rolls up mostly off the top of the screen (`07-road-build-3.png`). The Mama Put and the Market are about 40 px at far zoom (`03`). Nothing around the fix changes: the next block, the pavement, the people all stay the same.
+3. **No city-wide "how good is Lagos" picture.** The Booming meter (d) is not built yet, and as planned it is a bar. Nothing on the map grows with it until the first boom at 20 points.
+4. **Life does not come back.** No bus or car moves in the city yet (W14). Fixed spots get 9 still people; nobody walks in. The line "New road! Danfos are back." shows, but no danfo drives.
+5. **The run is not the same place as the spot.** The Alausa run is a sunny street of open, tidy shops with no "Alausa" on screen and no broken road at the start (`05-alausa-run.png`). The city spot is a cracked road with cones. Nothing says "this is the road you saw", and after the fix the run looks the same as before.
+6. **The before-and-after moment is short.** "Mission complete!", a 1.5 s roll, a low "built" sound, then back to the same-looking city.
+
+Rule for every option: Lagos starts **tired, never bad**. Tired means faded paint, dark windows, empty pavements, rubbish by the kerb, broken lamps, cracked roads. Never people shown as the problem, never a group, area or job made fun of, no real place drawn as worse than another (every state starts tired the same way). All drawn in code, our own style, nothing from any other game.
+
+**Option A. Lagos starts tired, and brightens step by step (city-wide).**
+What the player sees: on the first visit, all of Lagos is faded: paint washed out, many windows dark, shop shutters down, little rubbish heaps by the kerbs, dry brown grass in the park, few people. Each fix brightens its own block **and the blocks next to it** for good (colour back, shutters up, trees green, rubbish gone, 3 to 6 people on the pavement). The Booming meter has 5 steps to the first boom; each step lights a set part of Lagos, so by the first boom (20 points) the whole first area is bright and busy, and new buildings rise. Later booms add a skyline, more buses, a busier lagoon. The meter is the picture, not just a bar.
+Size: art about 6 KB (a "tired" paint for each block and a few small rubbish, shutter and dry-grass shapes), code about 2 KB. The still city is still painted once and only again when a step changes, so a cheap phone does no extra work while walking.
+Plan step: fold into **S3d1** (the Booming meter), which grows from 11 KB to about 19 KB.
+
+**Option B. A big "watch it change" moment at every fix.**
+What the player sees: when a build starts, its pin goes away and the camera eases so the whole spot is on screen (none with reduced motion: then it cuts). The fix spreads out from the mat as a ring of colour, about 1.5 s: tired on the outside, bright on the inside. As it ends, 4 to 6 people walk in from the edges, one danfo drives up the new road and on, and a short happy highlife sting plays (our own, Sound on only). The words stay as now ("New road! Danfos are back."), and now you see it happen.
+Size: code about 3 KB, sound about 1 KB (code-made), art about 1 KB (moving danfo and walkers reuse `drawCityBus` and `drawFolk`). On a cheap phone the ring draws two still pictures with a round clip for 1.5 s; the second picture is kept at 1 map unit a pixel so memory stays small.
+Plan step: **S3d1** too (it needs A's "tired" picture to spread from), or a small polish task after S3c4. Without A it can only spread the small dim cover of the 3 spots, so it is much weaker alone.
+
+**Option C. The run is the same place as the city spot.**
+What the player sees: before a run, a small card shows that city spot from above ("Alausa road. Potholes.") and the hero getting on the bus there. The street run's first screen matches: cracked road, cones, a dark street lamp, a few shops with shutters down, the name "Alausa" on a street sign. Once the road is fixed in the city, playing Alausa again shows fresh tarmac, open shops and more people at the start. Words in the run never blame a place: "Potholes on this road" sits on the problem, the name sits on a plain street sign.
+Size: art about 4 KB (a "tired" and a "fixed" look for the first screen of each street), code about 2 KB. Run speed is not touched.
+Plan step: **S3e1** (the challenge road already shows each stop's name and state).
+
+**Combo A + B, then C (recommended).** A gives Lagos somewhere to go (tired to glorious), which is Tp's first idea and the main thing missing. B makes each fix a moment you watch, and it only shines once A is in. Build both as **S3d1, "The Booming meter you can see"**: about 23 KB in all (meter 11 + A 8 + B 4 or so), first load still near 560 KB, far under 1.5 MB and 3 MB. Then fold C into **S3e1** so each stop on the challenge road and its run look like the same street. Also, now: hide a pin as soon as its board says "Done ✓", so the fix is never covered (a one-line gamedev change, can go in S3d1).
+
+Done when (for A + B): a first-timer looking at the far view before and after the road fix can point to what changed without help; the far view at 0, 8 and 20 points looks clearly different (qa puts the three side by side); walking stays at 45 fps or more at 4x CPU, and a still city still draws at most 2 small redraws a second; reduced motion shows each step as a still before and after; nothing is shown by colour alone (shutters, rubbish, dark windows and people show it by shape too); part 6 and W11 pass.
+
+**Questions for Tp (po copies them to docs/questions.md):**
+1. Which way? a) A + B in S3d1, then C in S3e1 (recommended). b) A only. c) B only. d) C only.
+2. How tired is Lagos at the start? a) Faded but friendly: washed-out paint, dark windows, shutters, small rubbish heaps, few people (recommended: clearly "before", never sad or ugly). b) Only faded colour, no rubbish or shutters.
+
 ## 6. Original only: the check list for every new piece
 
 On top of design R8 and part 2B's "must NOT copy" list:
