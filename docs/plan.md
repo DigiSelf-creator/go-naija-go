@@ -97,6 +97,8 @@ Goal: build a hero (saved on the phone), play World 1 level 1 by touch, take all
 | id | owner | task | done check |
 |----|-------|------|------------|
 | G1 | gamedev | GitHub Actions workflow: test, build, deploy to GitHub Pages; Vite base path set for the repo | Workflow file in repo; runs green on push to main |
+
+Deploy note (13 Nov): the deploy now runs only the quick checks and phone tests before going live. The timing and perf tests run after, in a separate job.
 | G2 | gamedev | Push to GitHub once Tp gives the repo (blocked) | Pages URL loads the game on a phone |
 | G3 | qa | Test the live URL: first load size, offline second visit, full play | Report |
 | G4 | po | Accept the live game | Note in docs/questions.md |
@@ -283,8 +285,10 @@ Source: docs/questions.md top block "Tp, 10 Nov 2026 (after playing the PR #3 bu
 | S3c2 | gamedev | Walk: walk grid and path, tap and hold to walk, arrow keys, camera follows, pin edge arrows, hero's saved place, first hint; drag no longer pans, double tap dropped | S3b2, S3c1 | city.md 5W W1, W9, W10; 45 fps walking at 4x CPU (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 6 KB |
 | S3c3 | gamedev | Pay: boards, stand to pay, part pay, not-enough card, "Walk there" on cards; coins as money, "Take it home", keep everything on a loss, prize top-up; Mission complete in the walkable city | S3c2 | city.md 5W W2, W5, W8; money tests (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 5 KB |
 | S3c4 | gamedev | Earn and collect: Mama Put and market, play-time filling, caps and "Full", trays saved, collecting, boom points, the two hints | S3c3 | city.md 5W W3, W4, W6, W7; nothing fills while closed; still city at most 2 small redraws a second (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 3 KB |
-| S3d1a | art | The Booming meter you can see, pictures and sounds: tired ("a bit faded but still warm and proud") and bright pieces for all 12 blocks and the bus park; people per block; market umbrellas; meter icon and bar; first-boom flats, bus shelter, coming-soon padlock pin badge; sounds sting (short highlife, our own), step, boom, horn (src/art/city*.ts, src/engine/sound.ts, docs/assets.md) | S3c4 (done) | city.md (d) d2, d4, d5, d7, d11; d12 item 10 (mock no one); gallery shows 0, 8 and 20 point looks | ~12 KB |
-| S3d1b | gamedev | Booming meter you can see, code: brightness rules (d3); meter in the "Lagos" heading box; small layout up to 640 px (d5); hide a pin at "Done ✓"; the watch-it-change moment and the boom, with skip and reduced motion (d6), at least one danfo drives the new road; boom card and cog link; coming-soon pins and cards; `boomSeen`; bright hint (d8, d9) | S3d1a | city.md (d) d12 items 1 to 9; 45 fps at 4x CPU in the moment, boom and walking; still city at most 2 small redraws a second | ~11 KB |
+| S3d1a | art | The Booming meter you can see, pictures and sounds: tired ("a bit faded but still warm and proud") and bright pieces for all 12 blocks and the bus park; people per block; market umbrellas; meter icon and bar; first-boom flats, bus shelter, coming-soon padlock pin badge; sounds sting (short highlife, our own), step, boom, horn (src/art/city*.ts, src/engine/sound.ts, docs/assets.md) | S3c4 (done) | city.md (d) d2, d4, d5, d7, d11; d12 item 10 (mock no one); gallery shows 0, 8 and 20 point looks (done: main 13 Nov, PR #9) | ~12 KB |
+| S3d1b | gamedev | Booming meter you can see, code: brightness rules (d3); meter in the "Lagos" heading box; small layout up to 640 px (d5); hide a pin at "Done ✓"; the watch-it-change moment and the boom, with skip and reduced motion (d6), at least one danfo drives the new road; boom card and cog link; coming-soon pins and cards; `boomSeen`; bright hint (d8, d9) | S3d1a | city.md (d) d12 items 1 to 9; 45 fps at 4x CPU in the moment, boom and walking; still city at most 2 small redraws a second (done: main 13 Nov, PR #9) | ~11 KB |
+| S3a3 | art | **Next (Tp asked 13 Nov).** The moving intro scene, drawn in code: `drawIntroScene(g, w, h, t, { look })` in src/art/intro.ts (or src/art/intro-scene.ts), plus `INTRO_BEATS` and `INTRO_CUES`; gallery shows each beat start and 2, 19.4, 23, 27.8 s | S3a1 (done) | city.md (a2) a2.10 S3a3 row: a2.2 matches by eye at 320 x 240 and 851 x 393; a2.8 list; 45 fps at 4x CPU in the gallery; same `t` draws the same picture (unit test) | ~10 KB |
+| S3a4 | gamedev | **Next (Tp asked 13 Nov).** Intro screen: `IntroScene` clock in src/game/intro.ts (unit tested, no DOM), src/screens/intro.ts draws the scene, plays cues, captions in the hidden log, two on-screen lines, "Let's go", Skip, Escape, tap and key jumps, 3 s hold stop; reduced motion keeps the six frames; `heroLine` and `endLine` in `WORDS.intro` | S3a3 (the clock part can start now, alongside S3a3) | city.md (a2) a2.11 "Done when" 1 to 14 | ~4 KB |
 | S3e1 | art and gamedev | The challenge road (replaces the Streets screen), plus W17 C "same street, city and run": stop card with the spot from above, run's first screen tired or bright to match its city spot, plain street sign (Alausa follows New road, Computer Village r1c3, Ikeja r2c1) | S3c3, S3d1b | city.md (e), including the W17 C brief; no level gets harder or easier | 12 KB + ~6 KB (W17 C) |
 | S3f0 | designer | Lane run note in docs/design.md | none | written, with exact numbers and words | |
 | S3f1 | art | Lane run pictures, sounds, tune | S3f0 | city.md (f) | 50 KB |
@@ -298,7 +302,7 @@ Lagos first (Tp, 13 Nov, decision line 46 waiting to be pasted): finish (d), (e)
 
 Designer rulings taken under Tp's "I take all you guys recommendations" (13 Nov): Mission complete grows to about 7 to 9 s with the moment (was 4 to 6 s), everything after the bus skippable with one tap; no special message for returning players.
 
-Suggested gamedev order (one at a time): S3c2 to S3c4 done; next S3d1b (after S3d1a), then S3e1, S3f2, S3f3, S3f4. Art can run P6, P7, P9, S3a1, S3b1, S3c1 side by side (sound tasks one at a time in src/engine/sound.ts).
+Suggested gamedev order (one at a time): S3c2 to S3c4 and S3d1 done; next S3a4 (clock part now, screen after S3a3), then S3e1, S3f2, S3f3, S3f4. Art: S3a3 first (Tp asked 13 Nov). Art can run P6, P7, P9, S3a1, S3b1, S3c1 side by side (sound tasks one at a time in src/engine/sound.ts).
 
 ### B1 to B5: birds, the strong look, the tech suit, the dash, thorny gutters (design S2.16; Tp, 10 Nov)
 
@@ -324,7 +328,9 @@ Added by designer. The street changes sit on top of P5 (S2.14) and P8 (S2.15), s
 
 Done: slice 1 A to F and G1. Slice 2 H (85741b9), I (53a659d), J (8636479), K (5ee5f06), L (cc8e594), M (ae69d29): each qa passed and po accepted. Tp answered Q16 to Q25 on 8 Nov.
 Done (13 Nov update): walk the city S3c0 to S3c4, merged to main 12 Nov (PR #8), qa round 5 passed, po accepted.
-Next: S3d1a (art, ready now: city.md (d) note is build-ready), then S3d1b (gamedev). Then S3e1 with W17 C, then S3f0 to S3f4. No second state until Lagos (d) to (f) is accepted.
+Done (13 Nov): S3d1 (S3d1a and S3d1b), merged to main 13 Nov (PR #9).
+Deploy (13 Nov): quick checks and phone tests run before going live; timing and perf tests run after, in a separate job.
+Next: the moving intro (Tp asked 13 Nov, city.md (a2)): S3a3 (art, ready now), then S3a4 (gamedev; the clock part can start now). Then S3e1 with W17 C, then S3f0 to S3f4. No second state until Lagos (d) to (f) is accepted.
 Waiting on Tp: paste decision lines 44 to 48; play on a real phone; the new sounds by ear, and later the highlife sting once S3d1a makes it.
 Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked.
 P2 (designer, 10 Nov): design.md S2.13 has the P2 doc fixes (foods 12 s, corn hazard rule, pothole signs, Gentle mode climb-out) and the tasks for gamedev and art; the hall difficulty part of P2 is still to do.

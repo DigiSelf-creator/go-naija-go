@@ -1,5 +1,17 @@
 # Open questions for the product owner
 
+## designer, 13 Nov 2026: the intro that moves (city.md step (a2)), questions for Tp
+
+Tp asked (13 Nov): "Can we have the intro not as static images with texts describing it?" Designer's note: docs/city.md, step (a2). The story becomes one moving scene of about 28 s; the six confirmed beats and captions (T1 to T4) stay. Work can start now on the recommendations; no answer below blocks art.
+
+1. **What a tap does.** a) A tap jumps to the next beat (six taps reach the end); Skip still ends it at once. b) A tap does nothing; only Skip. c) A tap pauses and plays. **Recommended: a)**, it keeps the old "a tap moves on" feel and lets a curious player hurry without missing the story.
+2. **Words on screen.** a) Only two short lines: "That hero is you." when the hero gets the Wheel turning, and "Build up Lagos. Get Nigeria working." at the end, with "Let's go". b) No words at all but "Skip" and "Let's go". **Recommended: a)**, the hero line is the one thing a picture cannot say alone, and the end line is your chosen title line.
+3. **Reduced motion.** Players who turn on "reduce motion" on their phone get the six still pictures with their captions, as in the intro today. **Recommended: yes**, still pictures with words are kinder for them, and it costs nothing (it is already built).
+4. **The Stoppers at the end of the intro.** They flinch back when the hero pushes the Wheel, but stay at the edges. **Recommended: yes**, so the story says "your job starts now", not "already won". (Designer's call unless Tp says otherwise.)
+
+Line for Tp to paste into docs/decisions.md (it updates the waiting line 25, "Six skippable frames"):
+- The intro story: the people of West Africa made the Wheel for everyone; the Stoppers (traffic, potholes, power cuts, red tape) want it stuck; the player is the Wheel Hero. It is one short moving scene (about 28 s) with almost no words, skippable from the start, before the first hero build; screen readers hear the six captions; with reduced motion it shows six still pictures with captions. (T1 to T4; Tp 13 Nov)
+
 ## po note, 13 Nov 2026 (latest): S3d1 "The Booming meter you can see" accepted
 
 - Accepted: S3d1 (city.md step (d), d1 to d12; plan S3d1a and S3d1b), after qa passed it (c67b197). See "po acceptance, 13 Nov 2026: S3d1" below.
