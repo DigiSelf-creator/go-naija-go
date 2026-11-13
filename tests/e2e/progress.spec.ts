@@ -149,17 +149,18 @@ test('5W W5: street 1 from the Potholes card, "Take it home": Mission complete i
   await expect(banner.getByRole('heading', { name: 'Mission complete!' })).toBeVisible();
   await expect(banner.getByText('New road here. Buses are moving again.')).toBeVisible();
   await expect(banner.getByText('Tap to skip')).toBeVisible();
-  // The bus pulls up, the hero walks to the board and pays by themselves, the road is built: 4 to 6 s.
+  // The bus pulls up, the hero walks to the board and pays by themselves, the road is built and the
+  // city brightens (city.md d12: with the moment Mission complete runs about 7 to 9 s).
   const t0 = Date.now();
-  await expect.poll(async () => (await page.evaluate(() => window.__game!.city!)).mission, { timeout: 10_000 }).toBe('end');
+  await expect.poll(async () => (await page.evaluate(() => window.__game!.city!)).mission, { timeout: 12_000 }).toBe('end');
   const took = (Date.now() - t0) / 1000;
-  expect(took).toBeLessThan(7.5);
+  expect(took).toBeLessThan(9.5);
   const c = await page.evaluate(() => window.__game!.city!);
   expect(c.saved).toMatchObject({ kobo: home - 1000, fixed: ['potholes'], boom: 4 });
   expect(Math.hypot(c.hero.x - 101, c.hero.y - 480)).toBeLessThan(30);
   await expect(page.getByRole('button', { name: 'New road, fixed' })).toBeAttached();
   // Then the Mama Put board, with its hint (W7).
-  await expect(page.locator('.city-hint')).toHaveText('Walk onto the ₦4 board to build a Mama Put.', { timeout: 6000 });
+  await expect(page.locator('.city-hint')).toHaveText('Walk onto the ₦4 board to build a Mama Put.', { timeout: 10_000 });
   expect(Object.keys(c.boards)).toEqual(['mamaPut']);
   await page.locator('[data-build="mamaPut"]').tap();
   await expect.poll(async () => (await page.evaluate(() => window.__game!.city!)).saved.built, { timeout: 20_000 }).toEqual(['buka']);
