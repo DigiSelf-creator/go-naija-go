@@ -48,7 +48,10 @@ import {
   drawProudFolk,
   drawShutter,
   drawWashingLine,
+  brightColour,
   fadeColour,
+  tiredColour,
+  tiredRoof,
   type BlockLife,
 } from './bright';
 import { CAR_COLOURS, CREAM, INK, KOBO, KOBO_DARK, KOBO_SHINE, SHOP_WALLS, WHITE } from './palette';
@@ -443,7 +446,7 @@ export function drawJetty(g: CanvasRenderingContext2D, x: number, y: number): vo
  */
 function busPark(g: CanvasRenderingContext2D, bright: boolean, boom: boolean): void {
   const { x, y, w, h } = BUS_PARK;
-  rect(g, x, y, w, h, '#6a6a71');
+  rect(g, x, y, w, h, bright ? '#6a6a71' : fadeColour('#6a6a71', TIRED_COLOURS.roadDust));
   g.fillStyle = bright ? 'rgba(244,241,230,0.85)' : 'rgba(244,241,230,0.28)';
   for (let k = 0; k < 4; k++) g.fillRect(x + 8, y + 60 + k * 36, w - 16, 2);
   // Shelter by the main road
@@ -539,7 +542,7 @@ function drawBox(g: CanvasRenderingContext2D, b: CityBox, lit: 'day' | 'dim' | '
     g.fill();
   }
   // Front wall
-  rect(g, b.x, frontY, b.w, h, tired ? fadeColour(b.wall) : b.wall, INK, 1.2);
+  rect(g, b.x, frontY, b.w, h, tired ? tiredColour(b.wall) : brightColour(b.wall), INK, 1.2);
   // Windows, a row every 12 units; the ground floor is a shop front with an awning.
   // Tired day: 2 of every 3 windows warm brown, no glint. Bright day: glass with a white glint.
   const win = lit === 'dim' ? K.windowDark : lit === 'glow' ? K.window : K.glass;
@@ -569,14 +572,14 @@ function drawBox(g: CanvasRenderingContext2D, b: CityBox, lit: 'day' | 'dim' | '
   }
   if (b.h > 20) {
     const awn = AWNINGS[Math.floor(b.x / 7) % AWNINGS.length]!;
-    rect(g, b.x + 2, b.y + b.d - 13, b.w - 4, 4, tired ? fadeColour(awn) : awn);
+    rect(g, b.x + 2, b.y + b.d - 13, b.w - 4, 4, tired ? tiredColour(awn) : brightColour(awn));
     g.fillStyle = win;
     g.fillRect(b.x + 6, b.y + b.d - 8, Math.max(4, b.w - 22), 7);
     if (o.shutter && o.shutter !== 'none') drawShutter(g, b.x + 5, b.y + b.d - 9, Math.max(5, b.w - 20), 9, o.shutter);
     rect(g, b.x + b.w - 12, b.y + b.d - 9, 6, 9, '#5b4636');
   }
   // Roof
-  rect(g, b.x, top, b.w, b.d, tired ? fadeColour(b.roof) : b.roof, INK, 1.2);
+  rect(g, b.x, top, b.w, b.d, tired ? tiredRoof(b.roof) : brightColour(b.roof), INK, 1.2);
   g.strokeStyle = 'rgba(29,26,20,0.18)';
   g.lineWidth = 1;
   g.strokeRect(b.x + 4, top + 4, b.w - 8, b.d - 8);
@@ -759,17 +762,17 @@ export function drawCityBlock(g: CanvasRenderingContext2D, b: CityBlock, look: S
   const bright = areaBright(opts, b.id);
   const tired = !bright;
   const life = BLOCK_LIFE[b.id];
-  // The lot: pavement with a kerb and a little green
-  rect(g, b.x, b.y, b.w, b.d, K.lot, K.kerb, 1.5);
+  // The lot: pavement with a kerb and a little green (a little dustier when tired)
+  rect(g, b.x, b.y, b.w, b.d, tired ? TIRED_COLOURS.lot : K.lot, tired ? TIRED_COLOURS.kerb : K.kerb, 1.5);
   const front = b.y + b.d;
   if (b.kind === 'park') {
-    rect(g, b.x + 6, b.y + 6, b.w - 12, b.d - 12, K.grass);
+    rect(g, b.x + 6, b.y + 6, b.w - 12, b.d - 12, tired ? fadeColour(K.grass, TIRED_COLOURS.grassFade) : K.grass);
     // A small football pitch
     const px = b.x + 80;
     const py = b.y + 34;
     const pw = b.w - 120;
     const ph = b.d - 70;
-    g.fillStyle = '#9ccc6a';
+    g.fillStyle = tired ? fadeColour('#9ccc6a', TIRED_COLOURS.grassFade) : '#9ccc6a';
     g.fillRect(px, py, pw, ph);
     if (tired) {
       // Dry patches over about 60% of the grass (kept inside the grass)

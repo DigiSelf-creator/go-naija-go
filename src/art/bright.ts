@@ -15,22 +15,87 @@ import { INK, WHITE } from './palette';
 
 const TAU = Math.PI * 2;
 
-/** The warm sand that tired colours lean toward (d2). */
-export const TIRED_SAND = '#d9c7a3';
-/** How far a tired colour leans toward the sand. */
-export const TIRED_MIX = 0.3;
+/**
+ * The warm sand that tired colours lean toward (d2). A mid sand, darker than the bright pastel
+ * roofs, so tired and bright differ in lightness too (greyscale and colour-blind safe), not hue alone.
+ */
+export const TIRED_SAND = '#c9b48c';
+/** How far a tired colour leans toward the sand (Tp, 13 Nov: stronger, about half). */
+export const TIRED_MIX = 0.5;
+/** Tired roofs (the biggest thing at far zoom) lean this much further toward a warm dusty brown. */
+export const TIRED_ROOF_DIM = 0.22;
+export const TIRED_ROOF_DUST = '#9a8262';
+/** Bright walls and roofs get this much more colour (HSL saturation, times 1 + boost). */
+export const BRIGHT_BOOST = 0.18;
 
-/** Tired look colours (d2). */
+/** Tired look colours (d2). Warm and sun-faded, never grey or cold. */
 export const TIRED_COLOURS = {
   window: '#5a4a3a',
   shutter: '#8f8578',
   shutterLine: '#6d655a',
-  leaves: '#8a8a4a',
-  leavesLight: '#a3a35e',
-  dryGrass: '#b8a46a',
+  leaves: '#968a50',
+  leavesLight: '#ab9e62',
+  dryGrass: '#bba468',
+  /** The pavement of a tired block: a little dustier than the bright cream. */
+  lot: '#e6d4ae',
+  kerb: '#b49e74',
+  /** Dust on a tired bus park's tarmac (how far it leans toward the sand). */
+  roadDust: 0.22,
+  /** How far a tired park's grass leans toward the sand (under the dry patches). */
+  grassFade: 0.35,
 } as const;
 
-/** A #rrggbb colour mixed `k` of the way toward `to` (default: tired, 30% toward warm sand). */
+/** HSL (each 0 to 1) of a #rrggbb colour. */
+function toHsl(hex: string): { h: number; s: number; l: number } {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const mx = Math.max(r, g, b);
+  const mn = Math.min(r, g, b);
+  const l = (mx + mn) / 2;
+  const d = mx - mn;
+  if (d === 0) return { h: 0, s: 0, l };
+  const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+  const h = (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) / 6;
+  return { h, s, l };
+}
+
+/** Faded colours below this saturation (cool blues and greens go greyish) fade again, so they stay warm. */
+export const TIRED_MIN_SAT = 0.2;
+
+/** A tired wall or awning: faded toward the sand; a cool colour that went greyish fades once more, warm. */
+export function tiredColour(hex: string): string {
+  const c = fadeColour(hex);
+  if (c === hex || toHsl(c).s >= TIRED_MIN_SAT) return c;
+  return fadeColour(c);
+}
+
+/** A tired roof: a tired colour, then a little further toward warm dusty brown. */
+export function tiredRoof(hex: string): string {
+  return fadeColour(tiredColour(hex), TIRED_ROOF_DIM, TIRED_ROOF_DUST);
+}
+
+/** A bright wall or roof: the same colour with `k` more saturation (lightness kept). */
+export function brightColour(hex: string, k: number = BRIGHT_BOOST): string {
+  if (!/^#[0-9a-f]{6}$/i.test(hex) || !Number.isFinite(k)) return hex;
+  const { h, s: s0, l } = toHsl(hex);
+  if (s0 === 0) return hex.toLowerCase();
+  const s = Math.min(1, s0 * (1 + k));
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const hue = (t: number): number => {
+    const tt = t < 0 ? t + 1 : t > 1 ? t - 1 : t;
+    if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+    if (tt < 1 / 2) return q;
+    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+    return p;
+  };
+  const hx = (v: number): string => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0');
+  return `#${hx(hue(h + 1 / 3))}${hx(hue(h))}${hx(hue(h - 1 / 3))}`;
+}
+
+/** A #rrggbb colour mixed `k` of the way toward `to` (default: tired, 50% toward warm sand). */
 export function fadeColour(hex: string, k: number = TIRED_MIX, to: string = TIRED_SAND): string {
   const a = parseInt(hex.slice(1), 16);
   const b = parseInt(to.slice(1), 16);
@@ -343,7 +408,7 @@ export function drawKerbSack(g: CanvasRenderingContext2D, x: number, y: number):
 // ---------- Trees, plants, extras ----------
 
 /**
- * A round tree at (x, y) (trunk foot), radius r. Tired: 80% size with olive-brown leaves.
+ * A round tree at (x, y) (trunk foot), radius r. Tired: 80% size with dull olive-ochre leaves.
  */
 export function drawCityTree(g: CanvasRenderingContext2D, x: number, y: number, r: number, tired = false): void {
   const rr = tired ? r * 0.8 : r;
