@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { CITY_AREAS, CITY_BLOCKS } from '../../src/art/city';
-import { TIRED_MIX } from '../../src/art/bright';
+import { TIRED_MIX, TIRED_SAND, fadeColour } from '../../src/art/bright';
 import type { BuildId } from '../../src/art/payspot';
 import { FIX_SET, STEP_ORDER, boomDue, brightAreas, fixSet, markReached, meterOf, shownBoom, stepBlock } from '../../src/game/boom';
 import { addBoom, collectTray, emptyCity, payBoard, readCity, writeCity, type CityState, PLACES, COLLECT_MAX } from '../../src/game/city';
@@ -117,8 +117,10 @@ describe('d3: what brightens, and when', () => {
     expect(brightAreas(readCity(JSON.parse(JSON.stringify(saved))))).toEqual(brightAreas(c));
   });
 
-  it('the tired look strength is one constant (30% toward the sand)', () => {
-    expect(TIRED_MIX).toBe(0.3);
+  it('the tired look strength is one constant (TIRED_MIX, tuned after Tp looks): fadeColour leans that far by default', () => {
+    expect(fadeColour('#000000')).toBe(fadeColour('#000000', TIRED_MIX, TIRED_SAND));
+    expect(TIRED_MIX).toBeGreaterThan(0);
+    expect(TIRED_MIX).toBeLessThan(1);
   });
 });
 
