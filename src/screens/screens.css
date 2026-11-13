@@ -1468,6 +1468,8 @@
   overflow: hidden;
   touch-action: none;
   cursor: grab;
+  /* Pins over signs over a fixed spot's tap area (it has no pin drawn), all inside the stage. */
+  isolation: isolate;
 }
 .city-map {
   position: absolute;
@@ -1483,6 +1485,7 @@
 }
 .city-pin {
   position: absolute;
+  z-index: 3;
   left: 0;
   top: 0;
   padding: 0;
@@ -1534,6 +1537,8 @@
   background: rgba(255, 250, 240, 0.94);
   font-size: 1.1rem;
   line-height: 1.6;
+  /* Words only: a tap here goes to the map below (an edge arrow may sit under it on a tiny screen). */
+  pointer-events: none;
 }
 .city-chips {
   display: flex;
@@ -1669,5 +1674,103 @@
     min-height: 44px;
     padding: 4px 8px;
     font-size: 0.85rem;
+  }
+}
+
+/* city.md 5W: walking the city. Boards, tray bubbles and edge arrows are drawn on the map; these
+   plain buttons lie over them so taps, keys and screen readers reach them. */
+.city-signs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.city-pin.fixed {
+  z-index: 1;
+}
+.screen .city-sign {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+}
+.screen .city-arrow {
+  /* The arrow's tap area is exactly its 48 x 48 square, corners too (qa round 5). */
+  border-radius: 0;
+}
+.screen .city-sign[hidden] {
+  display: none;
+}
+.screen .city-sign:focus-visible {
+  outline: 3px solid #1d1a14;
+  outline-offset: 2px;
+}
+.city-stage {
+  cursor: pointer;
+}
+/* W7 hints and the W5 "Mission complete!" heading: real text just under the top row. */
+.city-hint,
+.city-banner {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  box-sizing: border-box;
+  margin: 0;
+  border: 2px solid #1d1a14;
+  border-radius: 12px;
+  background: rgba(255, 250, 240, 0.96);
+  text-align: center;
+  pointer-events: none;
+}
+.screen .city-hint {
+  margin: 0;
+  padding: 4px 12px;
+  font: bold 14px 'Trebuchet MS', Verdana, sans-serif;
+}
+.city-hint[hidden],
+.city-banner[hidden] {
+  display: none;
+}
+.city-banner {
+  width: max-content;
+  padding: 4px 14px 6px;
+}
+.screen .city-banner h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+.screen .city-banner p {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+}
+.screen .city-banner .city-skip {
+  font-size: 0.8rem;
+  color: #5d574b;
+}
+.screen .city-need {
+  font-weight: bold;
+}
+@media (max-width: 480px), (max-height: 300px) {
+  .screen .city-hint {
+    font-size: 12px;
+    padding: 2px 8px;
+  }
+  .screen .city-banner h2 {
+    font-size: 1rem;
+  }
+  .screen .city-banner p {
+    font-size: 0.8rem;
   }
 }
