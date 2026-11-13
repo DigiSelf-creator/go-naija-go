@@ -475,12 +475,13 @@ Owner: designer. Tp, 13 Nov 2026: yes to W17 A + B together as S3d1; Lagos start
 Shared tired pieces (drawn in code, our own shapes, each readable by **shape**, not colour alone):
 | Piece | Tired | Bright |
 |---|---|---|
-| Walls and roofs | Each colour mixed 30% toward warm sand `#d9c7a3`. Never grey, never blue. Shadows stay. | The block's own colours, as drawn today |
+| Walls and roofs | Each colour mixed 50% toward warm sand `#c9b48c` (a colour that goes greyish fades once more, so it stays warm); roofs then a further 22% toward dusty brown `#9a8262`, so tired roofs are darker than bright ones in greyscale too. Never grey, never blue. Shadows stay. | The block's own colours with 18% more saturation (same lightness) |
 | Windows | 2 of every 3 windows filled warm brown `#5a4a3a`, **no glint** | Today's glass colour plus a 1 px white glint line in each |
 | Shop fronts | Some have a **roll-down shutter**: brown-grey with 4 flat lines across | Shutter rolled up (a thin roll at the top), goods out front: a crate of tomatoes, a rack of cloth, a stack of plain boxes (no brand, no writing) |
 | Kerb rubbish | One **neat tied sack and a box** by the kerb, waiting for collection (never spilled, never a dump) | Gone |
-| Trees | 80% size, olive-brown leaves `#8a8a4a` | Today's size and green |
-| Park grass | Dry patches `#b8a46a` over about 60% of the grass; the pitch lines faint | All green, lines bright white |
+| Trees | 80% size, dull olive-ochre leaves `#968a50` | Today's size and green |
+| Park grass | Grass and pitch mixed 35% toward the sand, with dry patches `#bba468` over about 60% of it; the pitch lines faint | All green, lines bright white |
+| Pavement | Lot `#e6d4ae`, kerb `#b49e74` (a little dustier); the bus park's tarmac mixed 22% toward the sand | Lot `#f3ead3`, kerb `#c9b994` |
 | Lamps on ordinary blocks | Lamp heads drawn off (no glow ring) | On |
 | People | A few still people (counts below) | More still people (counts below), plus the walkers who walked in |
 
@@ -501,7 +502,7 @@ Block by block (ids as in src/art/city.ts `CITY_BLOCKS`; rows top to bottom, col
 | r2c3 | the market block | 3 shallow | 0; umbrellas **folded** (drawn as closed poles) | 0 (food is sold here) | 1 (a trader setting up) | 5 | umbrellas open (the front row stays hidden once the Market is built, W14) |
 | Bus park | ground | | | 0 | 1 parked danfo; lane paint faded | 3 parked danfos, 4 people waiting | fresh lane paint |
 
-Totals when all tired: 18 shutters, 9 kerb sacks, 12 people. All painted into the still city picture once, never per frame.
+Totals when all tired: 15 shutters, 9 kerb sacks, 12 people. All painted into the still city picture once, never per frame.
 
 The two spot blocks (r1c3, r2c1) while still a problem: the tired look **plus** their own problem marks (dark lamps, the one-bar mast, today's dim cover). The Potholes spot is a road, so it keeps its own cracked look and cones.
 
@@ -955,6 +956,8 @@ The case: 320 x 240 with the Lamps, Market and Mast boards and the Mama Put bubb
 Owner: designer, 13 Nov 2026. Tp played "Walk the city" and said: "I don't feel the connection to the city getting cleaned up." Tp's first idea was "building a city to its glorious state": you watch Lagos go from broken to glorious as you play. Tp also chose to finish Lagos first: (d) Booming meter, (e) challenge road, (f) lane run.
 
 **Answered by Tp, 13 Nov 2026: yes to the recommendations.** Question 1: a) A + B as S3d1 "The Booming meter you can see", then C in S3e1. Question 2: a), in Tp's words "a bit faded but still warm and proud", not run-down. Also: hide a pin as soon as its board says "Done ✓" (in S3d1). See docs/questions.md, "po, 13 Nov 2026". The build-ready note is part 5 step (d); C's brief is in step (e). The options below are kept as the reasons.
+
+Tp, 13 Nov: tired look made stronger after seeing the first pictures (option a).
 
 Screenshots (the live build of 13 Nov, phone sideways 851 x 393), in `/tmp/claude-0/-home-user-go-naija-go/8f053298-216f-5365-a405-cc199ad5be18/scratchpad/clean/`: `01-before-far.png` (new player), `03-after-mamaput-market-far.png` (road, Mama Put and Market built), `06-road-before-zoom.png`, `07-road-build-3.png` (the road going in), `08-road-after-zoom.png`, `09-mamaput-market-zoom.png`, `05-alausa-run.png` (the Alausa street run).
 

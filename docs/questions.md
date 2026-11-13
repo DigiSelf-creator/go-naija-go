@@ -17,6 +17,7 @@ What Tp chose (Tp's words and city.md part 5W, W17):
    - C (in S3e1): the run looks like the same place as the city spot: a small card shows the spot from above, the run's first screen matches it ("Alausa" on a plain street sign, "Potholes on this road"), and after the fix the run starts on fresh tarmac with open shops.
 3. **W17 question 2: a)**, in Tp's words: Lagos starts **"a bit faded but still warm and proud", not run-down.** Faded paint, some dark windows, some shutters down, a few small neat rubbish heaps by the kerb, dry grass, fewer people. Never sad, ugly or dirty-looking; never people shown as the problem; no real place drawn as worse than another, and every later state starts faded the same way.
 4. **Also now (in S3d1):** hide a pin as soon as its board says "Done ✓", so the fix is never covered.
+5. **Tp, 13 Nov: tired look made stronger after seeing the first pictures (option a).** Still warm and proud, never run-down; built by art in ed8e742, exact look in city.md (d) d2.
 
 po read (microscope):
 - Reasoned: B's moving danfo also settles the step (f) condition from the 12 Nov acceptance ("New road here. Buses are moving again." said while no bus moves). In S3d1, at least one danfo must drive on the new road after the road fix.
