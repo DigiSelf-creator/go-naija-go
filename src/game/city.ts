@@ -4,7 +4,7 @@
  * Saved on the phone as the `city` part of `gidi-progress` (src/game/progress.ts):
  *   { "kobo": 0, "power": 0, "tech": 0, "fixed": [], "fixes": 0,
  *     "at": {"x":820,"y":700}, "paid": {"potholes": 600}, "built": ["buka"],
- *     "trays": {"buka": 120, "market": 240}, "boom": 9, "boomCollect": 0, "hints": ["walk"] }
+ *     "trays": {"buka": 120, "market": 240}, "boom": 9, "boomCollect": 0, "hints": ["walk"], "boomSeen": 0 }
  * Money is kept as whole kobo (a board's Naira paid so far too); Power and Tech as whole units.
  * A broken or missing field starts empty. An older city part (no walking yet) reads with the
  * hero at the bus park, nothing part paid, nothing built, and 4 Booming points for each fix it
@@ -53,6 +53,8 @@ export interface CityState {
   boomCollect: number;
   /** Hints already shown (once each). */
   hints: string[];
+  /** The highest Booming mark whose boom card has been shown (city.md d9); 0 for none. */
+  boomSeen: number;
 }
 
 export type Bucket = 'naira' | 'power' | 'tech';
@@ -105,7 +107,7 @@ export const FIRST_WIN = 1400;
 export const HALL_PRIZE = 1500;
 
 export function emptyCity(): CityState {
-  return { kobo: 0, power: 0, tech: 0, fixed: [], fixes: 0, at: null, paid: {}, built: [], trays: {}, boom: 0, boomCollect: 0, hints: [] };
+  return { kobo: 0, power: 0, tech: 0, fixed: [], fixes: 0, at: null, paid: {}, built: [], trays: {}, boom: 0, boomCollect: 0, hints: [], boomSeen: 0 };
 }
 
 const count = (n: unknown): number => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0);
@@ -160,6 +162,7 @@ export function readCity(v: unknown): CityState {
     boom,
     boomCollect: Math.min(COLLECT_MAX, count(v['boomCollect'])),
     hints,
+    boomSeen: count(v['boomSeen']),
   };
 }
 
@@ -173,6 +176,8 @@ export function writeCity(c: CityState): Record<string, unknown> {
   out['boom'] = c.boom;
   out['boomCollect'] = c.boomCollect;
   out['hints'] = [...c.hints];
+  // Written once a boom card has shown (an older reader keeps its exact shape until then).
+  if (c.boomSeen > 0) out['boomSeen'] = c.boomSeen;
   return out;
 }
 
