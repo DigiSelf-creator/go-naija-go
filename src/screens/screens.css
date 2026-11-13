@@ -1622,7 +1622,7 @@
 .screen .city-fixed {
   color: #13703a;
 }
-@media (max-width: 480px), (max-height: 300px) {
+@media (max-width: 640px), (max-height: 300px) {
   .screen .city-top h2 {
     font-size: 0.95rem;
     padding: 4px 8px;
@@ -1762,7 +1762,7 @@
 .screen .city-need {
   font-weight: bold;
 }
-@media (max-width: 480px), (max-height: 300px) {
+@media (max-width: 640px), (max-height: 300px) {
   .screen .city-hint {
     font-size: 12px;
     padding: 2px 8px;
@@ -1772,5 +1772,105 @@
   }
   .screen .city-banner p {
     font-size: 0.8rem;
+  }
+}
+
+/* city.md (d), d5: the Booming meter inside the "Lagos" heading box. Line 1: "Lagos", the
+   rising-building icon and "Booming"; line 2: the 5-step bar and "9 of 20". About 176 x 48 wide,
+   at most 132 x 44 small. The box takes no taps (a tap there goes to the map). */
+.screen .city-top h2.city-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.city-head-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.city-head svg {
+  display: block;
+  flex: none;
+}
+.city-head .boom-word,
+.city-head .boom-num {
+  font: bold 13px 'Trebuchet MS', Verdana, sans-serif;
+}
+.city-head.tight .boom-word {
+  display: none;
+}
+/* 320 x 240 with four signs up (after the lane run): only "Lagos", so the signs have room (W15). */
+.city-head.compact .boom-icon,
+.city-head.compact .boom-word,
+.city-head.compact .city-head-row + .city-head-row {
+  display: none;
+}
+.city-head.pulse {
+  animation: city-head-pulse 0.3s ease-out;
+}
+@keyframes city-head-pulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+@media (max-width: 640px), (max-height: 300px) {
+  .screen .city-top h2.city-head {
+    padding: 3px 6px;
+    gap: 1px;
+  }
+  .city-head-row {
+    gap: 4px;
+  }
+  .city-head .boom-word,
+  .city-head .boom-num {
+    font-size: 11px;
+  }
+}
+/* d6: "Tap to skip" while a moment or a boom plays (small, bottom middle). */
+.screen .city-skipline {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: rgba(255, 250, 240, 0.9);
+  font: bold 12px 'Trebuchet MS', Verdana, sans-serif;
+  color: #5d574b;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.city-skipline[hidden] {
+  display: none;
+}
+/* d4: the coming-soon pins drop in after "See Lagos", with a 4 px bounce, then bob. */
+.city-pin.drop canvas {
+  animation:
+    city-pin-drop 0.5s ease-out,
+    city-pin-bob 1s ease-in-out 0.5s infinite alternate;
+}
+@keyframes city-pin-drop {
+  0% {
+    transform: translateY(-24px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .city-head.pulse,
+  .city-pin.drop canvas {
+    animation: none;
   }
 }

@@ -218,6 +218,28 @@ export const WORDS = {
       brought: (money: string) => `You brought ${money} home.`,
       skip: 'Tap to skip',
     },
+    /** city.md (d), d8: the Booming meter you can see. */
+    booming: 'Booming',
+    meter: (n: number, of: number) => `${n} of ${of}`,
+    meterSpoken: (n: number, of: number) => `Booming meter. ${n} of ${of} to the next boom.`,
+    stepLine: 'Lagos is getting brighter!',
+    stepSpoken: 'Lagos is getting brighter.',
+    hintBright: 'Each fix makes Lagos brighter!',
+    skip: 'Tap to skip',
+    skipKeys: 'Press Space to skip',
+    boom: {
+      heading: 'Lagos is booming!',
+      body: 'New buildings are going up. More people are coming, and they need more.',
+      cog: "Lagos's cog is turning on Nigeria's wheel!",
+      go: 'See Lagos',
+    },
+    /** d4, d8: the coming-soon pins and their cards. */
+    soon: {
+      goSlow: 'The traffic is stuck here.',
+      crowdedBuses: 'More people need buses here.',
+      line: 'Coming soon.',
+      spoken: (word: string) => `${word}, coming soon.`,
+    },
     cards: {
       potholes: {
         line1: 'Potholes on this road.',
