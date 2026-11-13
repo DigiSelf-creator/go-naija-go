@@ -59,7 +59,9 @@ test('slowed 4x CPU: the moving intro from 0 to 31 s, fps for each beat', async 
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   }
   const names = ['beat 1', 'beat 2', 'beat 3', 'beat 4', 'beat 5', 'beat 6', 'hold'];
-  const text = `${names.map((n, i) => `${n} ${out.fps[i]!.toFixed(1)}`).join(', ')}; average ${out.average.toFixed(1)} fps; longest frame ${out.longest.toFixed(0)} ms; ${out.slow} frames over 33 ms; beat-change frames ${out.beatChange.join(', ')} ms; pixel ratio ${out.ratio}`;
+  // The worst single beat is reported, not failed on (qa: dips to about 43 in beat 5 at 4x CPU).
+  const worst = out.fps.reduce((w, f, i) => (f < out.fps[w]! ? i : w), 0);
+  const text = `${names.map((n, i) => `${n} ${out.fps[i]!.toFixed(1)}`).join(', ')}; worst ${names[worst]} ${out.fps[worst]!.toFixed(1)}; average ${out.average.toFixed(1)} fps; longest frame ${out.longest.toFixed(0)} ms; ${out.slow} frames over 33 ms; beat-change frames ${out.beatChange.join(', ')} ms; pixel ratio ${out.ratio}`;
   console.log(`intro at 4x CPU: ${text}`);
   test.info().annotations.push({ type: 'intro fps', description: text });
   expect(out.average).toBeGreaterThanOrEqual(MIN_AVERAGE);

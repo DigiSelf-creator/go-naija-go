@@ -963,9 +963,11 @@ function world45(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numb
   }
   if (withWheel) wheel(g, W4.x, W4.y, W4.r, wheelAngle(T), 0, T >= 19.2 && T < 23);
   wedge(g, e, T);
+  // The hero walks on the pavement behind the Stoppers, which sit nearer, in the road (qa: from
+  // 20.3 to 20.9 s the hero was drawn over the jam's cars, as if walking on them).
+  hero45(g, e, T, look);
   for (const p of STOPPER_PLACES) if (p.kind === 'jam' || p.kind === 'pothole') stopperAt(g, e, p, T);
   for (const p of STOPPER_PLACES) if (p.kind !== 'jam' && p.kind !== 'pothole') stopperAt(g, e, p, T);
-  hero45(g, e, T, look);
 }
 
 // ---------- Beat 6: the journey starts at a Lagos bus stop (24.5 s on) ----------
@@ -976,6 +978,10 @@ function world45(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numb
  */
 const BUS6 = { x: 204, y: 150, s: 1.05 } as const;
 const DOOR_X = BUS6.x - 23 * BUS6.s;
+/** Where the hero stops: at the door (qa: not beside the front wheel). */
+const HERO6_X = DOOR_X - 2;
+/** How fast the people waiting walk to the door (units a second): the last is on by 27.4 s. */
+const QUEUE_PACE = 72;
 
 function back6(g: CanvasRenderingContext2D, e: Ext): void {
   grad(g, e, 0, 130, '#6fc2f0', '#fbe6b4');
@@ -1055,18 +1061,18 @@ function world6(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
   // The people waiting step on, one after another (25.8 to 27.2 s)
   QUEUE.forEach((p, i) => {
     const t0 = 25.8 + i * 0.18;
-    const x = T < t0 ? p.x : Math.min(DOOR_X, p.x + (T - t0) * 60);
-    const there = t0 + (DOOR_X - p.x) / 60;
+    const x = T < t0 ? p.x : Math.min(DOOR_X, p.x + (T - t0) * QUEUE_PACE);
+    const there = t0 + (DOOR_X - p.x) / QUEUE_PACE;
     const gone = span(T, there - 0.05, there + 0.12);
     if (gone >= 1) return;
     faded(g, 1 - gone, () => person(g, T < t0 ? p : { ...p, x, pose: 'walk', f: 1, ph: (T - t0) * 10 }));
   });
-  // The hero jogs in from the left to the bus door and stops there, ready (27.2 s)
+  // The hero jogs in from the left and stops at the bus door, ready (27.2 s)
   if (T >= 25.6) {
     const s = 0.62;
     const startX = Math.min(e.l - 14, -14);
     const k = easeOut(span(T, 25.6, 27.2));
-    const x = lerp(startX, DOOR_X - 15, k);
+    const x = lerp(startX, HERO6_X, k);
     const moving = T < 27.2;
     const dist = (x - startX) / s;
     g.save();

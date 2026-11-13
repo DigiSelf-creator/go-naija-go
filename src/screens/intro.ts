@@ -259,12 +259,12 @@ export class IntroScreen {
     const hold = document.hidden || this.portrait.matches;
     const scene = this.scene;
     if (scene) {
-      if (hold && !scene.paused) {
+      if (hold) {
         scene.pause();
-        if (!this.musicHeld) {
-          this.musicHeld = true;
-          this.opts.music?.({ kind: 'hold' });
-        }
+        // Every time: the page coming back (still upright) lets the music director resume the
+        // tune just before this runs, so hold it again. Pausing twice is safe.
+        this.musicHeld = true;
+        this.opts.music?.({ kind: 'hold' });
       } else if (!hold && scene.paused) {
         scene.resume();
         if (this.musicHeld) {
