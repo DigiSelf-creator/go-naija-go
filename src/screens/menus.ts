@@ -673,6 +673,7 @@ export class Menus {
         button(w.wheel, 'minor', () => this.showWheel('city')),
       ],
       run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
+      cogOn: () => this.hooks.progress().lagos.hall.done,
       ignoreTap: (e) => this.ignoreTap(e),
     });
     this.cityScreen = screen;
