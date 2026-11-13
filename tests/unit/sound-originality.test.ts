@@ -120,6 +120,7 @@ const ALL_SOUNDS: readonly SoundName[] = [
   // birdFlap and weedsFsss are hiss only (no notes to check), so they are not in this list.
   'strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'crowKraa', 'egretKrk', 'dashStart', 'dashSteps', 'dashReady',
   'payChink', 'payBulb', 'payChip', 'built', 'collect', 'notEnough',
+  'sting', 'step', 'boom', 'horn',
 ];
 // If a new sound name is added, this line fails to compile until it is in the list above.
 const _everyName: Record<SoundName, true> = Object.fromEntries(ALL_SOUNDS.map((n) => [n, true])) as Record<SoundName, true>;
