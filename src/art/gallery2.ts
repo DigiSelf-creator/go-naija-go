@@ -16,6 +16,7 @@ import { P5_PAGES } from './galleryP5';
 import { B_PAGES } from './galleryB';
 import { CITY_PAGES } from './galleryCity';
 import { WALK_PAGES } from './galleryWalk';
+import { BRIGHT_PAGES } from './galleryBright';
 import { FIXED_PAGES, STREET_PAGES } from './galleryStreets';
 import { INK } from './palette';
 import { BUS_END, busEndAt, drawBigPitCones, drawBusPark, drawCone, drawEndBus, drawEndBusInside, drawPavement, drawStartFence } from './roadside';
@@ -337,4 +338,4 @@ const roomPage: Page = (g, time) => {
 };
 
 /** Slice 2 pages in order. Later pieces of work push their pages onto this list. */
-export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses, crates, wellPage, roomPage, ...HERO_PAGES, ...STREET_PAGES, ...HALL_PAGES, ...FIXED_PAGES, ...P2_PAGES, ...P5_PAGES, ...CITY_PAGES, ...B_PAGES, ...WALK_PAGES];
+export const SLICE2_PAGES: Page[] = [controlsAndStreet, poses, crates, wellPage, roomPage, ...HERO_PAGES, ...STREET_PAGES, ...HALL_PAGES, ...FIXED_PAGES, ...P2_PAGES, ...P5_PAGES, ...CITY_PAGES, ...B_PAGES, ...WALK_PAGES, ...BRIGHT_PAGES];
