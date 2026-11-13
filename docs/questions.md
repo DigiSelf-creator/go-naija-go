@@ -1,5 +1,26 @@
 # Open questions for the product owner
 
+## po note, 13 Nov 2026 (latest): S3a3 and S3a4 "The intro that moves" accepted
+
+- Accepted: S3a3 (art) and S3a4 (gamedev), city.md step (a2), a2.1 to a2.11, after qa passed it (04d7596). See "po acceptance, 13 Nov 2026: the intro that moves" below.
+- Waits for Tp:
+  1. The four intro questions above (designer, 13 Nov). The build uses 1a, 2a, 3a and 4a; each of the first three is one switch in `INTRO_CHOICES` (src/game/intro.ts), so any other answer is a small change. Recommend: 1a, 2a, 3a and 4a, as the designer wrote, and paste the decision line given there.
+  2. A watch on a real phone, Sound on, start to "Let's go" (about 28 s). Recommend: look for any beat that feels slow or unclear, and listen to the music stopping at the jam and coming back with the hero.
+  3. The people test (a2.11 item 2): three first-time watchers, Sound off, at least one aged 9 to 12; they say the story back. Recommend: do it before Lagos ships to players; if 2 of 3 miss a beat, designer reworks that beat only.
+- Not tested yet (open, not blocking): a real screen reader (TalkBack or VoiceOver), the sounds by ear, a phone with a notch, a real cheap Android phone.
+
+## po acceptance, 13 Nov 2026: the intro that moves (S3a3, S3a4; city.md (a2))
+
+**Verdict: accepted**, on the team's recommended answers (1a 2a 3a 4a), until Tp answers.
+Reported (qa, 04d7596): tsc clean; vitest 1165 of 1165; first load 621.3 KB of 3 MB, the page 550.2 KB, the intro scene a separate 8.2 KB gzip chunk loaded only when needed (inside a2.9's 14 KB and a2.11 item 13's 20 KB); phone-landscape 201 passed (the one failure is the known sandbox-only icon request); "Let's go" at 28.02 s, every beat within 0.03 s (a2.11 item 1 asks 26 to 30 s, beats within 0.5 s); 52.8 to 54.8 fps average at 4x CPU, worst beat 45.9 (item 11 asks 45); offline on the second visit with a fallback to the still frames; the early fetch loads only our own file; reduced motion shows the six still frames (item 8); the hidden log holds the six captions (item 7, browser tree only); the music bug after an app switch while upright is fixed; the hero walks behind the jam cars; the hold hero stands at the bus door.
+Checked by po (verified by reading src/screens/words.ts, src/screens/intro.ts, src/game/intro.ts, src/art/intro-scene.ts and qa's screenshots at 851 x 393, 568 x 320 and 320 x 240):
+1. Words: the only words on screen come from `WORDS.intro`: "Skip", "That hero is you.", "Build up Lagos. Get Nigeria working." and "Let's go". `endLine` reuses the title line itself, so the two cannot drift apart. The six captions are untouched, word for word as Tp confirmed (T1 to T4). The scene draws no text of its own; the only words in the picture are the "BUS STOP" sign from the frame 6 drawing Tp already saw. Plain, warm, short.
+2. Fits (a2.11 item 3): at 320 x 240 the end line wraps to two lines, nothing is cut, it covers neither the hero, the bus door nor Skip; "Let's go" sits bottom right clear of the hero. At 851 x 393 everything sits on one line.
+3. Story (telescope, opinion): each beat reads on its own picture: people of every age push the Wheel at sunrise; Lagos rises by the lagoon with cranes and yellow buses; the Wheel sits in the middle of Nigeria with the turning border cogs and the Lagos dot on the south-west coast; the four Stoppers jam it with a wedge under a lilac sky; the plain hero pushes it free while the Stoppers grumble at the edges; the hero waits at the bus door. It is the confirmed story, shown and not told, and it is fun to watch.
+4. Rules (a2.8, part 6): the Stoppers are things (cars, a hole, a lamp, a stack of forms), silly and grumpy, never people, never hurt. The map is land in green, white, green with no pole, crest or waving shape, as Tp asked (10 Nov). No real people, buildings, brands or party colours. Nothing like Mario, any Nintendo game or a known film intro: plain slides, zooms and fades, no shaped wipe, no text crawl, no "long ago" card. Nothing mocks anyone. No accounts, photos, trackers or ads. The "wrong premise" line is not used.
+5. Scope: nothing out of scope for version 1. The brief's "Done when" items 5 to 7 still hold (offline, under 3 MB, no request after load but our own chunk, nothing copied, no real people).
+Small art notes, not blockers (opinion; art may pick them up in a later polish task): in beat 2 the bridge road is nearly the same blue as the lagoon, so at a glance the buses can look as if they drive on the water; a slightly grey or sand road deck would read better. The Stoppers' slanted brows read a little cross at full size; a2.2 asks "silly, never mean": keep the pout, soften the brows if the people test finds them scary.
+
 ## designer, 13 Nov 2026: the intro that moves (city.md step (a2)), questions for Tp
 
 Tp asked (13 Nov): "Can we have the intro not as static images with texts describing it?" Designer's note: docs/city.md, step (a2). The story becomes one moving scene of about 28 s; the six confirmed beats and captions (T1 to T4) stay. Work can start now on the recommendations; no answer below blocks art.
