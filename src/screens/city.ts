@@ -297,6 +297,9 @@ const SOON_TAP = { w: 94, h: 56, up: 66 } as const;
 /** The whole drawn coming-soon pin round its foot (its picture is bigger than its tap area). */
 const SOON_PIC = { x: -60, y: -90, w: 120, h: 96 } as const;
 
+/** The jetty's picture round drawJetty(410, 838): walkway left of `cut`, the ferry right of it (map units). */
+const JETTY_PIC = { x: 400, y: 830, w: 150, h: 112, cut: 452 } as const;
+
 /** What the still city picture is painted with. */
 interface Paint {
   looks: SpotLooks;
@@ -321,7 +324,7 @@ interface MomentRun {
   still: boolean;
   before: CityState;
   after: CityState;
-  /** The tired picture until the end; the bright one (1 map unit a px) inside the rings. */
+  /** The tired picture until the end; the bright one (at the moving screen scale, at most 1 map unit a px) inside the rings. */
   paint: Paint;
   img: HTMLCanvasElement | null;
   from: Pt;
@@ -345,6 +348,8 @@ interface BoomRun {
   reach: number;
   cam: { from: CityCam; to: CityCam } | null;
   fired: Set<string>;
+  /** The jetty and its ferry, painted once (the ferry glides in as a copy), and its scale. */
+  jetty: { img: HTMLCanvasElement; k: number } | null;
 }
 
 interface MissionRun {
@@ -1516,7 +1521,7 @@ export class CityScreen {
       before,
       after,
       paint: paintOf(before, before.built.includes('market') || build === 'market'),
-      img: still ? null : paintImg(paintOf(after), 1),
+      img: null,
       from,
       rects,
       reach: ringReach(from, rects),
@@ -1529,6 +1534,7 @@ export class CityScreen {
     if (build && this.cardOpen) this.closeCard();
     this.moment = mo;
     if (!build) {
+      if (!still) mo.img = this.ringImg(paintOf(after), this.cam.zoom);
       // A collect: the step ring, the step sound and the step line, where it is (no camera move).
       this.momentWords(mo);
       return;
@@ -1552,8 +1558,20 @@ export class CityScreen {
     const c = this.mission ? this.hero : middle(box);
     const to = clampCam({ zoom, x: this.view.w / 2 - c.x * s, y: top + room / 2 - c.y * s }, this.view);
     if (still) this.cam = to;
-    else mo.cam = { from: { ...this.cam }, to };
+    else {
+      mo.cam = { from: { ...this.cam }, to };
+      mo.img = this.ringImg(paintOf(after), zoom);
+    }
     this.wake();
+  }
+
+  /**
+   * The bright picture a ring shows, painted once at the scale the map is drawn at while things
+   * move (at most 1 map unit a px, d10), so each frame copies it without resizing.
+   */
+  private ringImg(p: Paint, zoom: Zoom): HTMLCanvasElement | null {
+    const scale = Math.min(1, camScale(zoom, this.view) * Math.min(window.devicePixelRatio || 1, MAP_DPR_MOVING));
+    return paintImg(p, scale);
   }
 
   private stepMoment(dt: number): void {
@@ -1629,7 +1647,13 @@ export class CityScreen {
     if (!mo.fired.has('words')) this.momentWords(mo);
     if (this.building) this.endBuild();
     this.moment = null;
-    if (mo.img) mo.img.width = 0;
+    if (mo.img) {
+      const dpr = Math.min(window.devicePixelRatio || 1, MAP_DPR_MOVING);
+      const p = paintOf(this.life.state);
+      const want = Math.min(camScale(this.cam.zoom, this.view) * dpr, 2048 / CITY_MAP.w);
+      if (paintKey(p) === paintKey(paintOf(mo.after)) && Math.abs(Math.ceil(CITY_MAP.w * want) - mo.img.width) < 1) painted.set(`${paintKey(p)}|${this.cam.zoom}|${dpr}`, { img: mo.img, scale: want });
+      else mo.img.width = 0;
+    }
     this.danfo = null;
     if (mo.cam) this.cam = mo.cam.to;
     if (mo.build) {
@@ -1662,10 +1686,11 @@ export class CityScreen {
       t: 0,
       still,
       paint: paintOf(st),
-      img: still ? null : paintImg({ ...paintOf({ ...st, boomSeen: mark }), flats: false }, 1),
+      img: still ? null : this.ringImg({ ...paintOf({ ...st, boomSeen: mark }), flats: false }, 'far'),
       reach: ringReach(BOOM.from, [{ x: 0, y: 0, w: 1600, h: 1000 }]),
       cam: null,
       fired: new Set(),
+      jetty: null,
     };
     const to = centreOn({ x: 800, y: 560 }, 'far', this.view);
     if (this.cam.zoom !== 'far') this.cam = zoomCam(this.cam, this.view, 'far', toScreen(this.cam, this.view, this.hero));
@@ -2351,8 +2376,9 @@ export class CityScreen {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = CITY_COLOURS.water;
     g.fillRect(0, 0, pw, ph);
-    const pic = this.picture(dpr);
     const s = camScale(this.cam.zoom, this.view);
+    const covered = this.boomCovers();
+    const pic = covered ? { img: covered, scale: covered.width / CITY_MAP.w } : this.picture(dpr);
     if (pic) {
       const x = Math.round(this.cam.x * dpr);
       const y = Math.round(this.cam.y * dpr);
@@ -2363,7 +2389,7 @@ export class CityScreen {
       const sh = Math.min(pic.img.height - sy, (ph - Math.max(0, y)) / k);
       if (sw > 0 && sh > 0) g.drawImage(pic.img, sx, sy, sw, sh, Math.max(0, x), Math.max(0, y), sw * k, sh * k);
     }
-    this.drawRings(g, dpr, s);
+    if (!covered) this.drawRings(g, dpr, s);
     this.drawLive(g, dpr, s);
     this.placePins();
   }
@@ -2372,6 +2398,17 @@ export class CityScreen {
    * d6, d10: the colour rings. The bright picture (1 map unit a px) is drawn only inside each ring
    * (and, for a fix or a step, only over its own blocks), with a soft cream-gold edge while it grows.
    */
+  /** The boom's bright picture once its ring has passed every corner of the screen (then it is the only copy a frame needs). */
+  private boomCovers(): HTMLCanvasElement | null {
+    const bo = this.boomRun;
+    if (!bo?.img) return null;
+    const r = bo.reach * ease(span(bo.t, BOOM.ring));
+    const a = toMap(this.cam, this.view, { x: 0, y: 0 });
+    const b = toMap(this.cam, this.view, { x: this.view.w, y: this.view.h });
+    for (const [x, y] of [[a.x, a.y], [b.x, a.y], [a.x, b.y], [b.x, b.y]] as const) if (Math.hypot(x - BOOM.from.x, y - BOOM.from.y) > r - 8) return null;
+    return bo.img;
+  }
+
   private drawRings(g: CanvasRenderingContext2D, dpr: number, s: number): void {
     const mo = this.moment;
     const bo = this.boomRun;
@@ -2390,12 +2427,13 @@ export class CityScreen {
     }
     if (!parts.length) return;
     const k = s * dpr;
+    const sc = img.width / CITY_MAP.w;
     const a = toMap(this.cam, this.view, { x: 0, y: 0 });
     const b = toMap(this.cam, this.view, { x: this.view.w, y: this.view.h });
     const sx = Math.max(0, Math.floor(a.x));
     const sy = Math.max(0, Math.floor(a.y));
-    const sw = Math.min(img.width, Math.ceil(b.x)) - sx;
-    const sh = Math.min(img.height, Math.ceil(b.y)) - sy;
+    const sw = Math.min(CITY_MAP.w, Math.ceil(b.x)) - sx;
+    const sh = Math.min(CITY_MAP.h, Math.ceil(b.y)) - sy;
     if (sw <= 0 || sh <= 0) return;
     g.save();
     g.setTransform(k, 0, 0, k, this.cam.x * dpr, this.cam.y * dpr);
@@ -2410,7 +2448,7 @@ export class CityScreen {
       g.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       g.save();
       g.clip();
-      g.drawImage(img, sx, sy, sw, sh, sx, sy, sw, sh);
+      g.drawImage(img, sx * sc, sy * sc, sw * sc, sh * sc, sx, sy, sw, sh);
       g.restore();
       if (p.k < 1) {
         g.strokeStyle = 'rgba(255,236,170,0.85)';
@@ -2445,19 +2483,24 @@ export class CityScreen {
     if (bo && !bo.still) {
       if (bo.t >= BOOM.flats[0]) drawBoomFlats(g, ease(span(bo.t, BOOM.flats)));
       if (bo.t >= BOOM.ferry[0]) {
-        g.save();
-        g.beginPath();
-        g.rect(0, 0, 452, CITY_MAP.h);
-        g.clip();
-        drawJetty(g, 410, 838);
-        g.restore();
-        g.save();
-        g.translate((1 - ease(span(bo.t, BOOM.ferry))) * 260, 0);
-        g.beginPath();
-        g.rect(452, 780, 300, 220);
-        g.clip();
-        drawJetty(g, 410, 838);
-        g.restore();
+        const J = JETTY_PIC;
+        if (!bo.jetty || Math.abs(bo.jetty.k - k) > 1e-6) {
+          const img = document.createElement('canvas');
+          img.width = Math.ceil(J.w * k);
+          img.height = Math.ceil(J.h * k);
+          const c = img.getContext('2d');
+          if (c) {
+            c.scale(k, k);
+            c.translate(-J.x, -J.y);
+            drawJetty(c, 410, 838);
+          }
+          bo.jetty = { img, k };
+        }
+        const jk = bo.jetty.img.width / J.w;
+        const cut = J.cut - J.x;
+        const dx = (1 - ease(span(bo.t, BOOM.ferry))) * 260;
+        g.drawImage(bo.jetty.img, 0, 0, cut * jk, J.h * jk, J.x, J.y, cut, J.h);
+        g.drawImage(bo.jetty.img, cut * jk, 0, (J.w - cut) * jk, J.h * jk, J.cut + dx, J.y, J.w - cut, J.h);
       }
     }
     // Standing things, back to front: the places, the hero (or the bus bringing them).
