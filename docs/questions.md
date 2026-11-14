@@ -1,5 +1,59 @@
 # Open questions for the product owner
 
+## po note, 14 Nov 2026 (latest): Tp answered the four moving-intro questions
+
+- Answered by Tp (14 Nov, reported by the lead): 1a, 2a, 3a, 4a, the team's recommended answers. A tap jumps to the next beat; only two lines on screen; reduce motion gets the six still frames; the Stoppers flinch but stay. See "designer, 13 Nov 2026: the intro that moves" below.
+- Accepted: nothing new to build. My acceptance of S3a3 and S3a4 now rests on Tp's confirmed answers, not on recommendations. Verified by reading the code: `INTRO_CHOICES` in src/game/intro.ts is `tapJumps: true` (1a), `lines: true` (2a), `stillFramesForReducedMotion: true` (3a); `stopperAt` in src/art/intro-scene.ts moves each Stopper a step outward with a blink at 23.0 to 23.3 s and keeps drawing it to the end of beat 5 (4a). No code change.
+- Found (verified): docs/decisions.md holds only lines 1 to 4, on this branch and on main. Lines 5 to 48, drafted in this file for Tp since 6 Nov, are not in it yet, including line 25 and lines 44 to 48.
+- Waits for Tp:
+  1. Paste the lines in "For Tp to paste into decisions.md" just below: the new line 25 (instead of the old 25 wording) and line 49. Recommend: paste as written, together with the other waiting lines 5 to 48.
+  2. Still waiting from 13 Nov: a watch on a real phone with Sound on (recommend: listen for the music stopping at the jam and coming back with the hero) and the people test with three first-time watchers (recommend: before Lagos ships to players).
+
+## For Tp to paste into decisions.md
+
+docs/decisions.md now ends at line 4. Every line from 5 to 48 drafted in this file still waits to be pasted; the numbers below follow on from those, so 49 is the next free number.
+
+Replace the drafted line 25 ("... Six skippable frames before the first hero build. (T1 to T4)") with:
+25. The intro story: the people of West Africa made the Wheel for everyone; the Stoppers (traffic, potholes, power cuts, red tape) want it stuck; the player is the Wheel Hero. It is one short moving scene (about 28 s) with almost no words, skippable from the start, before the first hero build; screen readers hear the six captions; with reduced motion it shows six still pictures with captions. (T1 to T4; Tp 13 Nov)
+
+New line:
+49. In the moving intro a tap jumps to the next beat and Skip ends it at once; only two lines show on screen, "That hero is you." and, with "Let's go", "Build up Lagos. Get Nigeria working."; with reduce motion on, the six still pictures with captions play instead; the Stoppers flinch back when the hero frees the Wheel but stay at the edges, still out there to beat. Built as S3a3 and S3a4. (Intro questions 1a, 2a, 3a, 4a; Tp 14 Nov)
+
+## po note, 13 Nov 2026: S3a3 and S3a4 "The intro that moves" accepted
+
+- Accepted: S3a3 (art) and S3a4 (gamedev), city.md step (a2), a2.1 to a2.11, after qa passed it (04d7596). See "po acceptance, 13 Nov 2026: the intro that moves" below.
+- Waits for Tp:
+  1. Answered by Tp, 14 Nov: 1a, 2a, 3a, 4a (see the 14 Nov note above). Was: the four intro questions above (designer, 13 Nov). The build uses 1a, 2a, 3a and 4a; each of the first three is one switch in `INTRO_CHOICES` (src/game/intro.ts), so any other answer is a small change. Recommend: 1a, 2a, 3a and 4a, as the designer wrote, and paste the decision line given there.
+  2. A watch on a real phone, Sound on, start to "Let's go" (about 28 s). Recommend: look for any beat that feels slow or unclear, and listen to the music stopping at the jam and coming back with the hero.
+  3. The people test (a2.11 item 2): three first-time watchers, Sound off, at least one aged 9 to 12; they say the story back. Recommend: do it before Lagos ships to players; if 2 of 3 miss a beat, designer reworks that beat only.
+- Not tested yet (open, not blocking): a real screen reader (TalkBack or VoiceOver), the sounds by ear, a phone with a notch, a real cheap Android phone.
+
+## po acceptance, 13 Nov 2026: the intro that moves (S3a3, S3a4; city.md (a2))
+
+**Verdict: accepted**, on Tp's confirmed answers (1a 2a 3a 4a, answered 14 Nov). It was first given on the team's recommended answers; the build already matched them, so nothing changed.
+Reported (qa, 04d7596): tsc clean; vitest 1165 of 1165; first load 621.3 KB of 3 MB, the page 550.2 KB, the intro scene a separate 8.2 KB gzip chunk loaded only when needed (inside a2.9's 14 KB and a2.11 item 13's 20 KB); phone-landscape 201 passed (the one failure is the known sandbox-only icon request); "Let's go" at 28.02 s, every beat within 0.03 s (a2.11 item 1 asks 26 to 30 s, beats within 0.5 s); 52.8 to 54.8 fps average at 4x CPU, worst beat 45.9 (item 11 asks 45); offline on the second visit with a fallback to the still frames; the early fetch loads only our own file; reduced motion shows the six still frames (item 8); the hidden log holds the six captions (item 7, browser tree only); the music bug after an app switch while upright is fixed; the hero walks behind the jam cars; the hold hero stands at the bus door.
+Checked by po (verified by reading src/screens/words.ts, src/screens/intro.ts, src/game/intro.ts, src/art/intro-scene.ts and qa's screenshots at 851 x 393, 568 x 320 and 320 x 240):
+1. Words: the only words on screen come from `WORDS.intro`: "Skip", "That hero is you.", "Build up Lagos. Get Nigeria working." and "Let's go". `endLine` reuses the title line itself, so the two cannot drift apart. The six captions are untouched, word for word as Tp confirmed (T1 to T4). The scene draws no text of its own; the only words in the picture are the "BUS STOP" sign from the frame 6 drawing Tp already saw. Plain, warm, short.
+2. Fits (a2.11 item 3): at 320 x 240 the end line wraps to two lines, nothing is cut, it covers neither the hero, the bus door nor Skip; "Let's go" sits bottom right clear of the hero. At 851 x 393 everything sits on one line.
+3. Story (telescope, opinion): each beat reads on its own picture: people of every age push the Wheel at sunrise; Lagos rises by the lagoon with cranes and yellow buses; the Wheel sits in the middle of Nigeria with the turning border cogs and the Lagos dot on the south-west coast; the four Stoppers jam it with a wedge under a lilac sky; the plain hero pushes it free while the Stoppers grumble at the edges; the hero waits at the bus door. It is the confirmed story, shown and not told, and it is fun to watch.
+4. Rules (a2.8, part 6): the Stoppers are things (cars, a hole, a lamp, a stack of forms), silly and grumpy, never people, never hurt. The map is land in green, white, green with no pole, crest or waving shape, as Tp asked (10 Nov). No real people, buildings, brands or party colours. Nothing like Mario, any Nintendo game or a known film intro: plain slides, zooms and fades, no shaped wipe, no text crawl, no "long ago" card. Nothing mocks anyone. No accounts, photos, trackers or ads. The "wrong premise" line is not used.
+5. Scope: nothing out of scope for version 1. The brief's "Done when" items 5 to 7 still hold (offline, under 3 MB, no request after load but our own chunk, nothing copied, no real people).
+Small art notes, not blockers (opinion; art may pick them up in a later polish task): in beat 2 the bridge road is nearly the same blue as the lagoon, so at a glance the buses can look as if they drive on the water; a slightly grey or sand road deck would read better. The Stoppers' slanted brows read a little cross at full size; a2.2 asks "silly, never mean": keep the pout, soften the brows if the people test finds them scary.
+
+## designer, 13 Nov 2026: the intro that moves (city.md step (a2)), answered by Tp
+
+**Answered by Tp, 14 Nov 2026 (reported by the lead): 1 a, 2 a, 3 a, 4 a** (all as recommended). A tap jumps to the next beat; only two lines on screen; reduce motion gets the six still frames with captions; the Stoppers flinch but stay. The paste-ready lines are in "For Tp to paste into decisions.md" at the top of this file.
+
+Tp asked (13 Nov): "Can we have the intro not as static images with texts describing it?" Designer's note: docs/city.md, step (a2). The story becomes one moving scene of about 28 s; the six confirmed beats and captions (T1 to T4) stay. Work can start now on the recommendations; no answer below blocks art.
+
+1. **What a tap does.** a) A tap jumps to the next beat (six taps reach the end); Skip still ends it at once. b) A tap does nothing; only Skip. c) A tap pauses and plays. **Recommended: a)**, it keeps the old "a tap moves on" feel and lets a curious player hurry without missing the story.
+2. **Words on screen.** a) Only two short lines: "That hero is you." when the hero gets the Wheel turning, and "Build up Lagos. Get Nigeria working." at the end, with "Let's go". b) No words at all but "Skip" and "Let's go". **Recommended: a)**, the hero line is the one thing a picture cannot say alone, and the end line is your chosen title line.
+3. **Reduced motion.** Players who turn on "reduce motion" on their phone get the six still pictures with their captions, as in the intro today. **Recommended: yes**, still pictures with words are kinder for them, and it costs nothing (it is already built).
+4. **The Stoppers at the end of the intro.** They flinch back when the hero pushes the Wheel, but stay at the edges. **Recommended: yes**, so the story says "your job starts now", not "already won". (Designer's call unless Tp says otherwise.)
+
+Line for Tp to paste into docs/decisions.md (it updates the waiting line 25, "Six skippable frames"; numbered as line 25 in "For Tp to paste into decisions.md" at the top):
+- The intro story: the people of West Africa made the Wheel for everyone; the Stoppers (traffic, potholes, power cuts, red tape) want it stuck; the player is the Wheel Hero. It is one short moving scene (about 28 s) with almost no words, skippable from the start, before the first hero build; screen readers hear the six captions; with reduced motion it shows six still pictures with captions. (T1 to T4; Tp 13 Nov)
+
 ## po note, 13 Nov 2026 (latest): S3d1 "The Booming meter you can see" accepted
 
 - Accepted: S3d1 (city.md step (d), d1 to d12; plan S3d1a and S3d1b), after qa passed it (c67b197). See "po acceptance, 13 Nov 2026: S3d1" below.

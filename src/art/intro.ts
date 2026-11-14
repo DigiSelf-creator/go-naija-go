@@ -51,14 +51,15 @@ const C = INTRO_COLOURS;
 const SKIN = ['#f1c9a5', '#d9a172', '#a8693f', '#7a4a2a', '#4b2c1a'] as const;
 
 /** Area the scene can reach past the 320 x 180 box (design units), set per frame. */
-interface Ext {
+export interface Ext {
   l: number;
   r: number;
   t: number;
   b: number;
 }
 
-function grad(g: CanvasRenderingContext2D, e: Ext, y0: number, y1: number, top: string, bottom: string): void {
+/** Helpers from here on are shared with the moving scene (intro-scene.ts). */
+export function grad(g: CanvasRenderingContext2D, e: Ext, y0: number, y1: number, top: string, bottom: string): void {
   const gr = g.createLinearGradient(0, y0, 0, y1);
   gr.addColorStop(0, top);
   gr.addColorStop(1, bottom);
@@ -66,19 +67,19 @@ function grad(g: CanvasRenderingContext2D, e: Ext, y0: number, y1: number, top: 
   g.fillRect(e.l, Math.min(e.t, y0), e.r - e.l, Math.max(y1, e.b) - Math.min(e.t, y0));
 }
 
-function band(g: CanvasRenderingContext2D, e: Ext, y: number, colour: string): void {
+export function band(g: CanvasRenderingContext2D, e: Ext, y: number, colour: string): void {
   g.fillStyle = colour;
   g.fillRect(e.l, y, e.r - e.l, e.b - y);
 }
 
-function disc(g: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string): void {
+export function disc(g: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string): void {
   g.fillStyle = fill;
   g.beginPath();
   g.arc(x, y, r, 0, TAU);
   g.fill();
 }
 
-function line(g: CanvasRenderingContext2D, colour: string, w: number, pts: readonly number[]): void {
+export function line(g: CanvasRenderingContext2D, colour: string, w: number, pts: readonly number[]): void {
   g.strokeStyle = colour;
   g.lineWidth = w;
   g.lineCap = 'round';
@@ -91,7 +92,7 @@ function line(g: CanvasRenderingContext2D, colour: string, w: number, pts: reado
   g.stroke();
 }
 
-function box(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fill: string, edge = INK, ew = 0.8): void {
+export function box(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fill: string, edge = INK, ew = 0.8): void {
   g.fillStyle = fill;
   g.fillRect(x, y, w, h);
   g.strokeStyle = edge;
@@ -190,10 +191,11 @@ export function drawStoryWheel(g: CanvasRenderingContext2D, x: number, y: number
 
 // ---------- Small people (frames 1, 2, 6) ----------
 
-type Pose = 'lift' | 'push' | 'carry' | 'sit' | 'point' | 'walk' | 'stand';
-type Head = 'bare' | 'puff' | 'wrap' | 'grey' | 'braids';
+/** 'clap' (sitting, hands meeting) and 'up' (one arm pointing up) are for the moving scene. */
+export type Pose = 'lift' | 'push' | 'carry' | 'sit' | 'point' | 'walk' | 'stand' | 'clap' | 'up';
+export type Head = 'bare' | 'puff' | 'wrap' | 'grey' | 'braids';
 
-interface Folk {
+export interface Folk {
   x: number;
   y: number;
   skin: number;
@@ -204,11 +206,13 @@ interface Folk {
   kid?: boolean;
   /** 1 faces right, -1 left. */
   f?: 1 | -1;
-  wrap?: string;
+  wrap?: string | undefined;
+  /** Moving scene only: the step, push or clap cycle in radians. Missing: the still pose. */
+  ph?: number | undefined;
 }
 
 /** A small person, feet at (x, y), about 18 u tall (a child 13). Drawn simply, with care. */
-function person(g: CanvasRenderingContext2D, p: Folk): void {
+export function person(g: CanvasRenderingContext2D, p: Folk): void {
   const H = p.kid ? 13 : 18;
   const f = p.f ?? 1;
   const skin = SKIN[p.skin % SKIN.length]!;
@@ -219,20 +223,24 @@ function person(g: CanvasRenderingContext2D, p: Folk): void {
   const sh = -H * 0.74;
   const lw = H * 0.1;
   // Legs
-  if (p.pose === 'sit') {
+  const ph = p.ph;
+  if (p.pose === 'sit' || p.pose === 'clap') {
     box(g, -3, hip + 1, 7, 2.5, '#8a5d36', INK, 0.5); // stool
     line(g, '#6b4a2b', 1, [-2, hip + 3.5, -2, 0, 3, hip + 3.5, 3, 0]);
     line(g, p.low, lw, [0, hip, 5, hip + 1, 5, 0]);
   } else {
     const st = p.pose === 'walk' ? 2.6 : p.pose === 'push' ? 3 : 1.6;
-    line(g, p.low, lw, [-0.5, hip, -st, 0]);
-    line(g, p.low, lw, [0.5, hip, st + (p.pose === 'push' ? -4 : 0), 0]);
+    // A walk in motion: the legs swing through each other.
+    const sw = (p.pose === 'walk' || p.pose === 'carry') && ph !== undefined ? Math.sin(ph) : 1;
+    line(g, p.low, lw, [-0.5, hip, -st * sw, 0]);
+    line(g, p.low, lw, [0.5, hip, st * sw + (p.pose === 'push' ? -4 : 0), 0]);
   }
   // Body: a robe or shirt, wider at the hem
   g.fillStyle = p.top;
   g.strokeStyle = INK;
   g.lineWidth = 0.6;
-  const lean = p.pose === 'push' ? 2 : 0;
+  // A push in motion: lean in and out with each shove.
+  const lean = p.pose === 'push' ? 2 + (ph !== undefined ? Math.sin(ph) * 0.8 : 0) : 0;
   g.beginPath();
   g.moveTo(-H * 0.12 + lean, sh);
   g.lineTo(H * 0.12 + lean, sh);
@@ -248,12 +256,21 @@ function person(g: CanvasRenderingContext2D, p: Folk): void {
   // Arms
   const ax = lean;
   const arm = (pts: number[]): void => line(g, skin, H * 0.075, pts);
+  const wv = ph !== undefined ? Math.sin(ph) : 0;
   if (p.pose === 'lift') {
-    arm([ax - 1.5, sh + 1, ax - 2.5, sh - 4, ax - 1, sh - 7]);
-    arm([ax + 1.5, sh + 1, ax + 3, sh - 4, ax + 2, sh - 7]);
+    arm([ax - 1.5, sh + 1, ax - 2.5 - wv, sh - 4, ax - 1 - wv * 1.5, sh - 7]);
+    arm([ax + 1.5, sh + 1, ax + 3 + wv, sh - 4, ax + 2 + wv * 1.5, sh - 7]);
   } else if (p.pose === 'push') {
-    arm([ax, sh + 1, ax + 4, sh + 1.5, ax + 7, sh]);
-    arm([ax, sh + 2.5, ax + 4, sh + 3.5, ax + 7, sh + 2]);
+    const r = wv * 1.2;
+    arm([ax, sh + 1, ax + 4 + r, sh + 1.5, ax + 7 + r, sh]);
+    arm([ax, sh + 2.5, ax + 4 + r, sh + 3.5, ax + 7 + r, sh + 2]);
+  } else if (p.pose === 'up') {
+    arm([ax, sh + 1, ax + 2, sh - 3, ax + 3, sh - 8]);
+    arm([ax, sh + 1, ax - 1, sh + 4, ax, sh + 7]);
+  } else if (p.pose === 'clap') {
+    const c = Math.abs(wv) * 1.6;
+    arm([ax, sh + 1, ax + 3, sh + 2, ax + 5 + c, sh - 1]);
+    arm([ax, sh + 2, ax + 3.5, sh + 3, ax + 5 - c, sh]);
   } else if (p.pose === 'carry') {
     arm([ax + 1, sh + 1, ax + 3, sh - 3, ax + 1.5, sh - 6.5]);
     arm([ax - 1, sh + 1, ax - 2, sh + 4, ax - 1.5, sh + 7]);
@@ -263,7 +280,7 @@ function person(g: CanvasRenderingContext2D, p: Folk): void {
   } else if (p.pose === 'sit') {
     arm([ax, sh + 1, ax + 3, sh + 3, ax + 5, sh + 1]);
   } else {
-    const sw = p.pose === 'walk' ? 2.5 : 0.8;
+    const sw = p.pose === 'walk' ? 2.5 * (ph !== undefined ? -Math.sin(ph) : 1) : 0.8;
     arm([ax, sh + 1, ax + sw, sh + 4, ax + sw * 1.2, sh + 7]);
     arm([ax, sh + 1, ax - sw, sh + 4, ax - sw * 1.2, sh + 7]);
   }
@@ -303,7 +320,7 @@ function person(g: CanvasRenderingContext2D, p: Folk): void {
 
 // ---------- Frame 1: the people make the Wheel ----------
 
-function palm(g: CanvasRenderingContext2D, x: number, y: number, h: number): void {
+export function palm(g: CanvasRenderingContext2D, x: number, y: number, h: number): void {
   line(g, '#7a5a3a', 2.4, [x, y, x + 2, y - h * 0.5, x + 1, y - h]);
   g.fillStyle = '#3f8f4a';
   for (let i = 0; i < 6; i++) {
@@ -314,7 +331,7 @@ function palm(g: CanvasRenderingContext2D, x: number, y: number, h: number): voi
   }
 }
 
-function baobab(g: CanvasRenderingContext2D, x: number, y: number): void {
+export function baobab(g: CanvasRenderingContext2D, x: number, y: number): void {
   g.fillStyle = '#8a6a4a';
   g.beginPath();
   g.moveTo(x - 6, y);
@@ -397,12 +414,19 @@ function frame1(g: CanvasRenderingContext2D, e: Ext, t: number): void {
 
 // ---------- Frame 2: Lagos grows ----------
 
-function building(g: CanvasRenderingContext2D, x: number, base: number, w: number, h: number, wall: string, roof: string, crane = false): void {
+/** A city block. `lit` (0 to 1, moving scene): that share of its windows glow warm, always the same ones. */
+export function building(g: CanvasRenderingContext2D, x: number, base: number, w: number, h: number, wall: string, roof: string, crane = false, lit = 0): void {
   box(g, x, base - h, w, h, wall, INK, 0.7);
   g.fillStyle = roof;
   g.fillRect(x - 1, base - h - 2, w + 2, 3);
   g.fillStyle = '#cfe9f5';
-  for (let yy = base - h + 5; yy < base - 6; yy += 7) for (let xx = x + 3; xx < x + w - 4; xx += 6) g.fillRect(xx, yy, 3, 4);
+  let n = 0;
+  for (let yy = base - h + 5; yy < base - 6; yy += 7)
+    for (let xx = x + 3; xx < x + w - 4; xx += 6) {
+      // A fixed scatter (not random), so the same lit share always lights the same windows.
+      g.fillStyle = lit > 0 && ((n++ * 7 + x) % 10) / 10 < lit ? '#ffd86b' : '#cfe9f5';
+      g.fillRect(xx, yy, 3, 4);
+    }
   if (crane) {
     // Still growing: scaffold and a small crane
     g.strokeStyle = '#d98a1e';
@@ -414,14 +438,40 @@ function building(g: CanvasRenderingContext2D, x: number, base: number, w: numbe
   }
 }
 
+/**
+ * Our own bridge into the city over the lagoon (frame 2 and the moving beat 2): a grey asphalt
+ * road (130 to 141) with lane marks, a light rail along its far side, a sandy edge under it and
+ * piers down into the water, so the road never reads as water. Buses stand on y = 138.
+ */
+export function bridge(g: CanvasRenderingContext2D, e: Ext): void {
+  const l = e.l;
+  const w = e.r - e.l;
+  // Ripples on the water between the piers
+  for (let x = Math.floor(l / 36) * 36 + 10; x < e.r; x += 36) line(g, 'rgba(255,255,255,0.6)', 1, [x, 148 + (x % 72 ? 2 : 0), x + 10, 148 + (x % 72 ? 2 : 0)]);
+  // The rail along the far side
+  for (let x = Math.ceil(l / 15) * 15; x < e.r; x += 15) box(g, x, 126, 1.6, 4, '#eee7d6', INK, 0.4);
+  line(g, '#eee7d6', 1.4, [l, 126.5, e.r, 126.5]);
+  line(g, INK, 0.5, [l, 125.6, e.r, 125.6]);
+  // The road: grey asphalt and its lane marks
+  g.fillStyle = '#77736d';
+  g.fillRect(l, 130, w, 11);
+  g.fillStyle = '#5f5b56';
+  g.fillRect(l, 130, w, 1.5);
+  g.fillStyle = '#f4efe2';
+  for (let x = Math.floor(l / 24) * 24; x < e.r; x += 24) g.fillRect(x, 135.5, 9, 1.2);
+  // The sandy edge of the bridge, then the piers
+  g.fillStyle = '#d8c9a8';
+  g.fillRect(l, 141, w, 4);
+  line(g, INK, 0.6, [l, 141, e.r, 141]);
+  line(g, INK, 0.5, [l, 145, e.r, 145]);
+  for (let x = Math.ceil(l / 30) * 30; x < e.r; x += 30) box(g, x, 145, 4, 9, '#b9a888', INK, 0.4);
+}
+
 function frame2(g: CanvasRenderingContext2D, e: Ext, t: number): void {
   grad(g, e, 0, 130, '#8fd0f2', '#fdf0cf');
   disc(g, 40, 30, 12, '#ffd34d');
   // The lagoon and its far shore
   band(g, e, 124, '#5fb3c9');
-  g.strokeStyle = 'rgba(255,255,255,0.6)';
-  g.lineWidth = 1;
-  for (let i = 0; i < 6; i++) line(g, 'rgba(255,255,255,0.6)', 1, [100 + i * 36, 130 + (i % 2) * 4, 112 + i * 36, 130 + (i % 2) * 4]);
   // Lagos growing on the right: some still going up
   const B: [number, number, number, string, boolean][] = [
     [128, 20, 34, '#f0a35e', false], [150, 18, 50, '#9fb6e8', true], [170, 24, 40, '#7fc4a4', false],
@@ -429,11 +479,7 @@ function frame2(g: CanvasRenderingContext2D, e: Ext, t: number): void {
     [258, 26, 38, '#b7d77a', false], [286, 18, 52, '#e7b98a', true],
   ];
   for (const [x, w, h, wall, cr] of B) building(g, x, 124, w, h, wall, '#5b4636', cr);
-  // Our own bridge into the city
-  g.fillStyle = '#d8c9a8';
-  g.fillRect(e.l, 138, e.r - e.l, 6);
-  for (let x = Math.ceil(e.l / 30) * 30; x < e.r; x += 30) box(g, x, 144, 4, 10, '#b9a888', INK, 0.4);
-  line(g, INK, 0.6, [e.l, 138, e.r, 138]);
+  bridge(g, e);
   // Buses and people coming in, welcome
   for (const [x, s] of [[150, 0.3], [220, 0.3]] as const) {
     g.save();
@@ -485,15 +531,15 @@ const NIGERIA: readonly (readonly [number, number])[] = [
 
 /** Frame 3's map: k frame units a degree, west edge at x 64, north edge at y 14. */
 const MAP_K = 16;
-const toFrame = ([lon, lat]: readonly [number, number]): [number, number] => [64 + (lon - 2.7) * MAP_K, 14 + (13.9 - lat) * MAP_K];
+export const toFrame = ([lon, lat]: readonly [number, number]): [number, number] => [64 + (lon - 2.7) * MAP_K, 14 + (13.9 - lat) * MAP_K];
 /** The outline in frame-3 units (320 x 180). */
 export const NIGERIA_OUTLINE: readonly (readonly [number, number])[] = NIGERIA.map(toFrame);
 /** Where the big Wheel sits on the map (the middle of the land) and its size. */
 export const MAP_WHEEL = { x: 64 + (8.7 - 2.7) * MAP_K, y: 14 + (13.9 - 9.2) * MAP_K, r: 27 } as const;
 
 /** The national colours: green and white. */
-const NG_GREEN = '#008751';
-const NG_WHITE = '#ffffff';
+export const NG_GREEN = '#008751';
+export const NG_WHITE = '#ffffff';
 
 /** One border cog: centre, size, turn way (+1 or -1) and start angle so neighbours' teeth mesh. */
 export interface BorderCog {
@@ -640,7 +686,7 @@ export function borderCogs(): readonly BorderCog[] {
   return cogs;
 }
 
-function nigeriaPath(g: CanvasRenderingContext2D): void {
+export function nigeriaPath(g: CanvasRenderingContext2D): void {
   g.beginPath();
   NIGERIA_OUTLINE.forEach(([x, y], i) => (i === 0 ? g.moveTo(x, y) : g.lineTo(x, y)));
   g.closePath();
@@ -683,8 +729,25 @@ function frame3(g: CanvasRenderingContext2D, e: Ext, t: number): void {
 // ---------- Frame 4: the Stoppers ----------
 
 /** A grumpy pout: two eyes with low brows and a pushed-out lip. On things only. */
-function pout(g: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+/** A Stopper's brow: a soft, low arch that dips only a little at the middle, grumpy-silly, not cross. */
+function brow(g: CanvasRenderingContext2D, x: number, y: number, s: number, d: number): void {
+  g.strokeStyle = INK;
+  g.lineWidth = 1.1 * s;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(x + d * 6.8 * s, y - 3.4 * s);
+  g.quadraticCurveTo(x + d * 4.4 * s, y - 4.8 * s, x + d * 1.5 * s, y - 2.9 * s);
+  g.stroke();
+}
+
+function pout(g: CanvasRenderingContext2D, x: number, y: number, s: number, blink = false): void {
   for (const d of [-1, 1]) {
+    if (blink) {
+      // Eyes shut tight for a blink: a short line under the brow.
+      line(g, INK, 0.9 * s, [x + d * 6 * s, y, x + d * 2 * s, y + 0.6 * s]);
+      brow(g, x, y, s, d);
+      continue;
+    }
     disc(g, x + d * 4 * s, y, 2.6 * s, '#ffffff');
     g.strokeStyle = INK;
     g.lineWidth = 0.6 * s;
@@ -692,7 +755,7 @@ function pout(g: CanvasRenderingContext2D, x: number, y: number, s: number): voi
     g.arc(x + d * 4 * s, y, 2.6 * s, 0, TAU);
     g.stroke();
     disc(g, x + d * 4 * s + 0.5 * s, y + 0.8 * s, 1.2 * s, INK);
-    line(g, INK, 1.1 * s, [x + d * 6.8 * s, y - 3.6 * s, x + d * 1.4 * s, y - 2 * s]);
+    brow(g, x, y, s, d);
   }
   g.fillStyle = '#7a4a4a';
   g.beginPath();
@@ -729,7 +792,7 @@ export type StopperKind = 'jam' | 'pothole' | 'darkLamp' | 'redTape';
 export const STOPPERS: readonly StopperKind[] = ['jam', 'pothole', 'darkLamp', 'redTape'];
 
 /** One Stopper, standing on (x, y), about 40 u tall at s = 1. */
-export function drawStopper(g: CanvasRenderingContext2D, kind: StopperKind, x: number, y: number, s = 1): void {
+export function drawStopper(g: CanvasRenderingContext2D, kind: StopperKind, x: number, y: number, s = 1, blink = false): void {
   g.save();
   g.translate(x, y);
   g.scale(s, s);
@@ -740,7 +803,7 @@ export function drawStopper(g: CanvasRenderingContext2D, kind: StopperKind, x: n
     // Smoke puffs of honking
     disc(g, -22, -30, 4, 'rgba(160,160,170,0.7)');
     disc(g, -27, -34, 3, 'rgba(160,160,170,0.6)');
-    pout(g, 0, -7, 0.7);
+    pout(g, 0, -7, 0.7, blink);
   } else if (kind === 'pothole') {
     g.fillStyle = '#5c4a38';
     g.beginPath();
@@ -752,7 +815,7 @@ export function drawStopper(g: CanvasRenderingContext2D, kind: StopperKind, x: n
     g.fill();
     line(g, '#2a1f17', 1, [-22, -4, -28, -1, 22, -4, 29, -7]);
     // Eyes peeking up from the hole
-    pout(g, 0, -10, 0.8);
+    pout(g, 0, -10, 0.8, blink);
   } else if (kind === 'darkLamp') {
     line(g, '#5d6670', 3, [0, 0, 0, -36, 4, -42, 12, -42]);
     g.fillStyle = '#4a4a4a';
@@ -763,14 +826,14 @@ export function drawStopper(g: CanvasRenderingContext2D, kind: StopperKind, x: n
     g.beginPath();
     g.ellipse(13, -37.5, 6, 2, 0, 0, TAU);
     g.fill();
-    pout(g, 0, -22, 0.75);
+    pout(g, 0, -22, 0.75, blink);
   } else {
     // A stack of forms tied round and round with red tape
     for (let i = 0; i < 6; i++) box(g, -13 + (i % 2) * 1.5, -6 - i * 6, 26, 6, i % 2 ? '#fdf6e3' : '#efe6cf', INK, 0.5);
     line(g, '#c0392b', 2, [-12, -8, 12, -30]);
     line(g, '#c0392b', 2, [-12, -30, 12, -10]);
     line(g, '#c0392b', 1.4, [12, -10, 18, -4, 15, 0]);
-    pout(g, 0, -20, 0.75);
+    pout(g, 0, -20, 0.75, blink);
   }
   g.restore();
 }
@@ -797,8 +860,20 @@ function frame4(g: CanvasRenderingContext2D, e: Ext, t: number): void {
 
 // ---------- Frame 5: the Wheel Hero ----------
 
+/** The outline hero in motion (moving scene): a step cycle in radians, or a push (0 to 1). */
+export interface OutlinePose {
+  step?: number;
+  push?: number;
+  /** Seconds, for a gentle breath while standing. */
+  breathe?: number;
+}
+
 /** A plain outline hero (no look chosen yet), feet at (0, 0), about 50 u tall like drawHero. */
-export function drawOutlineHero(g: CanvasRenderingContext2D): void {
+export function drawOutlineHero(g: CanvasRenderingContext2D, pose?: OutlinePose): void {
+  if (pose) {
+    movingOutlineHero(g, pose);
+    return;
+  }
   g.fillStyle = '#fff8e6';
   g.strokeStyle = INK;
   g.lineWidth = 1.6;
@@ -819,6 +894,56 @@ export function drawOutlineHero(g: CanvasRenderingContext2D): void {
   g.closePath();
   g.fill();
   g.stroke();
+}
+
+/** The same plain cream-and-ink hero, built from parts so the legs walk and the arms push. */
+function movingOutlineHero(g: CanvasRenderingContext2D, pose: OutlinePose): void {
+  const step = pose.step !== undefined && Number.isFinite(pose.step) ? pose.step : null;
+  const push = pose.push !== undefined && Number.isFinite(pose.push) ? Math.max(0, Math.min(1, pose.push)) : 0;
+  const br = pose.breathe !== undefined && Number.isFinite(pose.breathe) ? Math.sin(pose.breathe * 2.2) * 0.5 : 0;
+  const cream = '#fff8e6';
+  // A limb: an ink line with a cream line inside it.
+  const limbs = (w: number, pts: number[][]): void => {
+    for (const [c, lw] of [[INK, w + 3.2], [cream, w]] as const) for (const q of pts) line(g, c, lw, q);
+  };
+  const sw = step !== null ? Math.sin(step) * 5 : 0;
+  const lift = step !== null ? Math.max(0, Math.cos(step)) * 1.2 : 0;
+  // Legs, the back one braced behind in a push
+  limbs(3.6, [
+    [-2, -14, -2 - sw - push * 5, -1 - (sw > 0 ? 0 : lift)],
+    [2, -14, 2 + sw - push * 1, -1 - (sw < 0 ? 0 : lift)],
+  ]);
+  g.save();
+  g.translate(0, br - lift * 0.4);
+  g.rotate(push * 0.28);
+  g.fillStyle = cream;
+  g.strokeStyle = INK;
+  g.lineWidth = 1.6;
+  g.lineJoin = 'round';
+  // Body
+  g.beginPath();
+  g.moveTo(-8, -33);
+  g.quadraticCurveTo(0, -36, 8, -33);
+  g.lineTo(9, -14);
+  g.lineTo(-9, -14);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.beginPath();
+  g.arc(0, -43, 7, 0, TAU);
+  g.fill();
+  g.stroke();
+  // Arms: swinging at the sides, or out in front and pressing
+  const reach = push > 0 ? push : 0;
+  const swing = step !== null ? Math.sin(step) * 4 : 0;
+  const hand = (side: number): number[] => [
+    side * 2,
+    -31,
+    side * 2 + (-side * swing * (1 - reach)) + reach * 13,
+    -16 - reach * 12 + reach * side * 2,
+  ];
+  limbs(2.6, [hand(-1), hand(1)]);
+  g.restore();
 }
 
 function frame5(g: CanvasRenderingContext2D, e: Ext, t: number, look: HeroLook | null): void {

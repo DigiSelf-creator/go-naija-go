@@ -7,10 +7,13 @@ import { formatMoney } from '../game/money';
 /** The game name is one setting (docs/questions.md Q1). */
 export const GAME_NAME = 'Gbese!';
 
+/** The title line (City choice 10, Tp 9 Nov 2026); the moving intro ends on the same words. */
+const TAGLINE = 'Build up Lagos. Get Nigeria working.';
+
 export const WORDS = {
   title: {
     /** City choice 10 (Tp, 9 Nov 2026). */
-    tagline: 'Build up Lagos. Get Nigeria working.',
+    tagline: TAGLINE,
     /** city.md (a): the title's small "Settings" button. */
     settings: 'Settings',
     makeHero: 'Make your hero',
@@ -140,6 +143,10 @@ export const WORDS = {
     tapOn: 'Tap to go on',
     keysOn: 'Press Space to go on',
     go: "Let's go",
+    /** city.md a2.4: the moving intro's only words on screen, beat 5 (23 to 24.5 s). */
+    heroLine: 'That hero is you.',
+    /** city.md a2.4: beat 6, from 27.2 s; the title's own words, so they cannot drift apart. */
+    endLine: TAGLINE,
     captions: [
       'Long ago, light shone on West Africa. Its people and its rich land made the Wheel, so everyone could share, stay safe and keep going.',
       'The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses.',

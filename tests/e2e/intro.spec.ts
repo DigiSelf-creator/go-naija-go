@@ -2,6 +2,9 @@
  * Slice 3 step (a) (docs/city.md part 5 "The intro"): six frames with real-text captions, Skip
  * from frame 1, a tap or key goes on, it plays once (before the builder on a first visit, once
  * on the next Play for a saved hero), then only from Settings, "Watch the story".
+ *
+ * From step (a2) the six frames are the reduced-motion version (a2.5), so these tests run with
+ * reduce motion on. The moving intro's tests are in intro-moving.spec.ts.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { PAST_DOUBLE_TAP_MS, screenNow } from './helpers';
@@ -15,6 +18,9 @@ const CAPTIONS = [
   'Your journey starts now. Build up Lagos. Get Nigeria working.',
 ];
 const LOOK = '{"skin":2,"hair":0,"outfit":0,"body":0,"age":1}';
+
+// a2.5: the six still frames are what a player with reduce motion on sees.
+test.use({ reducedMotion: 'reduce' });
 
 const story = (page: Page) => page.getByRole('dialog', { name: 'The story' });
 const seen = (page: Page) => page.evaluate(() => localStorage.getItem('gidi-intro'));
@@ -151,7 +157,6 @@ test('an app switch or a phone turned upright pauses the story; that frame start
 });
 
 test('reduced motion: plain cuts and a still picture (nothing redrawn while it waits)', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./');
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   await expect(story(page)).toBeVisible();
