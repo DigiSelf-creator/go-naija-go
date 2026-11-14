@@ -34,6 +34,8 @@ import type { Where } from './screens/streets';
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
+import { bannerShows } from './update';
+import { UpdateBanner } from './screens/update-banner';
 
 const el = document.getElementById('game');
 if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing #game canvas');
@@ -53,7 +55,9 @@ function resize(): void {
 window.addEventListener('resize', resize);
 resize();
 
-registerServiceWorker();
+/** U1: set by startGame; called when a new version of the game is ready. */
+let updateReady = (): void => {};
+const updates = registerServiceWorker(() => updateReady());
 
 const query = new URLSearchParams(location.search);
 if (query.has('gallery')) {
@@ -220,6 +224,18 @@ function startGame(): void {
   /** The street, the well and its room, or the hall fight is being played (not a finish, game over or won). */
   const inPlay = (): boolean => game.run.inPlay;
 
+  // U1 (decision 52): "New version ready. Tap to update." on any screen, never in a run: only on
+  // Pause, the result cards and the other screens. One tap reloads into the new version.
+  const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
+  /** A run is being played with no card over it (the finish bus counts: the result card follows). */
+  const inRun = (): boolean => playing && menus.current === null;
+  const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
+  updateReady = () => {
+    syncUpdate();
+    // Cheap, and only once an update is ready: follows the screens (a run ends, Pause opens).
+    window.setInterval(syncUpdate, 250);
+  };
+
   /** Pause the run and show the pause screen (button, app switch, or phone upright). */
   function pause(): void {
     if (!playing || game.paused || !inPlay()) return;
@@ -231,12 +247,14 @@ function startGame(): void {
     game.release();
     game.steer(0);
     menus.show('pause');
+    syncUpdate();
   }
   function resume(): void {
     if (!playing || document.hidden || portrait.matches) return;
     menus.show(null);
     game.paused = false;
     loop.resume();
+    syncUpdate();
   }
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
   function startRun(at: TapPoint | null, to: Where = where): void {
@@ -263,6 +281,7 @@ function startGame(): void {
     loop.resume();
     startingRun = false;
     syncMusic();
+    syncUpdate();
     if (portrait.matches || document.hidden) pause();
   }
   /**
@@ -811,6 +830,9 @@ function startGame(): void {
     get paused() {
       return game.paused;
     },
+    get update() {
+      return { ready: updates?.state.ready ?? false, shown: updateBanner.shown };
+    },
     get steps() {
       return loop.stepCount;
     },
@@ -1151,6 +1173,8 @@ declare global {
   interface Window {
     __game?: {
       readonly paused: boolean;
+      /** U1: a new version is ready; the banner shows. */
+      readonly update: { ready: boolean; shown: boolean };
       readonly steps: number;
       /** Camera left edge (world x) as last drawn. */
       readonly camX: number;
