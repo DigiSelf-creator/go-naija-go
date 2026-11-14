@@ -6,7 +6,7 @@
  * on a bar line, pause and resume from the same bar).
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CORN, G_PENTATONIC, TUNES, type MusicPlace, type Tune } from '../../src/art/tunes';
+import { CORN, G_PENTATONIC, TUNES, laneTempoAt, type MusicPlace, type Tune } from '../../src/art/tunes';
 import { LOOKAHEAD, MUSIC_GAIN, Music, midiHz, noteNumber, ringSeconds, stepSeconds, trackEvents, tuneEvents } from '../../src/engine/music';
 
 const PLACES = Object.keys(TUNES) as MusicPlace[];
@@ -197,8 +197,74 @@ describe('every tune is our own', () => {
 
   it('the four looping tunes each have their own melody', () => {
     const open = (p: MusicPlace): string => iv(melody(TUNES[p]).slice(0, 6)).join(',');
-    const opens = ['street', 'well', 'hall'].map((p) => open(p as MusicPlace));
-    expect(new Set(opens).size).toBe(3);
+    const opens = ['street', 'well', 'hall', 'lane'].map((p) => open(p as MusicPlace));
+    expect(new Set(opens).size).toBe(4);
+  });
+});
+
+/**
+ * S3f1: the lane tune (design.md S3f0 part 17). It must not sound like the Subway Surfers, Temple
+ * Run or Minion Rush music. Their melodies are not written into KNOWN above: notes written down
+ * from memory proved unreliable (guessed fingerprints matched our own older tunes, so they test
+ * nothing). Instead these checks hold the things that make those tunes what they are away from
+ * ours (no whistle or high held lead, no hip-hop backbeat, no strings), and qa's by-ear check
+ * (S3f0 part 24.17) covers the melodies themselves. The lane tune is also checked against every
+ * fingerprint in KNOWN by the loop above.
+ */
+describe('S3f1: the lane tune (design.md S3f0 part 17)', () => {
+  const lane = TUNES.lane;
+  it('120 BPM in E minor pentatonic, 8 bars looping, and 1 BPM faster per 100 m after the goal up to 132', () => {
+    expect(lane.bpm[0]).toBe(120);
+    expect(lane.bpm.at(-1)).toBe(132);
+    expect(lane.bpm.length).toBe(13);
+    expect([...lane.key].sort()).toEqual(['A', 'B', 'D', 'E', 'G']);
+    expect(lane.bars).toBe(8);
+    expect(lane.loop).toBe(true);
+    expect(laneTempoAt(0)).toBe(0);
+    expect(laneTempoAt(600)).toBe(0);
+    expect(laneTempoAt(699)).toBe(0);
+    expect(laneTempoAt(700)).toBe(1);
+    expect(laneTempoAt(1250)).toBe(6);
+    expect(laneTempoAt(99999)).toBe(12);
+    expect(laneTempoAt(Number.NaN)).toBe(0);
+    // Its notes are the street tunes' G major pentatonic, so the corn tune never clashes
+    expect([...lane.key].sort()).toEqual([...G_PENTATONIC].sort());
+  });
+
+  it('kick on beats 1 and 3 only (no hip-hop backbeat), shekere on every 16th, a talking-drum call every 4 bars', () => {
+    const kick = lane.tracks.find((t) => t.inst === 'kick')!;
+    for (const e of trackEvents(kick)) expect([0, 8]).toContain(e.step % 16);
+    expect(trackEvents(kick).length).toBe(16);
+    const shake = lane.tracks.find((t) => t.inst === 'shekere')!;
+    expect(trackEvents(shake).length).toBe(8 * 16);
+    const drum = lane.tracks.find((t) => t.inst === 'drum')!;
+    const bars = new Set(trackEvents(drum).map((e) => Math.floor(e.step / 16)));
+    expect([...bars].sort()).toEqual([3, 7]);
+  });
+
+  it('a plucked highlife guitar lead (no whistle, horn or strings), which rests where the drum calls', () => {
+    const insts = new Set(lane.tracks.map((t) => t.inst));
+    expect([...insts].sort()).toEqual(['bass', 'drum', 'guitar', 'kick', 'shekere']);
+    const lead = lane.tracks.filter((t) => t.lead);
+    expect(lead.map((t) => t.inst)).toEqual(['guitar']);
+    // Never high and held like a whistle: the lead stays at E5 or under, notes short
+    for (const e of trackEvents(lead[0]!)) {
+      expect(Math.max(...e.notes)).toBeLessThanOrEqual(noteNumber('E5')!);
+      expect(e.len).toBeLessThanOrEqual(2);
+    }
+    // The guitar starts no note in the last beat of bars 4 and 8, where the talking drum calls
+    for (const e of trackEvents(lead[0]!)) {
+      const bar = Math.floor(e.step / 16);
+      if (bar % 4 === 3) expect(e.step % 16).toBeLessThan(12);
+    }
+  });
+
+  it('only the guitar is the layer that drops out under 15 m; drums and bass play on', () => {
+    expect(lane.tracks.filter((t) => t.layer).map((t) => [t.inst, t.layer])).toEqual([['guitar', 'guitar']]);
+  });
+
+  it('the tune data is small (under 2 KB as written)', () => {
+    expect(JSON.stringify(lane).length).toBeLessThan(2000);
   });
 });
 
@@ -458,5 +524,42 @@ describe('corn tune (S2.9 "Corn tune")', () => {
     const open = (p: MusicPlace): string => iv(melody(TUNES[p]).slice(0, 6)).join(',');
     for (const p of ['street', 'well', 'hall', 'cleared', 'win'] as const) expect(open('corn')).not.toBe(open(p));
     expect(JSON.stringify(CORN).length).toBeLessThan(2048);
+  });
+});
+
+describe('S3f1: the lane tune in the player', () => {
+  beforeEach(() => {
+    scheduled = [];
+  });
+
+  /** Guitar notes are two square waves together; kicks are sines starting at twice E2. */
+  const guitarNotes = (): number => scheduled.filter((s) => s.type === 'square').length;
+  const kicks = (): number => scheduled.filter((s) => s.type === 'sine' && Math.abs(s.f - midiHz(40) * 2) < 0.01).length;
+
+  it('plays the guitar, then drops only the guitar layer while it is off (under 15 m), and back on', () => {
+    const { m, advance } = rig();
+    m.play('lane');
+    advance(4);
+    expect(guitarNotes()).toBeGreaterThan(0);
+    expect(kicks()).toBeGreaterThan(0);
+    m.setLayer('guitar', false);
+    expect(m.layerOn('guitar')).toBe(false);
+    scheduled = [];
+    advance(4);
+    expect(guitarNotes()).toBe(0);
+    expect(kicks()).toBeGreaterThan(0);
+    expect(scheduled.filter((s) => s.type === 'triangle').length).toBeGreaterThan(0); // bass on
+    m.setLayer('guitar', true);
+    scheduled = [];
+    advance(4);
+    expect(guitarNotes()).toBeGreaterThan(0);
+  });
+
+  it('two kicks a bar at 120 BPM (beats 1 and 3)', () => {
+    const { m, advance } = rig();
+    m.play('lane');
+    advance(8.05); // four bars at 120 BPM
+    expect(kicks()).toBeGreaterThanOrEqual(8);
+    expect(kicks()).toBeLessThanOrEqual(10);
   });
 });

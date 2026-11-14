@@ -5,7 +5,7 @@
  */
 import { audioCtor, playSilence, wake } from './audio-unlock';
 
-export type SoundName =
+type CoreSoundName =
   | 'jump'
   | 'airJump'
   | 'kobo'
@@ -92,10 +92,36 @@ export type SoundName =
   | 'horn';
 
 /**
+ * The lane run's sounds (design.md S3f0 part 17). Their recipes live in src/art/lane-sounds.ts,
+ * which loads with the lane run, not with the first page; addSounds puts them in. Until then
+ * playing one is silent.
+ */
+export type LaneSoundName =
+  | 'laneStepA'
+  | 'laneStepB'
+  | 'laneSwish'
+  | 'laneHop'
+  | 'laneLand'
+  | 'laneSlide'
+  | 'laneTink0'
+  | 'laneTink1'
+  | 'laneTink2'
+  | 'laneBulb'
+  | 'laneChip'
+  | 'lanePok'
+  | 'laneOof'
+  | 'laneTunk'
+  | 'laneTzing'
+  | 'laneBusStop'
+  | 'laneCaught';
+
+export type SoundName = CoreSoundName | LaneSoundName;
+
+/**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
  * style bend); to = Hz at the end; at = start delay in s; vol = loudness.
  */
-interface Tone {
+export interface Tone {
   f: number;
   len: number;
   wave?: OscillatorType;
@@ -112,7 +138,7 @@ interface Tone {
 }
 
 /** A short burst of hiss (shekere shake, splash). hp/lp = filter Hz. */
-interface Hiss {
+export interface Hiss {
   len: number;
   at?: number;
   vol?: number;
@@ -122,7 +148,7 @@ interface Hiss {
   bp?: number;
 }
 
-interface Recipe {
+export interface Recipe {
   tones: readonly Tone[];
   hiss?: readonly Hiss[];
 }
@@ -194,7 +220,7 @@ const HAWK: Recipe = (() => {
  * square-wave B5-to-E6 coin, rising square power-up runs, descending "lose" runs,
  * and pipe or warp slides.
  */
-const SOUNDS: Record<SoundName, Recipe> = {
+const SOUNDS: Record<CoreSoundName, Recipe> = {
   // Talking-drum bend: up, then settles a little lower.
   jump: { tones: [{ f: 330, len: 0.14, wave: 'triangle', peak: 520, to: 440, vol: 0.07 }] },
   airJump: { tones: [{ f: 470, len: 0.12, wave: 'triangle', peak: 720, to: 620, vol: 0.06 }] },
@@ -619,12 +645,26 @@ const SOUNDS: Record<SoundName, Recipe> = {
   },
 };
 
-/** Every sound's name, in recipe order (for the ?sounds test board). */
+/** Every built-in sound's name, in recipe order (for the ?sounds test board). Added sounds are not in it. */
 export const SOUND_NAMES = Object.keys(SOUNDS) as SoundName[];
 
-/** How long a sound lasts, in seconds (its last tone or hiss end). For the music dip under the sting and the boom. */
+/** Sounds added later by a part of the game that loads on its own (the lane run). */
+const ADDED: Partial<Record<SoundName, Recipe>> = {};
+
+/** Adds recipes for sounds that load later (the lane run's, src/art/lane-sounds.ts). Safe to call more than once. */
+export function addSounds(recipes: Partial<Record<SoundName, Recipe>>): void {
+  Object.assign(ADDED, recipes);
+}
+
+/** A sound's recipe, or undefined if it has not been added yet. */
+function recipeOf(name: SoundName): Recipe | undefined {
+  return (SOUNDS as Partial<Record<SoundName, Recipe>>)[name] ?? ADDED[name];
+}
+
+/** How long a sound lasts, in seconds (its last tone or hiss end). For the music dip under the sting and the boom. 0 if not added yet. */
 export function soundLength(name: SoundName): number {
-  const r = SOUNDS[name];
+  const r = recipeOf(name);
+  if (!r) return 0;
   let end = 0;
   for (const t of r.tones) end = Math.max(end, (t.at ?? 0) + t.len);
   for (const h of r.hiss ?? []) end = Math.max(end, (h.at ?? 0) + h.len);
@@ -655,11 +695,20 @@ export const ATTACK = 0.003;
 /** The suit's hum: 6 percent volume (100 percent is 0.3, as in the S2.16 recipes). */
 export const HUM_VOL = 0.018;
 
+type HumName = 'suit' | 'close';
+
+/** The held hums: their pitches (Hz), loudness, fade-in (s) and slow wobble (Hz). */
+const HUMS: Record<HumName, { freqs: readonly number[]; vol: number; fadeIn: number; wobbleHz: number }> = {
+  suit: { freqs: [110, 165], vol: HUM_VOL, fadeIn: 0.3, wobbleHz: 0.4 },
+  // E2, B2 and B3: the lane tune's key, low and steady; B3 lets a phone speaker carry it.
+  close: { freqs: [82.4, 123.5, 246.9], vol: 0.022, fadeIn: 0.5, wobbleHz: 0.25 },
+};
+
 export class Sound {
   private ac: AudioContext | null = null;
   private on = true;
 
-  /** Sound switch. Turning it off also stops the suit's hum at once; on again brings it back if still wanted. */
+  /** Sound switch. Turning it off also stops the held hums at once; on again brings it back if still wanted. */
   get enabled(): boolean {
     return this.on;
   }
@@ -669,14 +718,21 @@ export class Sound {
     this.syncHum();
   }
 
-  /* ---- S2.16 B3: the tech suit's soft hum, held while the suit is worn ---- */
+  /* ---- Held hums: the tech suit's (S2.16 B3) and the Blackout's close hum (S3f0 part 17) ---- */
 
-  private humWanted = false;
-  private humNodes: { gain: GainNode; stops: OscillatorNode[] } | null = null;
+  private hums: Record<HumName, { wanted: boolean; nodes: { gain: GainNode; stops: OscillatorNode[] } | null }> = {
+    suit: { wanted: false, nodes: null },
+    close: { wanted: false, nodes: null },
+  };
 
-  /** True while the hum is playing. */
+  /** True while the suit's hum is playing. */
   get humming(): boolean {
-    return this.humNodes !== null;
+    return this.hums.suit.nodes !== null;
+  }
+
+  /** True while the Blackout's close hum is playing. */
+  get closeHumming(): boolean {
+    return this.hums.close.nodes !== null;
   }
 
   /**
@@ -685,23 +741,39 @@ export class Sound {
    * while the Sound switch is off or before the first tap.
    */
   setHum(on: boolean): void {
-    this.humWanted = on;
+    this.hums.suit.wanted = on;
+    this.syncHum();
+  }
+
+  /**
+   * The lane run's close hum (the Blackout under 15 m): a low steady hum on E2, B2 and B3 that
+   * fades in over 0.5 s. Call with false when the Blackout is back over 15 m, on pause, a hidden
+   * tab and at the run's end. Never while the Sound switch is off or before the first tap.
+   */
+  setCloseHum(on: boolean): void {
+    this.hums.close.wanted = on;
     this.syncHum();
   }
 
   private syncHum(): void {
+    for (const name of ['suit', 'close'] as const) this.syncOne(name);
+  }
+
+  private syncOne(name: HumName): void {
     const ac = this.ac;
-    const want = this.humWanted && this.on && ac !== null && ac.state === 'running';
-    if (want && !this.humNodes && ac) {
+    const hum = this.hums[name];
+    const spec = HUMS[name];
+    const want = hum.wanted && this.on && ac !== null && ac.state === 'running';
+    if (want && !hum.nodes && ac) {
       try {
         const t = ac.currentTime;
         const gain = ac.createGain();
         gain.gain.value = 0.0001;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(HUM_VOL, t + 0.3);
+        gain.gain.linearRampToValueAtTime(spec.vol, t + spec.fadeIn);
         gain.connect(this.bus(ac));
         const stops: OscillatorNode[] = [];
-        for (const f of [110, 165]) {
+        for (const f of spec.freqs) {
           const o = ac.createOscillator();
           o.type = 'sine';
           o.frequency.setValueAtTime(f, t);
@@ -709,22 +781,22 @@ export class Sound {
           o.start(t);
           stops.push(o);
         }
-        // The slow wobble: a 0.4 Hz sine moving the hum's volume a little
+        // The slow wobble: a slow sine moving the hum's volume a little
         const lfo = ac.createOscillator();
         lfo.type = 'sine';
-        lfo.frequency.setValueAtTime(0.4, t);
+        lfo.frequency.setValueAtTime(spec.wobbleHz, t);
         const depth = ac.createGain();
-        depth.gain.setValueAtTime(HUM_VOL * 0.3, t);
+        depth.gain.setValueAtTime(spec.vol * 0.3, t);
         lfo.connect(depth).connect(gain.gain);
         lfo.start(t);
         stops.push(lfo);
-        this.humNodes = { gain, stops };
+        hum.nodes = { gain, stops };
       } catch {
-        this.humNodes = null;
+        hum.nodes = null;
       }
-    } else if (!want && this.humNodes) {
-      const { gain, stops } = this.humNodes;
-      this.humNodes = null;
+    } else if (!want && hum.nodes) {
+      const { gain, stops } = hum.nodes;
+      hum.nodes = null;
       try {
         const t = ac?.currentTime ?? 0;
         gain.gain.cancelScheduledValues(t);
@@ -837,7 +909,8 @@ export class Sound {
   play(name: SoundName): void {
     const ac = this.ac;
     if (!this.enabled || !ac || ac.state !== 'running') return;
-    const recipe = SOUNDS[name];
+    const recipe = recipeOf(name);
+    if (!recipe) return;
     const now = ac.currentTime;
     let out: AudioNode;
     try {

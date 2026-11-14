@@ -5,6 +5,8 @@
  * switch (decision 22): all of that is in Sound itself.
  */
 import { SOUND_NAMES, Sound, type SoundName } from '../engine/sound';
+import { Music } from '../engine/music';
+import { LANE_SOUND_NAMES, addLaneSounds } from '../art/lane-sounds';
 import { createStore } from '../storage';
 import { loadSettings } from '../game/save';
 
@@ -15,6 +17,27 @@ const FIRST: readonly [SoundName, string][] = [
   ['goatChew', 'Goat chewing a fufu ball'],
   ['birdFlap', 'Bird wings'],
 ];
+
+/** Plain words for the lane run's sounds. */
+const LANE_WORDS: Partial<Record<SoundName, string>> = {
+  laneStepA: 'Lane: step (left foot)',
+  laneStepB: 'Lane: step (right foot)',
+  laneSwish: 'Lane: change lane (whoosh)',
+  laneHop: 'Lane: jump (hop up)',
+  laneLand: 'Lane: land (soft thud)',
+  laneSlide: 'Lane: slide (cloth scuff)',
+  laneTink0: 'Lane: coin "tink" 1',
+  laneTink1: 'Lane: coin "tink" 2',
+  laneTink2: 'Lane: coin "tink" 3',
+  laneBulb: 'Lane: Power bulb "vmm-ding"',
+  laneChip: 'Lane: Tech chip "blip-blip"',
+  lanePok: 'Lane: burst (wooden "pok")',
+  laneOof: 'Lane: stumble ("oof" and thump)',
+  laneTunk: 'Lane: lamp switches off ("tunk")',
+  laneTzing: 'Lane: shield used ("tzing")',
+  laneBusStop: 'Lane: bus stop (horn and chime)',
+  laneCaught: 'Lane: caught ("wom-wom-wom", torch click)',
+};
 
 export function showSoundBoard(root: HTMLElement): void {
   const sound = new Sound();
@@ -51,7 +74,37 @@ export function showSoundBoard(root: HTMLElement): void {
   for (const [name, words] of FIRST) grid.append(button(name, words, name === 'meeh' || name === 'hawk'));
   const firsts = new Set(FIRST.map(([n]) => n));
   for (const name of SOUND_NAMES) if (!firsts.has(name)) grid.append(button(name, name, false));
+  // S3f1: the lane run's sounds (design.md S3f0 part 17), its close hum and its tune
+  addLaneSounds();
+  const laneHead = document.createElement('h2');
+  laneHead.textContent = 'Lane run';
+  laneHead.style.cssText = 'font-size:18px;margin:18px 0 0';
+  const lane = document.createElement('div');
+  lane.style.cssText = grid.style.cssText;
+  for (const name of LANE_SOUND_NAMES) lane.append(button(name, LANE_WORDS[name] ?? name, false));
+  lane.append(button('meeh', 'Goat: "meeh" (the same goat sound)', false));
+  const music = new Music();
+  const toggleButton = (words: (on: boolean) => string, act: (on: boolean) => void): HTMLButtonElement => {
+    let on = false;
+    const b = document.createElement('button');
+    b.textContent = words(on);
+    b.style.cssText = 'min-height:48px;padding:8px;border-radius:10px;border:2px solid #f2b300;background:#1f3a27;color:#fff;font:inherit;text-align:left';
+    b.addEventListener('click', () => {
+      sound.unlock();
+      if (sound.context) music.attach(sound.context);
+      music.unlock();
+      on = !on;
+      act(on);
+      b.textContent = words(on);
+    });
+    return b;
+  };
+  lane.append(
+    toggleButton((on) => `Close hum (Blackout under 15 m): ${on ? 'on' : 'off'}`, (on) => sound.setCloseHum(on)),
+    toggleButton((on) => `Lane tune: ${on ? 'playing' : 'off'}`, (on) => (on ? music.play('lane') : music.stop())),
+    toggleButton((on) => `Blackout close (guitar drops out): ${on ? 'yes' : 'no'}`, (on) => music.setLayer('guitar', !on)),
+  );
   toggle.style.cssText = 'min-height:44px;padding:8px 14px;border-radius:10px;border:2px solid #fff;background:none;color:#fff;font:inherit';
-  box.append(h, note, toggle, grid);
+  box.append(h, note, toggle, grid, laneHead, lane);
   root.append(box);
 }
