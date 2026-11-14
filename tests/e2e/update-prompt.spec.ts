@@ -128,14 +128,18 @@ test('first visit: no banner, and none on the next open of the same version', as
 });
 
 test('a new version served: the next open shows the banner; a tap loads the new version', async ({ page }) => {
+  // Chromium runs a sw.js check made without a tap at most about once a minute. This open comes
+  // a second after the first visit's check, so the check (the game's own on opening, or the
+  // browser's) runs about a minute later. On a phone the next open is normally much later.
+  test.setTimeout(150_000);
   const other = ownOnly(page);
   await firstVisit(page);
   expect(await isB(page)).toBe(false);
   root = builds.b;
-  // Revisit: the old worker answers with the old page, the browser finds the new sw.js.
+  // Revisit: the old worker answers with the old page; a new sw.js is looked for.
   await page.reload();
   expect(await isB(page)).toBe(false);
-  await expect(banner(page)).toBeVisible({ timeout: 20_000 });
+  await expect(banner(page)).toBeVisible({ timeout: 90_000 });
   await expect(region(page)).toHaveClass(/update-banner/);
   await coversNothing(page);
   if (SHOTS) await page.screenshot({ path: join(SHOTS, 'update-title-851x393.png') });

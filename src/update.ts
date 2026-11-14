@@ -101,7 +101,12 @@ export class UpdateWatch {
             if (w.state === 'installed') this.mark(() => this.state.workerWaiting(!!o.container.controller));
           });
         });
-        // Look for a new sw.js each time the game comes back to the front (only our own sw.js).
+        // Look for a new sw.js on every open, and each time the game comes back to the front, so
+        // the game does not depend on the browser's own check. Only our own sw.js. Chromium runs
+        // a check made without a tap at most about once a minute. Not on a first visit (no old
+        // worker: nothing to update from) and not while a worker is installing or waiting (the
+        // update is already here; a queued check would only hold up the next open's register()).
+        if (o.container.controller && !reg.installing && !reg.waiting) this.check();
         o.onVisible(() => this.check());
       },
       () => {

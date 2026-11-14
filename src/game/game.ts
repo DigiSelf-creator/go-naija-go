@@ -8,7 +8,7 @@ import { drawBoss, drawDustPop, drawGoLight, drawHighHonk, drawHitCounter, drawH
 import { drawHall, drawHallCones, drawHallFront, hallDoors, hallFinishAt } from '../art/hall';
 import { crateAngle, crateLineY, drawCrate, drawCrateLine, koboFanAt, koboFlyAt } from '../art/crate';
 import { drawDrum, drawDrumSmash, drawDrumSparkle } from '../art/drum';
-import { drawHero, drawSuitBits, STRONG, SUIT, WALK_STRIDE, type HeroLook, type HeroPose } from '../art/hero';
+import { HeroSprites, drawSuitBits, STRONG, SUIT, WALK_STRIDE, type HeroLook, type HeroPose } from '../art/hero';
 import { drawCrow, drawEgret, drawPileKoboPop, drawRubbishPile, type BirdMode } from '../art/birds';
 import { drawCementBlocks, drawGutter, drawWeeds, drawWeedSteam } from '../art/gutter';
 import { drawDustRing, drawStepThump } from '../art/dust';
@@ -46,6 +46,8 @@ export const STRIDE = 58;
 const STRIDE_AMALA = STRIDE * 1.13;
 /** Landing squash after a fall: lasts this long (s), only after landing faster than LAND_VY. */
 export const LAND_TIME = 0.12;
+/** Seconds the hero winces after a knock (decision 60). */
+export const HURT_FACE_TIME = 0.6;
 export const LAND_VY = 200;
 /** Start-of-run dust puff (S2.2): lasts this long, s. */
 export const DUST_TIME = 0.4;
@@ -123,6 +125,10 @@ export class Game {
   suitBreakAt = -Infinity;
   amalaAt = -Infinity;
   amalaEndAt = -Infinity;
+  /** Decision 60: when the hero last took a knock (this.clock), for the short wince. */
+  hurtAt = -Infinity;
+  /** Decision 60: the lit hero's run, walk, jump and landing, kept as sprites at the screen's own scale. */
+  private heroSprites = new HeroSprites();
   private stepAt = -Infinity;
   private dashStepAt = -Infinity;
 
@@ -218,7 +224,7 @@ export class Game {
 
   /** No suit, strong look or dash sounds carried over from another run. */
   private clearLooks(): void {
-    this.suitOnAt = this.suitBreakAt = this.amalaAt = this.amalaEndAt = -Infinity;
+    this.suitOnAt = this.suitBreakAt = this.amalaAt = this.amalaEndAt = this.hurtAt = -Infinity;
     this.stepAt = this.dashStepAt = -Infinity;
   }
 
@@ -378,6 +384,7 @@ export class Game {
       if (e.type === 'food' && e.kind === 'amala') this.amalaAt = this.clock;
       if (e.type === 'powerEnd' && e.kind === 'amala') this.amalaEndAt = this.clock;
       if (e.type === 'fall' || e.type === 'hit' || e.type === 'gameOver') this.amalaEndAt = -Infinity; // ends at once
+      if (e.type === 'hit' || e.type === 'shieldPop') this.hurtAt = this.clock;
       if (e.type === 'dashStart') this.dashStepAt = this.clock;
     }
     // A foot meets the ground as the run cycle passes 0 and 0.5 (one cycle is two steps).
@@ -662,7 +669,7 @@ export class Game {
     const walking = h.manual && h.grounded && this.gait === 'walk';
     g.save();
     g.translate(h.x, h.y);
-    drawHero(g, this.look, {
+    this.heroSprites.draw(g, this.look, {
       phase: this.stridePhase,
       inAir: !rope && !h.grounded,
       vy: h.vy,
@@ -680,6 +687,8 @@ export class Game {
       ...(!rope && this.run.dustOff > 0 ? { dustOff: 1 - this.run.dustOff / RULES.dustOffSteps } : {}),
       // S2.15: one 0.15 s arm swing after a throw.
       ...(!rope && this.run.throwAge < THROW_TIME ? { throwing: this.run.throwAge / THROW_TIME } : {}),
+      // Decision 60: a short wince just after a knock; a beam once the boss is beaten.
+      ...(t - this.hurtAt < HURT_FACE_TIME ? { face: 'hurt' as const } : (boss?.defeated ?? false) ? { face: 'win' as const } : {}),
       time: t,
     });
     g.restore();

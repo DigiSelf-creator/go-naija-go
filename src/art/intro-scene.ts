@@ -908,7 +908,18 @@ function stopperAt(g: CanvasRenderingContext2D, e: Ext, p: StopperPlace, T: numb
   }
 }
 
-/** The hero in beats 4 and 5: walking in, stopping, pushing, then standing tall. */
+/** Decision 61: when the hero turns to face us, in beat 5 and again at the bus door in beat 6 (s). */
+export const TURN5 = 37.5;
+export const TURN6 = 42.7;
+/** How long the turn takes (s): a quick narrow-and-widen, then the front pose holds. */
+export const TURN_TIME = 0.4;
+
+/** The turn at time T (0 side on, 1 facing us) for a turn starting at t0. */
+export function heroTurn(T: number, t0: number): number {
+  return ease(span(T, t0, t0 + TURN_TIME));
+}
+
+/** The hero in beats 4 and 5: walking in, stopping, pushing, standing tall, then facing us. */
 function hero45(g: CanvasRenderingContext2D, e: Ext, T: number, look: HeroLook | null): void {
   if (T < 31.6) return;
   // Walks in (31.6 to 33.6 s), looks, hands on the Wheel (to 34.4 s), pushes (to 35.8 s)
@@ -930,6 +941,8 @@ function hero45(g: CanvasRenderingContext2D, e: Ext, T: number, look: HeroLook |
   g.translate(x, HERO4.y);
   g.scale(HERO4.s, HERO4.s);
   const dist = (x - startX) / HERO4.s;
+  // Decision 61: the hero turns to face us as the line says "That hero is you." (37.5 to 39.0 s)
+  const front = heroTurn(T, TURN5);
   if (look) {
     drawHero(g, look, {
       phase: dist / (58 * WALK_STRIDE),
@@ -940,9 +953,10 @@ function hero45(g: CanvasRenderingContext2D, e: Ext, T: number, look: HeroLook |
       standing: !walking,
       push: Math.min(1, push + shove),
       time: T,
+      ...(front > 0 ? { front } : {}),
     });
   } else {
-    drawOutlineHero(g, walking ? { step: (dist / 36) * TAU } : { push: Math.min(1, push + shove), breathe: T });
+    drawOutlineHero(g, walking ? { step: (dist / 36) * TAU } : { push: Math.min(1, push + shove), breathe: T, front });
   }
   g.restore();
 }
@@ -1108,13 +1122,15 @@ function world6(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
     const x = lerp(startX, HERO6_X, k);
     const moving = T < 42.6;
     const dist = (x - startX) / s;
+    // At the bus door the hero turns to face us (decision 61), the same turn as in beat 5
+    const front = heroTurn(T, TURN6);
     g.save();
     g.translate(x, BUS6.y);
     g.scale(s, s);
     if (look) {
-      drawHero(g, look, { phase: dist / 58, inAir: false, facing: 1, glow: false, standing: !moving, time: T });
+      drawHero(g, look, { phase: dist / 58, inAir: false, facing: 1, glow: false, standing: !moving, time: T, ...(front > 0 ? { front } : {}) });
     } else {
-      drawOutlineHero(g, moving ? { step: (dist / 40) * TAU } : { breathe: T });
+      drawOutlineHero(g, moving ? { step: (dist / 40) * TAU } : { breathe: T, front });
     }
     g.restore();
   }

@@ -19,7 +19,7 @@
  * and the 320 x 180 picture sits in the middle, as big as fits. Still pictures: `time` only
  * turns the Wheel and its cogs gently (frame 3: border cogs turn opposite ways to their neighbours); pass 0 (or nothing) for reduced motion.
  */
-import { drawHero, type HeroLook } from './hero';
+import { drawHero, turnWidth, type HeroLook } from './hero';
 import { INK } from './palette';
 import { drawBusShape, drawBusStop } from './street';
 
@@ -866,6 +866,8 @@ export interface OutlinePose {
   push?: number;
   /** Seconds, for a gentle breath while standing. */
   breathe?: number;
+  /** Decision 61: turning to face us, 0 to 1; past halfway the front pose shows. */
+  front?: number;
 }
 
 /** A plain outline hero (no look chosen yet), feet at (0, 0), about 50 u tall like drawHero. */
@@ -901,6 +903,15 @@ function movingOutlineHero(g: CanvasRenderingContext2D, pose: OutlinePose): void
   const step = pose.step !== undefined && Number.isFinite(pose.step) ? pose.step : null;
   const push = pose.push !== undefined && Number.isFinite(pose.push) ? Math.max(0, Math.min(1, pose.push)) : 0;
   const br = pose.breathe !== undefined && Number.isFinite(pose.breathe) ? Math.sin(pose.breathe * 2.2) * 0.5 : 0;
+  const turn = step === null && pose.front !== undefined && Number.isFinite(pose.front) ? Math.max(0, Math.min(1, pose.front)) : 0;
+  if (turn > 0) {
+    g.save();
+    g.scale(turnWidth(turn), 1);
+    if (turn >= 0.5) frontOutlineHero(g, br);
+    else movingOutlineHero(g, { ...pose, front: 0 });
+    g.restore();
+    return;
+  }
   const cream = '#fff8e6';
   // A limb: an ink line with a cream line inside it.
   const limbs = (w: number, pts: number[][]): void => {
@@ -943,6 +954,65 @@ function movingOutlineHero(g: CanvasRenderingContext2D, pose: OutlinePose): void
     -16 - reach * 12 + reach * side * 2,
   ];
   limbs(2.6, [hand(-1), hand(1)]);
+  g.restore();
+}
+
+/**
+ * Decision 61: the plain outline hero facing us: arms relaxed at the sides, feet a little apart,
+ * and a simple friendly face (two eyes with a glint, a smile), so the turn reads even with no
+ * look chosen yet. The same cream and ink, the same size.
+ */
+function frontOutlineHero(g: CanvasRenderingContext2D, br: number): void {
+  const cream = '#fff8e6';
+  const limbs = (w: number, pts: number[][]): void => {
+    for (const [c, lw] of [[INK, w + 3.2], [cream, w]] as const) for (const q of pts) line(g, c, lw, q);
+  };
+  limbs(3.6, [
+    [-2.6, -14, -3.4, -1],
+    [2.6, -14, 3.4, -1],
+  ]);
+  g.save();
+  g.translate(0, br);
+  limbs(2.6, [
+    [-7.2, -31, -9.6, -16],
+    [7.2, -31, 9.6, -16],
+  ]);
+  g.fillStyle = cream;
+  g.strokeStyle = INK;
+  g.lineWidth = 1.6;
+  g.lineJoin = 'round';
+  g.beginPath();
+  g.moveTo(-8, -33);
+  g.quadraticCurveTo(0, -36, 8, -33);
+  g.lineTo(9, -14);
+  g.lineTo(-9, -14);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.beginPath();
+  g.arc(0, -43, 7, 0, TAU);
+  g.fill();
+  g.stroke();
+  // The face
+  g.fillStyle = INK;
+  g.beginPath();
+  g.ellipse(-2.4, -44, 1.1, 1.45, 0, 0, TAU);
+  g.moveTo(3.5, -44);
+  g.ellipse(2.4, -44, 1.1, 1.45, 0, 0, TAU);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.beginPath();
+  g.arc(-2.0, -44.6, 0.45, 0, TAU);
+  g.moveTo(3.25, -44.6);
+  g.arc(2.8, -44.6, 0.45, 0, TAU);
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.9;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(-2.2, -40.2);
+  g.quadraticCurveTo(0, -38.4, 2.2, -40.2);
+  g.stroke();
   g.restore();
 }
 
