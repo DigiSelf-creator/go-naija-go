@@ -8,6 +8,7 @@ import laneData from '../../src/data/levels/lagos-lane.json';
 import { DODGE, HERO_HEIGHT, SIZE, checkChunk, checkFair, chunkRows, freeLanes, isDodge, parseLane, rowsOf, speedAt, timeTo, type LaneLevel } from '../../src/lane/level';
 import { CAM_BACK, farBoost, focal, sizeOnScreen } from '../../src/lane/view';
 import { SwipeReader, buttonBoxes, keyMove } from '../../src/lane/input';
+import { ONE_RUN_BOTH_FIXES, haulWords, lanePrize, readLane, writeLane } from '../../src/lane/rewards';
 import { LaneSim, POOL_COINS, POOL_THINGS, seeded, type LaneEvent, type LaneMove } from '../../src/lane/sim';
 
 const L = parseLane(laneData);
@@ -362,6 +363,115 @@ describe('lane pool and endless part (part 12, part 21)', () => {
     expect(sim.peak).toBeLessThanOrEqual(POOL_THINGS);
     expect(POOL_COINS).toBe(30);
     expect(sim.speed).toBe(16);
+  });
+});
+
+describe('S3f3: the Blackout (part 10)', () => {
+  it('starts 40 m back (Gentle 60), creeps 0.2 m/s (Gentle 0.1); a stumble gains 15 (10); caught at 0', () => {
+    const sim = new LaneSim(empty());
+    expect(sim.gap).toBe(40);
+    run(sim, 5);
+    expect(sim.gap).toBeCloseTo(39, 1);
+    const g = new LaneSim(empty(), { gentle: true });
+    expect(g.gap).toBe(60);
+    run(g, 10);
+    expect(g.gap).toBeCloseTo(59, 1);
+    const hit = new LaneSim(empty({ things: [{ d: 30, lane: 1, kind: 'cones' }] }));
+    const ev = run(hit, 5);
+    expect(ev).toContainEqual({ type: 'blackout', by: -15 });
+    const gh = new LaneSim(empty({ things: [{ d: 30, lane: 1, kind: 'cones' }] }), { gentle: true });
+    expect(run(gh, 5)).toContainEqual({ type: 'blackout', by: -10 });
+    const c = new LaneSim(empty());
+    c.gap = 0.1;
+    const end = run(c, 2);
+    expect(end).toContainEqual({ type: 'caught' });
+    expect(c.phase).toBe('over');
+  });
+
+  it('each Power pushes it back 5 m, never past 60', () => {
+    const sim = new LaneSim(empty({ pickups: [{ d: 20, lane: 1, kind: 'bulb' }, { d: 25, lane: 1, kind: 'bulb' }] }));
+    sim.gap = 52;
+    run(sim, 3);
+    expect(sim.power).toBe(2);
+    expect(sim.gap).toBeLessThanOrEqual(60);
+    expect(sim.gap).toBeGreaterThan(59);
+  });
+
+  it('after the goal it creeps 0.15 m/s faster each 100 m, up to 2 m/s (Gentle 0.075, up to 1)', () => {
+    const sim = new LaneSim(empty());
+    sim.dist = 800;
+    expect(sim.creepNow()).toBeCloseTo(0.5, 5);
+    sim.dist = 5000;
+    expect(sim.creepNow()).toBe(2);
+    const g = new LaneSim(empty(), { gentle: true });
+    g.dist = 800;
+    expect(g.creepNow()).toBeCloseTo(0.25, 5);
+    g.dist = 9000;
+    expect(g.creepNow()).toBe(1);
+  });
+
+  it('part 10 checks: a clean run reaches the bus stop about 29 m ahead; 2 stumbles with the 3 warm-up bulbs are safe', () => {
+    const clean = new LaneSim(empty());
+    run(clean, 70, (s) => s.phase !== 'run');
+    expect(clean.phase).toBe('goal');
+    expect(clean.gap).toBeCloseTo(29, 0);
+    const two = new LaneSim(empty({ things: [{ d: 60, lane: 1, kind: 'cones' }, { d: 300, lane: 1, kind: 'cones' }], pickups: [152, 282, 372].map((d) => ({ d, lane: 1, kind: 'bulb' as const })) }));
+    run(two, 70, (s) => s.phase !== 'run');
+    expect(two.phase).toBe('goal');
+    expect(two.gap).toBeCloseTo(14, 0);
+  });
+});
+
+describe('S3f3: buckets, pops and food (parts 9 and 11)', () => {
+  it('coins are 10 kobo; chips Tech 1; bursts pop their values (and their Power pushes the Blackout)', () => {
+    const sim = new LaneSim(empty({ things: [{ d: 30, lane: 1, kind: 'sign' }, { d: 50, lane: 1, kind: 'junk' }], pickups: [{ d: 40, lane: 1, kind: 'chip' }], coins: [{ d: 60, lane: 1, count: 3, shape: 'line' }] }));
+    run(sim, 8);
+    expect({ kobo: sim.kobo, power: sim.power, tech: sim.tech }).toEqual({ kobo: 20 + 30, power: 1, tech: 3 });
+  });
+
+  it('a goat pops 3 coins; the garri shield takes one stumble (no trip, no Blackout gain); a second garri gives 3 coins', () => {
+    const sim = new LaneSim(empty({ things: [{ d: 30, lane: 1, kind: 'goat' }, { d: 70, lane: 1, kind: 'cones' }], pickups: [{ d: 50, lane: 1, kind: 'garri' }, { d: 55, lane: 1, kind: 'garri' }] }));
+    const ev = run(sim, 10);
+    expect(sim.kobo).toBe(30 + 30);
+    expect(ev).toContainEqual({ type: 'shieldUsed' });
+    expect(ev.some((e) => e.type === 'stumble')).toBe(false);
+    expect(ev.some((e) => e.type === 'blackout' && e.by < 0)).toBe(false);
+    expect(sim.shield).toBe(false);
+  });
+
+  it('corn: 12 s of tosses at the nearest problem ahead in your lane; never a danfo', () => {
+    const sim = new LaneSim(empty({ pickups: [{ d: 20, lane: 1, kind: 'corn' }], things: [{ d: 40, lane: 1, kind: 'cones' }, { d: 60, lane: 1, kind: 'crate:power' }, { d: 80, lane: 1, kind: 'danfo' }] }));
+    const ev = run(sim, 7.5);
+    const tossed = ev.filter((e) => e.type === 'toss').map((e) => (e as { kind: string }).kind);
+    expect(tossed).toEqual(['cones', 'crate:power']);
+    expect(sim.power).toBe(1);
+    expect(ev.some((e) => e.type === 'stumble' && e.kind !== 'danfo')).toBe(false);
+    expect(sim.corn).toBeGreaterThan(0);
+    run(sim, 8);
+    expect(sim.corn).toBe(0);
+  });
+});
+
+describe('S3f3: what goes home (rewards.ts)', () => {
+  it('the prize, and the decision 45 top-up for a fix', () => {
+    const prize = { kobo: 500, power: 4, tech: 2 };
+    expect(lanePrize({ kobo: 300, power: 3, tech: 1 }, prize, null)).toEqual(prize);
+    expect(lanePrize({ kobo: 300, power: 3, tech: 1 }, prize, { bucket: 'power', left: 10 })).toEqual({ kobo: 500, power: 7, tech: 2 });
+    expect(lanePrize({ kobo: 300, power: 3, tech: 1 }, prize, { bucket: 'tech', left: 6 })).toEqual({ kobo: 500, power: 4, tech: 5 });
+    expect(lanePrize({ kobo: 300, power: 12, tech: 9 }, prize, { bucket: 'power', left: 10 })).toEqual(prize);
+  });
+
+  it('haul words leave a 0 bucket out', () => {
+    expect(haulWords({ kobo: 620, power: 12, tech: 7 })).toBe('₦6.20, Power 12 and Tech 7');
+    expect(haulWords({ kobo: 310, power: 5, tech: 0 })).toBe('₦3.10 and Power 5');
+    expect(haulWords({ kobo: 0, power: 0, tech: 0 })).toBe('₦0');
+  });
+
+  it('the lane save part: missing or broken starts at zeros', () => {
+    expect(readLane(undefined)).toEqual({ best: 0, goals: 0, runs: 0, hints: [] });
+    expect(readLane({ best: 'x', goals: 2, runs: -1, hints: ['lane', 3, 'lane'] })).toEqual({ best: 0, goals: 2, runs: 0, hints: ['lane'] });
+    expect(writeLane({ best: 840, goals: 1, runs: 3, hints: ['jump'] })).toEqual({ best: 840, goals: 1, runs: 3, hints: ['jump'] });
+    expect(ONE_RUN_BOTH_FIXES).toBe(true);
   });
 });
 
