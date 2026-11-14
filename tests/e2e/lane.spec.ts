@@ -109,6 +109,12 @@ test('Pause: "Buttons instead of swipes" shows the four buttons at once; each fi
   await expect.poll(async () => (await lane(page))!.stage).toBe('count');
   await expect.poll(async () => (await lane(page))!.stage).toBe('play');
   expect((await lane(page))!.buttons).toBe(true);
+  // A quiet stretch of road (178 m to 240 m: only a goat behind and the garri ahead), so no
+  // stumble or side-step moves the hero while the buttons are checked.
+  await page.evaluate(() => {
+    window.__lane!.warp(180);
+    window.__lane!.setGap(60);
+  });
   for (const name of ['Left lane', 'Right lane', 'Jump', 'Slide']) {
     const b = page.getByRole('button', { name, exact: true });
     const box = (await b.boundingBox())!;

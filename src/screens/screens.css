@@ -1755,20 +1755,20 @@
   }
 }
 
-/* Settings on a short screen: two columns (Sound | Music, Gentle mode, Watch the story | Back),
+/* Settings on a short screen: two columns (Sound | Music, Gentle mode | Buttons instead of swipes, Watch the story | Back),
    so every button shows with no scroll at 320 x 240. */
 @media (max-height: 300px) {
   .settings-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
-  .settings-list .gentle {
-    grid-column: 1 / -1;
-  }
+  /* S3f3: Gentle mode and "Buttons instead of swipes" share a row, each on two lines. */
   .settings-list .minor {
     min-height: 44px;
     padding: 4px 8px;
     font-size: 0.85rem;
+    line-height: 1.15;
+    white-space: normal;
   }
 }
 
