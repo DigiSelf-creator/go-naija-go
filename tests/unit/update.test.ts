@@ -4,7 +4,7 @@ import { SKIP_WAITING, TAKE_OVER_MS, UpdateState, UpdateWatch, bannerShows, type
 import { WORDS } from '../../src/screens/words';
 
 /** A fake navigator.serviceWorker and registration. */
-function fakes(controlled: boolean, waiting = false) {
+function fakes(controlled: boolean, waiting = false, offline = false) {
   const container = {
     controller: controlled ? {} : null,
     fns: [] as (() => void)[],
@@ -25,7 +25,7 @@ function fakes(controlled: boolean, waiting = false) {
     found: [] as (() => void)[],
     update() {
       this.updates++;
-      return Promise.resolve();
+      return offline ? Promise.reject(new Error('offline')) : Promise.resolve();
     },
     addEventListener(_t: 'updatefound', fn: () => void) {
       this.found.push(fn);
@@ -135,12 +135,51 @@ describe('U1 UpdateWatch', () => {
     expect(f.watch.state.ready).toBe(true);
   });
 
-  it('checks for a new sw.js when the page comes back to the front', async () => {
+  it('checks for a new sw.js once on every open (the browser may skip its own check)', async () => {
+    const f = fakes(true);
+    await tick();
+    expect(f.reg.updates).toBe(1);
+    // It finds one: a new worker takes over, so the banner is due.
+    f.container.change();
+    expect(f.watch.state.ready).toBe(true);
+  });
+
+  it('no open-time check on a first visit (nothing to update from), and never ready', async () => {
+    const f = fakes(false);
+    await tick();
+    expect(f.reg.updates).toBe(0);
+    f.container.change();
+    expect(f.watch.state.ready).toBe(false);
+    expect(f.readies()).toBe(0);
+  });
+
+  it('the open-time check fails quietly offline', async () => {
+    const f = fakes(true, false, true);
+    await tick();
+    await tick();
+    expect(f.reg.updates).toBe(1);
+    expect(f.watch.state.ready).toBe(false);
+  });
+
+  it('no open-time check while a new worker is already installing or waiting', async () => {
+    const waiting = fakes(true, true);
+    await tick();
+    expect(waiting.reg.updates).toBe(0);
+    // Ready all the same: the waiting worker is the new version.
+    expect(waiting.watch.state.ready).toBe(true);
+    const installing = fakes(true);
+    // Set before the registration resolves (it resolves on the next tick).
+    installing.reg.installing = installing.installing;
+    await tick();
+    expect(installing.reg.updates).toBe(0);
+  });
+
+  it('checks for a new sw.js again when the page comes back to the front', async () => {
     const f = fakes(true);
     await tick();
     expect(f.visible).toHaveLength(1);
     f.visible[0]!();
-    expect(f.reg.updates).toBe(1);
+    expect(f.reg.updates).toBe(2);
   });
 
   it('an update check that fails (offline) is quiet', async () => {
