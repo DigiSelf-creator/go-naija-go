@@ -291,6 +291,8 @@ interface Line {
   dur: number;
   /** Seconds before it shows (a line queued after another). */
   wait: number;
+  /** Read out on its own when it shows (a queued line not already in the spoken summary). */
+  speak?: boolean;
 }
 
 /** A coming-soon pin's tap area, wide enough for its "Coming soon" line (bold 11 px) too. */
@@ -1888,9 +1890,9 @@ export class CityScreen {
   }
 
   /** A line over the hero; `after`: it waits for the line showing now to end. */
-  private addLine(text: string, dur = LINE_TIME, after = false): void {
+  private addLine(text: string, dur = LINE_TIME, after = false, speak = false): void {
     const last = this.lines[this.lines.length - 1];
-    if (after && last) this.lines.push({ text, t: 0, dur, wait: last.wait + (1 - last.t) * last.dur });
+    if (after && last) this.lines.push({ text, t: 0, dur, wait: last.wait + (1 - last.t) * last.dur, speak });
     else {
       this.lines = [{ text, t: 0, dur, wait: 0 }];
       this.say.textContent = text;
@@ -1923,7 +1925,7 @@ export class CityScreen {
     const w = WORDS.city.mission;
     if (m.plain) {
       if (m.line) this.addLine(m.line, 2);
-      if (m.after) this.addLine(m.after, 3, true);
+      if (m.after) this.addLine(m.after, 3, true, true);
       return;
     }
     const st = this.life.state;
@@ -1982,7 +1984,7 @@ export class CityScreen {
     if (!ms) return;
     ms.phase = 'end';
     ms.after = 0;
-    if (ms.m.after) this.addLine(ms.m.after, 3, true);
+    if (ms.m.after) this.addLine(ms.m.after, 3, true, true);
     this.banner.querySelector('.city-skip')?.remove();
     this.saveAt();
   }
@@ -2364,8 +2366,8 @@ export class CityScreen {
       for (const l of this.lines) {
         if (l.wait > 0) {
           l.wait -= dt;
-          // A line that waited its turn is read out as it shows (screen readers hear queued lines too).
-          if (l.wait <= 0) this.say.textContent = l.text;
+          // A line that waited its turn and is not in the spoken summary is read out as it shows.
+          if (l.wait <= 0 && l.speak) this.say.textContent = l.text;
         } else l.t += dt / l.dur;
       }
       this.lines = this.lines.filter((l) => l.t < 1);
