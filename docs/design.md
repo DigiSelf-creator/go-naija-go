@@ -1792,3 +1792,153 @@ If playtests show many first-timers mashing at the dash hint and getting stuck, 
 The game is played sideways. The city screen may show upright (it is a menu-like screen), and there it zooms out so all three pins and their words fit across the narrow screen without a drag (city.md part 5 (b), qa F2). That leaves the map in a band across the middle with empty sky above and below. That is OK: every pin, word and button is whole and readable, every button and pin tag is at least 44 px, + and − zoom in, and drag works. Nothing is cut off or hidden.
 
 Follow-up for later (small, pm to plan, not needed for S2.16): on an upright phone, put one line of words, centred in the empty space above the map, 14 px: "Turn your phone sideways to see more of Lagos." (46 characters, one line at 393 px; two lines are fine on narrower phones). It is not shown sideways. Nothing else changes. qa check then: at 393 x 851 and 360 x 800 the line fits with no cut, does not cover the map or the + and − buttons, and screen readers read it once.
+
+## ST0. The store app (designer, 14 Nov 2026)
+
+Decisions 39 to 41 and 51: Gbese! is an app for Google Play and the App Store; the web link is for the team's testing. This note says how the app looks and behaves where it is not the same as the web link. It is the source for ST1a (Android), ST1c (iPhone), ST2 (icons and splash) and ST5 (qa). Everything this note does not change stays as the rest of this file says. Same game, same words, same look: our own dark green and warm street colours, our own icon, no store or phone maker's look added.
+
+Settled since: no update prompt in the app (decision 55), app id com.coachnaz.gbese (54), privacy page on the test link's site (56), iPhone only at first, no iPad (57). Open for Tp in docs/questions.md: ST-Q5 (phone backup; part 8). This note is written with the recommended answer; a different answer changes only the lines marked ST-Q5.
+
+### 1. The name under the icon
+
+**"Gbese!"**, with the "!" (decision 5). Six characters, so no phone cuts it short ("Gbese..." never shows). The same on Android and iPhone, in the phone's app list and in the recent apps view. Screen readers say "Gbese". The store listing name (ST3) can be longer; the name under the icon never is.
+
+### 2. Sideways, both ways
+
+- The whole app is sideways only: the title, hero builder, Lagos city, every card and every run. (On the web link, menus can still be upright.)
+- Both ways: the phone can be turned so its camera is on the left or on the right. Turning it over flips the picture with the phone and nothing else happens: no pause, no restart, the run carries on. Android: "sensor landscape". iPhone: landscape left and landscape right.
+- After a flip, the buttons stay where the thumbs are: Back and Forward on the left of the screen, Jump (and Throw) on the right, Pause top right. The notch is now on the other side, so the layout reads the safe edges again (part 4).
+- If the app is opened while the phone is upright, the splash and the game come up sideways and the player turns the phone. No words are needed: the picture is sideways.
+- The "Turn your phone sideways to play." card stays in the code. On phones it never shows in the app. It can still show on a big tablet or a folding phone, or in split screen, where Android may ignore the sideways lock; there it works as on the web (the run pauses until the screen is sideways again).
+- The upright-city line "Turn your phone sideways to see more of Lagos." (qa round 2 ruling 4) is never needed in the app.
+
+### 3. The Android back button
+
+The back button (and the back swipe from the screen edge) never closes the game by itself. In a run it pauses first; the "Leave the game?" ask comes one press later; only a tap on "Leave" closes the game.
+
+What back does on each screen:
+
+| Where you are | Back does |
+|---|---|
+| In a run (a street, the well room, Go-Slow Hall, the lane run when it comes) | Pause, the same as the Pause button |
+| Pause | Opens the "Leave the game?" ask |
+| The "Leave the game?" ask | Closes the ask: the same as "Keep playing" |
+| Lagos city (home) | Opens the "Leave the game?" ask. The hero stops walking while it is open |
+| A "watch it change" moment, "Mission complete!" or a boom card | Skips to the end, the same as tapping on. The fix and the money are kept |
+| The moving intro | The same as Skip |
+| Settings, Credits, Privacy, Streets, Nigeria's wheel, the challenge road | The same as that screen's own Back or Home button |
+| The wheel's "All names" list | The same as Close |
+| Hero builder, changing a saved hero | Back to where you came from; the old look stays |
+| Hero builder, first time (no hero saved yet) | Opens the "Leave the game?" ask |
+| Street cleared | The same as "Take it home": everything won goes home |
+| Out of lives, Win | Home to Lagos city. Anything already kept stays kept |
+
+Rules:
+1. Back never loses anything that is already won, and never starts a run.
+2. Back presses in the first 0.4 s of any new screen or of the ask are ignored, the same as taps (part 1). So a child pressing back again and again in a run gets Pause, then the ask, then Pause again, and never a quit.
+3. The ask opens with "Keep playing" ready: screen readers land on it first.
+
+**The ask, exact words**
+
+- Heading: "Leave the game?"
+- Line: "Your hero and your Lagos are saved on this phone."
+- Only when it comes from a run, a second line: "This street starts again next time." (In Go-Slow Hall: "The hall starts again next time." In the lane run: "This run starts again next time.")
+- Big button, first: "Keep playing". Smaller button: "Leave".
+- Screen readers hear it as a box called "Leave the game?".
+- Never colour alone: "Keep playing" is the big filled button and comes first; "Leave" is smaller, with an outline only.
+
+"Leave" saves first (the same as when the app goes to the background, part 5), then closes the game. Next time the game opens on its splash and then Lagos city, as usual.
+
+**The edge swipe in a run (Android).** On phones with swipe navigation, a swipe in from the left or right edge means back. A thumb sliding off the walk buttons could pause the run by mistake. During a run only, the game asks Android not to treat an edge swipe as back over the walk buttons (left edge) and over Jump and Throw (right edge), as far up as Android allows (200 dp from the bottom). The back button, and swipes higher up the edge, still pause. On menus and the city there is no block.
+
+iPhones have no back button, and the iPhone swipe in from the left edge does nothing in the app (there is no page to go back to).
+
+### 4. Notches, camera holes, round corners and the home bar
+
+Held sideways, the notch or camera hole sits on the left or right edge, and the iPhone home bar sits along the bottom.
+
+1. The picture fills the whole screen, edge to edge, under the notch and round the corners: sky, road and city, no black bars. (Android: draw into the cutout on the short edges.)
+2. Everything you tap or read sits inside the safe area, plus 8 px: the HUD, Sound and Pause, Back, Forward, Jump, Throw, the hint bar, every card and every button. Nothing is ever under the notch, the camera hole, a round corner or the home bar.
+3. The safe edges are read again after every flip and every size change. The code already uses `--safe-top`, `--safe-right`, `--safe-bottom` and `--safe-left` (index.html, src/engine/view.ts); the app only has to make sure they hold the real values. Android web views do not always give them: if they read 0 on a phone with a camera hole, the app fills them from the phone's own numbers.
+4. The phone's top bar (time, battery) and Android's button bar are hidden in the whole app. A swipe from the edge shows them for a moment; then they hide again.
+5. iPhone home bar: in a run it fades out, and leaving needs a second swipe up, so a thumb on Jump never leaves by mistake. On menus and the city the home bar works as normal.
+6. A phone with no notch (iPhone SE, many cheap Androids) looks just like the web link.
+
+### 5. Going to the background and coming back
+
+"The background" is anything that takes the game off the screen: the home button or swipe, the app switcher, a phone call, an alarm, the screen locking, another app opening over it. On Android, pulling down the top shade during a run counts too.
+
+| Where you are | When the game goes away | When it comes back |
+|---|---|---|
+| A run | Pause shows at once. All sound and music stop at once (the corn tune too) | Pause is still there. Music waits for "Keep playing", then carries on from the same bar (S2.9 rule 4) |
+| Lagos city | The hero stops. Saves are written (trays, the hero's place) | The city is as you left it. Music comes back softly over 1 s from the same bar |
+| The moving intro | It holds on its beat (as now) | It waits on that beat; a tap goes on |
+| Any card or menu | Music stops | Music comes back softly over 1 s |
+
+Rules:
+1. Saves are written every time the game goes away, wherever it is, so nothing is lost if the phone later closes the app to free memory.
+2. Fixed places make no money while the game is away. The tray carries on from where it was when the game comes back (decision 44: never while the game is closed).
+3. If the phone did close the app while it was away, the game opens fresh: splash, then Lagos city, with everything saved. A run that was in the middle of a street starts that street again, the same as after "Leave".
+4. On an iPhone, after a call the sound can come back silent; the first tap brings it back (src/engine/audio-unlock.ts does this already). The silent switch still wins (decision 22), and the Pause line "No sound? Turn off silent mode on your phone." stays, iPhones only.
+5. The phone's volume buttons change the game's sound while it is open.
+6. The screen stays awake during a run and the moving intro, so it does not go dark while a player stands and thinks. On menus, the city and Pause, the phone's own sleep timer works as normal.
+7. If the player has their own music playing when the game opens, it carries on under ours. They can turn ours off with "Music: off".
+
+### 6. The splash screen
+
+- What: our own icon (from ST2) in the middle of a plain dark green background, `#0f1a12`, the same colour as the game's first screen, so there is no white flash. No words, no "Made by" (that lives in Credits), no sound, no loading bar.
+- Light and dark: the phone's dark mode does not change the splash. The game is dark green either way, so both splash files (ST2) use the same dark background.
+- Android 12 and later: the phone's own splash shows the icon in its circle on that background. Older Android and the iPhone: the same picture as a plain screen.
+- How long: only as long as loading takes. It goes as soon as the game's first screen has drawn, with a 0.2 s fade (no fade with reduced motion). Never a timer that makes anyone wait. On a cheap phone this should be well under 2 s, because the game files are inside the app. If it ever takes longer, the splash stays until the game is ready: never a blank or white screen.
+- After the splash: the first time, the moving intro (decision 25), then the hero builder; after that, Lagos city.
+
+### 7. What is different from the web link
+
+| | Web test link | Store app |
+|---|---|---|
+| Game files | Downloaded on the first visit, kept by a service worker | Inside the app. No service worker in the app at all |
+| First open with no internet | Needs one visit online first | Works from the very first open, in airplane mode |
+| "New version ready. Tap to update." (decision 52, U1) | Yes | No: the app updates through the store (decision 55) |
+| Holding the phone upright | Menus work upright; runs show "Turn your phone sideways to play." | Sideways everywhere (part 2) |
+| Back button | The browser's own | Part 3 |
+| Browser bar, pull down to reload, pinch zoom, long-press menu, "Add to home screen" | Can show, depending on the browser | Never |
+| Notch and home bar | As the browser allows | Part 4 |
+| Screen stays awake in a run | No | Yes (part 5, rule 6) |
+| Saves | In the browser | In the app, on this phone. The two never share saves: a tester who played on the link starts fresh in the app |
+| Privacy card and Version line | Yes (part 8) | Yes |
+
+Both show the same game, words, sounds and text sizes. The app keeps the game's own text sizes even when the phone's text size is set larger, because every card is checked to fit at 320 x 240 (S2.10) and the game's smallest words are already 14 px or more.
+
+### 8. What a 10 year old player needs
+
+1. **No way out of the game by mistake** (part 3), and no way to lose a win.
+2. **Nothing to buy, no ads, no links out.** No button in the app opens a web page, the store, a "rate us" box or another app. So no grown-up gate is needed.
+3. **No asks.** The app asks for no permissions: no camera, microphone, location, contacts or notifications. It never sends a notification or a "come back and play" reminder. No streaks that punish a missed day.
+4. **No internet needed, ever** (part 7). Nothing is sent from the phone.
+5. **Privacy in plain words, inside the game.** Both stores want the privacy words easy to find. A "Privacy" button on Settings opens a small card. Exact words:
+   - Heading: "Privacy"
+   - "Gbese! collects nothing about you."
+   - "No accounts. No ads. No trackers."
+   - ST-Q5 a: "Your hero and your Lagos are saved on this phone only. If you delete the game, they go too." (If Tp picks b: "Your hero and your Lagos are saved on this phone. Your phone's own backup can keep a copy for you. We never see it.")
+   - Button "Back".
+   The same words go on the privacy web page (decision 56) and into the store answers (ST3), so they never disagree.
+6. **The version on Credits.** One small line under "Every picture, sound and tune is our own.": "Version {version}" from package.json, for example "Version 0.1.0". Testers and Tp can say which one they played. On the web link too.
+7. **Small to download.** Aim for the Android download under 10 MB, for cheap phones and small data bundles. The web first load stays under 3 MB (rule 6) and gains nothing from the app.
+8. **The same help as the web.** Every button 44 px or more (56 in play), separate Sound and Music switches, never colour alone, Gentle mode with 5 lives, no time limits, reduced motion: all as S2.10, S2.11 and the rest of this file. Nothing about them changes in the app.
+
+### 9. Build notes
+
+For gamedev (ST1a, ST1c):
+1. Saves live under the app's own address inside the phone. That address (the Capacitor host and scheme) must never change from one version to the next, or every player's saves vanish on update. Set it once in `capacitor.config.ts` and never touch it.
+2. Back button: Capacitor's back button event, wired to the table in part 3. The ask is a new card in src/screens, its words in src/screens/words.ts.
+3. Background: Capacitor's app pause and resume events, beside the `visibilitychange` that src/main.ts already uses, so a call or the top shade also pauses. Same `pause()`, `cityLife.flush()` and music path.
+4. No service worker and no U1 in the app: src/sw-register.ts and the update prompt check one "this is the app" flag and do nothing there.
+5. Edge swipe block in runs only (Android), home bar deferred in runs only (iPhone), top and button bars hidden, picture into the cutout, real safe-area numbers (part 4).
+6. Screen awake in runs and the intro only (part 5, rule 6). Android text zoom held at 100 percent (part 7).
+7. iPhone sound: the "ambient" audio kind, so the silent switch still wins (decision 22) and the player's own music mixes in (part 5, rule 7).
+8. Release builds ask for no permissions. If Android's internet permission can be left out of the release build without breaking anything, leave it out; say in the PR either way.
+9. Phone backup off unless Tp picks ST-Q5 b: Android `allowBackup="false"`; on the iPhone, the saved game is kept out of the iCloud backup.
+
+For art (ST2): the icon reads at 48 px with no words; the splash is that icon on `#0f1a12`, the same file for light and dark (part 6).
+
+For qa (ST5), beside the plan's checks: back pressed 10 times fast in a run never closes the game; back from every screen in the table; the ask with and without its run line; flip the phone both ways mid-jump and in the city; a call or alarm in a run; lock and unlock in a run and in the city; a save survives an update installed over the top (debug build A, then B); the safe edges on a phone with a camera hole, an iPhone with a notch or island, an iPhone SE and a cheap Android with three buttons; splash time on the slow phone; airplane mode from the very first open; the Privacy card and the Version line fit at 320 x 240.

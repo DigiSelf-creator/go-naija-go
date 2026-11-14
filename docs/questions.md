@@ -1,6 +1,16 @@
 # Open questions for the product owner
 
-## po note, 14 Nov 2026 (latest): Tp answered the four moving-intro questions
+## pm, 14 Nov 2026 (latest): store version, choices for Tp (po to check)
+
+Decision 51: the store version is built now beside Lagos (plan "ST. Store version"). These choices are not settled by the brief or decisions. Blocks: ST-Q1 blocks ST1a; the others block ST3 and U1 in the app only.
+
+- **ST-Q1. App id.** The store's hidden name for the app. It can never change after the first upload. a) `com.coachnaz.gbese` (matches the credits, decision 6, and is not tied to any employer, decision 40). b) Another id Tp picks, for example from Tp's own company or web address. Recommended: a, unless Tp has a company or web address of their own to use.
+- **ST-Q2. "New version ready" inside the store app** (decision 52). In the app, new game files come with the store update. a) The web test link shows the prompt (U1); the store app does not, and updates through the store as usual. b) The store app also checks the store and shows "New version ready. Tap to update.", opening the store page. Recommended: a now (no web fetch in the app, nothing extra to test); b can come later if testers miss updates.
+- **ST-Q3. Where the privacy statement lives.** Both stores ask for a web page, even when no data is collected. a) A plain page on the same GitHub Pages site as the test link, holding only the privacy words (the game itself stays a test link, decision 39). b) A page on a site Tp owns. Recommended: a.
+- **ST-Q4. iPhone only, or iPad too?** a) iPhone only at first (fewer screenshot sizes and checks; iPad can come later). b) iPhone and iPad. Android phones and tablets both run it either way. Recommended: a.
+- **ST-Q5. Phone backup of the saved game** (asked by designer, ST0 in docs/design.md, 14 Nov). Android and iPhone can copy an app's saves to the player's own Google or Apple backup, so a new phone keeps their Lagos. We never see that copy, but it does leave the phone. a) Backup off: saves stay on this phone only, matching rule 5 ("Saves stay on the phone") and the builder line "Your hero is saved on this phone only."; deleting the game or changing phone starts fresh. b) Backup on: the phone's own backup keeps a copy in the player's own account; the Privacy card and store answers say so. Recommended: a for version 1 (keeps the privacy promise word for word, simplest store answers); b can come later if players ask. Blocks: ST1a (one setting), ST3 privacy words.
+
+## po note, 14 Nov 2026: Tp answered the four moving-intro questions
 
 - Answered by Tp (14 Nov, reported by the lead): 1a, 2a, 3a, 4a, the team's recommended answers. A tap jumps to the next beat; only two lines on screen; reduce motion gets the six still frames; the Stoppers flinch but stay. See "designer, 13 Nov 2026: the intro that moves" below.
 - Accepted: nothing new to build. My acceptance of S3a3 and S3a4 now rests on Tp's confirmed answers, not on recommendations. Verified by reading the code: `INTRO_CHOICES` in src/game/intro.ts is `tapJumps: true` (1a), `lines: true` (2a), `stillFramesForReducedMotion: true` (3a); `stopperAt` in src/art/intro-scene.ts moves each Stopper a step outward with a blink at 23.0 to 23.3 s and keeps drawing it to the end of beat 5 (4a). No code change.
