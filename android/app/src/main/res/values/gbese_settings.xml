@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Phone backup (decision 59, Tp 14 Nov): off, no backup at all. This is the one switch
+         (AndroidManifest.xml reads it). To turn backup on later, set it true and change the two
+         rule files in res/xml (backup_rules.xml, data_extraction_rules.xml) to include the saves. -->
+    <bool name="gbese_allow_backup">false</bool>
+</resources>

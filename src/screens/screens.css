@@ -1980,3 +1980,75 @@
 .screen .city-pin[hidden] {
   display: none;
 }
+
+/* U1 (decision 52): "New version ready. Tap to update." at the top of any screen, never in a run.
+   One button, at least 44 px tall. While it shows (body.has-update) the menu cards start below
+   it, so it covers none of their buttons. Fades in and out; with reduced motion it just shows
+   and goes (update-banner.ts removes it at once). */
+.update-banner {
+  position: fixed;
+  top: max(4px, var(--safe-top));
+  right: max(8px, var(--safe-right));
+  left: max(8px, var(--safe-left));
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  transform: translateY(-6px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s,
+    transform 0.2s,
+    visibility 0s 0.2s;
+  pointer-events: none;
+}
+/* Only the button takes taps: the strip beside it lets them through. */
+.update-banner.show {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.update-banner.show .update-btn {
+  pointer-events: auto;
+}
+.update-btn {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 14px;
+  border: 2px solid #1d1a14;
+  border-radius: 12px;
+  background: #f2b300;
+  color: #1d1a14;
+  font: bold 15px/1.2 'Trebuchet MS', Verdana, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  touch-action: manipulation;
+}
+.update-btn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+body.has-update .screen:not(.full) {
+  padding-top: calc(max(4px, var(--safe-top)) + 52px) !important;
+}
+/* The screens that fill the page (the intro, Lagos from above, the wheel) start below it too;
+   each fits itself to its card again (update-banner.ts sends a resize). */
+body.has-update .screen.full .intro-card,
+body.has-update .screen.full .city-card,
+body.has-update .screen.full .wheel-card {
+  top: calc(max(4px, var(--safe-top)) + 52px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-banner,
+  .update-banner.show {
+    transform: none;
+    transition: none;
+  }
+}

@@ -19,7 +19,7 @@ import { parseRoom } from './game/well';
 import { WELL } from './art/well';
 import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
-import { loadLook } from './game/save';
+import { hasSavedLook, loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
 import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, isBuilt, leftOf, winPrize, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
@@ -34,6 +34,10 @@ import type { Where } from './screens/streets';
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
+import { bannerShows } from './update';
+import { UpdateBanner } from './screens/update-banner';
+import { isNativeApp } from './native/is-native';
+import type { NativeApp } from './native/app';
 
 const el = document.getElementById('game');
 if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing #game canvas');
@@ -53,7 +57,11 @@ function resize(): void {
 window.addEventListener('resize', resize);
 resize();
 
-registerServiceWorker();
+/** U1: set by startGame; called when a new version of the game is ready. */
+let updateReady = (): void => {};
+// ST1a, decision 55: the store app carries its files inside it and updates through the store,
+// so no service worker and no update prompt there.
+const updates = isNativeApp() ? null : registerServiceWorker(() => updateReady());
 
 const query = new URLSearchParams(location.search);
 if (query.has('gallery')) {
@@ -75,6 +83,8 @@ if (query.has('gallery')) {
 
 function startGame(): void {
   const store = createStore();
+  /** The store app's extras (ST1a); null on the web. */
+  let nativeApp: NativeApp | null = null;
   /** S2.8: streets done, best kobo, the saved parcel and the hall, under gidi-progress. */
   const progress = new Progress(store);
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
@@ -220,6 +230,18 @@ function startGame(): void {
   /** The street, the well and its room, or the hall fight is being played (not a finish, game over or won). */
   const inPlay = (): boolean => game.run.inPlay;
 
+  // U1 (decision 52): "New version ready. Tap to update." on any screen, never in a run: only on
+  // Pause, the result cards and the other screens. One tap reloads into the new version.
+  const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
+  /** A run is being played with no card over it (the finish bus counts: the result card follows). */
+  const inRun = (): boolean => playing && menus.current === null;
+  const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
+  updateReady = () => {
+    syncUpdate();
+    // Cheap, and only once an update is ready: follows the screens (a run ends, Pause opens).
+    window.setInterval(syncUpdate, 250);
+  };
+
   /** Pause the run and show the pause screen (button, app switch, or phone upright). */
   function pause(): void {
     if (!playing || game.paused || !inPlay()) return;
@@ -231,12 +253,14 @@ function startGame(): void {
     game.release();
     game.steer(0);
     menus.show('pause');
+    syncUpdate();
   }
   function resume(): void {
     if (!playing || document.hidden || portrait.matches) return;
     menus.show(null);
     game.paused = false;
     loop.resume();
+    syncUpdate();
   }
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
   function startRun(at: TapPoint | null, to: Where = where): void {
@@ -263,6 +287,7 @@ function startGame(): void {
     loop.resume();
     startingRun = false;
     syncMusic();
+    syncUpdate();
     if (portrait.matches || document.hidden) pause();
   }
   /**
@@ -347,7 +372,10 @@ function startGame(): void {
       director.switches(on, menus.music);
     },
     musicChanged: (on) => director.switches(menus.sound, on),
-    screenChanged: () => syncMusic(),
+    screenChanged: () => {
+      syncMusic();
+      nativeApp?.screenChanged();
+    },
     progress: () => ({
       lagos: progress.state(LAGOS),
       names: streets.map((l) => l.name),
@@ -733,6 +761,25 @@ function startGame(): void {
     else resume();
   });
 
+  // ST1a, ST0: the store app's back button, background pause, safe edges, screen awake and
+  // splash. Only the app build has this code (MODE is fixed at build time, so the web build
+  // drops it, and Capacitor with it).
+  if (import.meta.env.MODE === 'app' && isNativeApp()) {
+    void import('./native/app').then(({ startNativeApp }) => {
+      nativeApp = startNativeApp({
+        running: () => playing && !game.paused && !menus.current && inPlay(),
+        screen: () => menus.current,
+        hall: () => where === 'hall',
+        heroSaved: () => hasSavedLook(store),
+        pause: () => pause(),
+        home: () => leave('city'),
+        city: () => menus.showCity(),
+        save: () => cityLife.flush(),
+        relayout: () => resize(),
+      });
+    });
+  }
+
   let musicAttached = false;
   // Sound may start only after the player's first tap or key. iOS Safari counts only the end of
   // a touch (or a click or key) as the tap that can start audio, and stops it on an app switch
@@ -810,6 +857,9 @@ function startGame(): void {
   window.__game = {
     get paused() {
       return game.paused;
+    },
+    get update() {
+      return { ready: updates?.state.ready ?? false, shown: updateBanner.shown };
     },
     get steps() {
       return loop.stepCount;
@@ -1154,6 +1204,8 @@ declare global {
   interface Window {
     __game?: {
       readonly paused: boolean;
+      /** U1: a new version is ready; the banner shows. */
+      readonly update: { ready: boolean; shown: boolean };
       readonly steps: number;
       /** Camera left edge (world x) as last drawn. */
       readonly camX: number;

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gbese!</string>
+    <string name="title_activity_main">Gbese!</string>
+    <string name="package_name">com.coachnaz.gbese</string>
+    <string name="custom_url_scheme">com.coachnaz.gbese</string>
+</resources>
