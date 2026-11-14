@@ -14,7 +14,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "check-size": "node scripts/check-size.mjs",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "app-icons": "node scripts/make-app-icons.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
