@@ -25,6 +25,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// U1: "Tap to update" asks a waiting worker to take over now (it normally does by itself).
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'skip-waiting') self.skipWaiting();
+});
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;

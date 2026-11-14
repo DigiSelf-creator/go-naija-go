@@ -567,7 +567,8 @@ export class Menus {
     this.refit = (): void => {
       const safe = readSafeArea();
       const sw = window.innerWidth - safe.left - safe.right;
-      const sh = window.innerHeight - safe.top - safe.bottom;
+      // The card's own height: less than the window while the update banner shows above it (U1).
+      const sh = card.clientHeight || window.innerHeight - safe.top - safe.bottom;
       const f = wheelFit(sw, sh);
       card.classList.toggle('narrow-rail', f.narrow);
       card.classList.toggle('upright', f.portrait);

@@ -65,6 +65,10 @@ export const WORDS = {
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
   },
+  /** U1 (decision 52): the banner when a new version of the game is ready. */
+  update: {
+    ready: 'New version ready. Tap to update.',
+  },
   /** S2.10 Pause: four buttons and the Sound and Music switches. */
   pause: {
     heading: 'Paused',
