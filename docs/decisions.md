@@ -57,3 +57,5 @@ Added 14 Nov 2026 at Tp's request: lines 5 to 50, confirmed by Tp in chat betwee
 48. On the challenge road, each stop's run looks like the same street as its city spot, before and after the fix. Built in S3e1. (W17 option C)
 49. In the moving intro a tap jumps to the next beat and Skip ends it at once; only two lines show on screen, "That hero is you." and, with "Let's go", "Build up Lagos. Get Nigeria working."; with reduce motion on, the six still pictures with captions play instead; the Stoppers flinch back when the hero frees the Wheel but stay at the edges, still out there to beat. Built as S3a3 and S3a4. (Intro questions 1a, 2a, 3a, 4a; Tp 14 Nov)
 50. The line "Remember: a wrong premise often leads to a misleading conclusion." is not in the game. It belongs to another project. (Tp, 7 Nov)
+51. The store version (Google Play and the App Store) is built now, alongside Lagos, so Tp can install a test app on a phone soon. Tp makes the two developer accounts when the team is ready to upload. (Tp, 14 Nov)
+52. When a new version of the game is ready, the game shows "New version ready. Tap to update." One tap loads it. (Tp, 14 Nov)
