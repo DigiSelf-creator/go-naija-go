@@ -1,9 +1,9 @@
 /**
  * The intro that moves (docs/city.md part 5, step (a2), art task S3a3): one camera, one Wheel,
- * about 28 s. drawIntroScene is a pure function of time: the same `t` always draws the same
+ * about 44 s (a2.12). drawIntroScene is a pure function of time: the same `t` always draws the same
  * picture, so the screen (gamedev, S3a4) owns the clock, the jumps, the pause and the hold.
  *
- * Beats (a2.2): 1 the people make the Wheel, 2 it turns and Lagos grows, 3 it sits in the
+ * Beats (a2.2, timed by a2.12 point 4): 1 the people make the Wheel, 2 it turns and Lagos grows, 3 it sits in the
  * middle of Nigeria, 4 the Stoppers jam it, 5 the hero pushes it back into motion, 6 its
  * turning becomes the yellow bus's wheel at a Lagos bus stop. Camera moves are plain slides,
  * zooms and fades (a2.8): no shaped wipes, no title cards, no star field.
@@ -52,9 +52,9 @@ const TAU = Math.PI * 2;
 // ---------- Timing (a2.2) and cues (a2.6) ----------
 
 /** The six beat starts (s), then the hold: "Let's go" shows at INTRO_BEATS[6]. */
-export const INTRO_BEATS = [0, 6, 11, 15.5, 20, 24.5, 27.8] as const;
+export const INTRO_BEATS = [0, 11, 19.6, 25.4, 31.6, 39, 44] as const;
 /** When the hold starts ("Let's go" fades in). */
-export const INTRO_HOLD = 27.8;
+export const INTRO_HOLD = 44;
 /** Seconds into the hold after which the picture no longer changes enough to redraw (a2.9). */
 export const INTRO_STILL_AFTER = 3;
 
@@ -75,38 +75,44 @@ export type IntroCue =
   | { t: number; music: 'start' | 'level' | 'restart'; level: number; ramp: number };
 
 /**
- * a2.6, in time order. One swap: the three footfalls at 20.2 to 21.2 use `strongStep` (a soft
- * low "dum"), since `step` is the Booming meter's three rising notes, not a footfall.
+ * a2.12 point 4 (which replaces the a2.6 times), in time order. One swap: the three footfalls at
+ * 31.8 to 33.0 use `strongStep` (a soft low "dum"), since `step` is the Booming meter's three
+ * rising notes, not a footfall.
  */
 export const INTRO_CUES: readonly IntroCue[] = [
   { t: 0, music: 'start', level: 0.6, ramp: 0 },
-  { t: 4, music: 'level', level: 1, ramp: 1 },
-  { t: 4, sound: 'cogBell' },
-  { t: 7, sound: 'built' },
-  { t: 8.6, sound: 'honk' },
-  { t: 13, sound: 'cogRatchet' },
-  { t: 14.4, sound: 'cogBell' },
-  { t: 16, music: 'level', level: 0.5, ramp: 2 },
-  { t: 16, sound: 'honk' },
-  { t: 16.7, sound: 'roomThump' },
-  { t: 17.4, sound: 'lightClunk' },
-  { t: 18.1, sound: 'parcel' },
-  { t: 19.2, music: 'level', level: 0, ramp: 0.3 },
-  { t: 19.2, sound: 'crateHit' },
-  { t: 20.2, sound: 'strongStep' },
-  { t: 20.7, sound: 'strongStep' },
-  { t: 21.2, sound: 'strongStep' },
-  { t: 22.3, music: 'restart', level: 1, ramp: 0 },
-  { t: 22.3, sound: 'bounce' },
-  { t: 25.4, sound: 'skid' },
-  { t: 26, sound: 'busBoard' },
-  { t: 27.2, music: 'level', level: 0.5, ramp: 0.4 },
-  { t: 27.2, sound: 'sting' },
+  { t: 6.5, music: 'level', level: 1, ramp: 1 },
+  { t: 6.5, sound: 'cogBell' },
+  { t: 12.2, sound: 'built' },
+  { t: 14.6, sound: 'honk' },
+  { t: 21.8, sound: 'cogRatchet' },
+  { t: 23.4, sound: 'cogBell' },
+  { t: 26, music: 'level', level: 0.5, ramp: 2 },
+  { t: 26, sound: 'honk' },
+  { t: 26.9, sound: 'roomThump' },
+  { t: 27.8, sound: 'lightClunk' },
+  { t: 28.7, sound: 'parcel' },
+  { t: 30.2, music: 'level', level: 0, ramp: 0.3 },
+  { t: 30.2, sound: 'crateHit' },
+  { t: 31.8, sound: 'strongStep' },
+  { t: 32.4, sound: 'strongStep' },
+  { t: 33, sound: 'strongStep' },
+  { t: 34.6, music: 'restart', level: 1, ramp: 0 },
+  { t: 34.6, sound: 'bounce' },
+  { t: 40, sound: 'skid' },
+  { t: 40.6, sound: 'busBoard' },
+  { t: 44, music: 'level', level: 0.5, ramp: 0.4 },
+  { t: 44, sound: 'sting' },
 ];
 
 export interface IntroSceneOptions {
   /** The player's hero. null or missing: the plain outline hero (first visit). */
   look?: HeroLook | null;
+  /**
+   * a2.12: canvas units at the bottom kept for the subtitle strip. The picture fits in the
+   * space above it; sky and ground still reach every edge, the ground carrying on under it.
+   */
+  inset?: number;
 }
 
 // ---------- Small helpers ----------
@@ -146,7 +152,7 @@ function clipExt(g: CanvasRenderingContext2D, e: Ext): void {
 
 /** The Wheel's speed (rad/s), straight lines between these [time, speed] knots. */
 const SPIN: readonly (readonly [number, number])[] = [
-  [0, 0.2], [4, 0.2], [4.5, 0.5], [18.6, 0.5], [19.2, 0], [22.3, 0], [23, 0.6], [1e6, 0.6],
+  [0, 0.2], [6.5, 0.2], [7, 0.5], [29.4, 0.5], [30.2, 0], [34.6, 0], [35.3, 0.6], [1e6, 0.6],
 ];
 
 /** The Wheel's angle at time t: the area under SPIN, plus the shudder and the rock. */
@@ -162,8 +168,8 @@ export function wheelAngle(t: number): number {
     a += ((w0 + we) / 2) * (e - t0);
   }
   // The shudder as it is jammed, and the rock back and forth as the hero pushes
-  if (T > 18.6 && T < 19.4) a += Math.sin(T * 70) * 0.025 * (1 - span(T, 18.6, 19.4));
-  if (T > 22 && T < 22.3) a += Math.sin(span(T, 22, 22.3) * TAU) * -0.06;
+  if (T > 29.4 && T < 30.4) a += Math.sin(T * 70) * 0.025 * (1 - span(T, 29.4, 30.4));
+  if (T > 34.3 && T < 34.6) a += Math.sin(span(T, 34.3, 34.6) * TAU) * -0.06;
   return a;
 }
 
@@ -256,9 +262,16 @@ function wheel(g: CanvasRenderingContext2D, x: number, y: number, r: number, rot
   drawStoryWheel(g, x, y, r, rot, missing, dull);
 }
 
-// ---------- Beat 1: the people make the Wheel (0 to 6 s) ----------
+// ---------- Beat 1: the people make the Wheel (0 to 11 s) ----------
 
 const W1 = { x: 160, y: 96, r: 44 } as const;
+/** The spoke clicks in here (s). */
+const CLICK = 6.5;
+
+/** a2.12: the slow drift closer while everyone cheers (6.5 to 11 s), at most 5 % zoom. */
+function drift1(T: number): number {
+  return 1 + 0.05 * ease(span(T, CLICK, 11));
+}
 
 function land1(g: CanvasRenderingContext2D, e: Ext): void {
   // Far hills, the savanna, a river, rows of crops, palms, a baobab and yams (frame 1's land)
@@ -299,9 +312,9 @@ function land1(g: CanvasRenderingContext2D, e: Ext): void {
   }
 }
 
-/** Where the last spoke's slot is when it clicks in (4.0 s): its inner and outer ends. */
-function slotAt4(): [number, number, number, number] {
-  const a = wheelAngle(4);
+/** Where the last spoke's slot is when it clicks in (6.5 s): its inner and outer ends. */
+function slotAtClick(): [number, number, number, number] {
+  const a = wheelAngle(CLICK);
   const c = Math.cos(a);
   const s = Math.sin(a);
   return [W1.x + c * W1.r * 0.18, W1.y + s * W1.r * 0.18, W1.x + c * W1.r * 0.74, W1.y + s * W1.r * 0.74];
@@ -315,7 +328,18 @@ function sun1(g: CanvasRenderingContext2D, y: number): void {
 }
 
 function world1(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: number, withWheel: boolean): void {
-  const dawn = ease(span(T, 0, 1));
+  const z = drift1(T);
+  if (z === 1) {
+    world1At(g, e, base, T, withWheel);
+    return;
+  }
+  // The camera drifts in round the Wheel. Drawn to the same edges (they still cover the screen
+  // when zoomed in), so the copied layers are kept, not painted again each frame.
+  zoomed(g, z, W1.x, W1.y, W1.x, W1.y, () => world1At(g, e, base, T, withWheel));
+}
+
+function world1At(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: number, withWheel: boolean): void {
+  const dawn = ease(span(T, 0, 1.5));
   if (dawn >= 1) {
     still(g, base, e, 'day1', (cg) => {
       grad(cg, e, 0, 120, '#ffb36b', '#fff1c9');
@@ -333,9 +357,9 @@ function world1(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
     disc(g, 160, lerp(130, 92, dawn), 28, '#ffd34d');
     still(g, base, e, 'land1', (cg) => land1(cg, e));
   }
-  if (withWheel) wheel(g, W1.x, W1.y, W1.r, wheelAngle(T), T < 4 ? 1 : 0);
+  if (withWheel) wheel(g, W1.x, W1.y, W1.r, wheelAngle(T), T < CLICK ? 1 : 0);
   // The brass flash as the spoke clicks in (small, soft, once)
-  const f = span(T, 4, 4.35);
+  const f = span(T, CLICK, CLICK + 0.35);
   if (f > 0 && f < 1) {
     faded(g, 1 - f, () => {
       disc(g, W1.x, W1.y, 6 + f * 10, C.brassShine);
@@ -345,12 +369,12 @@ function world1(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
       }
     });
   }
-  const done = T >= 4;
+  const done = T >= CLICK;
   const pushPh = Math.max(0, T - 0.5) * 3.4;
   const cheer = T * 7;
   const pusher = (x: number, skin: number, top: string, low: string, head: Folk['head'], f: 1 | -1, wrap?: string, k = 0): Folk =>
     done ? { x, y: 150 + k, skin, top, low, head, pose: 'lift', f, wrap, ph: cheer + x } : { x, y: 150 + k, skin, top, low, head, pose: 'push', f, wrap, ph: pushPh + (f > 0 ? 0 : 1.4) };
-  const lifting = T >= 2.5;
+  const lifting = T >= 4.5;
   const lifter = (x: number, skin: number, top: string, low: string, head: Folk['head'], f: 1 | -1, wrap?: string): Folk => ({
     x,
     y: 152,
@@ -382,12 +406,12 @@ function world1(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
   // The basket on the child's head, full of brass pins
   box(g, kidX - 4, 145, 9, 4, '#c8964a', INK, 0.5);
   for (let i = 0; i < 3; i++) disc(g, kidX - 2 + i * 2.5, 144.5, 1, C.brass);
-  // The last spoke: held low, lifted (2.5 to 4.0 s) and slid into its slot
+  // The last spoke: held low, lifted (4.5 to 6.5 s) and slid into its slot
   if (!done) {
-    // Up over their heads (2.5 to 3.3 s), then slid into the hub (3.3 to 4.0 s)
-    const up = ease(span(T, 2.5, 3.3)) * 16;
-    const k = ease(span(T, 3.3, 3.95));
-    const [ix, iy, ox, oy] = slotAt4();
+    // Up over their heads (5.0 to 5.8 s), then slid into the hub (5.8 to 6.5 s)
+    const up = ease(span(T, 5, 5.8)) * 16;
+    const k = ease(span(T, 5.8, 6.45));
+    const [ix, iy, ox, oy] = slotAtClick();
     const pts = [lerp(150, ix, k), lerp(144 - up, iy, k), lerp(174.6, ox, k), lerp(144 - up, oy, k)];
     line(g, C.woodDark, 4.4, pts);
     line(g, '#e0a868', 2.6, pts);
@@ -400,7 +424,7 @@ function world1(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
   });
 }
 
-// ---------- Beat 2: the Wheel turns and Lagos grows (6 to 11 s) ----------
+// ---------- Beat 2: the Wheel turns and Lagos grows (11 to 19.6 s) ----------
 
 const W2 = { x: 66, y: 84, r: 42 } as const;
 
@@ -439,10 +463,10 @@ function crane(g: CanvasRenderingContext2D, x: number, top: number, w: number, s
 
 function world2(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: number, withWheel: boolean): void {
   still(g, base, e, 'back2', (cg) => back2(cg, e));
-  // Buildings grow up from the shore one after another (each 0.4 s, 0.25 s apart)
-  const lit = span(T, 8.5, 11);
+  // Buildings grow up from the shore one after another (each 0.5 s, 0.4 s apart, 11.8 to 15 s)
+  const lit = span(T, 17.5, 19.6);
   TOWN.forEach(([x, w, h, wall, cr], i) => {
-    const k = ease(span(T, 6.8 + i * 0.25, 7.2 + i * 0.25));
+    const k = ease(span(T, 11.8 + i * 0.4, 12.3 + i * 0.4));
     if (k <= 0) return;
     const drop = (1 - k) * (h + 34);
     g.save();
@@ -456,7 +480,7 @@ function world2(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
   });
   still(g, base, e, 'front2', (cg) => front2(cg, e));
   // Two yellow buses roll in over the bridge and stop
-  for (const [to, t0, t1] of [[150, 8, 9.6], [220, 8.4, 10.5]] as const) {
+  for (const [to, t0, t1] of [[150, 14, 15.6], [220, 14.9, 17]] as const) {
     if (T < t0) continue;
     const x = lerp(e.l - 18, to, easeOut(span(T, t0, t1)));
     g.save();
@@ -473,7 +497,7 @@ function world2(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
     { x: 0, y: 173, skin: 3, top: '#e9e1cf', low: '#e9e1cf', head: 'grey', pose: 'walk' },
     { x: 0, y: 172, skin: 0, top: '#9b59b6', low: '#5b4636', head: 'puff', pose: 'walk' },
   ];
-  const starts = [8.5, 8.85, 8.85, 9.4, 9.8];
+  const starts = [15, 15.35, 15.35, 15.9, 16.3];
   walkers.forEach((p, i) => {
     const t0 = starts[i]!;
     if (T < t0) return;
@@ -500,7 +524,7 @@ function wheel2(g: CanvasRenderingContext2D, T: number, x: number, y: number, r:
   }
 }
 
-// ---------- Beat 3: Nigeria's Wheel (11 to 15.5 s) ----------
+// ---------- Beat 3: Nigeria's Wheel (19.6 to 25.4 s) ----------
 
 /** Lagos on the map (the south-west coast). */
 const LAGOS = toFrame([3.39, 6.47]);
@@ -519,7 +543,10 @@ function outlineTour(): { pts: [number, number][]; at: number[] } {
   return tour;
 }
 
-/** Each border cog's pop-in time: from Lagos both ways round, 0.03 s a step (13.0 to 14.1 s). */
+/** The first border cog pops in here (s). */
+const COGS_IN = 21.8;
+
+/** Each border cog's pop-in time: from Lagos both ways round, 0.03 s a step (from 21.8 s). */
 let popAt: number[] | null = null;
 function cogPops(): number[] {
   if (popAt) return popAt;
@@ -531,7 +558,7 @@ function cogPops(): number[] {
   const n = cogs.length;
   popAt = cogs.map((_, i) => {
     const d = Math.abs(i - near);
-    return 13 + Math.min(d, n - d) * 0.03;
+    return COGS_IN + Math.min(d, n - d) * 0.03;
   });
   return popAt;
 }
@@ -582,7 +609,7 @@ function map3Land(g: CanvasRenderingContext2D, fill: number, outline: boolean): 
 function cogChain(g: CanvasRenderingContext2D, T: number): void {
   const cogs = borderCogs();
   const pops = cogPops();
-  const turn = Math.max(0, T - 14.2) * 0.6;
+  const turn = Math.max(0, T - 23.2) * 0.6;
   const n = 8;
   const R = cogs[0] ? cogs[0].r * 1.4 : 7;
   const pic = spriteSharp(g) ? sprite('cog', R, (cg) => cogChainAt(cg, 0, 0, R / 1.4)) : null;
@@ -670,17 +697,17 @@ function lagosDot(g: CanvasRenderingContext2D, a: number, big: number): void {
 }
 
 function world3(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: number, withWheel = true): void {
-  if (T >= 13) {
+  if (T >= COGS_IN) {
     still(g, base, e, 'map3', (cg) => {
       map3Sky(cg, e);
       map3Land(cg, 1, true);
     });
   } else {
     map3Sky(g, e);
-    const fill = span(T, 12.4, 13);
+    const fill = span(T, 21.1, COGS_IN);
     map3Land(g, fill, fill >= 1);
-    // The outline draws itself round from Lagos (11.8 to 12.4 s)
-    const d = ease(span(T, 11.8, 12.4));
+    // The outline draws itself round from Lagos (20.4 to 21.1 s), then fills (21.1 to 21.8 s)
+    const d = ease(span(T, 20.4, 21.1));
     if (d > 0 && fill < 1) {
       const { pts, at } = outlineTour();
       const L = at[at.length - 1]! * d;
@@ -701,9 +728,9 @@ function world3(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numbe
       g.stroke();
     }
   }
-  if (T >= 13) cogChain(g, T);
-  // Soft light pulses out from the Wheel twice (14.3 and 14.95 s), never a flash
-  for (const p0 of [14.3, 14.95]) {
+  if (T >= COGS_IN) cogChain(g, T);
+  // Soft light pulses out from the Wheel twice (23.6 and 24.6 s, 1 a second), never a flash
+  for (const p0 of [23.6, 24.6]) {
     const k = span(T, p0, p0 + 0.6);
     if (k > 0 && k < 1)
       faded(g, (1 - k) * 0.8, () => {
@@ -728,7 +755,7 @@ export function prepareIntroScene(): void {
   outlineTour();
 }
 
-// ---------- Beats 4 and 5: the Stoppers, then the hero (15.5 to 24.5 s) ----------
+// ---------- Beats 4 and 5: the Stoppers, then the hero (25.4 to 39 s) ----------
 
 const W4 = { x: 160, y: 84, r: 44 } as const;
 const GROUND = 128;
@@ -745,18 +772,19 @@ interface StopperPlace {
 }
 
 const STOPPER_PLACES: readonly StopperPlace[] = [
-  { kind: 'jam', x: 36, y: 172, s: 1.15, at: 16, side: -1 },
-  { kind: 'pothole', x: 84, y: 177, s: 1, at: 16.7, side: -1 },
-  { kind: 'darkLamp', x: 232, y: 172, s: 1.3, at: 17.4, side: 1 },
-  { kind: 'redTape', x: 290, y: 171, s: 1.25, at: 18.1, side: 1 },
+  // a2.12: in the order the caption names them (traffic, potholes, power cuts, red tape)
+  { kind: 'jam', x: 36, y: 172, s: 1.15, at: 26, side: -1 },
+  { kind: 'pothole', x: 84, y: 177, s: 1, at: 26.9, side: -1 },
+  { kind: 'darkLamp', x: 232, y: 172, s: 1.3, at: 27.8, side: 1 },
+  { kind: 'redTape', x: 290, y: 171, s: 1.25, at: 28.7, side: 1 },
 ];
 
 /** Where the hero stands to push (feet), and the hero's size. */
 const HERO4 = { x: 121, y: 150, s: 0.95 } as const;
 
 function sky45(T: number): [string, string] {
-  const grey = ease(span(T, 15.8, 17));
-  const gold = ease(span(T, 23, 24.5));
+  const grey = ease(span(T, 25.7, 27));
+  const gold = ease(span(T, 35.8, 37.5));
   let top = mixHex('#bfe6f5', '#b9b3cf', grey);
   let bottom = mixHex('#fff4d9', '#efe3cf', grey);
   top = mixHex(top, '#ffcf7a', gold);
@@ -764,23 +792,26 @@ function sky45(T: number): [string, string] {
   return [top, bottom];
 }
 
-/** The wedge: under the Wheel from 19.1 s, popped out in a spinning arc from 22.3 s. */
+/** The wedge pops out here (s), as the hero pushes. */
+const POP = 34.6;
+
+/** The wedge: under the Wheel from 29.9 s, popped out in a spinning arc from 34.6 s. */
 function wedge(g: CanvasRenderingContext2D, e: Ext, T: number): void {
-  if (T < 18.6) return;
+  if (T < 29.4) return;
   let x: number;
   let y: number;
   let rot = 0;
   let s = 1;
-  if (T < 22.3) {
-    // Nudged along by the stack from in front of it to under the Wheel (18.6 to 19.1 s)
-    const k = easeOut(span(T, 18.6, 19.1));
+  if (T < POP) {
+    // Nudged along by the stack from in front of it to under the Wheel (29.4 to 29.9 s)
+    const k = easeOut(span(T, 29.4, 29.9));
     x = lerp(262, 166, k);
     y = lerp(170, GROUND - 3, k) - Math.sin(k * Math.PI) * 6;
     s = lerp(1.3, 1, k);
     rot = Math.sin(k * Math.PI * 3) * 0.15 * (1 - k);
   } else {
     // Off the screen in a funny spinning arc, up and over everyone
-    const u = T - 22.3;
+    const u = T - POP;
     x = 166 + u * 150;
     y = GROUND - 3 - u * 190 + u * u * 120;
     rot = u * 9;
@@ -828,14 +859,14 @@ function stopperAt(g: CanvasRenderingContext2D, e: Ext, p: StopperPlace, T: numb
     x = lerp(e.r + 30, p.x, k);
     y -= Math.abs(Math.sin(k * Math.PI * 2)) * 12;
   }
-  // The stack nudges the wedge (18.6 to 19.0 s)
-  if (p.kind === 'redTape') x -= Math.sin(span(T, 18.6, 19) * Math.PI) * 10;
-  // Lean back, pleased (19.4 to 20 s), then flinch back a step (23.0 to 23.3 s)
-  const lean = ease(span(T, 19.4, 19.9)) * (1 - ease(span(T, 23, 23.3)));
-  const flinch = ease(span(T, 23, 23.3));
+  // The stack nudges the wedge (29.4 to 29.8 s)
+  if (p.kind === 'redTape') x -= Math.sin(span(T, 29.4, 29.8) * Math.PI) * 10;
+  // Lean back, pleased (30.4 to 30.9 s), then flinch back a step (36.0 to 36.3 s)
+  const lean = ease(span(T, 30.4, 30.9)) * (1 - ease(span(T, 36, 36.3)));
+  const flinch = ease(span(T, 36, 36.3));
   x += p.side * flinch * 9;
-  y -= Math.sin(span(T, 23, 23.3) * Math.PI) * 3;
-  const blink = (T > 23.1 && T < 23.32) || (T > 19.75 && T < 19.88);
+  y -= Math.sin(span(T, 36, 36.3) * Math.PI) * 3;
+  const blink = (T > 36.1 && T < 36.32) || (T > 30.75 && T < 30.88);
   g.save();
   g.translate(x, y);
   g.rotate(p.side * lean * 0.12);
@@ -866,10 +897,10 @@ function stopperAt(g: CanvasRenderingContext2D, e: Ext, p: StopperPlace, T: numb
     });
   }
   g.restore();
-  // Grumbling: small zigzags over its head (23.3 to 24.5 s)
-  if (T > 23.3) {
+  // Grumbling: small zigzags over its head (36.3 to 37.0 s)
+  if (T > 36.3) {
     const top = p.kind === 'darkLamp' ? -50 : p.kind === 'pothole' ? -22 : -44;
-    faded(g, 1 - span(T, 24.1, 24.5), () => {
+    faded(g, 1 - span(T, 36.6, 37), () => {
       const gx = x + p.side * 4;
       const gy = y + top * p.s - 4 - Math.sin(T * 6) * 1;
       line(g, INK, 0.9, [gx - 5, gy, gx - 3, gy - 2, gx - 1, gy, gx + 1, gy - 2, gx + 3, gy, gx + 5, gy - 2]);
@@ -879,14 +910,15 @@ function stopperAt(g: CanvasRenderingContext2D, e: Ext, p: StopperPlace, T: numb
 
 /** The hero in beats 4 and 5: walking in, stopping, pushing, then standing tall. */
 function hero45(g: CanvasRenderingContext2D, e: Ext, T: number, look: HeroLook | null): void {
-  if (T < 20) return;
-  const walkK = span(T, 20, 21.5);
+  if (T < 31.6) return;
+  // Walks in (31.6 to 33.6 s), looks, hands on the Wheel (to 34.4 s), pushes (to 35.8 s)
+  const walkK = span(T, 31.6, 33.6);
   const startX = Math.min(e.l - 14, -14);
-  const x = lerp(startX, HERO4.x, walkK) + ease(span(T, 22.3, 23)) * 3;
-  const walking = T < 21.5;
-  const push = T < 21.6 ? 0 : T < 23.2 ? ease(span(T, 21.6, 22)) : 1 - ease(span(T, 23.2, 23.7));
+  const x = lerp(startX, HERO4.x, walkK) + ease(span(T, POP, 35.3)) * 3;
+  const walking = T < 33.6;
+  const push = T < 33.9 ? 0 : T < 35.5 ? ease(span(T, 33.9, 34.3)) : 1 - ease(span(T, 35.5, 36));
   // A hard shove while the Wheel creaks and rocks
-  const shove = T > 22 && T < 23 ? Math.sin(span(T, 22, 23) * Math.PI * 3) * 0.08 : 0;
+  const shove = T > 34.3 && T < 35.3 ? Math.sin(span(T, 34.3, 35.3) * Math.PI * 3) * 0.08 : 0;
   // A little shadow on the ground
   faded(g, 0.18, () => {
     g.fillStyle = INK;
@@ -932,24 +964,24 @@ function sky45Paint(g: CanvasRenderingContext2D, e: Ext, T: number): void {
   sky.addColorStop(1, bottom);
   g.fillStyle = sky;
   g.fillRect(e.l, e.t, e.r - e.l, GROUND + 1 - e.t);
-  // A warm patch of light opens on the left (20 s), then light floods back (23 s)
-  const warm = ease(span(T, 20, 20.8));
+  // A warm patch of light opens on the left (31.6 s), then light floods back (35.8 s)
+  const warm = ease(span(T, 31.6, 32.4));
   if (warm > 0) {
-    faded(g, warm * (1 - span(T, 23.5, 24.5) * 0.5), () => {
+    faded(g, warm * (1 - span(T, 36.3, 37.5) * 0.5), () => {
       disc(g, 20, 112, 30 + warm * 50, 'rgba(255,226,150,0.35)');
       disc(g, 20, 112, 20 + warm * 30, 'rgba(255,236,180,0.45)');
     });
   }
-  const flood = ease(span(T, 23, 24));
+  const flood = ease(span(T, 35.8, 36.8));
   if (flood > 0) faded(g, flood, () => disc(g, W4.x, W4.y, 72, 'rgba(255,236,170,0.6)'));
 }
 
 function world45(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: number, look: HeroLook | null, withWheel: boolean): void {
-  // While the light holds still (lilac 17 to 20 s, lilac with the warm patch 20.8 to 23 s, gold
-  // from 24.5 s), sky and road are one copied layer; while it changes, only the sky is painted.
-  const hold = T >= 17 && T < 20 ? 'lilac' : T >= 20.8 && T < 23 ? 'warm' : T >= 24.5 ? 'gold' : null;
+  // While the light holds still (lilac 27 to 31.6 s, lilac with the warm patch 32.4 to 35.8 s,
+  // gold from 37.5 s), sky and road are one copied layer; while it changes, only the sky is painted.
+  const hold = T >= 27 && T < 31.6 ? 'lilac' : T >= 32.4 && T < 35.8 ? 'warm' : T >= 37.5 ? 'gold' : null;
   if (hold) {
-    const at = hold === 'lilac' ? 18 : hold === 'warm' ? 21 : 25;
+    const at = hold === 'lilac' ? 29 : hold === 'warm' ? 33 : 38;
     still(g, base, e, `sky45${hold}`, (cg) => {
       sky45Paint(cg, e, at);
       ground45(cg, e);
@@ -958,16 +990,16 @@ function world45(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: numb
     sky45Paint(g, e, T);
     still(g, base, e, 'ground45', (cg) => ground45(cg, e), GROUND - 1);
   }
-  if (withWheel) wheel(g, W4.x, W4.y, W4.r, wheelAngle(T), 0, T >= 19.2 && T < 23);
+  if (withWheel) wheel(g, W4.x, W4.y, W4.r, wheelAngle(T), 0, T >= 30.2 && T < 35.8);
   wedge(g, e, T);
-  // The hero walks on the pavement behind the Stoppers, which sit nearer, in the road (qa: from
-  // 20.3 to 20.9 s the hero was drawn over the jam's cars, as if walking on them).
+  // The hero walks on the pavement behind the Stoppers, which sit nearer, in the road (qa: as the
+  // hero walked in, it was drawn over the jam's cars, as if walking on them).
   hero45(g, e, T, look);
   for (const p of STOPPER_PLACES) if (p.kind === 'jam' || p.kind === 'pothole') stopperAt(g, e, p, T);
   for (const p of STOPPER_PLACES) if (p.kind !== 'jam' && p.kind !== 'pothole') stopperAt(g, e, p, T);
 }
 
-// ---------- Beat 6: the journey starts at a Lagos bus stop (24.5 s on) ----------
+// ---------- Beat 6: the journey starts at a Lagos bus stop (39 s on) ----------
 
 /**
  * The bus's resting place (wheels on y) and size. It faces left here and rolls in from the
@@ -977,7 +1009,7 @@ const BUS6 = { x: 204, y: 150, s: 1.05 } as const;
 const DOOR_X = BUS6.x - 23 * BUS6.s;
 /** Where the hero stops: at the door (qa: not beside the front wheel). */
 const HERO6_X = DOOR_X - 2;
-/** How fast the people waiting walk to the door (units a second): the last is on by 27.4 s. */
+/** How fast the people waiting walk to the door (units a second): the last is on by about 42 s. */
 const QUEUE_PACE = 72;
 
 function back6(g: CanvasRenderingContext2D, e: Ext): void {
@@ -1008,9 +1040,13 @@ function back6(g: CanvasRenderingContext2D, e: Ext): void {
   g.restore();
 }
 
-/** The bus's x at time T: rolling in from the right, slowing to a stop at 25.9 s. */
+/** The bus starts rolling in (during the zoom out of the hub) and stops (s). */
+const BUS_IN = 39.35;
+const BUS_STOP = 40.4;
+
+/** The bus's x at time T: rolling in from the right, slowing to a stop at 40.4 s. */
 function busX(T: number): number {
-  return BUS6.x + 150 * (1 - easeOut(span(T, 24.85, 25.9)));
+  return BUS6.x + 150 * (1 - easeOut(span(T, BUS_IN, BUS_STOP)));
 }
 
 /** Where the bus's front wheel is at time T (the zoom follows it). */
@@ -1021,17 +1057,17 @@ function frontWheel(T: number): [number, number] {
 /** The bus, with turning hub bolts on its wheels, a little rock as it stops and a gentle idle. */
 function bus6(g: CanvasRenderingContext2D, T: number): void {
   const x = busX(T);
-  const rock = T > 25.9 ? Math.sin((T - 25.9) * 16) * 0.03 * Math.max(0, 1 - (T - 25.9) / 0.45) : 0;
-  const idle = T > 26.4 ? Math.sin(T * 3.2) * 0.5 : 0;
+  const rock = T > BUS_STOP ? Math.sin((T - BUS_STOP) * 16) * 0.03 * Math.max(0, 1 - (T - BUS_STOP) / 0.45) : 0;
+  const idle = T > BUS_STOP + 0.5 ? Math.sin(T * 3.2) * 0.5 : 0;
   g.save();
   // Rocks on its back wheel as it stops
   g.translate(x + 26 * BUS6.s, BUS6.y);
   g.rotate(rock);
   g.translate(-26 * BUS6.s, idle);
   g.scale(-BUS6.s, BUS6.s);
-  drawBusShape(g, 0, 0, 0, T >= 26);
+  drawBusShape(g, 0, 0, 0, T >= 40.6);
   // The wheels turn as it rolls: the same turning that was the Wheel's
-  const spin = (busX(24.85) - x) / 7 + wheelAngle(T) * 0.05;
+  const spin = (busX(BUS_IN) - x) / 7 + wheelAngle(T) * 0.05;
   g.fillStyle = '#d0d0d0';
   g.beginPath();
   for (const wx of [-26, 26])
@@ -1055,22 +1091,22 @@ const QUEUE: readonly Folk[] = [
 function world6(g: CanvasRenderingContext2D, e: Ext, base: Base | null, T: number, look: HeroLook | null): void {
   still(g, base, e, 'back6', (cg) => back6(cg, e));
   bus6(g, T);
-  // The people waiting step on, one after another (25.8 to 27.2 s)
+  // The people waiting step on, one after another (from 40.4 s)
   QUEUE.forEach((p, i) => {
-    const t0 = 25.8 + i * 0.18;
+    const t0 = 40.4 + i * 0.18;
     const x = T < t0 ? p.x : Math.min(DOOR_X, p.x + (T - t0) * QUEUE_PACE);
     const there = t0 + (DOOR_X - p.x) / QUEUE_PACE;
     const gone = span(T, there - 0.05, there + 0.12);
     if (gone >= 1) return;
     faded(g, 1 - gone, () => person(g, T < t0 ? p : { ...p, x, pose: 'walk', f: 1, ph: (T - t0) * 10 }));
   });
-  // The hero jogs in from the left and stops at the bus door, ready (27.2 s)
-  if (T >= 25.6) {
+  // The hero jogs in from the left and stops at the bus door, ready (41.0 to 42.6 s)
+  if (T >= 41) {
     const s = 0.62;
     const startX = Math.min(e.l - 14, -14);
-    const k = easeOut(span(T, 25.6, 27.2));
+    const k = easeOut(span(T, 41, 42.6));
     const x = lerp(startX, HERO6_X, k);
-    const moving = T < 27.2;
+    const moving = T < 42.6;
     const dist = (x - startX) / s;
     g.save();
     g.translate(x, BUS6.y);
@@ -1111,10 +1147,12 @@ export function drawIntroScene(g: CanvasRenderingContext2D, w: number, h: number
   const W = w > 0 && Number.isFinite(w) ? w : INTRO_VIEW.w;
   const H = h > 0 && Number.isFinite(h) ? h : INTRO_VIEW.h;
   const look = opts.look ?? null;
-  const s = Math.min(W / INTRO_VIEW.w, H / INTRO_VIEW.h);
+  // a2.12: the picture fits above the subtitle strip; the ground carries on under it
+  const inset = Number.isFinite(opts.inset) ? Math.min(Math.max(0, opts.inset!), H * 0.6) : 0;
+  const s = Math.min(W / INTRO_VIEW.w, (H - inset) / INTRO_VIEW.h);
   const ox = (W - INTRO_VIEW.w * s) / 2;
-  const oy = (H - INTRO_VIEW.h * s) / 2;
-  const e: Ext = { l: -ox / s - 1, r: INTRO_VIEW.w + ox / s + 1, t: -oy / s - 1, b: INTRO_VIEW.h + oy / s + 1 };
+  const oy = (H - inset - INTRO_VIEW.h * s) / 2;
+  const e: Ext = { l: -ox / s - 1, r: INTRO_VIEW.w + ox / s + 1, t: -oy / s - 1, b: (H - oy) / s + 1 };
   g.save();
   g.beginPath();
   g.rect(0, 0, W, H);
@@ -1128,11 +1166,11 @@ export function drawIntroScene(g: CanvasRenderingContext2D, w: number, h: number
   }
   curBase = base;
 
-  if (T < 6) {
+  if (T < 11) {
     world1(g, e, base, T, true);
-  } else if (T < 6.8) {
+  } else if (T < 11.8) {
     // The camera slides right: the savanna out to the left, the lagoon in; the Wheel stays
-    const k = ease(span(T, 6, 6.8));
+    const k = ease(span(T, 11, 11.8));
     // Slide by whole screen pixels, so the copied layers stay sharp and cheap
     const px = base ? base.k : 1;
     const D = Math.round((e.r - e.l) * px) / px;
@@ -1147,12 +1185,12 @@ export function drawIntroScene(g: CanvasRenderingContext2D, w: number, h: number
     clipExt(g, e);
     world2(g, e, base, T, false);
     g.restore();
-    wheelAt(g, T, W1, W2, k);
-  } else if (T < 11) {
+    wheelAt(g, T, { ...W1, r: W1.r * drift1(T) }, W2, k);
+  } else if (T < 19.6) {
     world2(g, e, base, T, true);
-  } else if (T < 11.8) {
+  } else if (T < 20.4) {
     // The camera pulls back and up: the city shrinks to a glowing dot on Lagos
-    const k = ease(span(T, 11, 11.8));
+    const k = ease(span(T, 19.6, 20.4));
     still(g, base, e, 'sky3', (cg) => map3Sky(cg, e));
     const sc = Math.pow(0.04, k);
     faded(g, 1 - span(k, 0.15, 0.6), () =>
@@ -1163,11 +1201,11 @@ export function drawIntroScene(g: CanvasRenderingContext2D, w: number, h: number
     );
     lagosDot(g, k, 1 - k);
     wheelAt(g, T, W2, MAP_WHEEL, k);
-  } else if (T < 15.5) {
+  } else if (T < 25.4) {
     world3(g, e, base, T);
-  } else if (T < 16.1) {
+  } else if (T < 26) {
     // The camera drops back to the ground: the map grows and fades, the road rises into view
-    const k = ease(span(T, 15.5, 16.1));
+    const k = ease(span(T, 25.4, 26));
     const [top, bottom] = sky45(T);
     grad(g, e, 0, 180, top, bottom);
     g.save();
@@ -1176,18 +1214,18 @@ export function drawIntroScene(g: CanvasRenderingContext2D, w: number, h: number
     g.restore();
     faded(g, 1 - span(k, 0, 0.7), () => zoomed(g, 1 + k * 1.5, MAP_WHEEL.x, MAP_WHEEL.y, MAP_WHEEL.x, MAP_WHEEL.y, () => world3(g, e, base, T, false)));
     wheelAt(g, T, MAP_WHEEL, W4, k);
-  } else if (T < 24.5) {
+  } else if (T < 39) {
     world45(g, e, base, T, look, true);
-  } else if (T < 25.3) {
+  } else if (T < 39.8) {
     // The camera rushes in to the Wheel's hub; pulling back out, it is the bus's front wheel
-    if (T < 24.95) {
-      const k = span(T, 24.5, 24.85);
+    if (T < 39.45) {
+      const k = span(T, 39, 39.35);
       zoomed(g, Math.pow(9, k * k), W4.x, W4.y, W4.x, W4.y, () => world45(g, e, base, T, look, true));
     }
-    if (T > 24.85) {
-      const k = ease(span(T, 24.85, 25.3));
+    if (T > 39.35) {
+      const k = ease(span(T, 39.35, 39.8));
       const [fx, fy] = frontWheel(T);
-      faded(g, span(T, 24.85, 24.95), () =>
+      faded(g, span(T, 39.35, 39.45), () =>
         zoomed(g, Math.pow(9, 1 - k), fx, fy, lerp(W4.x, fx, k), lerp(W4.y, fy, k), () => world6(g, e, base, T, look)),
       );
     }

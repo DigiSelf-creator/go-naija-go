@@ -16,8 +16,6 @@ const CAPTIONS = [
   'Nigeria called a hero to keep the Wheel turning: the Wheel Hero. That hero is you.',
   'Your journey starts now. Build up Lagos. Get Nigeria working.',
 ];
-const HERO_LINE = 'That hero is you.';
-const END_LINE = 'Build up Lagos. Get Nigeria working.';
 
 const story = (page: Page) => page.getByRole('dialog', { name: 'The story' });
 const intro = (page: Page) => page.evaluate(() => window.__game!.intro!);
@@ -211,7 +209,7 @@ for (const [w, h] of [
   [480, 220],
   [915, 412],
 ] as const) {
-  test(`break: at ${w} x ${h} the lines and "Let's go" show whole, inside the screen and clear of Skip`, async ({ page }) => {
+  test(`break: at ${w} x ${h} the subtitle and "Let's go" show whole, inside the screen and clear of Skip`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await page.goto('./');
     await page.getByRole('button', { name: 'Make your hero' }).tap();
@@ -229,21 +227,32 @@ for (const [w, h] of [
       expect(r.x + r.width <= skip.x || r.y >= skip.y + skip.height || r.y + r.height <= skip.y, `${sel} clear of Skip`).toBe(true);
       return r;
     };
-    for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
-    await expect(page.getByText(HERO_LINE, { exact: true })).toBeVisible({ timeout: 6000 });
-    await whole('.intro-hero-line');
+    // a2.12: each beat's line in the strip, whole and at most 3 lines
+    const lines = () => page.locator('.intro-sub').evaluate((n) => Math.round((n as HTMLElement).offsetHeight / parseFloat(getComputedStyle(n).lineHeight)));
+    for (let b = 0; b < 6; b++) {
+      if (b > 0) await page.keyboard.press('ArrowRight');
+      await expect.poll(async () => { const s = (await intro(page)).sub; return s !== '' && CAPTIONS[b]!.startsWith(s); }).toBe(true);
+      await whole('.intro-sub');
+      expect(await lines()).toBeLessThanOrEqual(3);
+    }
     await page.keyboard.press('ArrowRight');
     await expect(story(page).getByRole('button', { name: "Let's go" })).toBeVisible({ timeout: 6000 });
-    const end = await whole('.intro-end-line');
-    await expect(page.locator('.intro-end-line')).toHaveText(END_LINE);
+    await expect(page.locator('.intro-sub')).toHaveText(CAPTIONS[5]!);
+    await whole('.intro-strip');
     const go = await whole('.intro-go');
     expect(go.height).toBeGreaterThanOrEqual(44);
     expect(go.width).toBeGreaterThanOrEqual(44);
-    expect(end.y + end.height <= go.y || go.y + go.height <= end.y).toBe(true);
+    // "Let's go" sits at the strip's right end, after the words
+    const words = await page.locator('.intro-sub').evaluate((n) => {
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      return Math.max(...[...range.getClientRects()].map((r) => r.right));
+    });
+    expect(words).toBeLessThanOrEqual(go.x);
   });
 }
 
-test('only "Skip", "Let\'s go" and the two lines are ever on screen: no other words in the story card', async ({ page }) => {
+test('only "Skip", "Let\'s go" and the beat\'s own caption (or a piece of it) are ever on screen: no other words in the story card', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'Make your hero' }).tap();
   await expect.poll(async () => (await intro(page)).mode).toBe('moving');
@@ -261,10 +270,11 @@ test('only "Skip", "Let\'s go" and the two lines are ever on screen: no other wo
       }
       return out;
     });
-  const allowed = new Set(['Skip', "Let's go", HERO_LINE, END_LINE]);
+  const ok = (s: string, b: number) => s === 'Skip' || s === "Let's go" || CAPTIONS[b]!.includes(s);
   for (let b = 0; b < 6; b++) {
-    for (const s of await shown()) expect(allowed.has(s), s).toBe(true);
+    await expect.poll(async () => { const s = (await intro(page)).sub; return s !== '' && CAPTIONS[b]!.includes(s); }).toBe(true);
+    for (const s of await shown()) expect(ok(s, b), s).toBe(true);
     await page.keyboard.press('ArrowRight');
   }
-  for (const s of await shown()) expect(allowed.has(s), s).toBe(true);
+  for (const s of await shown()) expect(ok(s, 5), s).toBe(true);
 });

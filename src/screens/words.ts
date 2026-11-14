@@ -143,10 +143,10 @@ export const WORDS = {
     tapOn: 'Tap to go on',
     keysOn: 'Press Space to go on',
     go: "Let's go",
-    /** city.md a2.4: the moving intro's only words on screen, beat 5 (23 to 24.5 s). */
-    heroLine: 'That hero is you.',
-    /** city.md a2.4: beat 6, from 27.2 s; the title's own words, so they cannot drift apart. */
-    endLine: TAGLINE,
+    /**
+     * One per beat, word for word; the moving intro shows them as subtitles (a2.12). Caption 5
+     * ends with "That hero is you." and caption 6 with the title's line (a unit test checks).
+     */
     captions: [
       'Long ago, light shone on West Africa. Its people and its rich land made the Wheel, so everyone could share, stay safe and keep going.',
       'The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses.',

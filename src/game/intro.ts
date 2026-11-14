@@ -108,24 +108,82 @@ export class IntroFlow {
 export const INTRO_CHOICES = {
   /** a2.3: a tap anywhere but a button (and Space, Enter, →) jumps to the next beat. false: they do nothing; Skip, Escape and "Let's go" still work. */
   tapJumps: true,
-  /** a2.4: "That hero is you." (beat 5) and "Build up Lagos. Get Nigeria working." (beat 6) show on screen. false: no words but Skip and "Let's go". */
-  lines: true,
+  /** a2.12: each beat's caption shows as a subtitle in a strip at the bottom. false: no words on screen but Skip and "Let's go" (the log still says them). */
+  subtitles: true,
   /** a2.5: with reduce motion on, the six still frames with captions play (step (a)). false: the moving scene plays anyway. */
   stillFramesForReducedMotion: true,
 } as const;
 
 /**
- * Each beat's opening camera move (s), by beat 0 to 5 (a2.2): the slide right at 6, the pull
- * back to the map at 11, the drop to the road at 15.5, the hub-to-bus zoom at 24.5. Beats 1 and
- * 5 open with no camera move.
+ * Each beat's opening camera move (s), by beat 0 to 5 (a2.2, times a2.12): the slide right at 11,
+ * the pull back to the map at 19.6, the drop to the road at 25.4, the hub-to-bus zoom at 39.
+ * Beats 1 and 5 open with no camera move.
  */
 export const INTRO_MOVES: readonly number[] = [0, 0.8, 0.8, 0.6, 0, 0.8];
 /** After a jump the new beat's opening camera move plays in this long (s), so the picture never pops (a2.3). */
 export const JUMP_MOVE = 0.3;
-/** "That hero is you." shows from, to (s) (a2.2 beat 5, a2.4). */
-export const HERO_LINE = [23, 24.5] as const;
-/** "Build up Lagos. Get Nigeria working." fades in from here (s) and stays (a2.2 beat 6). */
-export const END_LINE_AT = 27.2;
+
+// ---------------------------------------------------------------- a2.12 the subtitles
+
+/** Each subtitle line fades in and out over this long (s). */
+export const LINE_FADE = 0.3;
+
+/** The words in a line (runs of letters and marks between spaces). */
+export function wordCount(text: string): number {
+  return text.split(/\s+/).filter((w) => w.length > 0).length;
+}
+
+/**
+ * a2.12 point 5: a caption that does not fit the strip (3 lines) shows in two pieces, split at
+ * a full stop, one after the other. `fits` says whether a piece fits. The whole caption when it
+ * fits; else the first full-stop split where both pieces fit, else the split whose longer piece
+ * is shortest (it is never cut or shrunk; the strip is sized so that does not happen at 320 px).
+ */
+export function splitCaption(text: string, fits: (piece: string) => boolean): string[] {
+  if (fits(text)) return [text];
+  const cuts: number[] = [];
+  const re = /\.\s+/g;
+  for (let m = re.exec(text); m; m = re.exec(text)) cuts.push(m.index + 1);
+  if (cuts.length === 0) return [text];
+  const pieces = cuts.map((c) => [text.slice(0, c).trim(), text.slice(c).trim()] as [string, string]);
+  const good = pieces.find(([a, b]) => fits(a) && fits(b));
+  if (good) return good;
+  let best = pieces[0]!;
+  for (const p of pieces) if (Math.max(p[0].length, p[1].length) < Math.max(best[0].length, best[1].length)) best = p;
+  return best;
+}
+
+/** Which piece of a beat's line shows at story time t, and how far it has faded in (0 to 1). */
+export interface SubtitleState {
+  piece: number;
+  alpha: number;
+}
+
+/**
+ * The subtitle at story time t in a beat from `start` to `end` (s), its line in `pieces`: the
+ * beat's time is shared by word count. Each piece fades in over LINE_FADE at its start (not when
+ * `fadeIn` is false: a jump shows the line at once) and out over LINE_FADE at its end (not the
+ * last piece when `fadeOut` is false: caption 6 stays through the hold).
+ */
+export function subtitleAt(pieces: readonly string[], start: number, end: number, t: number, fadeIn = true, fadeOut = true): SubtitleState {
+  const n = Math.max(1, pieces.length);
+  const words = pieces.map(wordCount);
+  const total = words.reduce((a, b) => a + b, 0) || 1;
+  const len = Math.max(0, end - start);
+  let from = start;
+  for (let i = 0; i < n; i++) {
+    const to = i === n - 1 ? end : from + (len * (words[i] ?? 0)) / total;
+    if (t < to || i === n - 1) {
+      const fin = fadeIn || i > 0 ? clamp01((t - from) / LINE_FADE) : 1;
+      const fout = fadeOut || i < n - 1 ? clamp01((to - t) / LINE_FADE) : 1;
+      return { piece: i, alpha: Math.min(fin, fout) };
+    }
+    from = to;
+  }
+  return { piece: n - 1, alpha: 1 };
+}
+
+const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 /** A timed cue (src/art/intro-scene.ts INTRO_CUES): only its time matters to the clock. */
 export interface TimedCue {
@@ -154,10 +212,6 @@ export function musicLevelAt(cues: readonly TimedCue[], t: number): number | nul
   return level;
 }
 
-/** "That hero is you." shows at story time t (a2.4). */
-export const heroLineShown = (t: number): boolean => INTRO_CHOICES.lines && t >= HERO_LINE[0] && t < HERO_LINE[1];
-/** "Build up Lagos. Get Nigeria working." shows at story time t (a2.4). */
-export const endLineShown = (t: number): boolean => INTRO_CHOICES.lines && t >= END_LINE_AT;
 
 /**
  * The moving intro's clock (a2.2, a2.3, a2.7, a2.9), with no DOM. Story time `t` runs from 0;

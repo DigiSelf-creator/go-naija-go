@@ -1416,8 +1416,7 @@
 }
 
 /* city.md (a2) The intro that moves: the picture fills the whole card. On it only Skip (top
-   right), the two lines (top, clear of Skip; bold 20 px, 16 px under 280 px tall, dark ink on a
-   cream pill, wrapping, never cut) and "Let's go" (bottom right, fades in). */
+   right), the subtitle strip along the bottom (a2.12) and "Let's go" at the strip's right end. */
 /* The small-screen card padding (.card:not(.hero-card) under 560 px) never applies here: the
    picture reaches the edges. */
 .card.intro-card {
@@ -1427,37 +1426,75 @@
 .intro-card.moving .intro-hint {
   display: none;
 }
+/* a2.12: a dark ink strip, always 3 lines tall (so the picture never jumps), with cream text
+   (contrast over 7 to 1 whatever is behind it). Bold 18 px, 16 px under 400 px wide or under
+   280 px tall; line height 1.3; padding 8 px top and bottom, 16 px at the sides. The scene
+   fits its picture above it (the ground carries on underneath). */
+.intro-strip {
+  display: none;
+}
+.intro-card.moving[data-mode='moving'] .intro-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: calc(3.9em + 16px);
+  padding: 8px 16px;
+  background: rgba(20, 17, 15, 0.9);
+  color: #fff6e5;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
+}
+.screen .intro-sub {
+  flex: 1 1 auto;
+  max-width: 640px;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  overflow-wrap: normal;
+}
+/* Beat 6 and the hold: room at the right end for "Let's go", so the line never jumps */
+.intro-card.moving[data-mode='moving'] .intro-strip.with-go {
+  padding-right: calc(16px + var(--intro-go-w) + 10px);
+}
+.intro-card {
+  --intro-go-w: 104px;
+}
 .intro-card.moving .intro-words {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: 16px;
+  bottom: calc((3.9 * 18px + 16px - 48px) / 2);
   z-index: 2;
   padding: 0;
 }
 .intro-card.moving .intro-go {
+  box-sizing: border-box;
+  width: var(--intro-go-w);
+  min-width: 44px;
+  min-height: 48px;
   margin: 0;
-  min-height: 44px;
-  animation: intro-fade-in 0.4s ease-out both;
+  padding: 0 8px;
+  animation: intro-fade-in 0.3s ease-out both;
 }
-.intro-card .intro-line {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 92px;
-  z-index: 1;
-  width: fit-content;
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 4px 12px;
-  border-radius: 14px;
-  background: rgba(255, 250, 240, 0.92);
-  color: #2b2620;
-  font-weight: bold;
-  font-size: 20px;
-  line-height: 1.2;
-  text-align: center;
-  pointer-events: none;
-  animation: intro-fade-in 0.4s ease-out both;
+@media (max-width: 399px), (max-height: 279px) {
+  .intro-card {
+    --intro-go-w: 92px;
+  }
+  .intro-card.moving[data-mode='moving'] .intro-strip {
+    font-size: 16px;
+  }
+  .intro-card.moving .intro-words {
+    bottom: calc((3.9 * 16px + 16px - 48px) / 2);
+  }
 }
 @keyframes intro-fade-in {
   from {
@@ -1467,16 +1504,7 @@
     opacity: 1;
   }
 }
-@media (max-height: 280px) {
-  .intro-card .intro-line {
-    top: 6px;
-    font-size: 16px;
-    line-height: 1.15;
-    padding: 2px 10px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .intro-line,
   .intro-card.moving .intro-go {
     animation: none;
   }

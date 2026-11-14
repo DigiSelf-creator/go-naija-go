@@ -1106,6 +1106,9 @@ function startGame(): void {
         log: [...s.el.querySelectorAll('.intro-log p')].map((p) => p.textContent ?? ''),
         caption: s.mode === 'moving' ? '' : (s.el.querySelector('.intro-caption')?.textContent ?? ''),
         hint: s.el.querySelector('.intro-hint')?.textContent ?? '',
+        // a2.12: the subtitle strip's line and its opacity (moving only)
+        sub: s.mode === 'moving' ? (s.el.querySelector('.intro-sub')?.textContent ?? '') : '',
+        subAlpha: Number((s.el.querySelector('.intro-sub') as HTMLElement | null)?.style.opacity || 0),
       };
     },
     get city() {
@@ -1336,6 +1339,9 @@ declare global {
         readonly log: string[];
         readonly caption: string;
         readonly hint: string;
+        /** a2.12: the subtitle strip's line now ('' outside the moving intro) and its opacity. */
+        readonly sub: string;
+        readonly subAlpha: number;
       } | null;
       /** Lagos from above now, or null when it is not showing. */
       readonly city: {

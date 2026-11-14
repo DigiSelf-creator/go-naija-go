@@ -2,8 +2,9 @@
  * Slice 3 step (a2), task S3a4 (docs/city.md a2.3 to a2.11): the intro that moves. Skip and
  * Escape from the start and from every beat; a tap, Space, Enter or → jumps to the next beat;
  * the hold ("Let's go"); it plays once; the hidden log; pause and that beat again; reduced
- * motion; the six frames when the scene cannot load; words whole at every size; no drawing
- * after the end. The real-time length is in intro-timing.spec.ts, the frame rate in
+ * motion; the six frames when the scene cannot load; the a2.12 subtitles (one caption per beat,
+ * whole at every size, 3 lines at most, the strip clear of Skip, "Let's go" in the strip); no
+ * drawing after the end. The real-time length is in intro-timing.spec.ts, the frame rate in
  * intro-perf.spec.ts.
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -17,9 +18,7 @@ const CAPTIONS = [
   'Nigeria called a hero to keep the Wheel turning: the Wheel Hero. That hero is you.',
   'Your journey starts now. Build up Lagos. Get Nigeria working.',
 ];
-const BEATS = [0, 6, 11, 15.5, 20, 24.5, 27.8];
-const HERO_LINE = 'That hero is you.';
-const END_LINE = 'Build up Lagos. Get Nigeria working.';
+const BEATS = [0, 11, 19.6, 25.4, 31.6, 39, 44];
 
 const story = (page: Page) => page.getByRole('dialog', { name: 'The story' });
 const seen = (page: Page) => page.evaluate(() => localStorage.getItem('gidi-intro'));
@@ -44,10 +43,13 @@ async function replay(page: Page): Promise<void> {
 /** A tap on the picture, away from Skip and "Let's go". */
 const tapPicture = (page: Page) => story(page).tap({ position: { x: 120, y: 120 } });
 
-test('first visit: the moving story; only Skip on screen; a tap jumps beat by beat to the hold; "Let\'s go" opens the builder; it plays once', async ({ page }) => {
+test('first visit: the moving story; Skip and the subtitle on screen; a tap jumps beat by beat, each line whole at once, to the hold; "Let\'s go" opens the builder; it plays once', async ({ page }) => {
   await openStory(page);
   await expect(story(page).getByRole('button', { name: 'Skip' })).toBeVisible();
-  // No captions on screen, no hint, no "Let's go" yet.
+  // a2.12: caption 1 in the strip (hidden from readers); no other captions, no hint, no "Let's go" yet.
+  await expect(page.locator('.intro-strip')).toBeVisible();
+  await expect(page.locator('.intro-strip')).toHaveAttribute('aria-hidden', 'true');
+  await expect.poll(async () => (await intro(page)).sub).toBe(CAPTIONS[0]);
   await expect(page.locator('.intro-caption')).toBeHidden();
   for (const c of CAPTIONS) await expect(page.locator('.intro-stage, .intro-words').getByText(c, { exact: true })).toHaveCount(0);
   await expect(page.getByText('Tap to go on')).toBeHidden();
@@ -59,12 +61,18 @@ test('first visit: the moving story; only Skip on screen; a tap jumps beat by be
     const now = await intro(page);
     expect(now.jumps).toBe(b);
     expect(now.time).toBeGreaterThanOrEqual(BEATS[b]!);
-    expect(now.time).toBeLessThan(b < 6 ? BEATS[b + 1]! : 40);
+    expect(now.time).toBeLessThan(b < 6 ? BEATS[b + 1]! : 60);
+    // The new beat's whole line at once, with no fade-in (a2.12 point 6)
+    await expect.poll(async () => (await intro(page)).sub).toBe(CAPTIONS[Math.min(b, 5)]);
+    expect((await intro(page)).subAlpha).toBe(1);
   }
-  // Six jumps reach the hold: "Let's go" and the end line.
+  // Six jumps reach the hold: "Let's go", with caption 6 staying in the strip.
   const go = story(page).getByRole('button', { name: "Let's go" });
   await expect(go).toBeVisible();
-  await expect(page.getByText(END_LINE, { exact: true }).first()).toBeVisible();
+  await expect(page.locator('.intro-sub')).toHaveText(CAPTIONS[5]!);
+  // The words "That hero is you." and the title line never show on their own.
+  await expect(page.getByText('That hero is you.', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Build up Lagos. Get Nigeria working.', { exact: true })).toHaveCount(0);
   // A tap in the hold does nothing.
   await tapPicture(page);
   await page.waitForTimeout(200);
@@ -133,10 +141,9 @@ test('screen readers: a hidden log gets each caption, word for word, at the star
   const box = (await log.boundingBox())!;
   expect(box.width * box.height).toBeLessThanOrEqual(1);
   await expect.poll(async () => (await intro(page)).log).toEqual([CAPTIONS[0]]);
-  // The picture and the two lines are hidden from readers (the log already says them).
+  // The picture and the subtitle strip are hidden from readers (the log already says the words).
   await expect(page.locator('.intro-pic')).toHaveAttribute('aria-hidden', 'true');
-  await expect(page.locator('.intro-hero-line')).toHaveAttribute('aria-hidden', 'true');
-  await expect(page.locator('.intro-end-line')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('.intro-strip')).toHaveAttribute('aria-hidden', 'true');
   for (let b = 1; b < 6; b++) {
     await page.keyboard.press('ArrowRight');
     await expect.poll(async () => (await intro(page)).log).toEqual(CAPTIONS.slice(0, b + 1));
@@ -152,8 +159,16 @@ test('screen readers: a hidden log gets each caption, word for word, at the star
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     document.dispatchEvent(new Event('visibilitychange'));
   });
+  // A resize and a turned phone do not add a line again either.
+  await page.setViewportSize({ width: 800, height: 380 });
+  await page.setViewportSize({ width: 393, height: 851 });
+  await expect.poll(async () => (await intro(page)).paused).toBe(true);
+  await page.setViewportSize({ width: 851, height: 393 });
+  await expect.poll(async () => (await intro(page)).paused).toBe(false);
   expect((await intro(page)).log).toEqual(CAPTIONS);
   await expect(log.locator('p')).toHaveText(CAPTIONS);
+  // "Let's go" is a real button with its own name, outside the hidden strip.
+  await expect(page.locator('.intro-strip .intro-go')).toHaveCount(0);
   // The dialog keeps its spoken name.
   await expect(story(page)).toHaveAttribute('aria-label', 'The story');
 });
@@ -163,7 +178,7 @@ test('an app switch or a phone turned upright pauses picture and story; coming b
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
-  await expect.poll(async () => (await intro(page)).time).toBeGreaterThan(16.8);
+  await expect.poll(async () => (await intro(page)).time).toBeGreaterThan(26.8);
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
     document.dispatchEvent(new Event('visibilitychange'));
@@ -186,8 +201,8 @@ test('an app switch or a phone turned upright pauses picture and story; coming b
   const back = await intro(page);
   expect(back.beat).toBe(3);
   expect(back.time).toBeLessThan(BEATS[3]! + 0.6);
-  // The beat's cues play again from its start (the honk at 16 s).
-  await expect.poll(async () => (await intro(page)).played.filter((p) => p === '16 honk').length).toBe(2);
+  // The beat's cues play again from its start (the honk at 26 s).
+  await expect.poll(async () => (await intro(page)).played.filter((p) => p === '26 honk').length).toBe(2);
   // Turned upright: the turn note, paused; sideways again: that beat again.
   await page.setViewportSize({ width: 393, height: 851 });
   await expect(page.getByText('Turn your phone sideways to play.')).toBeVisible();
@@ -290,45 +305,74 @@ for (const [w, h] of [
   [640, 360],
   [851, 393],
 ] as const) {
-  test(`at ${w} x ${h} the two lines and "Let's go" show whole, inside the screen, clear of Skip; Skip and "Let's go" at least 44 px`, async ({ page }) => {
+  test(`at ${w} x ${h} each beat's caption shows whole in the strip (3 lines at most, 16 px or more, split only at a full stop), clear of Skip; "Let's go" in the strip at the right end`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await openStory(page);
     const skip = (await story(page).getByRole('button', { name: 'Skip' }).boundingBox())!;
     expect(skip.width).toBeGreaterThanOrEqual(44);
     expect(skip.height).toBeGreaterThanOrEqual(44);
-    const whole = async (sel: string) => {
-      const el = page.locator(sel);
-      await expect(el).toBeVisible();
-      const r = (await el.boundingBox())!;
-      const fit = await el.evaluate((n) => ({
-        uncut: n.scrollHeight <= n.clientHeight + 1 && n.scrollWidth <= n.clientWidth + 1,
-        lines: Math.round(n.clientHeight / parseFloat(getComputedStyle(n).lineHeight)),
+    const strip = (await page.locator('.intro-strip').boundingBox())!;
+    // Full width along the bottom, clear of Skip
+    expect(strip.x).toBeLessThanOrEqual(0.5);
+    expect(strip.width).toBeGreaterThanOrEqual(w - 1);
+    expect(strip.y + strip.height).toBeGreaterThanOrEqual(h - 0.5);
+    expect(strip.y).toBeGreaterThanOrEqual(skip.y + skip.height);
+    const look = await page.locator('.intro-strip').evaluate((n) => {
+      const cs = getComputedStyle(n);
+      return { bg: cs.backgroundColor, color: cs.color, font: parseFloat(cs.fontSize), weight: cs.fontWeight };
+    });
+    expect(look.bg).toBe('rgba(20, 17, 15, 0.9)');
+    expect(look.color).toBe('rgb(255, 246, 229)');
+    expect(look.font).toBe(w < 400 || h < 280 ? 16 : 18);
+    expect(Number(look.weight)).toBeGreaterThanOrEqual(700);
+    // Always 3 lines tall (the picture never jumps)
+    expect(strip.height).toBeCloseTo(3 * 1.3 * look.font + 16, 0);
+    /** The line now: whole, inside the strip, 3 lines at most. */
+    const check = async () => {
+      const sub = page.locator('.intro-sub');
+      const fit = await sub.evaluate((n) => ({
+        lines: Math.round((n as HTMLElement).offsetHeight / parseFloat(getComputedStyle(n).lineHeight)),
+        wide: n.scrollWidth <= n.clientWidth + 1,
       }));
-      expect(fit.uncut, `${sel} not cut`).toBe(true);
-      expect(r.x).toBeGreaterThanOrEqual(0);
-      expect(r.y).toBeGreaterThanOrEqual(0);
-      expect(r.x + r.width).toBeLessThanOrEqual(w + 0.5);
-      expect(r.y + r.height).toBeLessThanOrEqual(h + 0.5);
-      const clear = r.x + r.width <= skip.x || r.y >= skip.y + skip.height || r.y + r.height <= skip.y;
-      expect(clear, `${sel} clear of Skip`).toBe(true);
-      return r;
+      expect(fit.lines).toBeLessThanOrEqual(3);
+      expect(fit.wide).toBe(true);
+      const r = (await sub.boundingBox())!;
+      expect(r.y).toBeGreaterThanOrEqual(strip.y - 0.5);
+      expect(r.y + r.height).toBeLessThanOrEqual(strip.y + strip.height + 0.5);
+      return (await sub.textContent()) ?? '';
     };
-    // Beat 5: "That hero is you."
-    for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
-    await expect(page.getByText(HERO_LINE, { exact: true })).toBeVisible({ timeout: 6000 });
-    await whole('.intro-hero-line');
-    // Beat 6 and the hold: the end line in the top 48 px (two lines at most), "Let's go" at the bottom right.
+    for (let b = 0; b < 6; b++) {
+      if (b > 0) await page.keyboard.press('ArrowRight');
+      await expect.poll(async () => (await intro(page)).beat).toBe(b);
+      const c = CAPTIONS[b]!;
+      await expect.poll(async () => c.startsWith((await intro(page)).sub) && (await intro(page)).sub.length > 0).toBe(true);
+      const first = await check();
+      if (first !== c) {
+        // Split at a full stop: the first piece ends with one, the second piece follows
+        expect(first.endsWith('.')).toBe(true);
+        const rest = c.slice(first.length).trim();
+        await expect.poll(async () => (await intro(page)).sub, { timeout: 12_000 }).toBe(rest);
+        await check();
+      }
+    }
+    // The hold: caption 6 stays, "Let's go" at the strip's right end, beside the words
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByText(HERO_LINE, { exact: true })).toBeHidden();
-    await expect(story(page).getByRole('button', { name: "Let's go" })).toBeVisible({ timeout: 6000 });
-    const end = await whole('.intro-end-line');
-    await expect(page.locator('.intro-end-line')).toHaveText(END_LINE);
-    if (h <= 240) expect(end.y + end.height).toBeLessThanOrEqual(48);
-    const go = await whole('.intro-go');
-    expect(go.height).toBeGreaterThanOrEqual(44);
-    expect(go.x + go.width).toBeGreaterThan(w / 2);
-    // The end line and "Let's go" do not cover each other.
-    expect(end.y + end.height <= go.y || go.y + go.height <= end.y).toBe(true);
+    const go = story(page).getByRole('button', { name: "Let's go" });
+    await expect(go).toBeVisible();
+    expect(await check()).toBe(CAPTIONS[5]);
+    const g = (await go.boundingBox())!;
+    expect(g.height).toBeGreaterThanOrEqual(44);
+    expect(g.width).toBeGreaterThanOrEqual(44);
+    expect(g.y).toBeGreaterThanOrEqual(strip.y - 0.5);
+    expect(g.y + g.height).toBeLessThanOrEqual(strip.y + strip.height + 0.5);
+    expect(g.x + g.width).toBeGreaterThan(w - 40);
+    // The words end before the button starts
+    const words = await page.locator('.intro-sub').evaluate((n) => {
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      return Math.max(...[...range.getClientRects()].map((r) => r.right));
+    });
+    expect(words).toBeLessThanOrEqual(g.x);
   });
 }
 
