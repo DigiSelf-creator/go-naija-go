@@ -333,7 +333,8 @@ describe('lane pool and endless part (part 12, part 21)', () => {
   });
 
   it('endless chunks: random, never one of the last 2, a food every 400 m, rows one beat apart, never over the pool', () => {
-    const sim = new LaneSim(L, { rng: seeded(7) });
+    // This hero never dodges: a Blackout that never comes.
+    const sim = new LaneSim({ ...L, blackout: { ...L.blackout, creep: 0, stumble: 0, afterGoalCreepPer100: 0, afterGoalCreepMax: 0 } }, { rng: seeded(7) });
     run(sim, 70, (s) => s.phase === 'goal');
     sim.keepRunning();
     expect(sim.phase).toBe('endless');

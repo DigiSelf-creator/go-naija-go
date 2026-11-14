@@ -12,6 +12,7 @@ import {
   isBurst,
   isDodge,
   speedAt,
+  type BlackoutRules,
   type LaneChunk,
   type LaneLevel,
   type PickupKind,
@@ -36,6 +37,12 @@ export const GOAT_TIME = 0.3;
 export const STUMBLE_RECOVER = 0.4;
 /** The body while sliding is this tall (part 4). */
 export const SLIDE_BODY = 0.8;
+/** Part 11: corn lasts 12 s and tosses about twice a second at the nearest problem ahead in your lane. */
+export const CORN_TIME = 12;
+export const TOSS_EVERY = 0.5;
+export const TOSS_REACH = 30;
+/** One coin is 10 kobo. */
+export const COIN_KOBO = 10;
 /** Coin heights: a line at waist height, a low line under barrier arms, an arc over a jump. */
 const COIN_H = 0.6;
 const LOW_COIN_H = 0.35;
@@ -71,7 +78,13 @@ export type LaneEvent =
   | { type: 'goat'; lane: number }
   | { type: 'coin' }
   | { type: 'pickup'; kind: PickupKind }
-  | { type: 'goal' };
+  | { type: 'goal' }
+  // S3f3: the Blackout, the buckets and the food.
+  | { type: 'blackout'; by: number }
+  | { type: 'shieldUsed' }
+  | { type: 'garriExtra' }
+  | { type: 'toss'; kind: ThingKind }
+  | { type: 'caught' };
 
 interface Spawn {
   d: number;
@@ -116,7 +129,19 @@ export class LaneSim {
   readonly level: LaneLevel;
   readonly curve: SpeedCurve;
   readonly gentle: boolean;
+  readonly dark: BlackoutRules;
   private readonly rng: () => number;
+
+  // S3f3 (part 9 to 11): what this run picked up, the Blackout, the shield and the corn.
+  kobo = 0;
+  power = 0;
+  tech = 0;
+  /** Metres between the Blackout and the hero. */
+  gap = 0;
+  shield = false;
+  /** Corn seconds left. */
+  corn = 0;
+  private tossT = 0;
 
   phase: LanePhase = 'run';
   /** Metres from the start (the hero's feet). */
@@ -179,6 +204,7 @@ export class LaneSim {
     this.level = level;
     this.gentle = opts.gentle ?? false;
     this.curve = this.gentle ? level.gentleSpeed : level.speed;
+    this.dark = this.gentle ? level.gentleBlackout : level.blackout;
     this.rng = opts.rng ?? Math.random;
     for (let i = 0; i < POOL_THINGS; i++) this.things.push({ used: false, pickup: false, kind: 'cones', d: 0, lane: 0, state: 'idle', t: 0 });
     for (let i = 0; i < POOL_COINS; i++) this.coins.push({ used: false, d: 0, lane: 0, h: 0, taken: false, t: 0 });
@@ -217,6 +243,36 @@ export class LaneSim {
     this.recent = [];
     this.chunksUsed.length = 0;
     this.speed = speedAt(this.curve, L.goal, 0);
+    this.kobo = this.power = this.tech = 0;
+    this.gap = this.dark.start;
+    this.shield = false;
+    this.corn = 0;
+    this.tossT = 0;
+  }
+
+  /** Part 10: how fast the Blackout creeps now (faster after the goal, up to its top). */
+  creepNow(): number {
+    const b = this.dark;
+    const goal = this.level.goal;
+    if (this.dist <= goal) return b.creep;
+    return Math.min(b.afterGoalCreepMax, b.creep + (b.afterGoalCreepPer100 * (this.dist - goal)) / 100);
+  }
+
+  /** Power in: each one pushes the Blackout back (never past its furthest). */
+  private addPower(n: number): void {
+    if (n <= 0) return;
+    this.power += n;
+    const before = this.gap;
+    this.gap = Math.min(this.dark.max, this.gap + this.dark.powerPush * n);
+    if (this.gap > before) this.events.push({ type: 'blackout', by: this.gap - before });
+  }
+
+  private pop(kind: ThingKind): void {
+    const p = this.level.pops[kind];
+    if (!p) return;
+    this.kobo += p.coins * COIN_KOBO;
+    this.tech += p.tech;
+    this.addPower(p.power);
   }
 
   laneX(lane: number): number {
@@ -377,6 +433,17 @@ export class LaneSim {
     if (this.phase === 'endless') this.fill();
     this.spawn();
     this.hits(before);
+    if (this.corn > 0) this.tossCorn(dt);
+    // Part 10: the Blackout creeps closer; at 0 m it has caught you (you keep everything).
+    if (this.phase !== 'goal') {
+      this.gap -= this.creepNow() * dt;
+      if (this.gap <= 0) {
+        this.gap = 0;
+        this.phase = 'over';
+        this.corn = 0;
+        this.events.push({ type: 'caught' });
+      }
+    }
     for (const s of this.things) if (s.used) s.t += dt;
     for (const c of this.coins) if (c.used) c.t += dt;
   }
@@ -427,6 +494,15 @@ export class LaneSim {
 
   private stumble(kind: ThingKind): void {
     const mv = this.level.move;
+    if (this.shield) {
+      // Part 10 and 11: the garri shield takes one stumble: no trip, the Blackout gains nothing.
+      this.shield = false;
+      this.safeUntil = Math.max(this.safeUntil, this.time + mv.safeAfterStumble);
+      this.events.push({ type: 'shieldUsed' });
+      return;
+    }
+    this.gap -= this.dark.stumble;
+    this.events.push({ type: 'blackout', by: -this.dark.stumble });
     this.tripT = 0;
     this.slideT = -1;
     this.queued = null;
@@ -457,6 +533,7 @@ export class LaneSim {
           s.state = 'taken';
           s.t = 0;
           this.events.push({ type: 'pickup', kind: s.kind as PickupKind });
+          this.take(s.kind as PickupKind);
         }
         continue;
       }
@@ -484,6 +561,7 @@ export class LaneSim {
         s.state = 'burst';
         s.t = 0;
         this.events.push({ type: 'burst', kind, lane: s.lane });
+        this.pop(kind);
         continue;
       }
       if (kind === 'goat') {
@@ -492,6 +570,7 @@ export class LaneSim {
         s.t = 0;
         this.goatT = 0;
         this.events.push({ type: 'goat', lane: s.lane });
+        this.pop('goat');
         continue;
       }
       if (!isDodge(kind)) continue;
@@ -509,8 +588,51 @@ export class LaneSim {
       if (c.h < this.y - 0.3 || c.h > this.y + this.bodyH + 0.3) continue;
       c.taken = true;
       c.t = 0;
+      this.kobo += COIN_KOBO;
       this.events.push({ type: 'coin' });
     }
+  }
+
+  private take(kind: PickupKind): void {
+    if (kind === 'bulb') this.addPower(1);
+    else if (kind === 'chip') this.tech++;
+    else if (kind === 'garri') {
+      // A second garri while shielded gives 3 coins instead.
+      if (this.shield) {
+        this.kobo += 3 * COIN_KOBO;
+        this.events.push({ type: 'garriExtra' });
+      } else this.shield = true;
+    } else {
+      this.corn = CORN_TIME;
+      this.tossT = 0;
+    }
+  }
+
+  /** Part 11: corn at the nearest problem ahead in your lane, about twice a second. Never a danfo. */
+  private tossCorn(dt: number): void {
+    this.corn = Math.max(0, this.corn - dt);
+    this.tossT -= dt;
+    if (this.tossT > 0) return;
+    let best: Slot | null = null;
+    for (const s of this.things) {
+      if (!s.used || s.pickup || s.state !== 'idle' || s.kind === 'danfo' || s.lane !== this.lane) continue;
+      if (s.d <= this.dist + 1 || s.d - this.dist > TOSS_REACH) continue;
+      if (!best || s.d < best.d) best = s;
+    }
+    if (!best) return;
+    this.tossT = TOSS_EVERY;
+    const kind = best.kind as ThingKind;
+    best.t = 0;
+    this.events.push({ type: 'toss', kind });
+    if (isBurst(kind)) {
+      best.state = 'burst';
+      this.events.push({ type: 'burst', kind, lane: best.lane });
+      this.pop(kind);
+    } else if (kind === 'goat') {
+      best.state = 'off';
+      this.events.push({ type: 'goat', lane: best.lane });
+      this.pop('goat');
+    } else best.state = 'done';
   }
 
   /** Part 12: rows from the chunks, one beat apart at any speed, as they come near. */

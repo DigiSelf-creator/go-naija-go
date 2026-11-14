@@ -24,6 +24,10 @@ const ROAD_HALF = 3.75;
 const KERB = 0.4;
 const LAMP_EVERY = 10;
 const LAMP_X = ROAD_HALF + KERB + 0.5;
+/** Part 10: the dark shows under 30 m, the close warning under 15 m. */
+export const DARK_FROM = 30;
+export const WARN_UNDER = 15;
+const DARK_HEIGHT = 0.35;
 
 /** Part 5: far things drawn bigger: times 1 at the hero, rising to 1.6 at 34 m ahead and beyond. */
 export function farBoost(ahead: number): number {
@@ -105,7 +109,11 @@ export class LaneView {
     g.fill();
   }
 
-  draw(g: CanvasRenderingContext2D, sim: LaneSim, look: HeroLook, dist: number, t: number, pose: HeroPose): void {
+  /**
+   * `night` 0..1: the caught moment, the whole road going deep blue. The Blackout's distance
+   * (sim.gap) darkens the bottom of the screen under 30 m and switches the near lamps off (part 10).
+   */
+  draw(g: CanvasRenderingContext2D, sim: LaneSim, look: HeroLook, dist: number, t: number, pose: HeroPose, night = 0): void {
     const art = laneArt();
     const { w, h, hz } = this;
     g.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
@@ -150,12 +158,17 @@ export class LaneView {
     };
     const fade = (d: number): number => Math.min(1, Math.max(0, (sim.level.spawnAhead - (d - dist)) / FADE_M));
 
-    // Lamps along both kerbs every 10 m, far ones first.
+    // Lamps along both kerbs every 10 m, far ones first. Under 30 m the Blackout has switched the
+    // nearest ones off; under 15 m the last lit ones flicker twice a second (dim with reduced motion).
+    const gap = sim.gap;
+    const offTo = this.camD + Math.max(0, DARK_FROM - gap) * 0.6 + night * 30;
+    const flicker = gap < WARN_UNDER ? (this.still ? 0.4 : Math.floor(t * 4) % 2 === 0 ? 1 : 0.25) : 1;
     const l1 = Math.floor(far / LAMP_EVERY) * LAMP_EVERY;
     for (let d = l1; d >= near + 0.5; d -= LAMP_EVERY) {
       g.globalAlpha = fade(d);
-      art.lamp(at(-LAMP_X, d), 1, -1);
-      art.lamp(at(LAMP_X, d), 1, 1);
+      const on = d < offTo ? 0 : d < offTo + LAMP_EVERY * 1.5 ? flicker : 1;
+      art.lamp(at(-LAMP_X, d), on, -1);
+      art.lamp(at(LAMP_X, d), on, 1);
     }
     g.globalAlpha = 1;
     const goal = sim.level.goal;
@@ -201,5 +214,19 @@ export class LaneView {
     }
     g.globalAlpha = 1;
     if (!heroDrawn) drawHero();
+    // The dark edge: deep blue (never black) from the bottom, up to 35 percent of the height at 0 m.
+    if (gap < DARK_FROM || night > 0) {
+      const u = Math.max(Math.min(1, (DARK_FROM - gap) / DARK_FROM), night);
+      const top = h - DARK_HEIGHT * h * u;
+      const grad = g.createLinearGradient(0, top, 0, h);
+      grad.addColorStop(0, 'rgba(12, 18, 64, 0)');
+      grad.addColorStop(1, 'rgba(12, 18, 64, 0.85)');
+      g.fillStyle = grad;
+      g.fillRect(0, top, w, h - top);
+      if (night > 0) {
+        g.fillStyle = `rgba(12, 18, 64, ${(0.6 * night).toFixed(3)})`;
+        g.fillRect(0, 0, w, h);
+      }
+    }
   }
 }

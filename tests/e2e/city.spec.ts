@@ -47,8 +47,9 @@ test('pin cards say the exact words; Back closes them', async ({ page }) => {
   let card = page.getByRole('dialog', { name: 'Lights out' });
   await expect(card.getByText('Lamps are out here.')).toBeVisible();
   await expect(card.getByText('Switching them on costs Power 10.')).toBeVisible();
-  await expect(card.getByText('Lane run: coming soon')).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Lane run' })).toHaveCount(0);
+  // S3f3: "Lane run: coming soon" is gone; the big button starts the lane run.
+  await expect(card.getByText('Lane run: coming soon')).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Lane run' })).toBeVisible();
   await card.getByRole('button', { name: 'Back' }).tap();
   await expect(card).toHaveCount(0);
 
@@ -56,7 +57,7 @@ test('pin cards say the exact words; Back closes them', async ({ page }) => {
   card = page.getByRole('dialog', { name: 'Slow internet' });
   await expect(card.getByText('The internet is slow here.')).toBeVisible();
   await expect(card.getByText('Fixing it costs Tech 6.')).toBeVisible();
-  await expect(card.getByText('Lane run: coming soon')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Lane run' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(card).toHaveCount(0);
 

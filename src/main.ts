@@ -22,7 +22,7 @@ import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { hasSavedLook, loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
-import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, isBuilt, leftOf, winPrize, writeCity } from './game/city';
+import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, canFix, isBuilt, leftOf, winPrize, withHint, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
 import type { BuildId } from './art/payspot';
 import type { Mission } from './screens/city';
@@ -40,6 +40,7 @@ import { UpdateBanner } from './screens/update-banner';
 import { isNativeApp } from './native/is-native';
 import type { NativeApp } from './native/app';
 import type { LaneSession } from './lane/session';
+import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul } from './lane/rewards';
 
 const el = document.getElementById('game');
 if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing #game canvas');
@@ -256,6 +257,7 @@ function startGame(): void {
     if (lane) {
       if (!lane.running) return;
       lane.pause();
+      menus.laneSoFar = lane.soFar;
       toast.hide();
       menus.show('pause');
       syncUpdate();
@@ -345,9 +347,29 @@ function startGame(): void {
   let lane: LaneSession | null = null;
   let laneLoading = false;
   let laneModule: Promise<typeof import('./lane/session')> | null = null;
+  /** The fix the lane run was started for (Lights out or Slow internet), or null (part 2). */
+  let laneFor: BuildId | null = null;
+  /**
+   * S3f3 part 2, "Bringing it home": a win for a fix not built yet plays Mission complete at that
+   * spot; any other end goes back to Lagos with "You brought ... home." (LR-Q2: and the other pin's hint).
+   */
+  function laneHome(won: boolean, haul: Haul): void {
+    const st = cityLife.state;
+    const build = won && laneFor && !isBuilt(st, laneFor) ? laneFor : null;
+    const other: BuildId | null = laneFor === 'lamps' ? 'mast' : laneFor === 'mast' ? 'lamps' : null;
+    const otherSpot = other === 'lamps' ? 'lightsOut' : 'slowInternet';
+    let after: string | undefined;
+    if (ONE_RUN_BOTH_FIXES && won && other && !isBuilt(st, other) && canFix(st, otherSpot) && !st.hints.includes('laneBoth')) {
+      after = other === 'mast' ? WORDS.lane.alsoMast : WORDS.lane.alsoLamps;
+      cityLife.set(withHint(st, 'laneBoth'), true);
+    }
+    const line = WORDS.lane.broughtHome(haulWords(haul));
+    leave('city', build ? { build, kobo: haul.kobo, ...(after ? { after } : {}) } : { build: null, kobo: haul.kobo, plain: true, line, ...(after ? { after } : {}) });
+  }
   /** Starts a lane run from 0 m ("3, 2, 1" first). Loads the lane run's code the first time. */
-  function startLane(): void {
+  function startLane(fix: BuildId | null = laneFor): void {
     if (laneLoading) return;
+    laneFor = fix === 'lamps' || fix === 'mast' ? fix : null;
     if (lane) {
       menus.show(null);
       lane.start();
@@ -377,9 +399,25 @@ function startGame(): void {
           buttonsOn: () => menus.laneButtons,
           safe: readSafeArea,
           sound: (name) => sound.play(name),
+          touch: () => buttons.touch,
           askPause: () => pause(),
-          goal: () => syncUpdate(),
-          takeHome: () => leave('city'),
+          laneSave: () => readLane(progress.raw?.[KEY_LANE]),
+          saveLane: (part) => {
+            // A broken copy is left alone (the same rule as the city part).
+            if (!(progress.broken && progress.raw === null)) progress.savePart(KEY_LANE, writeLane(part));
+          },
+          bank: (d) => cityLife.set({ ...cityLife.state, kobo: cityLife.state.kobo + d.kobo, power: cityLife.state.power + d.power, tech: cityLife.state.tech + d.tech }),
+          flush: () => cityLife.flush(),
+          forFix: () => {
+            if (!laneFor || isBuilt(cityLife.state, laneFor)) return null;
+            return { bucket: laneFor === 'lamps' ? 'power' : 'tech', left: leftOf(cityLife.state, laneFor) };
+          },
+          setGentle: (on) => menus.setGentle(on),
+          home: (r) => laneHome(r.won, r.haul),
+          changed: () => {
+            syncUpdate();
+            nativeApp?.screenChanged();
+          },
         });
         lane.start();
         syncMusic();
@@ -427,18 +465,25 @@ function startGame(): void {
     // city.md (b) flow: "Play" (and the builder's "Start running") opens Lagos from above, the
     // home screen. ?level=lagos-2, lagos-3 or lagos-hall still starts that level (for testing).
     start: (at) => {
-      if (askedLane) startLane();
+      if (askedLane) startLane(null);
       else if (askedAt === null) menus.show('city');
       else startRun(at, firstStreet);
     },
     cityLife,
     // The Potholes card's "Run Alausa" starts street 1, for the New road. The lane run (step (f)) comes later.
     runSpot: (spot, at) => {
+      // S3f3: the Lights out and Slow internet cards (and their Not enough cards) start a lane run for that fix.
+      if (spot === 'lightsOut' || spot === 'slowInternet') {
+        startLane(spot === 'lightsOut' ? 'lamps' : 'mast');
+        return;
+      }
       if (spot !== 'potholes') return;
       startRun(at, 0);
       missionFor = isBuilt(cityLife.state, 'road') ? null : 'road';
     },
     takeHome: () => leave('city', { build: missionFor, kobo: brought }),
+    lane: () => readLane(progress.raw?.[KEY_LANE]),
+    playLane: () => startLane(null),
     play: (to, at) => {
       missionFor = null;
       startRun(at, to);

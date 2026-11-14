@@ -2148,3 +2148,64 @@ body.lane {
 .lane-card {
   z-index: 12;
 }
+/* S3f3: the lane HUD's chips (icon-free words for now: art's icons come with S3f1), the Blackout
+   line with its "!" (never colour alone), the distance and best, and the hint bar (part 15). */
+.lane-hud[hidden] {
+  display: none;
+}
+.lane-chips {
+  display: flex;
+  gap: 4px;
+  max-width: 200px;
+  min-width: 0;
+}
+.lane-chip {
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+.lane-chip.power {
+  box-shadow: inset 0 -3px 0 #ffd34d;
+}
+.lane-chip.tech {
+  box-shadow: inset 0 -3px 0 #5ee0c8;
+}
+.lane-row2 {
+  align-items: flex-start;
+}
+.lane-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  background: none;
+  padding: 0;
+}
+.lane-right > p {
+  margin: 0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(10, 8, 30, 0.45);
+}
+.lane-right > p[hidden] {
+  display: none;
+}
+.lane-dark.near {
+  background: rgba(120, 20, 20, 0.6);
+}
+.lane-hint {
+  max-width: min(300px, calc(100vw - 16px));
+  margin: 4px auto 0;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(10, 8, 30, 0.6);
+  text-align: center;
+  font-size: 12px;
+}
+.lane-hint[hidden] {
+  display: none;
+}
+.street-card.lane-street {
+  grid-column: 1 / -1;
+}

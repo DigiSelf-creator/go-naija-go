@@ -63,16 +63,26 @@ async function startBotAndLog(page: Page): Promise<void> {
 
 async function play(page: Page, secs: number): Promise<void> {
   // The road part: from 100 m for `secs` seconds (never reaching the bus stop at these speeds).
-  await page.evaluate(() => window.__lane!.warp(100));
+  // The bot dodges, but a slow machine may still stumble: keep the Blackout away while measuring.
+  await page.evaluate(() => {
+    window.__lane!.warp(100);
+    window.__lane!.setGap(1e6);
+  });
   await page.waitForTimeout(secs * 1000);
   // The endless part at the top speed.
-  await page.evaluate(() => window.__lane!.warp(592));
+  await page.evaluate(() => {
+    window.__lane!.setGap(60);
+    window.__lane!.warp(592);
+  });
   const goal = page.getByRole('dialog', { name: 'You made it to the bus stop!' });
   await expect(goal).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await goal.getByRole('button', { name: 'Keep running for more' }).click();
   await expect.poll(() => page.evaluate(() => window.__lane!.stage), { timeout: 20_000 }).toBe('play');
-  await page.evaluate(() => window.__lane!.warp(1700));
+  await page.evaluate(() => {
+    window.__lane!.warp(1700);
+    window.__lane!.setGap(1e6);
+  });
   await page.waitForTimeout(secs * 1000);
 }
 

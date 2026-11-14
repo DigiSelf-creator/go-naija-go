@@ -130,7 +130,10 @@ test('Pause: "Buttons instead of swipes" shows the four buttons at once; each fi
 
 test('reaches the bus stop at 600 m (test hook); "Keep running for more" goes on, "Take it home" goes to Lagos', async ({ page }) => {
   await openLane(page);
-  await page.evaluate(() => window.__lane!.warp(585));
+  await page.evaluate(() => {
+    window.__lane!.setGap(60);
+    window.__lane!.warp(585);
+  });
   const goal = page.getByRole('dialog', { name: 'You made it to the bus stop!' });
   await expect(goal).toBeVisible({ timeout: 10_000 });
   const l = (await lane(page))!;
@@ -139,6 +142,8 @@ test('reaches the bus stop at 600 m (test hook); "Keep running for more" goes on
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await goal.getByRole('button', { name: 'Keep running for more' }).tap();
   await expect.poll(async () => (await lane(page))!.phase).toBe('endless');
+  // This test does not dodge: keep the Blackout away.
+  await page.evaluate(() => window.__lane!.setGap(1000));
   await expect.poll(async () => (await lane(page))!.stage).toBe('play');
   await expect.poll(async () => (await lane(page))!.dist).toBeGreaterThan(640);
   // The endless chunks are on the road.
@@ -156,7 +161,10 @@ test('reaches the bus stop at 600 m (test hook); "Keep running for more" goes on
 
 test('the goal card\'s "Take it home" goes to Lagos', async ({ page }) => {
   await openLane(page);
-  await page.evaluate(() => window.__lane!.warp(590));
+  await page.evaluate(() => {
+    window.__lane!.setGap(60);
+    window.__lane!.warp(590);
+  });
   const goal = page.getByRole('dialog', { name: 'You made it to the bus stop!' });
   await expect(goal).toBeVisible({ timeout: 10_000 });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
