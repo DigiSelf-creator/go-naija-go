@@ -1942,3 +1942,418 @@ For gamedev (ST1a, ST1c):
 For art (ST2): the icon reads at 48 px with no words; the splash is that icon on `#0f1a12`, the same file for light and dark (part 6).
 
 For qa (ST5), beside the plan's checks: back pressed 10 times fast in a run never closes the game; back from every screen in the table; the ask with and without its run line; flip the phone both ways mid-jump and in the city; a call or alarm in a run; lock and unlock in a run and in the city; a save survives an update installed over the top (debug build A, then B); the safe edges on a phone with a camera hole, an iPhone with a notch or island, an iPhone SE and a cheap Android with three buttons; splash time on the slow phone; airplane mode from the very first open; the Privacy card and the Version line fit at 320 x 240.
+
+## S3f0. The lane run (designer, 14 Nov 2026)
+
+Task S3f0, city.md step (f) f0. Tp, 14 Nov (decision 63): the lane run is built next, before the challenge road, because it is the only way to get Power and Tech, so Lights out and Slow internet can be fixed.
+
+Sources: city.md 2B (the rules, all confirmed), 2C and 2D (corn and garri), part 1 (buckets and values), part 5 (slice 3 screens), (b), 5W W5, W8, W14 to W16, (f); decisions 32, 34, 35, 36, 38, 42, 45, 62, 63; ST0 part 3 (the back button). Where this note gives a number that 2B gives as "about", this note is the exact number. Everything else in 2B stands.
+
+Level data: **src/data/levels/lagos-lane.json** (written with this note; format in part 13).
+
+Open for Tp (docs/questions.md, "designer, 14 Nov 2026: the lane run"): LR-Q1 (leaving a run early keeps what you picked up) and LR-Q2 (one lane run may pay for both Lights out and Slow internet). This note is built on the recommended answers; a different answer changes only the lines marked LR-Q1 or LR-Q2.
+
+### 1. The idea, and how long it is
+
+You run on foot down a Lagos main road at dusk, past a go-slow of stuck danfos, to the bus stop. Behind you the Blackout switches the street lamps off, one by one. Change lane, jump and slide past what blocks the road, burst crates for Naira, Power and Tech, and get to the bus stop before the dark catches you.
+
+- **Goal:** the bus stop, 600 m from the start. About **55 s** for a first-timer (60 s in Gentle mode).
+- **New thing it teaches:** a run seen from behind, three lanes, swipes, and the two new buckets, Power and Tech.
+- **Checkpoint:** none. A run is short, and losing keeps everything (decision 38), so there is nothing to lose by starting again.
+- **Hidden well:** none. Wells belong to the side-view streets.
+- **Food:** garri at 204 m (the shield, taught), roasted corn at 418 m.
+
+### 2. Where you start it (linking to the city)
+
+The challenge road (S3e1) is not built yet, so for now the lane run is started from three places. All three are open from the first city visit (pins 2 and 3 already show, city.md (b)).
+
+| Where | What it shows | The run starts "for" |
+|---|---|---|
+| Lights out problem card | "Lamps are out here." / "Switching them on costs Power 10." / big **"Lane run"**; when you have some Power, big "Walk there" and small "Lane run". Small "Back" | Lights out |
+| Slow internet problem card | "The internet is slow here." / "Fixing it costs Tech 6." / big **"Lane run"**; when you have some Tech, big "Walk there" and small "Lane run". Small "Back" | Slow internet |
+| Not enough card (Lamps or Mast board) | "You need Power 10 for this." / "Lane runs earn Power." (Tech: "You need Tech 6 for this." / "Lane runs earn Tech.") / big **"Lane run"**, small "Back" | That board's fix |
+| Streets screen, a new last card after Go-Slow Hall | "Lane run" / "Run to the bus stop for Naira, Power and Tech." / "Ready to play"; after the first goal "Done ✓ Best: 840 m" | Nothing |
+
+"Lane run: coming soon" goes away everywhere. The Streets card is how you replay the lane run once both pins are fixed and hidden. When the challenge road comes (S3e1), its "Lane run" stop takes over from the Streets card; the cards above stay.
+
+**Bringing it home.** Every pickup goes into its bucket as soon as you get it (part 9). When the run ends with "Take it home":
+- **A win that was for a fix** (Lights out or Slow internet, and that place is not built yet): the W5 "Mission complete!" walk-in at that spot. The win brings home at least the price of the fix you came for (decision 45): if the run plus the prize is less than Power 10 (or Tech 6), the prize grows to make it up. The hero walks onto the board and pays, as for the road. Lines as built: "The lamps are on. The street is awake." / "Fast internet here. Shops are busy."
+- **Any other end** (caught, a win from the Streets card, or a fix already built): back to the city with one line for 2 s: "You brought ₦6.20, Power 12 and Tech 7 home." (W8 "From elsewhere", now with all three buckets; a bucket with 0 is left out: "You brought ₦3.10 and Power 5 home.").
+- **LR-Q2 (recommended a):** one run often brings both Power 10 and Tech 6. Then the pin you did not come for turns to "Ready" (its tick badge) and the hint "The mast is ready to fix too. Walk onto its board." shows once. Nothing pays by itself; the player walks to it.
+
+### 3. Controls
+
+| Action | Swipe (default) | Keys | "Buttons instead of swipes" |
+|---|---|---|---|
+| Lane left | Swipe left | ← or A | ◀ button, bottom left |
+| Lane right | Swipe right | → or D | ▶ button, bottom left, right of ◀ |
+| Jump | Swipe up | ↑, W or Space | ▲ button, bottom right |
+| Slide | Swipe down | ↓ or S | ▼ button, bottom right, right of ▲ |
+| Pause | Pause button, top right | P or Escape | Pause button |
+
+- **A swipe** counts once the finger has moved 24 px in one direction within 0.3 s; it fires at that moment, not when the finger lifts. The bigger of the two directions wins. One swipe, one move: the finger must lift before the next swipe counts. A tap with no swipe does nothing. Swipes work anywhere on the screen except on the top HUD row and on buttons.
+- **Buttons:** each 56 x 56 px, 8 px apart, 8 px inside the safe edges, each with its arrow drawn as a shape and a spoken name ("Left lane", "Right lane", "Jump", "Slide"). A press fires on touch down. Holding does not repeat. When "Swap sides" comes (decision 20), ▲ ▼ go left and ◀ ▶ go right.
+- **The switch** "Buttons instead of swipes: off" / "...: on" sits in Settings and on the lane run Pause card. It counts at once. Swipes still work while buttons show.
+- **Keys** work whatever the switch says. Holding a key does not repeat.
+- **Moves queue:** one move pressed during a lane change or a jump waits and runs as soon as it can (at most one waiting; a newer press replaces it).
+- **Gentle mode** uses the same controls. It changes only the Blackout and the speed (part 10).
+
+### 4. Movement
+
+Metres (m) along the road, seconds (s). A lane is 2.5 m wide; the road is three lanes. The hero runs by themself (city choice 3 a, the one exception to "no auto-run").
+
+| Value | Normal | Gentle |
+|---|---|---|
+| Speed at the start | 9 m/s | 9 m/s |
+| Speed at the bus stop (600 m) | 13 m/s, rising evenly with distance | 11 m/s |
+| Time to the bus stop | about 55 s | about 60 s |
+| After the goal | +1 m/s each 100 m | +0.5 m/s each 100 m |
+| Top speed | 16 m/s | 14 m/s |
+| Lane change | 0.18 s, eased | same |
+| Jump | 0.7 s in the air, 1.2 m high at the top | same |
+| Clears cones and potholes | while the feet are 0.35 m or more up (the middle 0.58 s of the jump) | same |
+| Slide | 0.7 s, body 0.8 m high | same |
+| Swipe down in the air | drop to the road in 0.12 s, then slide | same |
+| Swipe up while sliding | the slide ends and the jump starts | same |
+| Lane change in the air | allowed | same |
+| Stumble | 0.5 s trip; speed 70 percent for 0.5 s, back to full over 0.4 s; then 1 s safe (nothing else trips you) | same |
+| Goat bump | soft bounce, speed 80 percent for 0.3 s, no stumble | same |
+
+Speed is worked out from distance (speed = 9 + 4 x distance / 600 up to the goal), so every first-timer meets each thing at the same speed in every try.
+
+Hit rules (kind, not fussy): the hero's body is 0.5 m deep and 1.2 m wide for hits. A danfo hit from the front is a stumble, and the hero side-steps into the nearest free lane (the lane they came from first) in 0.25 s. Changing lane into the side of a danfo is a soft side bump: back to your lane, no stumble. Cones tip over, the barrier arm swings up and a pothole is stumbled across, so after a stumble the road ahead is always open.
+
+### 5. The road and the camera
+
+- Seen from behind and a little above: camera 4 m behind the hero and 2.6 m up, horizon 36 percent down from the top of the screen. At the hero, the road fills 86 percent of the screen width.
+- The camera follows the hero's lane at 60 percent (so the road sways gently) and eases over 0.25 s. Reduced motion: the camera stays on the middle lane.
+- Things come into view 60 m ahead, fading in over the first 5 m.
+- **Visible 1.5 s before it arrives, at every speed** (2B). At 16 m/s that is 24 m. Far things are drawn a little bigger than true size (times 1 at the hero, rising to 1.6 times at 34 m ahead and beyond), so that at 320 x 240, every dodge thing is at least 10 px tall or wide when it is 1.5 s away. The hero is at least 56 px tall at 320 x 240.
+- Lamps stand along both kerbs every 10 m.
+
+### 6. What is on the road
+
+Each kind has its own shape and outline, never colour alone (2B).
+
+| Kind | Thing (slice 3) | Way past | If you touch it |
+|---|---|---|---|
+| **Dodge** (thick dark outline, sharp corners) | Stuck danfo, from the back. It stands still with hazard lights on. 6 m long | Change lane | Stumble, the Blackout gains 15 m (10 m in Gentle) |
+| | Cone row: three cones with white bands across one lane | Jump, or change lane | Stumble; the cones tip over |
+| | Pothole: a dark hole with a cracked lip and a few stones round it, 1.6 m long | Jump, or change lane | Stumble across it |
+| | Barrier arm: a striped pole on one post at chest height across one lane | Slide, or change lane | Stumble; the arm swings up |
+| **Burst** (wood or loose things, a small four-point sparkle above) | Market crate (our own, as on the streets, decision 11) | Run into it or land on it | It bursts with our own wooden pop; what pops out flies to its chip (part 9). No stumble |
+| | Junk pile: old tins, a broken radio and a cardboard box, stacked neatly | Run into it | Same |
+| | Old broken sign: a blank board on two legs, leaning, paint peeling, no words | Run into it | Same |
+| **Goat** (round shapes, our own goat seen from behind) | A goat standing in a lane, chewing | Change lane, or bump it | Soft bounce, "meeh" (decision 62), it trots to the pavement, 3 coins pop out. Never hurt, never a stumble. Corn feeds it off the road before you get there (2C) |
+
+Not in slice 3 (2B keeps them for later lane runs, each with its own note line first): keke, parked okada, low market umbrella or bunting, wheelbarrow of yams, the flood puddle (slow), and fufu rolling along your lane.
+
+**Nothing ever drives at the hero.** Danfos are stuck and still. **People are never in the lanes:** traders, people at the bus stop and people waving stand on the pavements as scenery only. The stuck danfos have dark back windows with no faces drawn.
+
+### 7. Fairness rules (every row, the fixed 600 m and the endless part)
+
+A "row" is everything at one distance across the three lanes.
+
+1. **Always a free lane.** Every row leaves at least one lane with no dodge thing in it. A burst thing, a goat or a pickup may sit in the free lane.
+2. **Time to get there.** Rows with dodge things are at least 1.2 s apart; at least 1.6 s when the next free lane is two lanes away from the last one. (The fixed 600 m is never under 1.7 s.)
+3. **One move at a time.** Never a row that needs two moves at once (for example a jump and a lane change together).
+4. **No jump-then-slide trap.** A jump thing and a slide thing in the same lane are never less than 1.0 s apart.
+5. **Pickups are never inside a dodge thing.** Coin arcs sit only over jump things and low coin lines only under barrier arms, so following coins is always safe.
+6. **Fresh start.** Nothing to dodge in the first 30 m, in the 2.5 s after "Keep running", or in the 1.5 s after "3, 2, 1" on any resume.
+7. **Seen in time.** Part 5: 1.5 s, at every speed.
+8. **Warm-up bulbs where you must run.** The three warm-up bulbs (152, 282 and 372 m) each sit in the only free lane of their row. Both foods sit in the middle lane, with nothing to dodge in that lane in the 1.5 s before them.
+
+A unit test on src/data/levels/lagos-lane.json checks rules 1 to 5 and 8 for the fixed 600 m and for every chunk.
+
+### 8. The first 600 m, laid out
+
+Same every run, so a second try is the same fair road. L, M, R are the left, middle and right lanes; the hero starts in M. Hints show only on the first run, once each, and a hint counts as seen only when its thing is passed, so a player caught early sees the rest next time. Each hint stays until its thing is passed.
+
+| m | s | What | Hint (shows at) |
+|---|---|---|---|
+| 0 | 0 | Start. "3, 2, 1" then "Go!" | |
+| 22 | 2.4 | 4 coins in L and 4 in R | "Swipe left or right to change lane." (12 m) |
+| 35 | 3.8 | **Stuck danfo in M** (teaches lane change) | |
+| 50 | 5.5 | 4 coins in M | |
+| 70 | 7.6 | **Cone row in M**, 5 coins in an arc over it | "Swipe up to jump over the cones." (48 m) |
+| 98 | 10.5 | 3 low coins in M | |
+| 100 | 10.7 | **Barrier arm in M** | "Swipe down to slide under the bar." (80 m) |
+| 128 | 13.6 | **Crate in M** (2 coins, Power 1) | "Run into crates to burst them." (108 m) |
+| 152 | 16.0 | Danfos in L and R, **Power bulb in M** (warm-up bulb 1) | "Power pushes the Blackout back." (134 m) |
+| 176 | 18.4 | 3 coins in L and 3 in R | |
+| 178 | 18.6 | **Goat in M** (3 coins) | "Goats move out of your way. Meeh!" (160 m) |
+| 204 | 21.1 | **Garri in M** | "Run into the garri to eat it." (186 m) |
+| 215 | 22.2 | 5 coins in M | |
+| 240 | 24.5 | Danfo in L, **Tech chip in M** | "Tech chips fix slow internet." (222 m) |
+| 258 | 26.2 | 4 coins in R | |
+| 262 | 26.6 | Cones in L and M (first two-lane row) | |
+| 282 | 28.5 | Danfos in M and R, bulb in L (warm-up bulb 2) | |
+| 305 | 30.6 | **Pothole in M** with 5 coins in an arc; junk pile in L; bulb in R | "Jump over potholes." (288 m) |
+| 328 | 32.6 | Barrier arms in L and M, chip in R | |
+| 346 | 34.2 | 4 coins in L | |
+| 350 | 34.6 | Crate in M (2 coins, Tech 1), cones in R, bulb in L | |
+| 372 | 36.5 | Danfos in L and R, bulb in M (warm-up bulb 3) | |
+| 390 | 38.1 | 4 coins in M | |
+| 395 | 38.5 | Goat in L, pothole in R | |
+| 398 | 38.8 | Bulb in M | |
+| 418 | 40.5 | Danfo in R, **roasted corn in M**, chip in L | (the food's own words) |
+| 440 | 42.3 | Cones in M and R, crate in L (2 coins, Power 1) | |
+| 458 | 43.8 | 4 coins in L | |
+| 462 | 44.1 | Barrier arm in M, broken sign in R (Power 1, Tech 1) | |
+| 484 | 46.0 | Danfo in M; chip in L or bulb in R (a choice) | |
+| 506 | 47.7 | Pothole in L with 5 coins in an arc, cones in M, bulb in R | |
+| 528 | 49.5 | Crate in L (2 coins, Tech 1), barrier arm in R, bulb in M | |
+| 545 | 50.9 | 5 coins in R | |
+| 550 | 51.3 | Danfos in L and M | |
+| 572 | 53.0 | Goat in R, cones in M, chip in L | |
+| 584 | 53.9 | 5 coins in M | |
+| 594 | 54.7 | Bulb in M | |
+| 600 | 55.2 | **The bus stop** | |
+
+The teaching follows 2B in its order, one new thing every 2.5 to 3 s: lane change, jump, slide, crate, Power bulb, goat, food, all by 21 s. Then Tech and the pothole, then mixes of two-lane rows. Corn lasts 12 s (about 150 m), and 440 to 572 m holds cones, barrier arms, crates, a sign, a pothole and a goat to toss at.
+
+### 9. Pickups, bursts and goats
+
+| Pickup | Looks like (our own) | Gives | Sound |
+|---|---|---|---|
+| Coin | A small brass 10 kobo coin with a raised rim and a palm leaf mark; stands up and tilts gently side to side (never a full spin) | 10 kobo | soft "tink", one of three notes at random |
+| Power bulb | A pear-shaped bulb with a small lightning bolt inside and a soft glow ring | Power 1, and the Blackout goes back 5 m | "vmm-ding" |
+| Tech chip | A small square chip with pins and three signal bars over it | Tech 1 | "blip-blip" |
+| Garri | A bowl of garri with sugar, as on the streets | The shield (part 11) | as on the streets |
+| Roasted corn | A cob on a husk, as on the streets | Corn toss for 12 s (part 11) | the corn tune |
+
+Coins come in short lines of 3 to 5 (2 m apart) and arcs of 5 over jumps. Never a long trail of coins.
+
+**What pops out** (it flies straight to its chip at the top, so nothing new lands in the lanes):
+
+| Thing | Pops out |
+|---|---|
+| Crate (Power) | 2 coins and Power 1 |
+| Crate (Tech) | 2 coins and Tech 1 |
+| Crate (coins, endless part only) | 4 coins |
+| Junk pile | 2 coins and Tech 1 |
+| Old broken sign | Power 1 and Tech 1 |
+| Goat | 3 coins |
+
+Power from a burst also pushes the Blackout back 5 m: every Power does ("Power pushes the Blackout back.").
+
+**Totals in the fixed 600 m** (some are on different lanes of one row, so nobody gets them all): Power 14 at most (11 bulbs, 3 from bursts), Tech 9 at most (5 chips, 4 from bursts), coins 86 at most (₦8.60). A first-timer gets about ₦4 to ₦6, Power 8 and Tech 5; a good run about ₦7, Power 12 and Tech 8. This matches city.md part 1 (about ₦4 to ₦10, Power 8 to 14, Tech 5 to 9).
+
+**The win prize** at the bus stop: ₦5, Power 4 and Tech 2 (city.md part 1), plus the decision 45 top-up when the run was for a fix (part 2). So a first-timer's win brings about ₦10, Power 12 and Tech 7: enough for Lights out (Power 10) and Slow internet (Tech 6). **One win pays for the fix.**
+
+### 10. The Blackout
+
+The street lamps behind you switch off one by one and the dark edge rolls up the road after you. No body, no face, no eyes, no hands (2B). The Blackout is a number of metres behind you; it is not a thing on the road.
+
+| Number | Normal | Gentle |
+|---|---|---|
+| Starts | 40 m behind | 60 m behind |
+| Furthest back | 60 m | 60 m |
+| Creeps closer | 0.2 m every second (1 m every 5 s) | 0.1 m every second |
+| A stumble | it gains 15 m | it gains 10 m |
+| Each Power | it goes back 5 m (never past 60 m) | same |
+| A garri shield | takes one stumble: it gains nothing | same |
+| After the goal | creeps 0.15 m/s faster each 100 m, up to 2 m/s | 0.075 m/s faster each 100 m, up to 1 m/s |
+| Caught | at 0 m: the run ends, you keep everything | same |
+
+**Checked against "a first-timer reaches the goal in 3 tries".** Normal mode, at the bus stop: distance = 40 − 11 (55 s of creep) + 5 for each Power − 15 for each stumble the shield did not take.
+
+| Run | At the bus stop | |
+|---|---|---|
+| Clean, no Power | 29 m | never caught |
+| 2 stumbles, the 3 warm-up bulbs | 14 m | safe |
+| 2 stumbles, no Power at all | caught at about 540 m | 2B's "stumble twice and still be fine" needs the warm-up bulbs, which sit where you must run |
+| 3 stumbles, warm-up bulbs, garri | 14 m | safe |
+| 4 stumbles, 5 Power, garri | 9 m | safe |
+| 4 stumbles, warm-up bulbs, garri | caught at about 535 m | try 2 |
+| 3 stumbles in the first 110 m (before any bulb) | caught | try 1 of a player who hits the first three teaching things |
+
+A first-timer hits 4 or 5 things in try 1 (learning), about 3 in try 2 and 2 in try 3, so the goal comes on try 2 or 3. Gentle mode: caught only after 6 stumbles with no Power. qa checks this with people (part 21), not only with numbers.
+
+**What you see and hear:**
+- Lamps behind you go dark. You see the Blackout only when it is near: under 30 m, the bottom of the screen darkens to a deep blue (never black), growing to 35 percent of the screen height at 0 m, and the lamps nearest the camera switch off with a soft "tunk" each.
+- **Close warning, not colour alone** (2B): under 15 m the lamps at the screen edge flicker twice a second, a low hum plays (Sound on), and the HUD line gets a "!". Reduced motion: no flicker; those lamps stay dim and the "!" and hum still come.
+- A Power pickup: the nearest dark lamps behind switch back on and the dark edge slides back; the HUD shows "+5 m" by the Blackout words for 1 s.
+- A stumble: the HUD shows "−15 m" (Gentle "−10 m") for 1 s.
+- A shield takes a stumble: the suit flashes once, "tzing", the line "The shield took it!" for 1.5 s, and no "−15 m".
+- **Caught (funny, never cruel):** the last lamps click off around the hero, the road turns deep blue, the hero stops, looks left and right, takes out a small torch, clicks it on and shrugs with a grin. 1.2 s, then the card. Sound: a soft falling "wom-wom-wom" and the torch click. Reduced motion: one still picture of the hero with the torch.
+
+### 11. Food in the lane run
+
+- **Garri** (2D): "Garri! A shield takes one stumble." (34 characters). The shield shows as our own tech suit (decision 43). It lasts until a stumble uses it. A second garri while shielded gives 3 coins instead.
+- **Roasted corn** (2C, 2D): "Roasted corn! Corn toss for 12 s." The hero tosses corn about twice a second at the nearest problem ahead in their lane: cones slide to the kerb, a barrier arm lifts, a pothole is plugged, a crate, junk pile or sign bursts (and pops out its values), and a goat trots off after the corn ("meeh", its 3 coins pop). Corn never moves a danfo and never aims at people. No speed boost in the lane run. The corn tune plays with its 5, 4, 3, 2, 1 count (decision 42, design.md "Corn tune"), in the hint bar's place.
+- A stumble does not end corn. Being caught ends it, and the corn tune fades out in 0.3 s.
+
+### 12. After the goal: "Keep running"
+
+- At 600 m the hero runs under the bus stop roof, the lamps over the stop shine brighter, the Blackout's edge drops back, a two-note danfo horn and a short chime play, and the run stops under the goal card (part 14). **That is a win**, saved at once (best distance, the prize).
+- "Take it home": the run ends (part 2).
+- "Keep running for more": "3, 2, 1", then the run goes on from the bus stop with the Blackout where it was. 2.5 s of open road first. It is endless and gets faster (part 4) and the Blackout creeps faster (part 10). Being caught after the goal is still a win, and you keep it all.
+- **The endless part** is made of 8 short chunks in the level file, 4 rows each, one row every 1.8 s at any speed. A chunk is picked at random, never one of the last 2 used, and is mirrored left to right half the time. A food every 400 m (garri, then corn, in turn). After 1,600 m, every second bulb in a chunk becomes a chip, so the run ends sooner or later in both modes.
+- Top right shows the distance run ("820 m") and under it "Best: 1,240 m". A new best saves at once.
+
+### 13. The level file (src/data/levels/lagos-lane.json)
+
+A new `type: "lane"` file. Distances are metres from the start; lanes are 0 left, 1 middle, 2 right.
+
+| Field | Shape | Meaning |
+|---|---|---|
+| `schema`, `type`, `id`, `state`, `name`, `theme` | 1, "lane", "lagos-lane", "lagos", "Lane run", "dusk" | Which file this is |
+| `goal` | 600 | The bus stop |
+| `lanes`, `laneWidth` | 3, 2.5 | |
+| `speed` | start, atGoal, afterGoalPer100, max, and `gentle` | Part 4 |
+| `move` | laneChange, jumpTime, jumpHeight, clearFeet, slideTime, dropTime, stumbleSlow, stumbleTime, safeAfterStumble | Part 4 |
+| `blackout` | start, max, creep, stumble, powerPush, warnUnder, afterGoalCreepPer100, afterGoalCreepMax, and `gentle` | Part 10 |
+| `prize` | { kobo: 500, power: 4, tech: 2 } | Part 9 |
+| `pops` | kind → { coins, power, tech } | Part 9 |
+| `spawnAhead` | 60 | Part 5 |
+| `things` | [d, lane, kind] | danfo, cones, pothole, barrier; crate:power, crate:tech, crate:coins, junk, sign; goat |
+| `pickups` | [d, lane, kind] | bulb, chip, garri, corn |
+| `coins` | [d, lane, count, shape] | line and low: first coin at d, 2 m apart; arc: 5 coins centred on d over a jump thing |
+| `hints` | [d, key] | lane, jump, slide, crate, power, goat, food, tech, pothole; words in src/screens/words.ts (part 14) |
+| `endless` | beat 1.8, foodEvery 400, foods, noRepeat 2, mirror, fewerBulbsAfter 1600, clearAfterCard 2.5 | Part 12 |
+| `chunks` | { id, beats: [[L, M, R] kinds or null] x 4, pickups: [beat, lane, kind], coins: [beat, lane, count, shape] } | Part 12 |
+
+The level test checks part 7's rules, the totals in part 9 (Power 14, Tech 9, coins 86), hints at least 1.5 s before their thing and 1.5 s apart, and that every chunk keeps a free lane.
+
+### 14. Screens and exact words
+
+Every line fits 320 x 240 on one or two lines. Money words as N1 to N4 ("80 kobo", "₦3.40", "N3.40" without the ₦ glyph). Screen readers hear "3 naira 40 kobo".
+
+| Screen | Who sees it | One job | Exact words |
+|---|---|---|---|
+| First-run start (first lane run only) | A first-timer | Show what chases you, in 2 s | The camera looks back down the road as the far lamps switch off, then turns to behind the hero. Line: "The Blackout is switching off the lamps." then "Run to the bus stop!" Then "3, 2, 1", "Go!". Reduced motion: one still picture with both lines, 2 s. A tap skips to "3, 2, 1" |
+| Start (every later run) | Anyone | Get ready | "3, 2, 1", "Go!" |
+| Hints (first run, part 8) | A first-timer | Teach one thing | Swipes: "Swipe left or right to change lane." / "Swipe up to jump over the cones." / "Swipe down to slide under the bar." Buttons: "Tap ◀ or ▶ to change lane." / "Tap ▲ to jump over the cones." / "Tap ▼ to slide under the bar." Keys: "Press ← or → to change lane." / "Press ↑ or Space to jump." / "Press ↓ to slide under the bar." All: "Run into crates to burst them." / "Power pushes the Blackout back." / "Goats move out of your way. Meeh!" / "Run into the garri to eat it." / "Tech chips fix slow internet." / "Jump over potholes." (swipes; buttons "Tap ▲ to jump over potholes."; keys "Press ↑ to jump over potholes.") |
+| Food lines | A player who eats | Say what it does | "Garri! A shield takes one stumble." / "Roasted corn! Corn toss for 12 s." / "The shield took it!" |
+| HUD | A player in the run | What you have, how near the dark is, how far to go | Chips "₦3.40", "Power 6", "Tech 2". "Blackout: 40 m behind"; under 15 m "Blackout: 10 m behind!"; "+5 m" / "−15 m" for 1 s. "To the bus stop: 420 m"; after the goal "820 m" and "Best: 1,240 m". Pause and Sound buttons (part 15) |
+| Goal card | A player who reached the bus stop | Bring it home, or run on | "You made it to the bus stop!" / "You got ₦10.20, Power 12 and Tech 7." (everything this run brings home, prize and top-up included) / big "Take it home", small "Keep running for more" |
+| Caught after the goal | A player who kept running | Bring it home | "The Blackout caught up at 840 m." / "Your win is safe. You got ₦12.40, Power 17 and Tech 9." / "New best: 840 m!" (only when it is) / big "Take it home", small "Run again" |
+| Caught before the goal | A player the Blackout caught | Keep it, try again | "The Blackout caught up." / "You keep it all: ₦3.10, Power 5 and Tech 2." / "The bus stop was 180 m away." / Gentle off only: "Want more tries? Gentle mode keeps the Blackout further back." with the switch "Gentle mode: off" / big "Run again", small "Take it home" |
+| Pause | A player who paused | Get back to playing | "Paused" / "So far: ₦2.10, Power 4 and Tech 1." / "Keep playing", "Start again", "Back to Lagos" / "Sound: on", "Music: on", "Buttons instead of swipes: off". iPhones only, by Sound: "No sound? Turn off silent mode on your phone." (decision 22) |
+| "Leave the game?" (Android back, ST0) | A player who pressed back twice | Stay or go | As ST0: "Leave the game?" / "Your hero and your Lagos are saved on this phone." / "This run starts again next time." / new line, lane run only: "You keep what you picked up." / big "Keep playing", small "Leave" |
+| Sideways card | A player holding the phone upright | Turn the phone | "Turn your phone sideways to play." (the run is paused; back sideways: "3, 2, 1") |
+| City line after "Take it home" (not a fix) | A player back in Lagos | Say what came in | "You brought ₦6.20, Power 12 and Tech 7 home." |
+| City hint (LR-Q2) | A player whose run paid for the other fix too | Point to it | "The mast is ready to fix too. Walk onto its board." (Power: "The lamps are ready to fix too. Walk onto their board.") |
+| Streets card | Anyone on the Streets screen | Start a lane run | "Lane run" / "Run to the bus stop for Naira, Power and Tech." / "Ready to play"; later "Done ✓ Best: 840 m" |
+| Settings | Anyone | Choose | New switch "Buttons instead of swipes: off" / "...: on" |
+
+Spoken (screen readers): the goal card "You made it to the bus stop! You got 10 naira 20 kobo, Power 12 and Tech 7."; the HUD is read on request, and a polite live line says "Blackout 10 metres behind" once each time it comes under 15 m, and "Bus stop in 100 metres" once.
+
+**What ends a run, and what goes home (LR-Q1, recommended a):** everything you picked up is already in its bucket, so every end keeps it: caught, "Take it home", "Start again", "Back to Lagos" and "Leave". Only a win gives the prize and the top-up. "Start again" and "Run again" start at 0 m with the Blackout reset.
+
+### 15. Layout at 320 x 240 (and bigger)
+
+Sideways only. Everything you tap or read sits inside the safe edges plus 8 px (ST0 part 4).
+
+- **Row 1, top, 44 px tall:** the three chips on the left (icon plus word each, 12 px bold, together at most 200 px wide at 320); Sound and Pause on the right, each 44 x 44 px.
+- **Row 2, under it, 20 px:** "Blackout: 40 m behind" on the left; "To the bus stop: 420 m" on the right, both 12 px bold, on a soft dark strip so they read over the sky. From 400 px wide, 6 lamp dots (each 10 m) sit after the Blackout words and go dark as it closes; under 400 px the dots hide and the words carry it. If the two lines still meet, the right one becomes "Bus stop: 420 m" (spoken stays in full).
+- **Hint bar:** under row 2, centred, at most 300 px wide, never over the hero.
+- **The hero:** lower middle, at least 56 px tall, never under a button.
+- **Buttons mode:** ◀ ▶ bottom left, ▲ ▼ bottom right, 56 x 56 each. They cover only the road's bottom corners, never the hero's lane middle.
+- **Cards** (goal, caught, pause): centred, at most 300 x 220 at 320 x 240, one big button at least 56 px tall, small buttons at least 44 x 44.
+- Bigger screens: the same layout, rows a little taller (row 1 48 px from 360 px high), more road shows.
+
+### 16. The look: a Lagos main road at dusk, from behind
+
+- **Sky:** dusk, warm orange low down to violet high up; a far skyline of our own block shapes and cranes, no real building. Drawn once.
+- **The road:** dark grey tarmac with white lane dashes; black-and-yellow kerbs on both sides; a concrete middle divider on the left with small plants.
+- **The pavements, as scenery** (cycled, our own drawings): a roasted corn seller with a grill and soft grey smoke, a fabric stall with rolled ankara, a fruit table with oranges and pawpaw, a provisions kiosk, a phone-charging stand, a market umbrella, a parked keke and a parked okada with no rider, people at a bus stop waving, a trader calling out. Every 200 m an overhead footbridge crosses high above the road (a real Lagos sight; scenery only, never something to duck). Billboards are blank or show our own food pictures, no brands and no words.
+- **The lamps:** tall concrete poles with one warm head, every 10 m on both kerbs. Three looks: on, flickering, off.
+- **The bus stop (goal):** our own shelter with a bench and a yellow danfo waiting beside it, people under the roof waving, the lamps above it bright. A plain stop sign with a bus picture, no name.
+- **The hero:** the hero you built, from behind, every body, skin, hair and outfit (decision 60 look): 4 run frames, jump, slide, stumble (2 frames), the torch shrug (2 frames), a wave at the bus stop.
+- Warm and proud, never run-down (decision 47's rule): the go-slow is a busy evening, not a broken city. The real problem is the dark, and it is a problem, not a person or a group.
+- Later lane runs in other states get their own streets, foods and sights from that state, with the same care (decision 30).
+
+### 17. Sound and tune (our own, made in code; all follow Sound and Music)
+
+| Sound | What it is like |
+|---|---|
+| Steps | soft feet, two alternating taps, faster as you speed up |
+| Lane change | short soft whoosh |
+| Jump / land | small hop up / soft thud |
+| Slide | short cloth scuff |
+| Coin | soft "tink", one of three notes from the tune's scale at random. Never a two-note rising coin sound like any well-known game |
+| Power bulb | a low hum that ends in a small bell, "vmm-ding" |
+| Tech chip | two quick bright "blip-blip" |
+| Burst | wooden "pok" and a short rattle of slats; no bang |
+| Goat | "meeh" (decision 62, the streets' sound) |
+| Stumble | small "oof" and a thump |
+| Lamp switching off (under 30 m) | low soft "tunk" |
+| Close hum (under 15 m) | low steady hum, fades in over 0.5 s |
+| Shield used | short "tzing" |
+| Bus stop | two-note danfo horn, then a three-note chime |
+| Caught | soft falling "wom-wom-wom", then a torch click; never sad |
+
+**The lane tune** (`lane` in src/art/tunes.ts, data like the others, under 2 KB): our own Afrobeat-style groove, 120 BPM, E minor pentatonic (the same notes as the street tunes' G major pentatonic, so the corn tune never clashes). 8 bars looping: kick on beats 1 and 3, shekere on every 16th, a bass riff, a highlife guitar line, a talking-drum call every 4 bars. Under 15 m the guitar drops out and only drums and bass play, until the Blackout is back over 15 m. After the goal, 1 BPM faster each 100 m, up to 132; the pitch never changes. **Must not sound like** the Subway Surfers, Temple Run or Minion Rush music, or any known song: no whistle lead, no hip-hop beat, no chase-movie strings. art adds their openings to the check list in tests/unit/music.test.ts.
+
+### 18. Accessibility and reduced motion
+
+- Tap targets: every button at least 44 x 44 px; in play (lane buttons) 56 x 56.
+- Sound and Music switches on Pause and Settings; the Sound button in the HUD.
+- **Never colour alone:** dodge things have their own outline and shape, burst things a sparkle mark, pickups their own shapes, buckets an icon and a word, the Blackout words and a "!".
+- **Gentle mode** (part 10): the Blackout starts further back, gains less and creeps half as fast; the speed rises half as fast. Offered on the caught card and in Settings; it counts from the next run (Q15's rule).
+- Swipes are never needed: keys and "Buttons instead of swipes".
+- No time limit: the Blackout is the only pressure, and it is shown in words.
+- **Reduced motion:** the camera does not sway, no lamp flicker (steady dim), the look-back becomes a still, pickups do not fly (the chip just counts up with a short "+1"), coins do not tilt, danfo hazard lights stay steady, the caught moment is one still picture. The run's speed does not change.
+- Screen readers: buttons have names; the cards are dialogs with the big button first; part 14 spoken lines.
+- Pause when the app goes to the background, on a call, when the phone is turned upright or the tab is hidden; back with "3, 2, 1" (2B, ST0 part 5).
+
+### 19. What we must not copy (2B's list, applied)
+
+All 11 lines of city.md 2B "What we must NOT copy" hold. For this build in particular:
+- The only chaser is the Blackout: lamps going off. No guard, inspector, police, dog or any animal running after you, nothing with a face in the dark.
+- No trains, tracks, tunnels, and no running along vehicle tops: you never land on or run over a danfo; jumping is for cones and potholes only.
+- Our coins are short lines of small brass kobo coins that tilt, never long rails of spinning gold coins. No score number, no multiplier, no mystery box, no magnet, no hoverboard, no letter hunt, no "keys to continue", no daily missions or streaks, no shop.
+- No upright screen, no corner turns, no cliff path.
+- Distance in metres, in words; not "stumble once, caught the second time".
+- Our own hero, Lagos road, danfo, cones, goats, Nigerian food, bus stop goal, our own pop, tune and sounds.
+
+### 20. Saves
+
+- Buckets live in the `city` part of `gidi-progress` (kobo, power, tech), as now. Each pickup goes in at once; the save is written at pause, when the app goes to the background, and at every run end.
+- New part `lane`: `{ "best": 0, "goals": 0, "runs": 0, "hints": [] }` (best in whole metres; hints seen, by key). Merged in; a missing or broken part starts at zeros and never touches the rest of the save.
+- Settings gain `buttonsInsteadOfSwipes: false`.
+
+### 21. Light on a cheap phone
+
+- **Size:** art under 50 KB (hero from behind about 10, road, sky, lamps and the Blackout about 8, road things about 12, pickups about 4, pavement scenery about 10, the bus stop about 3, sounds and tune about 3). Code under 45 KB (S3f2 engine 30, S3f3 game 15). The lane run may be its own chunk, loaded the first time it opens and kept for offline. The first load stays under 3 MB.
+- **Speed:** 60 fps on a mid phone; at least 45 fps at 4x CPU slowdown; never under 30 on a cheap phone (city.md part 3).
+- How (for gamedev): the sky and skyline are drawn once into their own picture; the road is at most 30 filled bands; each thing is a ready-made picture at two sizes, scaled with one draw call; at most 20 road things from a pool, coins from a pool of 30; one ready-made dark gradient for the Blackout; no blur, shadows or filters; nothing made new each frame.
+
+### 22. The city at 320 x 240 with Power and Tech (S3f4)
+
+The lane run makes Power and Tech real, so the packed layout from W15 and W16 is now reachable. po will not accept step (f) without these (S3f4, po 13 Nov):
+1. With all three chips at 320 x 240, every off-screen pin's edge arrow gets its full 48 x 48 tap square, and the drawn arrow sits in the middle of that square. The 44, 40 and 36 px squeeze (W15 "Narrow exception") is no longer used.
+2. No chip, "+" or "−" ever covers a pin's icon or cuts its word: "Lights out" and "Slow internet" are always whole. Rule: the first look and the camera keep every pin's tap area, and every arrow's square, inside the open map (the screen minus the top row, the bottom buttons and the zoom column, plus 4 px).
+3. The two coming-soon pins never overlap, and the Mast board never covers the Slow internet pin (po, 13 Nov).
+4. qa tries a first-timer on a moved sign (W16 part 2); if they look lost, the thin dotted line from sign to mat comes in.
+
+### 23. Who does what
+
+- **art (S3f1, can start now):** the road, kerbs, divider, sky and skyline; lamps on, flickering and off; the Blackout's dark edge; the hero from behind for every body (run 4, jump, slide, stumble 2, torch shrug 2, wave); danfo from the back, cone row, pothole, barrier arm; crate, junk pile, broken sign, each with its burst; the goat from behind; coin, bulb, chip; the bus stop; pavement scenery and the footbridge; the sounds in part 17; the `lane` tune; docs/assets.md lines. Under 50 KB.
+- **gamedev (S3f2, can start the engine now with plain shapes):** the camera and road (part 5), the pool, the level loader for `type: "lane"`, movement and hits (part 4), swipes, keys and buttons (part 3), the "Buttons instead of swipes" switch, the endless chunks (part 12), and the level test (part 13). Under 30 KB.
+- **gamedev (S3f3, after S3f2):** the Blackout (part 10), buckets and pops (part 9), food (part 11), the HUD (parts 14 and 15), the cards, "Keep running", best distance, saves (part 20), and the city links: the problem cards, Not enough cards and the Streets card open the run; Mission complete for Lamps and Mast; "You brought ... home". Under 15 KB.
+- **gamedev (S3f4, after S3f3):** part 22.
+
+### 24. Done checks for qa
+
+1. **First-timers reach the goal in 3 tries or fewer:** three people who have never played it (at least one aged 9 to 12, one who never plays runner games), Gentle off, swipes on a phone. Each reaches the bus stop within 3 tries. If one does not, designer retunes part 10 or 8 (not the rules).
+2. Everything is visible 1.5 s before it arrives at 9, 13 and 16 m/s, and every dodge thing is at least 10 px tall or wide then at 320 x 240.
+3. The level test passes part 7 and part 9 totals (Power 14, Tech 9, coins 86 in the fixed 600 m).
+4. The goal comes at 600 m in 54 to 57 s with no stumbles (Gentle 59 to 62 s).
+5. Blackout numbers: starts 40 (Gentle 60); a stumble −15 (−10); a Power +5, never over 60; garri takes one stumble; caught at 0; the HUD words match; "!" and the hum under 15 m; after the goal it speeds up as part 10 says.
+6. A clean run is never caught before the goal; 2 stumbles with the 3 warm-up bulbs never end a run before the goal.
+7. Swipes (24 px in 0.3 s), all keys, and the four buttons each do what part 3 says; "Buttons instead of swipes" in Settings and Pause; every button at least 44 px (lane buttons 56) at 320 x 240.
+8. Every pickup and pop goes to the right bucket; the goal card's numbers add up, prize and top-up included; a run for Lights out always brings home Power 10 or more on a win, for Slow internet Tech 6 or more.
+9. Losing, "Start again", "Back to Lagos" and "Leave" keep what was picked up (LR-Q1); only a win gives the prize.
+10. Pins 2 and 3 can be fixed: the cards, the Not enough cards and the Streets card start the run; Mission complete plays for Lamps and Mast; "Lane run: coming soon" is gone everywhere.
+11. Goats are never hurt and never make you stumble; they say "meeh"; corn feeds them off the road.
+12. Nothing drives at the hero; no people in the lanes; no faces in the danfos or the dark.
+13. "Keep running", best distance saved, "New best" only when it is; caught after the goal is a win.
+14. Every word on every screen matches part 14, fits 320 x 240 and 640 x 200, and nothing is shown by colour alone.
+15. Reduced motion as part 18; pause on background, upright and a call, back with "3, 2, 1"; Android back pauses, then the ask with "This run starts again next time." and "You keep what you picked up."
+16. 60 fps on a mid phone, at least 45 at 4x CPU, never under 30 on the slow phone profile; size within part 21; offline on the second visit; no network call.
+17. Sounds and the tune by ear: our own, not like any lane runner's or any known song; the corn tune plays over the lane tune.
+18. city.md 2B "What we must NOT copy" (all 11) and city.md part 6 pass; nothing from Mario or any Nintendo game.
+19. Part 22 at 320 x 240 with all three buckets.

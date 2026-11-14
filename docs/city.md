@@ -961,7 +961,7 @@ Done when: it fits 320 x 240 with stops at least 44 px; screen readers hear it a
 
 #### (f) The lane run and the Blackout
 
-Rules: part 2B, all confirmed. Built in four steps:
+Rules: part 2B, all confirmed. **The f0 note is written: docs/design.md "S3f0. The lane run" (14 Nov 2026), level data in src/data/levels/lagos-lane.json; it is built next (decision 63), before (e).** Built in four steps:
 - f0 designer: the lane run note in docs/design.md: lane width and speeds, the first 600 m laid out (what comes where, one new thing at a time), the pickup counts that make "one win pays for the fix", the Blackout numbers checked against "a first-timer reaches the goal in 3 tries or fewer", buttons and swipes, screens.
 - f1 art: the road from behind, the hero from behind (every body), dodge, burst, goat and slow things, pickups, the Blackout lamps, sounds, a lane-run tune (under 50 KB).
 - f2 gamedev: the lane run engine on the 2D canvas (pool of 20 things, 60 fps on a mid phone), swipes, keys and "Buttons instead of swipes" (under 30 KB).
