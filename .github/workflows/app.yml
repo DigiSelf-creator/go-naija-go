@@ -1,5 +1,5 @@
 # Build the Android test app (debug APK) for Gbese! (plan ST1b, draft from ST1a).
-# Runs on every push to main, and by hand from the Actions tab. deploy.yml (the web test link)
+# Runs on every push to main and to the team's working branch, and by hand from the Actions tab. deploy.yml (the web test link)
 # is separate and does not wait for this.
 # The APK is kept for 14 days as "gbese-debug.apk" on the run's page. It is a debug build:
 # not signed for the store, no keys needed.
@@ -7,7 +7,7 @@ name: Android test app
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/serene-hopper-ydve2g]
   workflow_dispatch:
 
 permissions:
