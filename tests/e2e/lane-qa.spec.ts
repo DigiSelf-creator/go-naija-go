@@ -343,6 +343,10 @@ for (const [w, hgt] of [
     const caught = page.getByRole('dialog', { name: 'The Blackout caught up.' });
     await expect(caught).toBeVisible({ timeout: 10_000 });
     bad.push(...(await fits(page, 'caught', '.lane-card .card, .lane-card .card *', 44)));
+    {
+      const b = await page.getByRole('dialog', { name: 'The Blackout caught up.' }).getByRole('button', { name: 'Run again', exact: true }).boundingBox();
+      if ((b?.height ?? 0) < 55.5) bad.push(`Run again: big button ${b?.height} px tall, under 56`);
+    }
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/caught-${w}x${hgt}.png` });
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
     await caught.getByRole('button', { name: 'Run again' }).tap();
@@ -355,6 +359,10 @@ for (const [w, hgt] of [
     const goal = page.getByRole('dialog', { name: 'You made it to the bus stop!' });
     await expect(goal).toBeVisible({ timeout: 10_000 });
     bad.push(...(await fits(page, 'goal', '.lane-card .card, .lane-card .card *', 44)));
+    {
+      const b = await page.getByRole('dialog', { name: 'You made it to the bus stop!' }).getByRole('button', { name: 'Take it home', exact: true }).boundingBox();
+      if ((b?.height ?? 0) < 55.5) bad.push(`Take it home: big button ${b?.height} px tall, under 56`);
+    }
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/goal-${w}x${hgt}.png` });
     // Caught after the goal.
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
@@ -367,6 +375,10 @@ for (const [w, hgt] of [
     const after = page.getByRole('dialog', { name: /^The Blackout caught up at / });
     await expect(after).toBeVisible({ timeout: 10_000 });
     bad.push(...(await fits(page, 'caught after goal', '.lane-card .card, .lane-card .card *', 44)));
+    {
+      const b = await page.getByRole('dialog', { name: /^The Blackout caught up at / }).getByRole('button', { name: 'Take it home', exact: true }).boundingBox();
+      if ((b?.height ?? 0) < 55.5) bad.push(`Take it home: big button ${b?.height} px tall, under 56`);
+    }
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/caught-after-${w}x${hgt}.png` });
     expect(bad).toEqual([]);
   });
@@ -385,8 +397,38 @@ test('qa: the lane cards\' big button is at least 56 px tall (part 15)', async (
   expect(big!.height).toBeGreaterThanOrEqual(56);
 });
 
+for (const [w, hgt] of [
+  [320, 240],
+  [851, 393],
+] as const) {
+  test(`qa: at ${w} x ${hgt} the lane Pause card's big button is at least 56 px tall (part 15)`, async ({ page }) => {
+    // qa bug (S3f3, 5e9a271): "Keep playing" is 44 px tall at 320 x 240 and 48 px at 851 x 393.
+    // Remove this line once it is fixed.
+    test.fail();
+    await page.setViewportSize({ width: w, height: hgt });
+    await open(page, CITY, './?level=lagos-lane');
+    await playing(page);
+    await page.keyboard.press('KeyP');
+    const b = await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Keep playing', exact: true }).boundingBox();
+    expect(b!.height).toBeGreaterThanOrEqual(56);
+  });
+}
+
 test('qa: the lane HUD has a Sound button beside Pause (parts 14 and 15)', async ({ page }) => {
   await open(page, CITY, './?level=lagos-lane');
   await playing(page);
-  await expect(page.locator('.lane-hud').getByRole('button', { name: /^Sound/ })).toBeVisible();
+  const sound = page.locator('.lane-hud').getByRole('button', { name: /^Sound/ });
+  await expect(sound).toBeVisible();
+  const box = (await sound.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  // It switches Sound, the same switch as Settings, and keeps the run going.
+  await expect(sound).toHaveAccessibleName('Sound: on');
+  await sound.tap();
+  await expect(sound).toHaveAccessibleName('Sound: off');
+  await expect.poll(() => page.evaluate(() => window.__game!.sound.enabled)).toBe(false);
+  expect((await page.evaluate(() => window.__lane!.stage))).toBe('play');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await sound.tap();
+  await expect(sound).toHaveAccessibleName('Sound: on');
 });
