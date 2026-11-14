@@ -11,6 +11,7 @@ import { Sound, soundLength } from './engine/sound';
 import { Music } from './engine/music';
 import { CORN_GAIN, CORN_LOUD, CornDirector, MusicDirector, cornCount } from './game/music-cue';
 import { listenForAudioGestures } from './engine/audio-unlock';
+import { AnimalCalls } from './game/animal-calls';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel, type Level } from './game/level';
@@ -77,6 +78,9 @@ if (query.has('gallery')) {
     };
     requestAnimationFrame(frame);
   });
+} else if (query.has('sounds')) {
+  // Debug only: a board of every code-made sound, the goat's "meeh" and the birds' "hawk hawk" first (decision 62).
+  void import('./screens/soundBoard').then(({ showSoundBoard }) => showSoundBoard(document.body));
 } else {
   startGame();
 }
@@ -460,6 +464,8 @@ function startGame(): void {
   director.switches(menus.sound, menus.music);
   menus.touchWords = () => buttons.touch;
 
+  /** Decision 62: the goats' "meeh" and the birds' "hawk hawk", kept from piling up. */
+  const animalCalls = new AnimalCalls((n) => sound.play(n));
   const W = WORDS.toast;
   /** S2.2: a level hint shows 3.5 s in the hint bar. */
   const HINT_MS = 3500;
@@ -512,7 +518,8 @@ function startGame(): void {
         sound.play('goatChew');
         break;
       case 'goatMeeh':
-        sound.play('goatMeeh');
+      case 'goatBump':
+        animalCalls.hear(e);
         break;
       case 'fufuPop':
       case 'fufuJam':
@@ -528,19 +535,21 @@ function startGame(): void {
         if (e.kind === 'drum') sound.play('drumWake');
         break;
       case 'bounce':
-        sound.play(e.kind === 'goat' ? 'meeh' : e.kind === 'drum' ? 'drumBounce' : 'bounce');
+        // Decision 62: a goat's "meeh" (at most one each 0.5 s; a plain boing if it just spoke).
+        if (!(e.kind === 'goat' && animalCalls.hear(e))) sound.play(e.kind === 'drum' ? 'drumBounce' : 'bounce');
         break;
       case 'smash':
         // S2.16 B2: a hearty "gbam" (goats trot off unhurt with their "meeh").
         sound.play(game.run.power.amala > 0 ? 'strongSmash' : 'smash');
-        if (e.kind === 'goat') sound.play('meeh');
+        animalCalls.hear(e);
         break;
       case 'strongStep':
         sound.play('strongStep');
         break;
       case 'birdOff':
-        // S2.16 B1: the bird's own call says it; a bounce on it bounces.
-        sound.play(e.kind === 'crow' ? 'crowKraa' : 'egretKrk');
+        // S2.16 B1 and decision 62: "hawk hawk" (at most one call each 1.5 s) and the wings;
+        // a bounce on it bounces.
+        animalCalls.hear(e);
         sound.play('birdFlap');
         if (e.why === 'stomp') sound.play('bounce');
         break;

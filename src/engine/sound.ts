@@ -62,7 +62,6 @@ export type SoundName =
   | 'fufuBonk'
   | 'fufuPff'
   | 'goatChew'
-  | 'goatMeeh'
   // P13: amala's strong look (S2.16 B2)
   | 'strongStep'
   | 'strongSmash'
@@ -70,9 +69,8 @@ export type SoundName =
   // P13: the garri tech suit (S2.16 B3); the hum is setHum, not a one-shot
   | 'suitOn'
   | 'suitBreak'
-  // P15: birds (S2.16 B1)
-  | 'crowKraa'
-  | 'egretKrk'
+  // P15: birds (S2.16 B1); decision 62: their "hawk hawk"
+  | 'hawk'
   | 'birdFlap'
   // P15: the dash (S2.16 B4)
   | 'dashStart'
@@ -105,6 +103,12 @@ interface Tone {
   to?: number;
   at?: number;
   vol?: number;
+  /** Vibrato: the pitch wobbles `depth` (a share of the pitch, 0.04 = 4 percent) `hz` times a second. */
+  vib?: { hz: number; depth: number };
+  /** Nasal: the tone goes through a narrow band filter at this Hz (a voice-like "eh" or "aw"). */
+  nasal?: number;
+  /** How narrow that band is (filter Q). Default 3. */
+  q?: number;
 }
 
 /** A short burst of hiss (shekere shake, splash). hp/lp = filter Hz. */
@@ -114,6 +118,8 @@ interface Hiss {
   vol?: number;
   hp?: number;
   lp?: number;
+  /** Band filter Hz instead (rasp in a bird's call). */
+  bp?: number;
 }
 
 interface Recipe {
@@ -145,6 +151,45 @@ const BOOM: readonly (readonly [number, number, number])[] = [
 ];
 
 /**
+ * Decision 62, the goat's "meeh" (0.45 s): a soft low "m" hum, then a nasal voiced "eeh"
+ * that lifts a little and falls away, with a quick goat wobble (7.5 times a second). Two
+ * sawtooth voices through two narrow "eh" bands make the nasal sound, and a soft triangle
+ * gives it a body. A happy, silly bleat: never a cry.
+ */
+const MEEH: readonly Tone[] = [
+  // "m": a short closed-mouth hum
+  { f: 360, len: 0.07, wave: 'triangle', to: 400, vol: 0.035 },
+  // "eeh": the nasal voice, two bands ("e" at 1150 Hz and a thin top at 2500 Hz)
+  { f: 400, len: 0.4, wave: 'sawtooth', peak: 440, to: 330, at: 0.05, vol: 0.13, nasal: 1150, q: 4, vib: { hz: 7.5, depth: 0.045 } },
+  { f: 400, len: 0.34, wave: 'sawtooth', peak: 440, to: 345, at: 0.05, vol: 0.05, nasal: 2500, q: 5, vib: { hz: 7.5, depth: 0.045 } },
+  // the body under it
+  { f: 400, len: 0.38, wave: 'triangle', peak: 440, to: 335, at: 0.05, vol: 0.03, vib: { hz: 7.5, depth: 0.045 } },
+];
+
+/** One "hawk" of the birds' call at time `at`, pitch `f`: a breathy "h", a raspy "aw", a dry "k". */
+function hawkOnce(f: number, at: number): { tones: Tone[]; hiss: Hiss[] } {
+  return {
+    tones: [
+      // "aw": a rough sawtooth through a low open band; the fast wobble makes it raspy
+      { f, len: 0.15, wave: 'sawtooth', peak: f * 1.06, to: f * 0.8, at: at + 0.015, vol: 0.12, nasal: 1300, q: 2.5, vib: { hz: 38, depth: 0.05 } },
+      { f: f / 2, len: 0.13, wave: 'triangle', peak: (f / 2) * 1.05, to: (f / 2) * 0.82, at: at + 0.015, vol: 0.025 },
+    ],
+    hiss: [
+      { len: 0.03, hp: 2200, at, vol: 0.025 }, // "h"
+      { len: 0.14, bp: 1500, at: at + 0.015, vol: 0.05 }, // the rasp
+      { len: 0.015, hp: 3000, at: at + 0.16, vol: 0.03 }, // "k"
+    ],
+  };
+}
+
+/** Decision 62, "hawk hawk" (0.5 s): two raspy caws, the second a little lower. */
+const HAWK: Recipe = (() => {
+  const a = hawkOnce(620, 0);
+  const b = hawkOnce(560, 0.3);
+  return { tones: [...a.tones, ...b.tones], hiss: [...a.hiss, ...b.hiss] };
+})();
+
+/**
  * All our own. Soft sine and triangle waves, short. Avoided on purpose: the
  * square-wave B5-to-E6 coin, rising square power-up runs, descending "lose" runs,
  * and pipe or warp slides.
@@ -165,13 +210,8 @@ const SOUNDS: Record<SoundName, Recipe> = {
   },
   // Springy boing.
   bounce: { tones: [{ f: 300, len: 0.13, wave: 'sine', peak: 640, to: 520, vol: 0.08 }] },
-  // Friendly goat bleat, wobbly.
-  meeh: {
-    tones: [
-      { f: 540, len: 0.09, wave: 'triangle', peak: 580, to: 500 },
-      { f: 530, len: 0.17, wave: 'triangle', peak: 570, to: 470, at: 0.1 },
-    ],
-  },
+  // Decision 62: the goat's "meeh". A cheerful, silly bleat, never a pained one.
+  meeh: { tones: MEEH },
   // Soft thump, a puff of dust, a tiny ping.
   smash: {
     tones: [
@@ -447,15 +487,6 @@ const SOUNDS: Record<SoundName, Recipe> = {
     tones: [0, 1, 2].map((i): Tone => ({ f: i % 2 ? 230 : 250, len: 0.05, wave: 'triangle', to: 190, at: i * 0.2, vol: 0.04 })),
     hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.04, lp: 900, at: i * 0.2, vol: 0.03 })),
   },
-  // Then a happy "meeh": two slightly detuned tones that wobble up and down together.
-  goatMeeh: {
-    tones: [
-      { f: 560, len: 0.08, wave: 'triangle', peak: 600, to: 540, vol: 0.05 },
-      { f: 566, len: 0.08, wave: 'triangle', peak: 606, to: 546, vol: 0.03 },
-      { f: 545, len: 0.22, wave: 'triangle', peak: 590, to: 480, at: 0.09, vol: 0.055 },
-      { f: 551, len: 0.22, wave: 'triangle', peak: 584, to: 486, at: 0.09, vol: 0.03 },
-    ],
-  },
   // --- S2.16. Volumes: 100 percent in the notes is 0.3 here, so "30 percent" is 0.09.
   // Amala heavy step: a low "dum", a sine falling 90 to 60 Hz in 0.08 s (at most one every 0.18 s: STRONG.stepGap).
   strongStep: { tones: [{ f: 90, len: 0.08, wave: 'sine', to: 60, vol: 0.09 }] },
@@ -491,19 +522,8 @@ const SOUNDS: Record<SoundName, Recipe> = {
     ],
     hiss: [{ len: 0.05, hp: 3000, vol: 0.04 }],
   },
-  // Pied crow: a short, rough, filtered-noise "kraa" with a low nasal tone under it. Our own.
-  crowKraa: {
-    tones: [
-      { f: 520, len: 0.2, wave: 'sawtooth', peak: 560, to: 430, vol: 0.012 },
-      { f: 260, len: 0.2, wave: 'triangle', peak: 280, to: 220, vol: 0.03 },
-    ],
-    hiss: [{ len: 0.2, lp: 1800, vol: 0.05 }],
-  },
-  // Cattle egret: a soft "krk-krk", two dry clicks.
-  egretKrk: {
-    tones: [0, 1].map((i): Tone => ({ f: 700, len: 0.035, wave: 'triangle', to: 520, at: i * 0.12, vol: 0.03 })),
-    hiss: [0, 1].map((i): Hiss => ({ len: 0.035, lp: 2500, at: i * 0.12, vol: 0.04 })),
-  },
+  // Decision 62: the street 3 birds' "hawk hawk", a raspy two-note caw. Our own.
+  hawk: HAWK,
   // Wings as a bird flies off: three soft low air puffs.
   birdFlap: { tones: [], hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.05, lp: 600, at: i * 0.09, vol: 0.04 - i * 0.008 })) },
   // Dash start: a quick wood block "tak-tak" (no zoom, no fwoosh).
@@ -599,6 +619,9 @@ const SOUNDS: Record<SoundName, Recipe> = {
   },
 };
 
+/** Every sound's name, in recipe order (for the ?sounds test board). */
+export const SOUND_NAMES = Object.keys(SOUNDS) as SoundName[];
+
 /** How long a sound lasts, in seconds (its last tone or hiss end). For the music dip under the sting and the boom. */
 export function soundLength(name: SoundName): number {
   const r = SOUNDS[name];
@@ -606,6 +629,24 @@ export function soundLength(name: SoundName): number {
   for (const t of r.tones) end = Math.max(end, (t.at ?? 0) + t.len);
   for (const h of r.hiss ?? []) end = Math.max(end, (h.at ?? 0) + h.len);
   return end;
+}
+
+/**
+ * Vibrato without extra nodes: the pitch path (f, up to peak at 35 percent, down to `to`) is
+ * drawn as short straight steps, each nudged up or down by the wobble. Cheap: a few dozen
+ * points on one oscillator, nothing left running after the tone.
+ */
+function wobble(p: AudioParam, tone: Tone, t: number): void {
+  const vib = tone.vib!;
+  const peak = tone.peak ?? tone.f;
+  const to = tone.to ?? peak;
+  const steps = Math.max(4, Math.ceil(tone.len * vib.hz * 6));
+  for (let i = 1; i <= steps; i++) {
+    const u = i / steps;
+    const base = u < 0.35 ? tone.f + (peak - tone.f) * (u / 0.35) : peak + (to - peak) * ((u - 0.35) / 0.65);
+    const w = 1 + vib.depth * Math.sin(2 * Math.PI * vib.hz * u * tone.len);
+    p.linearRampToValueAtTime(base * w, t + u * tone.len);
+  }
 }
 
 /** Every tone and hiss fades in over this long from near silence, so none starts with a tick. */
@@ -780,6 +821,19 @@ export class Sound {
 
   private noise: AudioBuffer | null = null;
 
+  /** A narrow band filter for a nasal tone, or null if this browser cannot make one (the tone then plays plain). */
+  private band(ac: AudioContext, hz: number, q: number, t: number): BiquadFilterNode | null {
+    try {
+      const f = ac.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.setValueAtTime(hz, t);
+      (f.Q as AudioParam | undefined)?.setValueAtTime(q, t);
+      return f;
+    } catch {
+      return null;
+    }
+  }
+
   play(name: SoundName): void {
     const ac = this.ac;
     if (!this.enabled || !ac || ac.state !== 'running') return;
@@ -800,12 +854,17 @@ export class Sound {
         gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
         osc.type = tone.wave ?? 'triangle';
         osc.frequency.setValueAtTime(tone.f, t);
-        if (tone.peak) osc.frequency.linearRampToValueAtTime(tone.peak, t + tone.len * 0.35);
-        if (tone.to) osc.frequency.linearRampToValueAtTime(tone.to, end);
+        if (tone.vib) wobble(osc.frequency, tone, t);
+        else {
+          if (tone.peak) osc.frequency.linearRampToValueAtTime(tone.peak, t + tone.len * 0.35);
+          if (tone.to) osc.frequency.linearRampToValueAtTime(tone.to, end);
+        }
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(tone.vol ?? 0.06, t + ATTACK);
         gain.gain.exponentialRampToValueAtTime(0.0001, Math.max(end, t + ATTACK + 0.01));
-        osc.connect(gain).connect(out);
+        const band = tone.nasal ? this.band(ac, tone.nasal, tone.q ?? 3, t) : null;
+        if (band) osc.connect(band).connect(gain).connect(out);
+        else osc.connect(gain).connect(out);
         osc.start(t);
         osc.stop(end + 0.02);
       }
@@ -826,8 +885,8 @@ export class Sound {
         const src = ac.createBufferSource();
         src.buffer = this.noise;
         const filter = ac.createBiquadFilter();
-        filter.type = h.lp ? 'lowpass' : 'highpass';
-        filter.frequency.setValueAtTime(h.lp ?? h.hp ?? 4000, t);
+        filter.type = h.bp ? 'bandpass' : h.lp ? 'lowpass' : 'highpass';
+        filter.frequency.setValueAtTime(h.bp ?? h.lp ?? h.hp ?? 4000, t);
         const gain = ac.createGain();
         gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
         gain.gain.setValueAtTime(0.0001, t);

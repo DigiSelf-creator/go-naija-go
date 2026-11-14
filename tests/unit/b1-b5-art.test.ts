@@ -337,7 +337,7 @@ describe('S2.16 sounds', () => {
     delete (globalThis as unknown as { window?: unknown }).window;
   });
 
-  const NEW: SoundName[] = ['strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'crowKraa', 'egretKrk', 'birdFlap', 'dashStart', 'dashSteps', 'dashReady', 'weedsFsss'];
+  const NEW: SoundName[] = ['strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'hawk', 'birdFlap', 'dashStart', 'dashSteps', 'dashReady', 'weedsFsss'];
 
   it('every new sound plays, and none plays with Sound off', () => {
     const s = new Sound();
