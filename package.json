@@ -15,13 +15,23 @@
     "e2e": "playwright test",
     "check-size": "node scripts/check-size.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "app-icons": "node scripts/make-app-icons.mjs"
+    "app-icons": "node scripts/make-app-icons.mjs",
+    "app:build": "tsc --noEmit && vite build --mode app",
+    "app:sync": "npm run app:build && cap sync android && node scripts/copy-app-res.mjs",
+    "app:android:debug": "npm run app:sync && cd android && ./gradlew assembleDebug"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.6.2",
     "@playwright/test": "1.65.0",
     "@types/node": "22.20.5",
     "typescript": "5.9.3",
     "vite": "8.3.6",
     "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/splash-screen": "8.0.2"
   }
 }
