@@ -133,6 +133,11 @@ export interface Mission {
   build: BuildId | null;
   /** The money the win brought home (whole kobo). */
   kobo: number;
+  /** S3f3: no Mission complete, just this line for 2 s ("You brought ₦6.20, Power 12 and Tech 7 home."). */
+  plain?: boolean;
+  line?: string;
+  /** S3f3 (LR-Q2): a line after it ends ("The mast is ready to fix too. Walk onto its board."). */
+  after?: string;
 }
 
 export interface CityScreenHooks {
@@ -1192,9 +1197,17 @@ export class CityScreen {
         return;
       }
       const c = w.cards[spot];
-      // Until the lane run (step (f)) exists, its button is a plain line.
-      body = [h('h2', {}, c.line1), h('p', {}, c.line2), some && shown ? walk(true) : h('p', { class: 'city-soon' }, c.soon)];
-      if (some && shown) body.push(h('p', { class: 'city-soon' }, c.soon));
+      // S3f3: big "Lane run"; with some Power (Tech) in hand, big "Walk there" and small "Lane run".
+      const lane = (big: boolean): HTMLButtonElement =>
+        button(c.go, big ? 'go' : 'minor', (e) => {
+          if (this.hooks.ignoreTap(e)) return;
+          this.hooks.run(spot, e);
+        });
+      const bigWalk = some && shown;
+      body = [h('h2', {}, c.line1), h('p', {}, c.line2), bigWalk ? walk(true) : lane(true)];
+      const card = this.showCard(spot, SPOT_WORDS[spot], body, bigWalk ? [lane(false), back] : [back]);
+      (card.querySelector<HTMLElement>('.go') ?? back).focus({ preventScroll: true });
+      return;
     }
     const card = this.showCard(spot, SPOT_WORDS[spot], body, [back]);
     (card.querySelector<HTMLElement>('.go') ?? back).focus({ preventScroll: true });
@@ -1232,7 +1245,16 @@ export class CityScreen {
           this.hooks.run('potholes', e);
         }),
       );
-    } else body.push(h('p', {}, w.earnLane(bucket)), h('p', { class: 'city-soon' }, w.cards.lightsOut.soon));
+    } else {
+      const spot = bucket === 'power' ? 'lightsOut' : 'slowInternet';
+      body.push(
+        h('p', {}, w.earnLane(bucket)),
+        button(w.cards[spot].go, 'go', (e) => {
+          if (this.hooks.ignoreTap(e)) return;
+          this.hooks.run(spot, e);
+        }),
+      );
+    }
     const card = this.showCard(null, BUILDS[b].name, body, [back]);
     card.classList.add('city-short');
     this.notEnough = b;
@@ -1899,6 +1921,11 @@ export class CityScreen {
 
   private startMission(m: Mission): void {
     const w = WORDS.city.mission;
+    if (m.plain) {
+      if (m.line) this.addLine(m.line, 2);
+      if (m.after) this.addLine(m.after, 3, true);
+      return;
+    }
     const st = this.life.state;
     const build = m.build && !isBuilt(st, m.build) ? m.build : null;
     const bus = build ? BUS_STOP[build] : BUS_PARK_STOP;
@@ -1955,6 +1982,7 @@ export class CityScreen {
     if (!ms) return;
     ms.phase = 'end';
     ms.after = 0;
+    if (ms.m.after) this.addLine(ms.m.after, 3, true);
     this.banner.querySelector('.city-skip')?.remove();
     this.saveAt();
   }

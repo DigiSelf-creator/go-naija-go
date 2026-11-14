@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isNativeApp } from '../../src/native/is-native';
 import { BACK_GUARD_MS, backStep, playMode, safeEdge, type BackLabels, type BackState } from '../../src/native/back';
-import { LEAVE_WORDS } from '../../src/native/leave-ask';
+import { LANE_LEAVE_KEEPS, LEAVE_WORDS } from '../../src/native/leave-ask';
 import { WORDS } from '../../src/screens/words';
 
 describe('isNativeApp (ST1a)', () => {
@@ -43,6 +43,16 @@ describe('Android back button (ST0 part 3)', () => {
     expect(backStep(at({ screen: 'pause' }), L)).toEqual({ kind: 'ask', fromRun: 'street' });
     expect(backStep(at({ screen: 'pause', hall: true }), L)).toEqual({ kind: 'ask', fromRun: 'hall' });
     expect(backStep(at({ screen: 'pause', askOpen: true }), L)).toEqual({ kind: 'closeAsk' });
+  });
+
+  it('S3f2: in a lane run back pauses, then asks with "This run starts again next time." and "You keep what you picked up."', () => {
+    expect(backStep(at({ running: true, lane: true }), L)).toEqual({ kind: 'pause' });
+    expect(backStep(at({ screen: 'pause', lane: true }), L)).toEqual({ kind: 'ask', fromRun: 'lane' });
+    // On the lane run's own card (the bus stop, caught): its "Take it home".
+    expect(backStep(at({ lane: true }), L)).toEqual({ kind: 'press', labels: ['Take it home'] });
+    expect(LEAVE_WORDS.lane).toBe('This run starts again next time.');
+    expect(LEAVE_WORDS.laneKeep).toBe('You keep what you picked up.');
+    expect(LANE_LEAVE_KEEPS).toBe(true);
   });
 
   it('ignores presses in the first 0.4 s of a new screen or of the ask', () => {

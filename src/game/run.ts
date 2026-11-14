@@ -195,6 +195,8 @@ export type RunEvent =
   /** A goat stops to eat a ball; then says "meeh" and trots off. */
   | { type: 'goatEat'; x: number; y: number }
   | { type: 'goatMeeh'; x: number; y: number }
+  /** Decision 62: the hero ran into a goat's side (the goat is fine and stays; it says "meeh"). */
+  | { type: 'goatBump'; x: number; y: number }
   /** Hall: a throw popped into dust; the jam went "pfft" (pushed: its next throw was put back). */
   | { type: 'fufuPop'; kind: ThrowKind; x: number; y: number }
   | { type: 'fufuJam'; pushed: boolean }
@@ -1141,6 +1143,8 @@ export class Run {
         this.kobo += RULES.smashKobo;
         ev.push({ type: 'smash', kind: z.kind, x: z.x, y: top });
       } else {
+        // Decision 62: a goat bumped says "meeh" (once, as the bump lands, not every safe step).
+        if (z.kind === 'goat' && this.safe <= 0) ev.push({ type: 'goatBump', x: z.x, y: top });
         this.hurt(ev);
       }
     }

@@ -1,5 +1,12 @@
 # Open questions for the product owner
 
+## designer, 14 Nov 2026: the lane run (S3f0, docs/design.md "S3f0. The lane run")
+
+Decision 63: the lane run is built next. The note is written on the recommended answers below, so art and gamedev can start now; a different answer changes only the lines marked LR-Q1 or LR-Q2 in the note. po to check first.
+
+- **LR-Q1. Leaving a lane run early.** Decision 38 says losing keeps everything. What about stopping on purpose ("Back to Lagos" or "Start again" on Pause, or "Leave" on the Android back ask)? a) Keep what you picked up, every way a run ends; only a win gives the prize. b) Keep it only when the Blackout catches you; stopping early loses this run's pickups. Recommended: **a**. Pickups go into the buckets the moment you get them, so nothing is ever taken back, which is simpler to build and easier for a 10 year old to trust; there is nothing to gain by quitting, because the prize comes only with a win.
+- **LR-Q2. One run, two fixes.** A first-timer's win brings about Power 12 and Tech 7, so it often pays for both Lights out (Power 10) and Slow internet (Tech 6). a) Yes, that is fine: the other pin shows "Ready" and the player walks to it. b) No: lower Tech in the run, so Slow internet needs a second run. Recommended: **a**. You are stuck now with nothing new to fix; one good run unlocking both feels generous, and the Streets card lets players run again for more.
+
 ## pm, 14 Nov 2026 (latest): store version, choices for Tp (po to check)
 
 Decision 51: the store version is built now beside Lagos (plan "ST. Store version"). These choices are not settled by the brief or decisions. Blocks: ST-Q1 blocks ST1a; the others block ST3 and U1 in the app only.
