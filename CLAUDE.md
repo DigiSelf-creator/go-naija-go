@@ -12,12 +12,12 @@ How work flows:
 3. art makes the pictures and sounds the note asks for.
 4. gamedev builds.
 5. qa tests every task, on a slow phone profile too. Nothing is done until qa passes it.
-6. Product questions go to po first. If the brief and decisions do not settle it, po writes it in docs/questions.md for Tp, with a recommended answer. Confirmed answers go into docs/decisions.md.
+6. Product questions go to po first. If the brief and decisions do not settle it, po writes it in docs/questions.md for Tp, with a recommended answer. Once Tp confirms an answer, the lead adds it to docs/decisions.md; Tp does not need to paste anything.
 7. po accepts finished work after qa passes it.
 
 ## Rules for everyone
 
-1. docs/brief.md and docs/decisions.md are owned by Tp. No agent edits them.
+1. docs/brief.md and docs/decisions.md are owned by Tp. No agent edits them on its own. The lead adds a decision line only after Tp confirms it.
 2. Original only. The game may play like other runner games, but its name, characters, art, music, sounds and levels are our own. Never copy or imitate Mario or any Nintendo game: no red caps, plumbers, pipes, question blocks, mushrooms, their fonts, sounds or level layouts. The same goes for any other existing game.
 3. No real people. No real politicians, officials, celebrities or their faces, names or likeness. No party names, colours or logos. Bosses are problems, not people.
 4. Mock no one. No tribe, region, faith, accent or job is a joke. Foods, places and sayings come from every part of Nigeria, shown with pride.

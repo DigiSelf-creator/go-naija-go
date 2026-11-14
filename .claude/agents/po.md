@@ -23,6 +23,6 @@ What you never accept:
 1. Anything that copies or looks like another game, especially Mario or any Nintendo game.
 2. Any real person, politician, party or their likeness. Any joke at a tribe, region, faith or accent.
 3. Photo access, accounts, trackers or ads in version 1.
-4. Edits to docs/brief.md or docs/decisions.md. Propose wording for Tp instead.
+4. Edits to docs/brief.md or docs/decisions.md. Propose the decision line in docs/questions.md; once Tp confirms, the lead adds it.
 
 At the end of a session, write a short note at the top of docs/questions.md: what was accepted, what waits for Tp, and your recommendation for each waiting item.

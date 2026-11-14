@@ -9,7 +9,7 @@
   1. Paste the lines in "For Tp to paste into decisions.md" just below: the new line 25 (instead of the old 25 wording) and line 49. Recommend: paste as written, together with the other waiting lines 5 to 48.
   2. Still waiting from 13 Nov: a watch on a real phone with Sound on (recommend: listen for the music stopping at the jam and coming back with the hero) and the people test with three first-time watchers (recommend: before Lagos ships to players).
 
-## For Tp to paste into decisions.md
+## For Tp to paste into decisions.md (done 14 Nov: the lead added lines 5 to 50 at Tp's request; nothing left to paste)
 
 docs/decisions.md now ends at line 4. Every line from 5 to 48 drafted in this file still waits to be pasted; the numbers below follow on from those, so 49 is the next free number.
 
