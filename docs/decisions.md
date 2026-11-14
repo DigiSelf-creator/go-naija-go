@@ -69,3 +69,4 @@ Added 14 Nov 2026 at Tp's request: lines 5 to 50, confirmed by Tp in chat betwee
 60. The hero gets a richer look now: art redraws it in code with shading, highlights, bolder outlines, a bigger, more expressive face and smoother running, keeping every skin, hair and outfit choice and the small size. Art also makes a small Blender 3D test of one hero running, to compare side by side. Our own look only, never like Mario or any other game. (Tp, 14 Nov)
 61. At the end of the intro the hero turns to face the player; art draws a front-facing pose. (Tp, 14 Nov)
 62. Goats make a "meeh" sound when bumped, and the street 3 birds call "hawk hawk". Our own code-made sounds. (Tp, 14 Nov)
+63. The lane run is built next (it brings Power and Tech, so Lights out and Slow internet can be fixed), then the challenge road. (Tp, 14 Nov)
