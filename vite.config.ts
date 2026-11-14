@@ -49,16 +49,18 @@ function serviceWorker(): Plugin {
   };
 }
 
-export default defineConfig({
+// `vite build --mode app` (npm run app:sync) builds the store app (ST1a): the same game into dist,
+// with no service worker (the app carries its files) and with the app-only code in src/native.
+export default defineConfig(({ mode }) => ({
   base: './',
   build: {
     target: 'es2020',
     assetsInlineLimit: 0,
     sourcemap: false,
   },
-  plugins: [serviceWorker()],
+  plugins: mode === 'app' ? [] : [serviceWorker()],
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',
   },
-});
+}));
