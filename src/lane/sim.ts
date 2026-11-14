@@ -57,6 +57,8 @@ export interface Slot {
   d: number;
   lane: number;
   state: ThingState;
+  /** Done by the corn (a pothole plugged, not stumbled across). */
+  corn: boolean;
   /** Seconds since its state changed (for the burst, tip-over and trot drawings). */
   t: number;
 }
@@ -206,7 +208,7 @@ export class LaneSim {
     this.curve = this.gentle ? level.gentleSpeed : level.speed;
     this.dark = this.gentle ? level.gentleBlackout : level.blackout;
     this.rng = opts.rng ?? Math.random;
-    for (let i = 0; i < POOL_THINGS; i++) this.things.push({ used: false, pickup: false, kind: 'cones', d: 0, lane: 0, state: 'idle', t: 0 });
+    for (let i = 0; i < POOL_THINGS; i++) this.things.push({ used: false, pickup: false, kind: 'cones', d: 0, lane: 0, state: 'idle', corn: false, t: 0 });
     for (let i = 0; i < POOL_COINS; i++) this.coins.push({ used: false, d: 0, lane: 0, h: 0, taken: false, t: 0 });
     this.reset();
   }
@@ -479,6 +481,7 @@ export class LaneSim {
         s.d = e.d;
         s.lane = e.lane;
         s.state = 'idle';
+        s.corn = false;
         s.t = 0;
       }
     }
@@ -623,6 +626,7 @@ export class LaneSim {
     this.tossT = TOSS_EVERY;
     const kind = best.kind as ThingKind;
     best.t = 0;
+    best.corn = true;
     this.events.push({ type: 'toss', kind });
     if (isBurst(kind)) {
       best.state = 'burst';

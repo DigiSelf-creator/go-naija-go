@@ -198,6 +198,14 @@ function startGame(): void {
   /** Music follows what shows now: the screen, the street, the well room, hall hits, a hidden page. */
   function syncMusic(): void {
     if (startingRun) return;
+    // S3f3: a lane run drives its own tune (LaneHooks.music); only a hidden page stops it here.
+    if (lane || laneLoading) {
+      if (document.hidden) {
+        music.pause();
+        sound.setCloseHum(false);
+      }
+      return;
+    }
     syncCorn();
     const run = game.run;
     director.update({
@@ -431,6 +439,23 @@ function startGame(): void {
             syncUpdate();
             nativeApp?.screenChanged();
           },
+          // Part 17: the lane tune (art's `lane`), 1 BPM faster each 100 m after the goal; the
+          // guitar drops out under 15 m. The street director picks up again once the run closes.
+          music: (m) => {
+            if (!m) {
+              if (music.place === 'lane') music.stop();
+              director.restart();
+              return;
+            }
+            music.setLayer('guitar', m.guitar);
+            if (m.held || document.hidden) music.pause();
+            else if (music.place !== 'lane') music.play('lane', m.tempo);
+            else {
+              music.resume();
+              music.setTempo(m.tempo);
+            }
+          },
+          closeHum: (on) => sound.setCloseHum(on && !document.hidden),
         });
         lane.start();
         syncMusic();

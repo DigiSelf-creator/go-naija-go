@@ -13,14 +13,13 @@ import { formatMoney, spokenMoney } from '../game/money';
 import { button, h } from '../screens/dom';
 import { WORDS } from '../screens/words';
 import { LANE_LEAVE_KEEPS } from '../native/leave-ask';
-import type { HeroPose } from './art';
+import { addLaneSounds, laneStepFor, laneStepGap, laneTinkFor } from '../art/lane-sounds';
+import { laneTempoAt } from '../art/tunes';
 import { LaneButtons, SwipeReader, buttonBoxes, keyMove } from './input';
 import { parseLane, type LaneLevel } from './level';
 import { NO_HAUL, addHaul, haulWords, lanePrize, subHaul, type Haul, type LaneSave } from './rewards';
 import { LaneSim, type LaneEvent, type LaneMove } from './sim';
-import { LaneView, WARN_UNDER } from './view';
-
-export { setLaneArt, PLAIN_ART } from './art';
+import { DARK_FROM, LaneView, WARN_UNDER, type HeroPose } from './view';
 
 /** "3, 2, 1": each number shows this long, then "Go!" while the run starts (part 14). */
 export const COUNT_STEP = 0.6;
@@ -33,24 +32,27 @@ const FLASH_TIME = 1;
 const FOOD_LINE = 2;
 const SHIELD_LINE = 1.5;
 
-/** Which sound each lane event plays, from the game's own sounds until art's lane sounds land (S3f1). */
+/** Which sound each lane event plays (art's lane sounds, S3f1; the goat's "meeh" is the streets' own, decision 62). */
 export const LANE_SOUNDS: Partial<Record<string, SoundName>> = {
-  jump: 'jump',
-  slide: 'skid',
-  stumble: 'hit',
-  sideBump: 'bounce',
-  burst: 'cratePop',
+  lane: 'laneSwish',
+  jump: 'laneHop',
+  slide: 'laneSlide',
+  land: 'laneLand',
+  stumble: 'laneOof',
+  sideBump: 'laneLand',
+  burst: 'lanePok',
   goat: 'meeh',
-  coin: 'kobo',
-  bulb: 'payBulb',
-  chip: 'dashReady',
+  bulb: 'laneBulb',
+  chip: 'laneChip',
   garri: 'food',
   corn: 'food',
   toss: 'fufuToss',
-  shieldUsed: 'shieldPop',
-  goal: 'checkpoint',
-  caught: 'gameOver',
+  shieldUsed: 'laneTzing',
+  goal: 'laneBusStop',
+  caught: 'laneCaught',
 };
+/** A goat's "meeh" at most this often (the streets' AnimalCalls rule). */
+const MEEH_GAP = 1.5;
 
 /** The hint keys and the kind of thing each one teaches (part 8): seen once that thing is passed. */
 const HINT_THING: Readonly<Record<string, readonly string[]>> = {
@@ -96,6 +98,10 @@ export interface LaneHooks {
   home(result: { won: boolean; haul: Haul }): void;
   /** A card opened or closed. */
   changed(): void;
+  /** Part 17: the lane tune at a tempo step, its guitar off under 15 m; held while paused. null: stop it. */
+  music(m: { tempo: number; guitar: boolean; held: boolean } | null): void;
+  /** Part 17: the Blackout's close hum. */
+  closeHum(on: boolean): void;
 }
 
 export type LaneStage = 'count' | 'play' | 'paused' | 'caught' | 'card' | 'off';
@@ -183,8 +189,14 @@ export class LaneSession {
   private hint: { key: string; until: number } | null = null;
   private warned = false;
   private toldStop = false;
+  private stepT = 0;
+  private steps = 0;
+  private meehAt = -Infinity;
+  /** Lamps the Blackout has switched off so far (each one goes "tunk"). */
+  private lampsOff = 0;
 
   constructor(private readonly hooks: LaneHooks) {
+    addLaneSounds();
     this.sim = new LaneSim(laneLevel(), { gentle: hooks.gentle() });
     this.loop = new FixedLoop({ update: (dt) => this.update(dt), render: (a) => this.render(a) });
     this.buttons = new LaneButtons(document.body, WORDS.lane.buttons, (m) => this.press(m));
@@ -269,6 +281,7 @@ export class LaneSession {
     this.warned = false;
     this.toldStop = false;
     this.caughtT = 0;
+    this.lampsOff = 0;
     this.view.camX = 0;
     this.countDown();
     this.loop.start();
@@ -314,6 +327,8 @@ export class LaneSession {
       this.hooks.flush();
     }
     this.stage = 'off';
+    this.hooks.music(null);
+    this.hooks.closeHum(false);
     this.loop.stop();
     for (const f of this.off) f();
     this.off.length = 0;
@@ -382,8 +397,24 @@ export class LaneSession {
     this.sim.step(dt);
     for (const e of this.sim.events) this.happened(e);
     if (LANE_LEAVE_KEEPS) this.bank();
+    this.sounds(dt);
     this.hints();
     this.spoken();
+  }
+
+  /** Part 17: steps, faster as you speed up; a "tunk" as each lamp behind goes off. */
+  private sounds(dt: number): void {
+    const s = this.sim;
+    if (s.moving && s.jumpT < 0 && s.slideT < 0 && s.dropT < 0) {
+      this.stepT += dt;
+      if (this.stepT >= laneStepGap(s.speed)) {
+        this.stepT = 0;
+        this.hooks.sound(laneStepFor(this.steps++));
+      }
+    }
+    const off = Math.floor((Math.max(0, DARK_FROM - s.gap) * 0.6) / 10);
+    if (off > this.lampsOff) this.hooks.sound('laneTunk');
+    this.lampsOff = off;
   }
 
   private say(text: string, t: number): void {
@@ -397,7 +428,7 @@ export class LaneSession {
     switch (e.type) {
       case 'move':
         t.moves++;
-        name = e.move === 'jump' ? 'jump' : e.move === 'slide' ? 'slide' : '';
+        name = e.move === 'jump' ? 'jump' : e.move === 'slide' ? 'slide' : 'lane';
         break;
       case 'stumble':
         t.stumbles++;
@@ -410,9 +441,12 @@ export class LaneSession {
         break;
       case 'goat':
         t.goats++;
+        if (this.sim.time - this.meehAt < MEEH_GAP) name = '';
+        else this.meehAt = this.sim.time;
         break;
       case 'coin':
         t.coins++;
+        this.hooks.sound(laneTinkFor(Math.random()));
         break;
       case 'toss':
         t.tosses++;
@@ -435,7 +469,7 @@ export class LaneSession {
         }
         break;
       case 'garriExtra':
-        name = 'coin';
+        this.hooks.sound(laneTinkFor(Math.random()));
         break;
       case 'goal':
         this.reachGoal();
@@ -629,11 +663,14 @@ export class LaneSession {
     const s = this.sim;
     const mv = s.level.move;
     const lean = s.changing ? Math.sign(s.laneX(s.lane) - s.x) : 0;
-    if (s.tripping) return { kind: 'stumble', phase: s.tripT / mv.stumbleTime, up: s.y, lean };
-    if (s.slideT >= 0) return { kind: 'slide', phase: s.slideT / mv.slideTime, up: 0, lean };
-    if (s.jumpT >= 0 || s.dropT >= 0) return { kind: 'jump', phase: Math.max(0, s.jumpT) / mv.jumpTime, up: s.y, lean };
+    const suit = s.shield;
+    if (this.stage === 'caught' || (this.card && s.phase === 'over')) return { kind: 'torch', phase: this.stage === 'caught' ? this.caughtT / CAUGHT_TIME : 1, up: 0, lean: 0, suit };
+    if (this.card && s.phase === 'goal') return { kind: 'wave', phase: 0, up: 0, lean: 0, suit };
+    if (s.tripping) return { kind: 'stumble', phase: s.tripT / mv.stumbleTime, up: s.y, lean, suit };
+    if (s.slideT >= 0) return { kind: 'slide', phase: s.slideT / mv.slideTime, up: 0, lean, suit };
+    if (s.jumpT >= 0 || s.dropT >= 0) return { kind: 'jump', phase: Math.max(0, s.jumpT) / mv.jumpTime, up: s.y, lean, suit };
     // Four run frames a stride; a stride is about 2.6 m.
-    return { kind: 'run', phase: (s.dist / 2.6) % 1, up: 0, lean };
+    return { kind: 'run', phase: (s.dist / 2.6) % 1, up: 0, lean, suit };
   }
 
   private render(alpha: number): void {
@@ -653,6 +690,9 @@ export class LaneSession {
     this.buttons.show(this.hooks.buttonsOn() && !this.card && this.stage !== 'caught');
     this.hud.hidden = this.card !== null;
     this.drawHud();
+    const near = s.gap < WARN_UNDER && s.phase !== 'over';
+    this.hooks.closeHum(near && this.stage === 'play');
+    this.hooks.music(s.phase === 'over' && this.stage !== 'caught' ? null : { tempo: laneTempoAt(s.dist, s.level.goal), guitar: !near, held: this.stage === 'paused' });
   }
 
   /** The HUD, the hint bar and the count: the DOM only changes when the words do. */
