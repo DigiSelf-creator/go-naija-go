@@ -135,7 +135,8 @@ describe('hero bodies and ages (I1)', () => {
     expect(combos).toBe(750);
     expect(drawn).toBe(750 * POSES.length);
     expect(outside.slice(0, 5)).toEqual([]);
-  });
+    // 750 looks x 20 poses through a stand-in context: the lit hero (decision 60) has more parts.
+  }, 30_000);
 
   it('heights follow S2.3 (Teen 46, Elder 49, Adult 50) with the feet on the same spot', () => {
     const stand = POSES[0]![1];

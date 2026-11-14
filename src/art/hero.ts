@@ -27,6 +27,13 @@ export interface SkinOption {
   shade: string;
   /** Colours for the brows, smile line and lips, chosen so they read on this skin. */
   face: FaceColours;
+  /**
+   * Decision 60: the one shadow tone and the one highlight for this skin, picked by hand so
+   * every skin gets the same care: the shadow is about 1.4:1 against the skin on every tone,
+   * and the highlight is a warm glow that reads best where it matters most, on darker skin.
+   */
+  deep: string;
+  glow: string;
 }
 
 /**
@@ -74,11 +81,11 @@ export interface OutfitOption {
 }
 
 export const SKINS: readonly SkinOption[] = [
-  { id: 'skin1', label: 'Skin tone 1', base: '#f1c9a5', shade: '#dcae86', face: FACE_LIGHT },
-  { id: 'skin2', label: 'Skin tone 2', base: '#d9a172', shade: '#c0875a', face: FACE_LIGHT },
-  { id: 'skin3', label: 'Skin tone 3', base: '#a8693f', shade: '#8d5530', face: FACE_LIGHT },
-  { id: 'skin4', label: 'Skin tone 4', base: '#7a4a2a', shade: '#653b20', face: { line: INK, brow: 0.95, rim: '#d29a72', lip: LIP_SOFT, lipLine: '#3a2113' } },
-  { id: 'skin5', label: 'Skin tone 5', base: '#4b2c1a', shade: '#3a2113', face: { line: INK, brow: 0.95, rim: '#a87656', lip: LIP, lipLine: '#2a170d' } },
+  { id: 'skin1', label: 'Skin tone 1', base: '#f1c9a5', shade: '#dcae86', face: FACE_LIGHT, deep: '#d6a682', glow: '#fde6cf' },
+  { id: 'skin2', label: 'Skin tone 2', base: '#d9a172', shade: '#c0875a', face: FACE_LIGHT, deep: '#bb8056', glow: '#efc59a' },
+  { id: 'skin3', label: 'Skin tone 3', base: '#a8693f', shade: '#8d5530', face: FACE_LIGHT, deep: '#8a502e', glow: '#c88d60' },
+  { id: 'skin4', label: 'Skin tone 4', base: '#7a4a2a', shade: '#653b20', face: { line: INK, brow: 0.95, rim: '#d29a72', lip: LIP_SOFT, lipLine: '#3a2113' }, deep: '#5c3318', glow: '#a5714a' },
+  { id: 'skin5', label: 'Skin tone 5', base: '#4b2c1a', shade: '#3a2113', face: { line: INK, brow: 0.95, rim: '#a87656', lip: LIP, lipLine: '#2a170d' }, deep: '#2c160a', glow: '#7f5439' },
 ];
 
 export const HAIRS: readonly HairOption[] = [
@@ -246,6 +253,16 @@ export interface HeroPose {
    * in front at chest height, a lean in, the back leg braced. Blends over any ground pose.
    */
   push?: number;
+  /**
+   * Decision 60: the face's mood. Unset: calm when standing, focused on the run, excited in the
+   * air, a wince during the dust off. The game sets 'hurt' just after a knock and 'win' on a win.
+   */
+  face?: HeroFace;
+  /**
+   * Decision 61: turning to face the player, 0 (side on, as always) to 1 (facing us). The turn is
+   * a quick narrow-and-widen: past halfway the front pose shows. Only on the ground, standing.
+   */
+  front?: number;
 }
 
 export interface StrongLook {
@@ -406,9 +423,9 @@ interface Build {
 }
 
 const AGE_BUILDS = [
-  { len: 0.905, head: 0.96, w: 0.9, limb: 0.85, eye: 1.05, round: 1 },
-  { len: 1, head: 1, w: 1, limb: 1, eye: 1, round: 0 },
-  { len: 0.98, head: 1, w: 0.95, limb: 0.9, eye: 1, round: 0 },
+  { len: 0.905, head: 0.96, w: 0.9, limb: 0.95, eye: 1.05, round: 1 },
+  { len: 1, head: 1, w: 1, limb: 1.1, eye: 1, round: 0 },
+  { len: 0.98, head: 1, w: 0.95, limb: 1, eye: 1, round: 0 },
 ] as const;
 
 /** BUILDS[body * 3 + age]. */
@@ -419,8 +436,8 @@ const BUILDS: readonly Build[] = [0, 1].flatMap((body) =>
     return {
       len: a.len,
       head: a.head,
-      sw: a.w * (female ? 0.94 : 1),
-      hw: a.w * (female ? 1.06 : 1),
+      sw: a.w * (female ? 0.98 : 1.05),
+      hw: a.w * (female ? 1.08 : 1.02),
       waist: female ? 0.06 : 0,
       limb: a.limb,
       eye: a.eye,
@@ -450,9 +467,23 @@ const FOREARM = 6.4;
 /** Hip to the base of the neck, along the torso. */
 const TORSO = 13.6;
 const SHOULDER_Y = -12.6;
-/** Outline width for one-pass outlined shapes (half of it shows after the fill). */
-const OUTLINE = 2.2;
-const LINE = 1.05;
+/**
+ * Outline width for shapes outlined before they are filled: only the outer half shows, so every
+ * edge of the body is one even 1.3 u ink line (decision 60: bolder, clean, even outlines).
+ */
+const OUTLINE = 2.6;
+/** Inner lines and small parts drawn over the body (sleeves, shorts, shoes, hands). */
+const LINE = 1.3;
+
+/**
+ * Decision 60 light: a key light from up and in front (the way the hero faces), so every part
+ * has its one shadow tone at the back and below, its one highlight in front, and a thin warm
+ * rim light right at the back edge. No gradients, blur or filters: flat fills inside clips.
+ */
+const LX = 0.55;
+const LY = -0.835;
+/** The warm light the rim and highlights lean towards. */
+const RIM_LIGHT = '#fff0cc';
 
 /* ------------------------------------------------------------------ colours */
 
@@ -478,6 +509,120 @@ function far(c: string): string {
   return tone(c, 0.8);
 }
 
+function mixHex(a: string, b: string, k: number): string {
+  const x = parseInt(a.slice(1), 16);
+  const y = parseInt(b.slice(1), 16);
+  const ch = (s: number): string => {
+    const u = (x >> s) & 255;
+    return Math.round(u + (((y >> s) & 255) - u) * k)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${ch(16)}${ch(8)}${ch(0)}`;
+}
+
+/** One part's colours (decision 60): its base, one shadow tone, one highlight and its rim light. */
+interface Paint {
+  base: string;
+  deep: string;
+  glow: string;
+  rim: string;
+}
+
+const PAINTS = new Map<string, Paint>();
+function made(key: string, base: string, deep: string, glow: string): Paint {
+  let p = PAINTS.get(key);
+  if (p === undefined) {
+    p = { base, deep, glow, rim: mixHex(deep, RIM_LIGHT, 0.42) };
+    PAINTS.set(key, p);
+  }
+  return p;
+}
+
+/** Cloth and hair: shadows lean to a deep plum (richer than plain darker), highlights to warm cream. */
+function paint(c: string): Paint {
+  return made(c, c, mixHex(c, '#2a1c38', 0.3), mixHex(c, '#fff6e2', 0.33));
+}
+
+/** Skin: the hand-picked shadow and highlight of that tone. */
+function skinPaint(s: SkinOption): Paint {
+  return made(`skin:${s.base}`, s.base, s.deep, s.glow);
+}
+
+/** The same paint on the far side (back arm and leg), a step darker. */
+function farPaint(p: Paint): Paint {
+  return made(`far:${p.base}`, far(p.base), far(p.deep), far(p.glow));
+}
+
+/**
+ * One limb segment's light, with no clip (fast on cheap phones): a shadow band along the edge
+ * away from the light, a thin rim light right at that edge, and a soft highlight streak on the
+ * lit side. The shadow is a smaller capsule pushed to the dark side and the base a smaller one
+ * pushed to the lit side, so both stay inside the limb and nothing grows the drawing.
+ */
+function limbLight(g: CanvasRenderingContext2D, xa: number, ya: number, ra: number, xb: number, yb: number, rb: number, p: Paint): void {
+  const dx = xb - xa;
+  const dy = yb - ya;
+  const l = Math.hypot(dx, dy) || 1;
+  let nx = -dy / l;
+  let ny = dx / l;
+  if (nx * LX + ny * LY > 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  // Shadow: the dark 65 % of the width, then the base back over all but the outer 30 %
+  g.beginPath();
+  capsule(g, xa + nx * ra * 0.35, ya + ny * ra * 0.35, ra * 0.65, xb + nx * rb * 0.35, yb + ny * rb * 0.35, rb * 0.65);
+  g.fillStyle = p.deep;
+  g.fill();
+  g.beginPath();
+  capsule(g, xa - nx * ra * 0.3, ya - ny * ra * 0.3, ra * 0.7, xb - nx * rb * 0.3, yb - ny * rb * 0.3, rb * 0.7);
+  g.fillStyle = p.base;
+  g.fill();
+  g.beginPath();
+  g.moveTo(xa + nx * (ra - 0.25), ya + ny * (ra - 0.25));
+  g.lineTo(xb + nx * (rb - 0.25), yb + ny * (rb - 0.25));
+  g.strokeStyle = p.rim;
+  g.lineWidth = 0.5;
+  g.stroke();
+  const h = 0.48;
+  const r2 = ra + (rb - ra) * 0.68;
+  g.beginPath();
+  g.moveTo(xa + dx * 0.18 - nx * ra * h, ya + dy * 0.18 - ny * ra * h);
+  g.lineTo(xa + dx * 0.68 - nx * r2 * h, ya + dy * 0.68 - ny * r2 * h);
+  g.strokeStyle = p.glow;
+  g.lineWidth = (ra + rb) * 0.17;
+  g.stroke();
+}
+
+/**
+ * A solid part (torso, head, hair, robe): ink outline outside, then the rim light, the shadow
+ * and the base, each a copy of the shape shrunk towards (ax, ay), a point on its lit side. So
+ * the lit side keeps the base right to the edge and the far side shows shadow, then rim. A
+ * shrunk copy stays inside the shape's own box, so the drawing never grows.
+ */
+function solid(g: CanvasRenderingContext2D, path: () => void, p: Paint, ax: number, ay: number, k = 0.86, kr = 0.965): void {
+  g.beginPath();
+  path();
+  g.strokeStyle = INK;
+  g.lineWidth = OUTLINE;
+  g.stroke();
+  g.fillStyle = p.rim;
+  g.fill();
+  // No clip (fast on cheap phones): each shrunk copy already lies inside the shape.
+  for (const [sc, c] of [[kr, p.deep], [k, p.base]] as const) {
+    g.save();
+    g.translate(ax, ay);
+    g.scale(sc, sc);
+    g.translate(-ax, -ay);
+    g.beginPath();
+    path();
+    g.restore();
+    g.fillStyle = c;
+    g.fill();
+  }
+}
+
 /* -------------------------------------------------------------------- shapes */
 
 /** Adds a tapered capsule from (x1,y1) radius r1 to (x2,y2) radius r2 as a subpath. */
@@ -489,24 +634,32 @@ function capsule(g: CanvasRenderingContext2D, x1: number, y1: number, r1: number
   g.closePath();
 }
 
-/** A two-part limb with one clean outline round the whole thing (no seam at the joint). */
-function limb(g: CanvasRenderingContext2D, x0: number, y0: number, r0: number, x1: number, y1: number, r1: number, x2: number, y2: number, r2: number, fill: string): void {
+/** A two-part limb with one clean outline round the whole thing (no seam at the joint), lit. */
+function limb(g: CanvasRenderingContext2D, x0: number, y0: number, r0: number, x1: number, y1: number, r1: number, x2: number, y2: number, r2: number, p: Paint): void {
   g.beginPath();
   capsule(g, x0, y0, r0, x1, y1, r1);
   capsule(g, x1, y1, r1, x2, y2, r2);
   g.strokeStyle = INK;
   g.lineWidth = OUTLINE;
   g.stroke();
-  g.fillStyle = fill;
+  g.fillStyle = p.base;
   g.fill();
+  g.lineCap = 'round';
+  limbLight(g, x0, y0, r0, x1, y1, r1, p);
+  limbLight(g, x1, y1, r1, x2, y2, r2, p);
 }
 
-/** One outlined capsule (sleeves, shorts, socks). */
+/** One outlined capsule (sleeves, shorts, socks), lit like the limb under it. */
 function patch(g: CanvasRenderingContext2D, x1: number, y1: number, r1: number, x2: number, y2: number, r2: number, fill: string): void {
+  const p = paint(fill);
   g.beginPath();
   capsule(g, x1, y1, r1, x2, y2, r2);
-  g.fillStyle = fill;
+  g.fillStyle = p.base;
   g.fill();
+  g.lineCap = 'round';
+  limbLight(g, x1, y1, r1, x2, y2, r2, p);
+  g.beginPath();
+  capsule(g, x1, y1, r1, x2, y2, r2);
   g.strokeStyle = INK;
   g.lineWidth = LINE;
   g.stroke();
@@ -541,44 +694,54 @@ interface Rig {
   tilt: number;
 }
 
-// Run cycle for one leg, 8 keys: contact, down, passing, up, then the same for the other leg.
-const RUN_THIGH = [0.6, 0.28, -0.12, -0.5, -0.62, -0.3, 0.32, 0.82];
-const RUN_KNEE = [0.22, 0.7, 0.45, 0.28, 1.25, 2.05, 1.95, 0.95];
-const RUN_FOOT = [-0.25, 0, 0.05, 0.7, 2, 2, 1.3, -0.15];
-const RUN_LIFT = [0, 0, 0.5, 1.5, 0, 0, 0.5, 1.5];
+// Run cycle for one leg, 12 keys (decision 60: more in-betweens): contact, the down (knee gives,
+// body sinks), passing, push off, toe off, then the leg folds high, swings through and reaches.
+const RUN_THIGH = [0.6, 0.4, 0.14, -0.12, -0.42, -0.6, -0.62, -0.45, -0.1, 0.36, 0.74, 0.8];
+const RUN_KNEE = [0.24, 0.66, 0.72, 0.45, 0.2, 0.5, 1.3, 1.95, 2.2, 1.98, 1.25, 0.6];
+const RUN_FOOT = [-0.25, -0.06, 0.02, 0.08, 0.5, 1.2, 2.0, 2.1, 1.85, 1.3, 0.22, -0.3];
+/** Body height through one step (6 keys, two steps a cycle): low on the down, high in the float. */
+const RUN_LIFT = [0, 0, 0.3, 1.0, 1.6, 0.9];
+/** The walk keeps its old, calmer 8-key cycle. */
+const WALK_THIGH = [0.6, 0.28, -0.12, -0.5, -0.62, -0.3, 0.32, 0.82];
+const WALK_KNEE = [0.22, 0.7, 0.45, 0.28, 1.25, 2.05, 1.95, 0.95];
+const WALK_FOOT = [-0.25, 0, 0.05, 0.7, 2, 2, 1.3, -0.15];
+const WALK_LIFT = [0, 0, 0.5, 1.5, 0, 0, 0.5, 1.5];
 
-/** Smooth looping blend (Catmull-Rom) through 8 keys. */
-function loop8(keys: readonly number[], q: number): number {
-  const x = (((q % 1) + 1) % 1) * 8;
+/** Smooth looping blend (Catmull-Rom) through n keys. */
+function loopN(keys: readonly number[], q: number): number {
+  const n = keys.length;
+  const x = (((q % 1) + 1) % 1) * n;
   const i = Math.floor(x);
   const t = x - i;
-  const p0 = keys[(i + 7) % 8]!;
-  const p1 = keys[i % 8]!;
-  const p2 = keys[(i + 1) % 8]!;
-  const p3 = keys[(i + 2) % 8]!;
+  const p0 = keys[(i + n - 1) % n]!;
+  const p1 = keys[i % n]!;
+  const p2 = keys[(i + 1) % n]!;
+  const p3 = keys[(i + 2) % n]!;
   return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
 }
 
 function runRig(phase: number, reach: number): Rig {
   const legs = [phase + 0.5, phase];
-  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * reach) as [number, number];
-  const knee = legs.map((q) => loop8(RUN_KNEE, q)) as [number, number];
-  const foot = legs.map((q) => loop8(RUN_FOOT, q)) as [number, number];
-  // Each arm swings against the leg on its own side, elbows bent, more when forward.
-  const arm = thigh.map((a) => -a * 1.05 + 0.08) as [number, number];
-  const elbow = arm.map((a) => 1.3 + Math.max(0, a) * 0.45) as [number, number];
-  return { thigh, knee, foot, arm, elbow, lean: 0.16, lift: loop8(RUN_LIFT, phase * 2), tilt: -0.08 };
+  const thigh = legs.map((q) => loopN(RUN_THIGH, q) * reach) as [number, number];
+  const knee = legs.map((q) => loopN(RUN_KNEE, q)) as [number, number];
+  const foot = legs.map((q) => loopN(RUN_FOOT, q)) as [number, number];
+  // Each arm swings against the leg on its own side, a full swing, elbows pumping more in front.
+  const arm = thigh.map((a) => -a * 1.25 + 0.1) as [number, number];
+  const elbow = arm.map((a) => 1.25 + Math.max(0, a) * 0.55) as [number, number];
+  // The body leans in more as each foot pushes off, and the head steadies against the bob.
+  const step = Math.cos(phase * TAU * 2);
+  return { thigh, knee, foot, arm, elbow, lean: 0.17 + step * 0.035, lift: loopN(RUN_LIFT, phase * 2), tilt: -0.08 - step * 0.03 };
 }
 
 /** Walk: the run's keys made smaller and calmer, back nearly straight, small arm swing. */
 function walkRig(phase: number, reach: number): Rig {
   const legs = [phase + 0.5, phase];
-  const thigh = legs.map((q) => loop8(RUN_THIGH, q) * 0.62 * reach) as [number, number];
-  const knee = legs.map((q) => loop8(RUN_KNEE, q) * 0.42) as [number, number];
-  const foot = legs.map((q) => loop8(RUN_FOOT, q) * 0.35) as [number, number];
+  const thigh = legs.map((q) => loopN(WALK_THIGH, q) * 0.62 * reach) as [number, number];
+  const knee = legs.map((q) => loopN(WALK_KNEE, q) * 0.42) as [number, number];
+  const foot = legs.map((q) => loopN(WALK_FOOT, q) * 0.35) as [number, number];
   const arm = thigh.map((a) => -a * 0.8 + 0.04) as [number, number];
   const elbow = arm.map((a) => 0.35 + Math.max(0, a) * 0.4) as [number, number];
-  return { thigh, knee, foot, arm, elbow, lean: 0.04, lift: loop8(RUN_LIFT, phase * 2) * 0.3, tilt: -0.02 };
+  return { thigh, knee, foot, arm, elbow, lean: 0.04, lift: loopN(WALK_LIFT, phase * 2) * 0.3, tilt: -0.02 };
 }
 
 /** Skid on a turn: leaning back, near foot braced ahead (toe up), arms out for balance. */
@@ -776,26 +939,34 @@ function drawShoe(g: CanvasRenderingContext2D, x: number, y: number, a: number, 
   g.quadraticCurveTo(-2.7, 2.3, -2.6, 0.8);
   g.quadraticCurveTo(-2.6, -1, -1.8, -1.6);
   g.closePath();
-  g.fillStyle = colour;
-  g.fill();
+  const p = paint(colour);
   g.strokeStyle = INK;
-  g.lineWidth = LINE;
+  g.lineWidth = OUTLINE;
   g.stroke();
-  // Sole line
+  g.fillStyle = p.base;
+  g.fill();
+  // Shadow low on the shoe, the sole, and a shine on the toe (all inside the shoe, no clip)
+  g.fillStyle = p.deep;
+  g.fillRect(-2.0, 0.5, 6.2, 1.1);
   g.fillStyle = sole;
   g.fillRect(-2.2, 1.5, 6.4, 0.8);
+  g.fillStyle = p.glow;
+  g.beginPath();
+  g.ellipse(2.4, -0.45, 1.2, 0.5, 0.25, 0, TAU);
+  g.fill();
   g.restore();
 }
 
-function drawLeg(g: CanvasRenderingContext2D, hx: number, hy: number, p: LegPts, o: OutfitOption, skin: string, isFar: boolean, b: Build): void {
+function drawLeg(g: CanvasRenderingContext2D, hx: number, hy: number, p: LegPts, o: OutfitOption, skin: Paint, isFar: boolean, b: Build): void {
   const c = (col: string): string => (isFar ? far(col) : col);
+  const sk = isFar ? farPaint(skin) : skin;
   const kx = hx + p.kx;
   const ky = hy + p.ky;
   const ax = hx + p.ax;
   const ay = hy + p.ay;
   const bare = o.id === 'jersey' || o.id === 'school';
   const w = b.limb;
-  limb(g, hx, hy, 2.75 * w, kx, ky, 2.1 * w, ax, ay, 1.6 * w, c(bare ? skin : o.legs));
+  limb(g, hx, hy, 2.75 * w, kx, ky, 2.1 * w, ax, ay, 1.6 * w, bare ? sk : paint(c(o.legs)));
   if (bare) {
     // Shorts over the thigh (as wide as the hips at the top), then a sock up the shin
     const sx = hx + p.kx * 0.62;
@@ -835,41 +1006,57 @@ function drawTorso(g: CanvasRenderingContext2D, o: OutfitOption, sway: number, r
   const Q = (cx: number, cy: number, x: number, y: number): void => g.quadraticCurveTo(cx * wAt(cy), cy * ts, x * wAt(y), y * ts);
   const D = (x: number, y: number, r: number, c: string): void => dot(g, x * wAt(y), y * ts, r, c);
 
-  g.beginPath();
-  if (o.id === 'agbada') {
-    // Wide flowing robe from the shoulders to below the knees; the hem trails when running.
-    const trail = -run * 2.2 + sway;
-    M(-3.2, -13.8);
-    Q(-7.2, -10, -7.6 + trail, 2);
-    Q(-8.6 + trail, 8, -8.4 + trail * 1.4, 14.6);
-    Q(0 + trail, 15.8, 8.2 + trail * 0.8, 13.8);
-    Q(8.4, 6, 6.2, -2);
-    Q(5.6, -11, 1.8, -14.2);
-    g.closePath();
-  } else {
-    const long = o.id === 'kaftan';
-    const trail = long ? -run * 1.2 + sway * 0.6 : 0;
-    M(-3.6, -13.4);
-    Q(-1.4, -14.6, 1.4, -14.3);
-    Q(4.8, -13.6, 4.8, -9.6);
-    Q(4.7, -6.4, 3.7, -4.6);
-    if (long) {
-      Q(5.4, 2, 5.6 + trail, 11.6);
-      Q(0 + trail, 12.6, -5.4 + trail, 11.4);
-      Q(-5.2, 2, -3.8, -6);
+  const robe = o.id === 'agbada';
+  const shape = (): void => {
+    if (robe) {
+      // Wide flowing robe from the shoulders to below the knees; the hem trails when running.
+      const trail = -run * 2.2 + sway;
+      M(-3.2, -13.8);
+      Q(-7.2, -10, -7.6 + trail, 2);
+      Q(-8.6 + trail, 8, -8.4 + trail * 1.4, 14.6);
+      Q(0 + trail, 15.8, 8.2 + trail * 0.8, 13.8);
+      Q(8.4, 6, 6.2, -2);
+      Q(5.6, -11, 1.8, -14.2);
+      g.closePath();
     } else {
-      Q(4.4, -1.5, 4.1, 1.2);
-      Q(0, 2.2, -4.1, 1);
-      Q(-4, -2.5, -3.6, -6);
+      const long = o.id === 'kaftan';
+      const trail = long ? -run * 1.2 + sway * 0.6 : 0;
+      M(-3.6, -13.4);
+      Q(-1.4, -14.6, 1.4, -14.3);
+      Q(4.8, -13.6, 4.8, -9.6);
+      Q(4.7, -6.4, 3.7, -4.6);
+      if (long) {
+        Q(5.4, 2, 5.6 + trail, 11.6);
+        Q(0 + trail, 12.6, -5.4 + trail, 11.4);
+        Q(-5.2, 2, -3.8, -6);
+      } else {
+        Q(4.4, -1.5, 4.1, 1.2);
+        Q(0, 2.2, -4.1, 1);
+        Q(-4, -2.5, -3.6, -6);
+      }
+      Q(-4.9, -10, -3.6, -13.4);
+      g.closePath();
     }
-    Q(-4.9, -10, -3.6, -13.4);
-    g.closePath();
+  };
+  const p = paint(o.a);
+  // Lit from the front of the chest: shadow down the back and under the hem, rim on the back edge.
+  const ay = robe ? -10 : -12;
+  solid(g, shape, p, (robe ? 4.6 : 3.4) * wAt(ay), ay * ts, robe ? 0.82 : 0.76, robe ? 0.97 : 0.955);
+  // One highlight down the front of the chest
+  g.lineCap = 'round';
+  g.strokeStyle = p.glow;
+  g.lineWidth = 0.9;
+  g.beginPath();
+  if (robe) {
+    M(4.6, -11);
+    Q(6.2, -6, 6.4, -1);
+  } else {
+    M(3.2, -13.2);
+    Q(4.1, -12.2, 4.0, -9.4);
   }
-  g.fillStyle = o.a;
-  g.fill();
+  g.stroke();
   g.strokeStyle = INK;
   g.lineWidth = LINE;
-  g.stroke();
 
   switch (o.id) {
     case 'jersey':
@@ -955,8 +1142,9 @@ function drawTorso(g: CanvasRenderingContext2D, o: OutfitOption, sway: number, r
 }
 
 /** One arm in the torso frame. Returns nothing; draws sleeve, hand and any drape. */
-function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: string, arm: number, elbow: number, isFar: boolean, b: Build): void {
+function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: Paint, arm: number, elbow: number, isFar: boolean, b: Build): void {
   const c = (col: string): string => (isFar ? far(col) : col);
+  const sk = isFar ? farPaint(skin) : skin;
   const w = b.limb;
   const sx = isFar ? -0.6 : 0.6;
   const sy = SHOULDER_Y * b.len;
@@ -966,7 +1154,7 @@ function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: string, arm
   const wx = ex + Math.sin(f) * FOREARM * b.len;
   const wy = ey + Math.cos(f) * FOREARM * b.len;
   const shortSleeve = o.id === 'jersey' || o.id === 'school';
-  limb(g, sx, sy, 2.1 * w, ex, ey, 1.65 * w, wx, wy, 1.35 * w, c(shortSleeve ? skin : o.a));
+  limb(g, sx, sy, 2.1 * w, ex, ey, 1.65 * w, wx, wy, 1.35 * w, shortSleeve ? sk : paint(c(o.a)));
   if (shortSleeve) {
     patch(g, sx, sy, 2.5 * w, sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5, 2.15 * w, c(o.a));
     if (o.id === 'jersey') {
@@ -991,18 +1179,22 @@ function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: string, arm
     const mx = ex + (wx - ex) * 0.55;
     const my = ey + (wy - ey) * 0.55;
     const low = Math.max(my, sy + 4 * b.len) + 6 * b.len;
-    g.beginPath();
-    g.moveTo(sx - 2.2, sy - 1.8);
-    g.quadraticCurveTo(ex + Math.cos(arm) * 2.6, ey - Math.sin(arm) * 2.6, mx + Math.cos(f) * 1.8, my - Math.sin(f) * 1.8);
-    g.lineTo(mx - Math.cos(f) * 1.8, my + Math.sin(f) * 1.8);
-    g.quadraticCurveTo(mx - 0.5, low, (sx + mx) / 2 - 1.5, low + 1);
-    g.quadraticCurveTo(sx - 3.6, low, sx - 3.4, sy + 3);
-    g.closePath();
-    g.fillStyle = c(o.a);
-    g.fill();
-    g.strokeStyle = INK;
-    g.lineWidth = LINE;
-    g.stroke();
+    solid(
+      g,
+      () => {
+        g.moveTo(sx - 2.2, sy - 1.8);
+        g.quadraticCurveTo(ex + Math.cos(arm) * 2.6, ey - Math.sin(arm) * 2.6, mx + Math.cos(f) * 1.8, my - Math.sin(f) * 1.8);
+        g.lineTo(mx - Math.cos(f) * 1.8, my + Math.sin(f) * 1.8);
+        g.quadraticCurveTo(mx - 0.5, low, (sx + mx) / 2 - 1.5, low + 1);
+        g.quadraticCurveTo(sx - 3.6, low, sx - 3.4, sy + 3);
+        g.closePath();
+      },
+      paint(c(o.a)),
+      sx,
+      sy,
+      0.84,
+      0.96,
+    );
     // Gold edge along the sleeve opening
     g.strokeStyle = c(o.b);
     g.lineWidth = 0.9;
@@ -1013,14 +1205,22 @@ function drawArm(g: CanvasRenderingContext2D, o: OutfitOption, skin: string, arm
     g.stroke();
   }
   // Hand: a small rounded fist (shrinks half as much as the arm, so it still reads)
-  const hand = 0.5 + 0.5 * w;
+  const hand = 0.55 + 0.41 * w;
+  drawHand(g, wx + Math.sin(f) * 0.9 * hand, wy + Math.cos(f) * 0.9 * hand, 1.6 * hand, sk);
+}
+
+/** A small round fist: ink outside, the shadow side, the lit side and a tiny shine. */
+function drawHand(g: CanvasRenderingContext2D, x: number, y: number, r: number, p: Paint): void {
   g.beginPath();
-  g.arc(wx + Math.sin(f) * 0.9 * hand, wy + Math.cos(f) * 0.9 * hand, 1.6 * hand, 0, TAU);
-  g.fillStyle = c(skin);
-  g.fill();
+  g.arc(x, y, r, 0, TAU);
   g.strokeStyle = INK;
-  g.lineWidth = LINE;
+  g.lineWidth = OUTLINE;
   g.stroke();
+  g.fillStyle = p.deep;
+  g.fill();
+  const k = r * 0.28;
+  dot(g, x + LX * k, y + LY * k, r - k, p.base);
+  dot(g, x + LX * r * 0.45, y + LY * r * 0.45, r * 0.28, p.glow);
 }
 
 /* --------------------------------------------------------------------- head */
@@ -1138,131 +1338,321 @@ function drawEar(g: CanvasRenderingContext2D, skin: string, shade: string): void
   g.arc(-0.8, 0.8, 0.8, -1.8, 1.3);
   g.stroke();
 }
+/**
+ * The face's moods (decision 60): the hero reads as calm at rest, focused on the run, excited
+ * in a jump, wincing for a moment after a knock, and beaming on a win. Every skin, body and age
+ * gets the same face; a mood only moves the brows, eyes and mouth. Never a cry or a sneer.
+ */
+export type HeroFace = 'calm' | 'run' | 'jump' | 'hurt' | 'win';
+
+interface Mood {
+  /** Brows up (u). */
+  lift: number;
+  /** Inner (front) end of the brows down (+, focused) or up (-, worried). */
+  frown: number;
+  /** Eye height scale. */
+  open: number;
+  eyes: 'open' | 'happy' | 'squeeze';
+  mouth: 'smile' | 'grin' | 'open' | 'wince' | 'beam';
+}
+
+const MOODS: Record<HeroFace, Mood> = {
+  calm: { lift: 0, frown: 0, open: 1, eyes: 'open', mouth: 'smile' },
+  run: { lift: 0, frown: 0.32, open: 0.96, eyes: 'open', mouth: 'grin' },
+  jump: { lift: 0.28, frown: -0.08, open: 1.1, eyes: 'open', mouth: 'open' },
+  hurt: { lift: 0.18, frown: -0.4, open: 1, eyes: 'squeeze', mouth: 'wince' },
+  win: { lift: 0.28, frown: -0.08, open: 1, eyes: 'happy', mouth: 'beam' },
+};
+
+/** Inside of an open mouth: a deep warm red-brown, never black. */
+const MOUTH = '#5e2020';
+/** Eye colour: a deep warm brown, with an ink pupil. */
+const IRIS = '#4a2a18';
+
+/** The two eyes (head frame): near one bigger, far one narrower (three-quarter view). */
+const EYE_N = { x: 2.95, y: -0.25, rx: 0.98, ry: 1.3 } as const;
+const EYE_F = { x: 4.8, y: -0.25, rx: 0.5, ry: 1.18 } as const;
 
 /**
- * Brows: short, slightly angled (calm and focused). On darker skins a thin light
- * line first runs along the TOP of the outer two thirds of the near brow (light
- * on the brow ridge), touching it, so the ink brow reads against the skin and
- * nothing light sits between brow and eye. The far brow has no rim.
+ * Brows: short and slightly angled. On darker skins a thin light line first runs along the TOP
+ * of the outer two thirds of the near brow (light on the brow ridge), touching it, so the ink
+ * brow reads against the skin and nothing light sits between brow and eye. No rim on the far brow.
  */
-function drawBrows(g: CanvasRenderingContext2D, f: FaceColours): void {
+function drawBrows(g: CanvasRenderingContext2D, f: FaceColours, m: Mood): void {
   const w = f.brow ?? 0.8;
+  const up = -m.lift;
+  const fr = m.frown;
+  // Near brow: outer end, middle, inner end; far brow: inner end, outer end.
+  const nx0 = 2.0;
+  const ny0 = -2.25 + up - fr * 0.3;
+  const ncx = 2.9;
+  const ncy = -2.85 + up;
+  const nx1 = 3.8;
+  const ny1 = -2.45 + up + fr;
   if (f.rim) {
     const rw = w * 0.5;
     const dy = -(w + rw) / 2 + 0.25;
-    // The near brow curve from its outer end to about two thirds along.
     g.beginPath();
-    g.moveTo(1.9, -1.95 + dy);
-    g.quadraticCurveTo(2.49, -2.31 + dy, 3.07, -2.29 + dy);
+    g.moveTo(nx0, ny0 + dy);
+    g.quadraticCurveTo((nx0 + ncx) / 2 + 0.05, (ny0 + ncy) / 2 - 0.1 + dy, (ncx + nx1) / 2 - 0.2, (ncy + ny1) / 2 - 0.05 + dy);
     g.strokeStyle = f.rim;
     g.lineWidth = rw;
     g.stroke();
   }
   g.beginPath();
-  g.moveTo(1.9, -1.95);
-  g.quadraticCurveTo(2.8, -2.5, 3.7, -2.15);
-  g.moveTo(4.3, -2.2);
-  g.lineTo(5, -2);
+  g.moveTo(nx0, ny0);
+  g.quadraticCurveTo(ncx, ncy, nx1, ny1);
+  g.moveTo(4.35, -2.5 + up + fr * 0.8);
+  g.lineTo(5.05, -2.3 + up - fr * 0.2);
   g.strokeStyle = f.line;
   g.lineWidth = w;
   g.stroke();
 }
 
-function blinkPath(g: CanvasRenderingContext2D): void {
-  g.moveTo(2.1, -0.2);
-  g.quadraticCurveTo(2.85, 0.35, 3.6, -0.2);
-  g.moveTo(4.3, -0.2);
-  g.quadraticCurveTo(4.65, 0.25, 5, -0.2);
+/** Open eyes: whites, a brown iris and ink pupil, a firm upper lid and two catch-lights. */
+function openEyes(g: CanvasRenderingContext2D, e: number, o: number, lash: boolean): void {
+  const whites = (): void => {
+    g.beginPath();
+    g.ellipse(EYE_N.x, EYE_N.y, EYE_N.rx * e, EYE_N.ry * e * o, 0, 0, TAU);
+    g.moveTo(EYE_F.x + EYE_F.rx * e, EYE_F.y);
+    g.ellipse(EYE_F.x, EYE_F.y, EYE_F.rx * e, EYE_F.ry * e * o, 0, 0, TAU);
+  };
+  whites();
+  g.fillStyle = WHITE;
+  g.fill();
+  g.save();
+  g.clip();
+  g.fillStyle = IRIS;
+  g.beginPath();
+  g.arc(EYE_N.x + 0.3 * e, EYE_N.y + 0.12 * e, 0.8 * e, 0, TAU);
+  g.moveTo(EYE_F.x + 0.6 * e, EYE_F.y + 0.1 * e);
+  g.arc(EYE_F.x + 0.14 * e, EYE_F.y + 0.1 * e, 0.46 * e, 0, TAU);
+  g.fill();
+  g.fillStyle = INK;
+  g.beginPath();
+  g.arc(EYE_N.x + 0.38 * e, EYE_N.y + 0.12 * e, 0.44 * e, 0, TAU);
+  g.moveTo(EYE_F.x + 0.44 * e, EYE_F.y + 0.1 * e);
+  g.arc(EYE_F.x + 0.18 * e, EYE_F.y + 0.1 * e, 0.26 * e, 0, TAU);
+  g.fill();
+  g.restore();
+  whites();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.35;
+  g.stroke();
+  // Upper lids: a firm ink line over the top of each eye, so the look reads at phone size
+  g.lineCap = 'round';
+  g.beginPath();
+  g.ellipse(EYE_N.x, EYE_N.y, EYE_N.rx * e, EYE_N.ry * e * o, 0, Math.PI * 1.08, Math.PI * 1.97);
+  g.moveTo(EYE_F.x + Math.cos(Math.PI * 1.15) * EYE_F.rx * e, EYE_F.y + Math.sin(Math.PI * 1.15) * EYE_F.ry * e * o);
+  g.ellipse(EYE_F.x, EYE_F.y, EYE_F.rx * e, EYE_F.ry * e * o, 0, Math.PI * 1.15, Math.PI * 1.95);
+  g.lineWidth = 0.62;
+  g.stroke();
+  dot(g, EYE_N.x + 0.62 * e, EYE_N.y - 0.42 * e * o, 0.34 * e, WHITE);
+  dot(g, EYE_N.x + 0.08 * e, EYE_N.y + 0.42 * e * o, 0.15 * e, WHITE);
+  dot(g, EYE_F.x + 0.28 * e, EYE_F.y - 0.38 * e * o, 0.16 * e, WHITE);
+  if (lash) {
+    // One small lash stroke at the outer corner of each eye
+    g.beginPath();
+    g.moveTo(EYE_N.x - 0.72 * e, EYE_N.y - 0.85 * e * o);
+    g.quadraticCurveTo(EYE_N.x - 1.2 * e, EYE_N.y - 0.95 * e * o, EYE_N.x - 1.5 * e, EYE_N.y - 1.3 * e * o);
+    g.moveTo(EYE_F.x + 0.32 * e, EYE_F.y - 0.95 * e * o);
+    g.quadraticCurveTo(EYE_F.x + 0.75 * e, EYE_F.y - 1.05 * e * o, EYE_F.x + 1.0 * e, EYE_F.y - 1.45 * e * o);
+    g.lineWidth = 0.5;
+    g.stroke();
+  }
 }
 
-function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean, b: Build): void {
-  const f = skin.face;
-  const e = b.eye;
-  g.lineCap = 'round';
-  // Eyes: the near eye is a little bigger than the far one (three-quarter view).
-  if (blink) {
-    g.beginPath();
-    blinkPath(g);
-    if (b.lash) {
-      // One small lash at the outer end of each closed eye
-      g.moveTo(2.1, -0.2);
-      g.lineTo(1.6, -0.45);
-      g.moveTo(5, -0.2);
-      g.lineTo(5.45, -0.45);
-    }
-    g.strokeStyle = f.line;
-    g.lineWidth = 0.7;
-    g.stroke();
+/** Closed eyes: a blink (lids down), happy arcs (a win) or a squeeze (a knock). */
+function closedEyes(g: CanvasRenderingContext2D, kind: 'blink' | 'happy' | 'squeeze', e: number, lash: boolean, line: string): void {
+  const n = EYE_N;
+  const f = EYE_F;
+  g.beginPath();
+  if (kind === 'blink') {
+    g.moveTo(n.x - 0.9 * e, n.y);
+    g.quadraticCurveTo(n.x, n.y + 0.75 * e, n.x + 0.9 * e, n.y);
+    g.moveTo(f.x - 0.45 * e, f.y);
+    g.quadraticCurveTo(f.x, f.y + 0.6 * e, f.x + 0.4 * e, f.y);
+  } else if (kind === 'happy') {
+    g.moveTo(n.x - 0.9 * e, n.y + 0.35 * e);
+    g.quadraticCurveTo(n.x, n.y - 1.15 * e, n.x + 0.9 * e, n.y + 0.35 * e);
+    g.moveTo(f.x - 0.45 * e, f.y + 0.35 * e);
+    g.quadraticCurveTo(f.x, f.y - 0.95 * e, f.x + 0.4 * e, f.y + 0.35 * e);
   } else {
-    g.fillStyle = WHITE;
-    g.beginPath();
-    g.ellipse(2.85, -0.45, 0.8 * e, 1.05 * e, 0, 0, TAU);
-    g.moveTo(4.65 + 0.4 * e, -0.45);
-    g.ellipse(4.65, -0.45, 0.4 * e, 0.95 * e, 0, 0, TAU);
-    g.fill();
-    g.strokeStyle = INK;
-    g.lineWidth = 0.45;
-    g.stroke();
-    g.fillStyle = INK;
-    g.beginPath();
-    g.arc(3.15, -0.35, 0.55 * e, 0, TAU);
-    g.moveTo(4.8 + 0.35 * e, -0.35);
-    g.arc(4.8, -0.35, 0.35 * e, 0, TAU);
-    g.fill();
-    // Tiny catch-light
-    dot(g, 3.3, -0.55, 0.18, WHITE);
-    if (b.lash) {
-      // One small lash stroke at the outer corner of each eye
-      g.beginPath();
-      // Near eye: out from the upper back corner, below the brow's end.
-      g.moveTo(2.85 - 0.7 * e, -0.45 - 0.45 * e);
-      g.quadraticCurveTo(1.85 - 0.3 * e, -0.45 - 0.45 * e, 1.45 - 0.3 * e, -0.45 - 0.75 * e);
-      // Far eye: a small flick past the face outline at the brow ridge.
-      g.moveTo(5.05, -0.45 - 0.75 * e);
-      g.quadraticCurveTo(5.55, -0.45 - 0.8 * e, 5.85, -0.45 - 1.2 * e);
-      g.strokeStyle = INK;
-      g.lineWidth = 0.5;
-      g.stroke();
-    }
+    // A tight squeeze, like a quick "ouch": the near eye a soft chevron, the far one a short line
+    g.moveTo(n.x - 0.85 * e, n.y - 0.7 * e);
+    g.quadraticCurveTo(n.x, n.y - 0.25 * e, n.x + 0.75 * e, n.y);
+    g.quadraticCurveTo(n.x, n.y + 0.2 * e, n.x - 0.85 * e, n.y + 0.55 * e);
+    g.moveTo(f.x - 0.4 * e, f.y - 0.1 * e);
+    g.lineTo(f.x + 0.4 * e, f.y + 0.05 * e);
   }
-  if (b.lines) {
-    // Elder: two short smile lines fanning from the outer corner of the near eye
-    g.beginPath();
-    g.moveTo(1.75, -0.75);
-    g.lineTo(1.25, -1.05);
-    g.moveTo(1.75, -0.15);
-    g.lineTo(1.25, 0);
-    g.strokeStyle = tone(skin.shade, 0.72);
-    g.lineWidth = 0.4;
-    g.stroke();
+  if (lash) {
+    g.moveTo(n.x - 0.9 * e, n.y);
+    g.lineTo(n.x - 1.4 * e, n.y - 0.3 * e);
+    g.moveTo(f.x + 0.4 * e, f.y);
+    g.lineTo(f.x + 0.85 * e, f.y - 0.3 * e);
   }
-  drawBrows(g, f);
-  // Nostril and a soft shade under the nose
-  g.strokeStyle = skin.shade;
-  g.lineWidth = 0.6;
-  g.beginPath();
-  g.moveTo(5.2, 1.2);
-  g.quadraticCurveTo(5.6, 1.6, 5.2, 1.85);
+  g.strokeStyle = line;
+  g.lineWidth = 0.7;
+  g.lineCap = 'round';
   g.stroke();
-  // Rose lower lip: the same crescent on every skin, corners turned up so it
-  // reads as a smile even when it is only a few pixels wide.
+}
+
+/** The lower lip: the same rose crescent on every skin, with its thin deep outline (filled once). */
+function lip(g: CanvasRenderingContext2D, f: FaceColours, x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, iy: number): void {
   g.beginPath();
-  g.moveTo(2.35, 2.45);
-  g.quadraticCurveTo(3.85, 5.15, 5.15, 2.4);
-  g.quadraticCurveTo(3.75, 3.35, 2.35, 2.45);
+  g.moveTo(x0, y0);
+  g.quadraticCurveTo(cx, cy, x1, y1);
+  g.quadraticCurveTo(cx - 0.1, iy, x0, y0);
   g.fillStyle = f.lip;
   g.fill();
   g.strokeStyle = f.lipLine;
   g.lineWidth = 0.24;
   g.stroke();
-  // Smile line along the top of the lip, with a small lift at the back corner
-  g.strokeStyle = f.line;
-  g.lineWidth = 0.5;
+}
+
+/** An open mouth: the inside, a band of teeth along the top if any, then its ink edge. */
+function mouthOpen(g: CanvasRenderingContext2D, f: FaceColours, shape: () => void, teeth: (() => void) | null): void {
   g.beginPath();
-  g.moveTo(2.1, 2.15);
-  g.quadraticCurveTo(2.2, 2.45, 2.35, 2.45);
-  g.quadraticCurveTo(3.75, 3.35, 5.15, 2.4);
+  shape();
+  g.fillStyle = MOUTH;
+  g.fill();
+  if (teeth) {
+    g.save();
+    g.clip();
+    g.beginPath();
+    teeth();
+    g.fillStyle = WHITE;
+    g.fill();
+    g.restore();
+  }
+  g.beginPath();
+  shape();
+  g.strokeStyle = f.line;
+  g.lineWidth = 0.45;
   g.stroke();
+}
+
+function drawMouth(g: CanvasRenderingContext2D, f: FaceColours, m: Mood): void {
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  switch (m.mouth) {
+    case 'smile':
+      // Rose lower lip, corners turned up, and the smile line along its top
+      lip(g, f, 2.35, 2.45, 3.85, 5.15, 5.15, 2.4, 3.35);
+      g.strokeStyle = f.line;
+      g.lineWidth = 0.5;
+      g.beginPath();
+      g.moveTo(2.1, 2.15);
+      g.quadraticCurveTo(2.2, 2.45, 2.35, 2.45);
+      g.quadraticCurveTo(3.75, 3.35, 5.15, 2.4);
+      g.stroke();
+      return;
+    case 'grin': {
+      // A small, sure grin while running
+      const shape = (): void => {
+        g.moveTo(2.3, 2.3);
+        g.quadraticCurveTo(3.75, 3.0, 5.15, 2.25);
+        g.quadraticCurveTo(4.0, 4.35, 2.3, 2.3);
+      };
+      mouthOpen(g, f, shape, () => {
+        g.moveTo(2.3, 2.3);
+        g.quadraticCurveTo(3.75, 3.0, 5.15, 2.25);
+        g.lineTo(5.15, 2.9);
+        g.quadraticCurveTo(3.75, 3.55, 2.3, 2.9);
+        g.closePath();
+      });
+      lip(g, f, 2.9, 3.35, 3.95, 4.65, 4.8, 3.2, 3.85);
+      return;
+    }
+    case 'open': {
+      // An excited "whoa" in the jump
+      const shape = (): void => {
+        g.moveTo(2.6, 2.25);
+        g.quadraticCurveTo(3.8, 1.85, 5.05, 2.15);
+        g.quadraticCurveTo(4.8, 4.75, 3.6, 4.55);
+        g.quadraticCurveTo(2.5, 4.3, 2.6, 2.25);
+      };
+      mouthOpen(g, f, shape, null);
+      lip(g, f, 3.0, 3.8, 3.8, 4.95, 4.6, 3.75, 4.25);
+      return;
+    }
+    case 'wince': {
+      // A quick clenched "ouch": teeth together, corners pulled
+      const shape = (): void => {
+        g.moveTo(2.45, 2.55);
+        g.quadraticCurveTo(3.1, 2.15, 3.8, 2.4);
+        g.quadraticCurveTo(4.5, 2.2, 5.1, 2.45);
+        g.quadraticCurveTo(4.6, 3.35, 3.8, 3.15);
+        g.quadraticCurveTo(3.0, 3.4, 2.45, 2.55);
+      };
+      mouthOpen(g, f, shape, () => g.rect(2.3, 2.0, 3.0, 1.6));
+      g.beginPath();
+      g.moveTo(2.6, 2.75);
+      g.lineTo(4.95, 2.7);
+      g.moveTo(3.8, 2.4);
+      g.lineTo(3.8, 3.1);
+      g.strokeStyle = f.line;
+      g.lineWidth = 0.3;
+      g.stroke();
+      lip(g, f, 3.05, 3.3, 3.85, 4.15, 4.6, 3.25, 3.6);
+      return;
+    }
+    case 'beam': {
+      // A big open smile on a win
+      const shape = (): void => {
+        g.moveTo(2.2, 2.1);
+        g.quadraticCurveTo(3.75, 2.9, 5.2, 2.0);
+        g.quadraticCurveTo(4.85, 5.1, 3.55, 4.85);
+        g.quadraticCurveTo(2.35, 4.5, 2.2, 2.1);
+      };
+      mouthOpen(g, f, shape, () => {
+        g.moveTo(2.2, 2.1);
+        g.quadraticCurveTo(3.75, 2.9, 5.2, 2.0);
+        g.lineTo(5.2, 2.75);
+        g.quadraticCurveTo(3.75, 3.6, 2.2, 2.85);
+        g.closePath();
+      });
+      lip(g, f, 2.85, 3.95, 3.8, 5.2, 4.65, 3.9, 4.35);
+      return;
+    }
+  }
+}
+
+function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean, b: Build, face: HeroFace): void {
+  const f = skin.face;
+  const m = MOODS[face] ?? MOODS.calm;
+  const e = b.eye;
+  g.lineCap = 'round';
+  // Soft light on the cheek and the tip of the nose
+  const sp = skinPaint(skin);
+  g.fillStyle = sp.glow;
+  g.beginPath();
+  g.ellipse(2.55, 1.45, 1.05, 0.7, -0.2, 0, TAU);
+  g.moveTo(6.0, 0.95);
+  g.arc(5.7, 0.95, 0.3, 0, TAU);
+  g.fill();
+  if (m.eyes === 'open' && !blink) openEyes(g, e, m.open, b.lash);
+  else closedEyes(g, m.eyes === 'open' ? 'blink' : m.eyes, e, b.lash, f.line);
+  if (b.lines) {
+    // Elder: two short smile lines fanning from the outer corner of the near eye
+    g.beginPath();
+    g.moveTo(1.7, -0.8);
+    g.lineTo(1.2, -1.1);
+    g.moveTo(1.7, -0.05);
+    g.lineTo(1.2, 0.1);
+    g.strokeStyle = tone(skin.shade, 0.72);
+    g.lineWidth = 0.4;
+    g.stroke();
+  }
+  drawBrows(g, f, m);
+  // Nostril and a soft shade under the nose
+  g.strokeStyle = skin.deep;
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.moveTo(5.2, 1.2);
+  g.quadraticCurveTo(5.6, 1.6, 5.2, 1.85);
+  g.stroke();
+  drawMouth(g, f, m);
 }
 
 /** Hair or headwear that sits behind the head and body (afro mass, braids, scarf tails). */
@@ -1284,10 +1674,28 @@ function hairBack(g: CanvasRenderingContext2D, h: HairOption, swing: number): vo
       }
     }
     g.closePath();
-    g.fillStyle = h.colour;
-    g.fill();
+    const p = paint(h.colour);
     g.strokeStyle = INK;
-    g.lineWidth = LINE;
+    g.lineWidth = OUTLINE;
+    g.stroke();
+    g.fillStyle = p.rim;
+    g.fill();
+    g.save();
+    g.clip();
+    g.fillStyle = p.deep;
+    g.beginPath();
+    g.ellipse(cx + 0.7, cy - 0.6, 8.3, 7.9, 0, 0, TAU);
+    g.fill();
+    g.fillStyle = h.colour;
+    g.beginPath();
+    g.ellipse(cx + 1.6, cy - 1.5, 7.2, 6.6, 0, 0, TAU);
+    g.fill();
+    g.restore();
+    g.strokeStyle = mixHex(h.colour, RIM_LIGHT, 0.11);
+    g.lineWidth = 0.8;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.ellipse(cx + 1.0, cy - 0.8, 6.2, 5.8, 0, -1.75, -0.95);
     g.stroke();
     g.fillStyle = h.accent;
     for (const [x, y] of [[-5, -6], [-1, -8], [2.6, -6.8], [-6.4, -1.4], [-4, 2.4]] as const) {
@@ -1359,7 +1767,7 @@ function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): vo
         for (let i = 1; i <= n; i++) {
           const a = A0 + ((A1 - A0) * i) / n;
           const m = a - (A1 - A0) / n / 2;
-          g.quadraticCurveTo(CX + Math.cos(m) * (RX + 0.62), CY + Math.sin(m) * (RY + 0.62), CX + Math.cos(a) * (RX + 0.4), CY + Math.sin(a) * (RY + 0.4));
+          g.quadraticCurveTo(CX + Math.cos(m) * (RX + 1.45), CY + Math.sin(m) * (RY + 1.45), CX + Math.cos(a) * (RX + 1.2), CY + Math.sin(a) * (RY + 1.2));
         }
       };
       g.beginPath();
@@ -1409,7 +1817,7 @@ function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): vo
     case 'afro':
     case 'braids': {
       // Close-cut cap with a neat line-up at the forehead and round the ear.
-      const t = 0.6;
+      const t = 1.35;
       g.beginPath();
       g.moveTo(-3.6, 3.4);
       g.ellipse(CX, CY, RX + t, RY + t, 0, 2.3, -0.82);
@@ -1438,19 +1846,33 @@ function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): vo
       // A tall pleated head tie: a band round the head at the hairline,
       // and a wide fan rising up and back.
       g.beginPath();
-      g.moveTo(4.6, -2.4);
+      g.moveTo(4.6, -3.0);
       g.quadraticCurveTo(6.6, -6.4, 3.6, -9.6);
       g.quadraticCurveTo(1, -13.4, -3.6, -12.8);
       g.quadraticCurveTo(-9.6, -12.2, -10.6, -7.4);
       g.quadraticCurveTo(-10.8, -3.4, -7.4, -2.2);
       g.quadraticCurveTo(-6.6, 1.2, -4.8, 2.4);
-      g.quadraticCurveTo(-2, 0.6, -1.4, -1.4);
-      g.quadraticCurveTo(1.8, -1.9, 4.6, -2.4);
+      g.quadraticCurveTo(-2, 0.4, -1.4, -1.9);
+      g.quadraticCurveTo(1.8, -2.55, 4.6, -3.0);
       g.closePath();
       g.fillStyle = h.colour;
       g.fill();
       g.strokeStyle = INK;
       g.lineWidth = LINE;
+      g.stroke();
+      // One shadow fold low at the back of the fan, one sheen across its top
+      g.lineCap = 'round';
+      g.strokeStyle = paint(h.colour).deep;
+      g.lineWidth = 1.6;
+      g.beginPath();
+      g.moveTo(-9.4, -5.2);
+      g.quadraticCurveTo(-7.4, -1.6, -4.6, 0.6);
+      g.stroke();
+      g.strokeStyle = paint(h.colour).glow;
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.moveTo(-6.4, -11.6);
+      g.quadraticCurveTo(-2.6, -12.7, 1.0, -11.6);
       g.stroke();
       // Pleats fanning out from the knot at the front of the band
       g.strokeStyle = h.accent;
@@ -1462,7 +1884,7 @@ function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): vo
         [-2.6, -8, -6.6, -11.2],
         [-4.6, -6, -9.2, -7.4],
       ] as const) {
-        g.moveTo(1.4, -3.6);
+        g.moveTo(1.4, -4.1);
         g.quadraticCurveTo(cx, cy, x, y);
       }
       g.stroke();
@@ -1470,17 +1892,17 @@ function hairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string): vo
       g.strokeStyle = tone(h.colour, 0.7);
       g.lineWidth = 0.8;
       g.beginPath();
-      g.moveTo(4.4, -3.1);
-      g.quadraticCurveTo(0, -2.6, -5, 1.4);
+      g.moveTo(4.4, -3.65);
+      g.quadraticCurveTo(0, -3.15, -5, 1.0);
       g.stroke();
       break;
     }
     case 'headscarf': {
       // A scarf wrapped smoothly over the skull and ears, tied at the back.
       g.beginPath();
-      g.moveTo(-3.8, 4.2);
-      g.ellipse(CX, CY, RX + 0.9, RY + 0.9, 0, 2.25, -0.5);
-      g.quadraticCurveTo(3, -2.6, 1.6, -1.6);
+      g.moveTo(-3.9, 4.2);
+      g.ellipse(CX, CY, RX + 1.35, RY + 1.35, 0, 2.25, -0.5);
+      g.quadraticCurveTo(3.1, -3.3, 1.55, -2.45);
       g.quadraticCurveTo(0.9, 1.4, 1.2, 4.4);
       g.quadraticCurveTo(-1.2, 5.2, -3.8, 4.2);
       g.closePath();
@@ -1864,9 +2286,18 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   const f = frameOf(look, pose);
   const { skin, b, hair, outfit, t, dustOff, running, r, legs, hipY, breathe, headX, headY } = f;
   const suit = typeof pose.suit === 'object' && pose.suit !== null;
+  const sp = skinPaint(skin);
 
   g.save();
   g.scale(pose.facing === -1 ? -1 : 1, 1);
+  // Decision 61: turning to face the player. Past halfway the front pose shows.
+  const turn = turnOf(pose);
+  if (turn > 0) g.scale(turnWidth(turn), 1);
+  if (turn >= 0.5) {
+    drawHeroFront(g, f, pose);
+    g.restore();
+    return;
+  }
 
   if (!pose.inAir && typeof pose.dust === 'number') drawDustPuff(g, pose.dust);
   if (!pose.inAir && !pose.standing && dustOff === null && typeof pose.skid === 'number') drawSkidScuff(g, pose.skid, t);
@@ -1907,7 +2338,8 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
     }
   }
 
-  if (f.land > 0) g.scale(1 + f.land * 0.08, 1 - f.land * 0.1);
+  if (f.land > 0) g.scale(1 + f.land * 0.1, 1 - f.land * 0.13);
+  else airStretch(g, pose);
 
   if (isStrong(pose)) {
     const a = strongGlowAlpha(t, pose.strong?.left, pose.still === true);
@@ -1924,7 +2356,7 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.save();
   torsoFrame(g, f);
   g.translate(0, breathe);
-  drawArm(g, outfit, skin.base, r.arm[0], r.elbow[0], true, b);
+  drawArm(g, outfit, sp, r.arm[0], r.elbow[0], true, b);
   if (suit) {
     suitPart(g, f, pose, 'farShoulder');
     suitPart(g, f, pose, 'farArm');
@@ -1932,9 +2364,9 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.restore();
 
   // 3. Legs, far then near
-  drawLeg(g, -0.7, hipY, legs[0], outfit, skin.base, true, b);
+  drawLeg(g, -0.7, hipY, legs[0], outfit, sp, true, b);
   if (suit) suitPart(g, f, pose, 'farShin');
-  drawLeg(g, 0.7, hipY, legs[1], outfit, skin.base, false, b);
+  drawLeg(g, 0.7, hipY, legs[1], outfit, sp, false, b);
   if (suit) suitPart(g, f, pose, 'nearShin');
 
   // 4. Torso, neck, head
@@ -1949,7 +2381,7 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   const neckY = SHOULDER_Y * b.len + breathe;
   g.beginPath();
   capsule(g, 0.2, neckY, 1.9 * b.limb, headX - 0.6, headY + 3.6 * b.head, 1.7 * b.limb);
-  g.fillStyle = skin.shade;
+  g.fillStyle = sp.deep;
   g.fill();
   g.strokeStyle = INK;
   g.lineWidth = LINE;
@@ -1965,14 +2397,10 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.translate(headX, headY);
   g.rotate(r.tilt - r.lean * 0.5);
   if (b.head !== 1) g.scale(b.head, b.head);
-  headPath(g, b.round);
-  g.fillStyle = skin.base;
-  g.fill();
-  g.strokeStyle = INK;
-  g.lineWidth = OUTLINE * 0.55;
-  g.stroke();
+  // Lit from up and in front: shadow at the back of the head and under the jaw, a rim behind.
+  solid(g, () => headPath(g, b.round), sp, 3.4, -3.8, 0.9, 0.965);
   if (b.grey && hair.id === 'gele') drawGreyTemple(g, false);
-  drawFace(g, skin, pose.blink === true, b);
+  drawFace(g, skin, pose.blink === true, b, faceOf(pose, running, dustOff));
   hairFront(g, hair, skin.base);
   if (b.grey && hair.id === 'headscarf') drawGreyTemple(g, true);
   if (b.beard) drawBeard(g);
@@ -1987,7 +2415,7 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.save();
   torsoFrame(g, f);
   g.translate(0, breathe);
-  drawArm(g, outfit, skin.base, r.arm[1], r.elbow[1], false, b);
+  drawArm(g, outfit, sp, r.arm[1], r.elbow[1], false, b);
   if (suit) {
     suitPart(g, f, pose, 'nearShoulder');
     suitPart(g, f, pose, 'nearArm');
@@ -2014,6 +2442,25 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.restore();
 }
 
+/**
+ * Decision 60 squash and stretch: taller and narrower rising fast off a jump, back to normal at
+ * the top, a little stretched again falling fast. Round the feet, so the hitbox never moves.
+ */
+function airStretch(g: CanvasRenderingContext2D, pose: HeroPose): void {
+  if (!pose.inAir || pose.rope || typeof pose.vy !== 'number' || !Number.isFinite(pose.vy)) return;
+  const k = pose.vy < 0 ? clamp01(-pose.vy / 320) * 0.07 : clamp01(pose.vy / 420) * 0.035;
+  if (k > 0.001) g.scale(1 - k * 0.7, 1 + k);
+}
+
+/** The face's mood this frame: the pose's own, or what the body is doing. */
+function faceOf(pose: HeroPose, running: boolean, dustOff: number | null): HeroFace {
+  if (pose.face && pose.face in MOODS) return pose.face;
+  if (dustOff !== null) return 'hurt';
+  if (pose.inAir && !pose.rope) return 'jump';
+  if (running && pose.gait !== 'walk' && !pose.push) return 'run';
+  return 'calm';
+}
+
 /** Two small breath puffs drifting out from the mouth (head frame), k 0 to 1 through one puff. */
 function drawBreath(g: CanvasRenderingContext2D, k: number): void {
   g.globalAlpha = (1 - k) * 0.9;
@@ -2038,7 +2485,8 @@ export function drawHeroSuit(g: CanvasRenderingContext2D, look: HeroLook, pose: 
   const f = frameOf(look, pose);
   g.save();
   g.scale(pose.facing === -1 ? -1 : 1, 1);
-  if (f.land > 0) g.scale(1 + f.land * 0.08, 1 - f.land * 0.1);
+  if (f.land > 0) g.scale(1 + f.land * 0.1, 1 - f.land * 0.13);
+  else airStretch(g, pose);
   for (const part of SUIT_ORDER) {
     g.save();
     if (part === 'chest') {
@@ -2089,4 +2537,838 @@ export function drawSuitBits(g: CanvasRenderingContext2D, x: number, y: number, 
     g.restore();
   }
   g.restore();
+}
+
+/* ------------------------------------------------------------ front pose */
+// Decision 61: the hero turned to face the player (the end of the intro). Same Build, colours,
+// size and feet as the side view; arms relaxed at the sides, a warm smile, breathing.
+
+/** How far a turn has gone (0 side on, 1 facing us), or 0 when the pose has none. */
+function turnOf(pose: HeroPose): number {
+  if (pose.inAir || pose.rope || typeof pose.front !== 'number' || !Number.isFinite(pose.front)) return 0;
+  return clamp01(pose.front);
+}
+
+/** The quick turn: narrow to about half as the side view goes, widen again as the front comes. */
+export function turnWidth(k: number): number {
+  const t = clamp01(Number.isFinite(k) ? k : 0);
+  return t < 0.5 ? 1 - t * 0.9 : 0.55 + (t - 0.5) * 0.9;
+}
+
+/** The front head outline, a little fuller at the cheeks for a teen. Head frame. */
+function frontHeadPath(g: CanvasRenderingContext2D, round: number): void {
+  const w = 5.05 + round * 0.3;
+  g.moveTo(0, -6.5);
+  g.bezierCurveTo(w * 0.62, -6.5, w, -4.6, w, -1.2);
+  g.bezierCurveTo(w, 2.0, w * 0.82 + round * 0.3, 4.2, w * 0.5, 5.2);
+  g.quadraticCurveTo(0, 6.5 + round * 0.2, -w * 0.5, 5.2);
+  g.bezierCurveTo(-w * 0.82 - round * 0.3, 4.2, -w, 2.0, -w, -1.2);
+  g.bezierCurveTo(-w, -4.6, -w * 0.62, -6.5, 0, -6.5);
+  g.closePath();
+}
+
+/** Both eyes looking at us, with their glints. Head frame. */
+function frontEyes(g: CanvasRenderingContext2D, e: number, blink: boolean, lash: boolean, line: string): void {
+  if (blink) {
+    g.beginPath();
+    for (const s of [-1, 1]) {
+      g.moveTo(s * 2.05 - 0.9 * e, -0.3);
+      g.quadraticCurveTo(s * 2.05, -0.3 + 0.7 * e, s * 2.05 + 0.9 * e, -0.3);
+      if (lash) {
+        g.moveTo(s * 2.05 + s * 0.9 * e, -0.3);
+        g.lineTo(s * 2.05 + s * 1.35 * e, -0.6);
+      }
+    }
+    g.strokeStyle = line;
+    g.lineWidth = 0.7;
+    g.lineCap = 'round';
+    g.stroke();
+    return;
+  }
+  const whites = (): void => {
+    g.beginPath();
+    for (const s of [-1, 1]) {
+      g.moveTo(s * 2.05 + 0.95 * e, -0.3);
+      g.ellipse(s * 2.05, -0.3, 0.95 * e, 1.25 * e, 0, 0, TAU);
+    }
+  };
+  whites();
+  g.fillStyle = WHITE;
+  g.fill();
+  g.save();
+  g.clip();
+  g.fillStyle = IRIS;
+  g.beginPath();
+  for (const s of [-1, 1]) {
+    g.moveTo(s * 2.05 + 0.75 * e, -0.15);
+    g.arc(s * 2.05, -0.15, 0.75 * e, 0, TAU);
+  }
+  g.fill();
+  g.fillStyle = INK;
+  g.beginPath();
+  for (const s of [-1, 1]) {
+    g.moveTo(s * 2.05 + 0.42 * e, -0.15);
+    g.arc(s * 2.05, -0.15, 0.42 * e, 0, TAU);
+  }
+  g.fill();
+  g.restore();
+  whites();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.35;
+  g.stroke();
+  g.beginPath();
+  for (const s of [-1, 1]) {
+    g.moveTo(s * 2.05 + Math.cos(Math.PI * 1.08) * 0.95 * e, -0.3 + Math.sin(Math.PI * 1.08) * 1.25 * e);
+    g.ellipse(s * 2.05, -0.3, 0.95 * e, 1.25 * e, 0, Math.PI * 1.08, Math.PI * 1.92);
+    if (lash) {
+      g.moveTo(s * 2.05 + s * 0.8 * e, -0.3 - 0.75 * e);
+      g.quadraticCurveTo(s * 2.05 + s * 1.25 * e, -0.3 - 0.85 * e, s * 2.05 + s * 1.5 * e, -0.3 - 1.2 * e);
+    }
+  }
+  g.lineWidth = 0.6;
+  g.lineCap = 'round';
+  g.stroke();
+  for (const s of [-1, 1]) {
+    dot(g, s * 2.05 + 0.32 * e, -0.3 - 0.45 * e, 0.34 * e, WHITE);
+    dot(g, s * 2.05 - 0.3 * e, -0.3 + 0.45 * e, 0.15 * e, WHITE);
+  }
+}
+
+/** The face from the front: calm or beaming. Head frame. Same colours and lip as the side face. */
+function frontFace(g: CanvasRenderingContext2D, skin: SkinOption, b: Build, blink: boolean, beam: boolean): void {
+  const f = skin.face;
+  const sp = skinPaint(skin);
+  // Soft light on both cheeks and the nose
+  g.fillStyle = sp.glow;
+  g.beginPath();
+  for (const s of [-1, 1]) {
+    g.moveTo(s * 2.6 + 0.95, 1.55);
+    g.ellipse(s * 2.6, 1.55, 0.95, 0.65, 0, 0, TAU);
+  }
+  g.moveTo(0.75, 0.95);
+  g.arc(0.45, 0.95, 0.3, 0, TAU);
+  g.fill();
+  if (beam) closedFront(g, b.eye, b.lash, f.line);
+  else frontEyes(g, b.eye, blink, b.lash, f.line);
+  if (b.lines) {
+    g.beginPath();
+    for (const s of [-1, 1]) {
+      g.moveTo(s * 3.25, -0.75);
+      g.lineTo(s * 3.75, -1.05);
+      g.moveTo(s * 3.25, -0.05);
+      g.lineTo(s * 3.75, 0.1);
+    }
+    g.strokeStyle = tone(skin.shade, 0.72);
+    g.lineWidth = 0.4;
+    g.stroke();
+  }
+  // Brows (with the light brow ridge on darker skins, as on the side face)
+  const w = f.brow ?? 0.8;
+  if (f.rim) {
+    g.beginPath();
+    for (const s of [-1, 1]) {
+      g.moveTo(s * 3.0, -2.35 - w * 0.65);
+      g.quadraticCurveTo(s * 2.2, -2.95 - w * 0.65, s * 1.4, -2.6 - w * 0.65);
+    }
+    g.strokeStyle = f.rim;
+    g.lineWidth = w * 0.5;
+    g.stroke();
+  }
+  g.beginPath();
+  for (const s of [-1, 1]) {
+    g.moveTo(s * 3.05, -2.3);
+    g.quadraticCurveTo(s * 2.2, -2.95, s * 1.1, -2.55);
+  }
+  g.strokeStyle = f.line;
+  g.lineWidth = w;
+  g.lineCap = 'round';
+  g.stroke();
+  // Nose: a soft shade on one side and the nostrils
+  g.strokeStyle = skin.deep;
+  g.lineWidth = 0.55;
+  g.beginPath();
+  g.moveTo(-0.35, -0.2);
+  g.quadraticCurveTo(-0.8, 1.0, -0.6, 1.55);
+  g.moveTo(-0.85, 1.75);
+  g.quadraticCurveTo(-0.4, 2.0, -0.15, 1.8);
+  g.moveTo(0.85, 1.75);
+  g.quadraticCurveTo(0.4, 2.0, 0.15, 1.8);
+  g.stroke();
+  if (beam) {
+    const shape = (): void => {
+      g.moveTo(-1.9, 2.55);
+      g.quadraticCurveTo(0, 3.2, 1.9, 2.55);
+      g.quadraticCurveTo(1.5, 5.0, 0, 5.0);
+      g.quadraticCurveTo(-1.5, 5.0, -1.9, 2.55);
+    };
+    mouthOpen(g, f, shape, () => {
+      g.moveTo(-1.9, 2.55);
+      g.quadraticCurveTo(0, 3.2, 1.9, 2.55);
+      g.lineTo(1.9, 3.3);
+      g.quadraticCurveTo(0, 3.9, -1.9, 3.3);
+      g.closePath();
+    });
+    lip(g, f, -1.0, 4.2, 0.05, 5.4, 1.0, 4.2, 4.55);
+    return;
+  }
+  lip(g, f, -1.6, 2.75, 0.05, 5.0, 1.6, 2.75, 3.45);
+  g.strokeStyle = f.line;
+  g.lineWidth = 0.5;
+  g.beginPath();
+  g.moveTo(-1.9, 2.45);
+  g.quadraticCurveTo(-1.75, 2.75, -1.6, 2.75);
+  g.quadraticCurveTo(0, 3.45, 1.6, 2.75);
+  g.quadraticCurveTo(1.75, 2.75, 1.9, 2.45);
+  g.stroke();
+}
+
+function closedFront(g: CanvasRenderingContext2D, e: number, lash: boolean, line: string): void {
+  g.beginPath();
+  for (const s of [-1, 1]) {
+    g.moveTo(s * 2.05 - 0.9 * e, -0.05);
+    g.quadraticCurveTo(s * 2.05, -1.4 * e, s * 2.05 + 0.9 * e, -0.05);
+    if (lash) {
+      g.moveTo(s * 2.05 + s * 0.9 * e, -0.05);
+      g.lineTo(s * 2.05 + s * 1.35 * e, -0.4);
+    }
+  }
+  g.strokeStyle = line;
+  g.lineWidth = 0.7;
+  g.lineCap = 'round';
+  g.stroke();
+}
+
+/** Hair and headwear behind the front head: the afro's mass, the braids down both sides. */
+function frontHairBack(g: CanvasRenderingContext2D, h: HairOption, sway: number): void {
+  if (h.id === 'afro') {
+    const n = 14;
+    g.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * TAU;
+      const x = Math.cos(a) * 8.0;
+      const y = -2.6 + Math.sin(a) * 7.2;
+      if (i === 0) g.moveTo(x, y);
+      else {
+        const m = a - Math.PI / n;
+        g.quadraticCurveTo(Math.cos(m) * 9.0, -2.6 + Math.sin(m) * 8.1, x, y);
+      }
+    }
+    g.closePath();
+    const p = paint(h.colour);
+    g.strokeStyle = INK;
+    g.lineWidth = OUTLINE;
+    g.stroke();
+    g.fillStyle = p.deep;
+    g.fill();
+    g.fillStyle = h.colour;
+    g.beginPath();
+    g.ellipse(0.8, -3.6, 7.6, 6.4, 0, 0, TAU);
+    g.save();
+    g.beginPath();
+    g.ellipse(0, -2.6, 8.0, 7.2, 0, 0, TAU);
+    g.clip();
+    g.beginPath();
+    g.ellipse(0.8, -3.6, 7.4, 6.2, 0, 0, TAU);
+    g.fill();
+    g.restore();
+    g.strokeStyle = mixHex(h.colour, RIM_LIGHT, 0.16);
+    g.lineWidth = 0.8;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.ellipse(0.5, -3.2, 6.4, 6.0, 0, -2.2, -0.9);
+    g.stroke();
+    g.fillStyle = h.accent;
+    g.beginPath();
+    for (const [x, y] of [[-6, -5], [-2, -8.4], [3.4, -7.8], [6.4, -3], [-6.8, 0.6], [6.6, 1.8]] as const) {
+      g.moveTo(x + 0.7, y);
+      g.arc(x, y, 0.7, 0, TAU);
+    }
+    g.fill();
+  } else if (h.id === 'braids') {
+    g.lineCap = 'round';
+    for (const s of [-1, 1])
+      for (let i = 0; i < 3; i++) {
+        const x0 = s * (3.8 + i * 0.7);
+        const y0 = -2 + i * 1.2;
+        const x1 = s * (4.6 + i * 1.1) + sway * 0.3;
+        const y1 = 10 - i * 0.8;
+        g.beginPath();
+        g.moveTo(x0, y0);
+        g.quadraticCurveTo(x0 + s * 1.4, (y0 + y1) / 2, x1, y1);
+        g.strokeStyle = INK;
+        g.lineWidth = 2.6;
+        g.stroke();
+        g.strokeStyle = h.colour;
+        g.lineWidth = 1.3;
+        g.stroke();
+        dot(g, x1, y1 + 0.6, 1.05, i === 1 ? '#e0572b' : h.accent);
+      }
+  }
+}
+
+/** Hair and headwear over the front head. */
+function frontHairFront(g: CanvasRenderingContext2D, h: HairOption, skin: string, grey: boolean): void {
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const top = (r: number, a0: number, a1: number): void => {
+    g.ellipse(0, -1.2, 5.05 + r, 5.3 + r, 0, a0, a1);
+  };
+  switch (h.id) {
+    case 'lowcut':
+    case 'afro':
+    case 'braids': {
+      // A close crop over the top, a neat line-up across the forehead and down to the temples
+      const r = h.id === 'lowcut' ? 1.15 : 1.35;
+      g.beginPath();
+      g.moveTo(-5.0, -0.6);
+      top(r, Math.PI * 1.02, Math.PI * 1.98);
+      g.lineTo(5.0, -0.6);
+      g.quadraticCurveTo(4.6, -3.0, 3.4, -3.5);
+      g.quadraticCurveTo(1.6, -3.4, 0, -3.95);
+      g.quadraticCurveTo(-1.6, -3.4, -3.4, -3.5);
+      g.quadraticCurveTo(-4.6, -3.0, -5.0, -0.6);
+      g.closePath();
+      if (h.id === 'lowcut') {
+        g.fillStyle = skin;
+        g.fill();
+        g.globalAlpha = 0.85;
+      }
+      g.fillStyle = h.colour;
+      g.fill();
+      g.globalAlpha = 1;
+      g.beginPath();
+      top(r, Math.PI * 1.02, Math.PI * 1.98);
+      g.strokeStyle = INK;
+      g.lineWidth = 0.6;
+      g.stroke();
+      g.strokeStyle = h.id === 'braids' ? (h.colour === GREY ? GREY_SHADE : '#6b5242') : h.accent;
+      g.lineWidth = 0.5;
+      g.beginPath();
+      if (h.id === 'braids') {
+        for (const x of [-2.6, 0, 2.6]) {
+          g.moveTo(x * 1.1, -3.6);
+          g.quadraticCurveTo(x * 1.35, -6.0, x * 0.9, -7.2);
+        }
+      } else {
+        g.ellipse(0, -1.2, 4.6, 4.9, 0, Math.PI * 1.3, Math.PI * 1.55);
+      }
+      g.stroke();
+      break;
+    }
+    case 'gele': {
+      // The tall head tie: a band across the forehead and a wide pleated fan above
+      const p = paint(h.colour);
+      solid(
+        g,
+        () => {
+          g.moveTo(-5.6, -1.4);
+          g.quadraticCurveTo(-7.8, -3.6, -9.4, -6.6);
+          g.quadraticCurveTo(-8.6, -11.6, -3.8, -12.6);
+          g.quadraticCurveTo(0, -13.4, 3.8, -12.6);
+          g.quadraticCurveTo(8.6, -11.6, 9.4, -6.6);
+          g.quadraticCurveTo(7.8, -3.6, 5.6, -1.4);
+          g.quadraticCurveTo(0, -3.9, -5.6, -1.4);
+          g.closePath();
+        },
+        p,
+        1.5,
+        -9,
+        0.84,
+        0.965,
+      );
+      g.strokeStyle = h.accent;
+      g.lineWidth = 0.75;
+      g.beginPath();
+      for (const [cx, cy, x, y] of [
+        [-3, -7, -8.4, -8.4],
+        [-1.6, -9, -4.6, -11.8],
+        [0, -9, 0, -12.6],
+        [1.6, -9, 4.6, -11.8],
+        [3, -7, 8.4, -8.4],
+      ] as const) {
+        g.moveTo(0, -4.4);
+        g.quadraticCurveTo(cx, cy, x, y);
+      }
+      g.stroke();
+      g.strokeStyle = tone(h.colour, 0.7);
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.moveTo(-5.4, -2.0);
+      g.quadraticCurveTo(0, -4.5, 5.4, -2.0);
+      g.stroke();
+      if (grey) drawFrontTemples(g, 0.4);
+      break;
+    }
+    case 'headscarf': {
+      // Wrapped smoothly over the head and ears, a knot on top
+      const p = paint(h.colour);
+      solid(
+        g,
+        () => {
+          g.moveTo(-5.9, 3.6);
+          top(1.35, Math.PI * 0.93, Math.PI * 2.07);
+          g.lineTo(5.9, 3.6);
+          g.quadraticCurveTo(5.6, 0.0, 4.4, -2.0);
+          g.quadraticCurveTo(0, -4.2, -4.4, -2.0);
+          g.quadraticCurveTo(-5.6, 0.0, -5.9, 3.6);
+          g.closePath();
+        },
+        p,
+        1.5,
+        -6,
+        0.86,
+        0.965,
+      );
+      g.strokeStyle = h.accent;
+      g.lineWidth = 0.7;
+      g.beginPath();
+      g.moveTo(-5.2, 0.8);
+      g.quadraticCurveTo(-3.6, -5.2, 2.6, -5.9);
+      g.moveTo(5.2, 0.6);
+      g.quadraticCurveTo(4.4, -3.2, 1.2, -4.0);
+      g.stroke();
+      g.beginPath();
+      g.ellipse(2.6, -6.4, 1.6, 1.2, 0.3, 0, TAU);
+      g.moveTo(1.9 + 1.4, -7.6);
+      g.ellipse(1.9, -7.6, 1.4, 0.9, -0.6, 0, TAU);
+      g.fillStyle = h.colour;
+      g.fill();
+      g.strokeStyle = INK;
+      g.lineWidth = 0.8;
+      g.stroke();
+      if (grey) drawFrontTemples(g, 1.4);
+      break;
+    }
+  }
+}
+
+/** Elder under a gele or headscarf: a little grey at both temples. */
+function drawFrontTemples(g: CanvasRenderingContext2D, dy: number): void {
+  g.beginPath();
+  for (const s of [-1, 1]) {
+    g.moveTo(s * 4.3, -1.8 + dy);
+    g.quadraticCurveTo(s * 4.75, -0.4 + dy, s * 4.5, 0.6 + dy);
+    g.quadraticCurveTo(s * 4.0, -0.3 + dy, s * 3.85, -1.6 + dy);
+    g.closePath();
+  }
+  g.fillStyle = GREY;
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.4;
+  g.stroke();
+}
+
+/** Elder man from the front: a short neat grey beard round the jaw and chin, clear of the lip. */
+function drawFrontBeard(g: CanvasRenderingContext2D): void {
+  g.beginPath();
+  g.moveTo(-4.9, 0.2);
+  g.quadraticCurveTo(-4.9, 4.4, -2.6, 5.9);
+  g.quadraticCurveTo(0, 7.0, 2.6, 5.9);
+  g.quadraticCurveTo(4.9, 4.4, 4.9, 0.2);
+  g.quadraticCurveTo(4.2, 0.1, 3.9, 1.6);
+  g.quadraticCurveTo(3.4, 4.7, 0, 4.85);
+  g.quadraticCurveTo(-3.4, 4.7, -3.9, 1.6);
+  g.quadraticCurveTo(-4.2, 0.1, -4.9, 0.2);
+  g.closePath();
+  g.fillStyle = GREY;
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.strokeStyle = GREY_SHADE;
+  g.lineWidth = 0.35;
+  g.beginPath();
+  for (const x of [-3.2, -1, 1, 3.2]) {
+    g.moveTo(x, 5.0 + Math.abs(x) * -0.1);
+    g.lineTo(x * 1.05, 5.6 + Math.abs(x) * -0.15);
+  }
+  g.stroke();
+}
+
+/** The hero facing us, feet on (0, 0). Called by drawHero for a turn past halfway. */
+function drawHeroFront(g: CanvasRenderingContext2D, f: Frame, pose: HeroPose): void {
+  const { skin, b, hair, outfit: o, breathe } = f;
+  const sp = skinPaint(skin);
+  const L = b.len;
+  const robe = o.id === 'agbada';
+  const long = robe || o.id === 'kaftan';
+  const bare = o.id === 'jersey' || o.id === 'school';
+  const w = b.limb;
+  const hipY = -(THIGH + SHIN + ANKLE) * L * 0.99;
+  const sway = Math.sin(f.t * 1.3) * 0.3;
+  // Hair behind the head (afro mass, braids), placed in the head frame
+  const head = (): void => {
+    g.translate(0, hipY + breathe * 0.5 + (-TORSO - 6.2) * L + breathe * 0.5);
+    if (b.head !== 1) g.scale(b.head, b.head);
+  };
+  g.save();
+  head();
+  frontHairBack(g, hair, sway);
+  g.restore();
+  // Legs: a relaxed stance, feet a little apart, toes turned out
+  for (const s of [-1, 1]) {
+    const hx = s * 2.2 * b.hw;
+    const ax = s * 2.7 * b.hw;
+    const ay = -ANKLE * L;
+    const kx = s * 2.6 * b.hw;
+    const ky = (hipY + ay) / 2;
+    limb(g, hx, hipY, 2.75 * w, kx, ky, 2.1 * w, ax, ay, 1.6 * w, bare ? sp : paint(o.legs));
+    if (bare) {
+      patch(g, hx, hipY, 3.0 * b.hw, hx + (kx - hx) * 0.62, hipY + (ky - hipY) * 0.62, 2.75 * w, o.legs);
+      patch(g, kx + (ax - kx) * 0.4, ky + (ay - ky) * 0.4, 1.85 * w, ax, ay, 1.75 * w, WHITE);
+    }
+    // Shoe from the front: a rounded toe
+    const sh = paint(o.shoes);
+    g.beginPath();
+    g.ellipse(ax + s * 0.6, -1.25 * L, 2.5 * L, 1.55 * L, s * 0.25, 0, TAU);
+    g.strokeStyle = INK;
+    g.lineWidth = OUTLINE;
+    g.stroke();
+    g.fillStyle = sh.base;
+    g.fill();
+    g.save();
+    g.clip();
+    g.fillStyle = sh.deep;
+    g.fillRect(ax - 3.2, -0.9 * L, 6.4, 1.4);
+    g.fillStyle = o.shoes === '#1d1a14' || o.shoes === '#3b2a20' ? '#5c5048' : '#d8d2c4';
+    g.fillRect(ax - 3.2, -0.5 * L, 6.4, 0.6);
+    dot(g, ax + s * 0.2 + 0.6, -2.0 * L, 0.7, sh.glow);
+    g.restore();
+  }
+  // Torso, in its own frame (origin at the hips)
+  g.save();
+  g.translate(0, hipY + breathe * 0.5);
+  const wAt = (y: number): number => {
+    const k = clamp01((y + 13) / 14);
+    const ww = b.sw + (b.hw - b.sw) * k;
+    const waist = long ? 0 : b.waist;
+    return waist === 0 ? ww : ww * (1 - waist * Math.max(0, 1 - Math.abs(y + 5) / 5));
+  };
+  const M = (x: number, y: number): void => g.moveTo(x * wAt(y), y * L);
+  const Q = (cx: number, cy: number, x: number, y: number): void => g.quadraticCurveTo(cx * wAt(cy), cy * L, x * wAt(y), y * L);
+  const Lt = (x: number, y: number): void => g.lineTo(x * wAt(y), y * L);
+  const shape = (): void => {
+    if (robe) {
+      M(-5.2, -13.6);
+      Q(0, -14.8, 5.2, -13.6);
+      Q(9.4 + sway, -8, 9.0 + sway, 13.6);
+      Q(0, 15.4, -9.0 + sway, 13.6);
+      Q(-9.4 + sway, -8, -5.2, -13.6);
+    } else {
+      M(-5.0, -13.4);
+      Q(0, -14.6, 5.0, -13.4);
+      Q(6.0, -12.8, 5.6, -10.5);
+      Q(4.6, -6, 4.4, -4.5);
+      if (long) {
+        Q(5.4, 2, 5.4 + sway, 11.6);
+        Q(0, 12.6, -5.4 + sway, 11.6);
+        Q(-5.4, 2, -4.4, -4.5);
+      } else {
+        Q(4.9, -1, 4.7, 1.2);
+        Q(0, 2.0, -4.7, 1.2);
+        Q(-4.9, -1, -4.4, -4.5);
+      }
+      Q(-4.6, -6, -5.6, -10.5);
+      Q(-6.0, -12.8, -5.0, -13.4);
+    }
+    g.closePath();
+  };
+  const tp = paint(o.a);
+  solid(g, shape, tp, 2.2 * wAt(-12), -12 * L, robe ? 0.84 : 0.8, 0.96);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  switch (o.id) {
+    case 'jersey':
+      g.strokeStyle = o.b;
+      g.lineWidth = 1.1;
+      g.beginPath();
+      M(-2.2, -14.0);
+      Lt(0, -11.0);
+      Lt(2.2, -14.0);
+      M(-4.6, -11);
+      Lt(-4.3, 0.6);
+      M(4.6, -11);
+      Lt(4.3, 0.6);
+      g.stroke();
+      break;
+    case 'ankara':
+      for (const [x, y] of [[-2.4, -11], [2.0, -10.4], [0, -7.4], [-2.8, -4.4], [2.6, -3.8], [-0.6, -1.2], [3.2, -12.6]] as const) {
+        dot(g, x * wAt(y), y * L, 1.45, o.b);
+        dot(g, x * wAt(y), y * L, 0.6, '#f2b300');
+      }
+      g.strokeStyle = o.b;
+      g.lineWidth = 1.2;
+      g.beginPath();
+      M(-4.6, 0.5);
+      Q(0, 1.6, 4.6, 0.5);
+      g.stroke();
+      break;
+    case 'school':
+      g.fillStyle = WHITE;
+      g.strokeStyle = INK;
+      g.lineWidth = 0.7;
+      g.beginPath();
+      M(-3.2, -14.0);
+      Lt(0, -11.6);
+      Lt(-0.6, -13.0);
+      g.closePath();
+      M(3.2, -14.0);
+      Lt(0, -11.6);
+      Lt(0.6, -13.0);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      g.fillStyle = o.b;
+      g.beginPath();
+      M(-0.55, -12.0);
+      Lt(0.55, -12.0);
+      Lt(0.8, -5.6);
+      Lt(0, -4.6);
+      Lt(-0.8, -5.6);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      g.fillRect(-4.7 * wAt(0), -0.6 * L, 9.4 * wAt(0), 1.3 * L);
+      break;
+    case 'agbada':
+      g.strokeStyle = o.b;
+      g.lineWidth = 1.2;
+      g.beginPath();
+      M(-3.0, -13.6);
+      Q(0, -9.6, 3.0, -13.6);
+      M(-1.6, -10.6);
+      Lt(-1.6, -3.0);
+      M(1.6, -10.6);
+      Lt(1.6, -3.0);
+      M(-1.6, -3.0);
+      Q(0, -2.0, 1.6, -3.0);
+      g.stroke();
+      g.lineWidth = 1;
+      g.beginPath();
+      M(-8.6 + sway, 12.2);
+      Q(0, 13.6, 8.6 + sway, 12.2);
+      g.stroke();
+      break;
+    case 'kaftan':
+      g.strokeStyle = o.b;
+      g.lineWidth = 1.1;
+      g.beginPath();
+      M(-2.6, -13.8);
+      Q(0, -11.4, 2.6, -13.8);
+      M(0, -11.8);
+      Lt(0, -4.4);
+      g.stroke();
+      for (let y = -10.6; y <= -5; y += 1.8) dot(g, 0.9 * wAt(y), y * L, 0.45, o.b);
+      break;
+  }
+  // Arms relaxed at both sides
+  for (const s of [-1, 1]) {
+    const sx = s * 4.9 * b.sw;
+    const sy = SHOULDER_Y * L + breathe * 0.5;
+    const ex = s * 6.1 * b.sw;
+    const ey = sy + UPPER_ARM * L;
+    const wx = s * 6.3 * b.sw;
+    const wy = ey + FOREARM * L;
+    if (robe) {
+      // The wide agbada sleeve hangs from the shoulder over the arm
+      solid(
+        g,
+        () => {
+          g.moveTo(s * 3.8, sy - 1.4);
+          g.quadraticCurveTo(s * 9.6, sy + 1, s * 10.2, wy - 1);
+          g.quadraticCurveTo(s * 8.6, wy + 2.2, s * 6.0, wy + 0.6);
+          g.quadraticCurveTo(s * 5.0, sy + 6, s * 3.8, sy - 1.4);
+          g.closePath();
+        },
+        tp,
+        s * 4.2,
+        sy,
+        0.84,
+        0.96,
+      );
+      g.strokeStyle = o.b;
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.moveTo(s * 10.0, wy - 1.2);
+      g.quadraticCurveTo(s * 8.6, wy + 1.4, s * 6.2, wy);
+      g.stroke();
+    } else {
+      limb(g, sx, sy, 2.1 * w, ex, ey, 1.65 * w, wx, wy, 1.35 * w, bare ? sp : tp);
+      if (bare) patch(g, sx, sy, 2.5 * w, sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5, 2.15 * w, o.a);
+      else if (o.id === 'ankara' || o.id === 'kaftan') patch(g, ex + (wx - ex) * 0.72, ey + (wy - ey) * 0.72, 1.55 * w, wx, wy, 1.5 * w, o.b);
+    }
+    drawHand(g, wx, wy + 1.2 * (0.55 + 0.41 * w), 1.6 * (0.55 + 0.41 * w), sp);
+  }
+  // Neck and collar
+  const neckTop = (-TORSO - 6.2) * L + breathe * 0.5 + 3.6 * b.head;
+  g.beginPath();
+  capsule(g, 0, SHOULDER_Y * L + breathe * 0.5, 2.2 * w, 0, neckTop, 2.0 * w);
+  g.fillStyle = sp.deep;
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = LINE;
+  g.stroke();
+  if (o.id === 'school' || o.id === 'jersey') {
+    g.fillStyle = o.id === 'jersey' ? o.a : WHITE;
+    g.beginPath();
+    g.ellipse(0, (SHOULDER_Y - 1.2) * L, 3.2 * b.sw, 1.2, 0, 0, TAU);
+    g.fill();
+    g.stroke();
+  }
+  g.restore();
+  // The head
+  g.save();
+  head();
+  const scarf = hair.id === 'headscarf';
+  if (!scarf) {
+    for (const s of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(s * 5.0, 0.4, 1.3, 1.85, 0, 0, TAU);
+      g.strokeStyle = INK;
+      g.lineWidth = OUTLINE;
+      g.stroke();
+      g.fillStyle = sp.deep;
+      g.fill();
+    }
+  }
+  solid(g, () => frontHeadPath(g, b.round), sp, 1.4, -4.4, 0.9, 0.965);
+  if (!scarf) {
+    // Inner ear shade, the near half of each ear over the head line
+    g.strokeStyle = skin.shade;
+    g.lineWidth = 0.55;
+    g.beginPath();
+    g.arc(-5.15, 0.5, 0.75, 1.9, 4.4);
+    g.moveTo(5.15 + Math.cos(-1.25) * 0.75, 0.5 + Math.sin(-1.25) * 0.75);
+    g.arc(5.15, 0.5, 0.75, -1.25, 1.25);
+    g.stroke();
+    if (b.studs) {
+      for (const s of [-1, 1]) {
+        g.beginPath();
+        g.arc(s * 5.2, 2.15, 0.6, 0, TAU);
+        g.fillStyle = '#f2b300';
+        g.fill();
+        g.strokeStyle = INK;
+        g.lineWidth = 0.35;
+        g.stroke();
+      }
+    }
+  }
+  frontFace(g, skin, b, pose.blink === true, pose.face === 'win');
+  frontHairFront(g, hair, skin.base, b.grey);
+  if (b.beard) drawFrontBeard(g);
+  g.restore();
+}
+
+/* ---------------------------------------------------------- sprite cache */
+
+/** Run and walk poses kept per stride (decision 60): about 60 a second at a full run, so smooth. */
+export const SPRITE_STEPS = 24;
+
+/**
+ * The cache key of a pose that may be drawn from a sprite, or null when it must be drawn live:
+ * any effect (amala glow, corn lines, dash, suit, throw, skid, dust, rope, push, the turn), and
+ * standing (its breath and cloth sway follow the clock). Only the run, walk, jump, fall and
+ * landing, which follow the stride, the fall speed and the landing alone, are cached.
+ */
+export function spriteKey(pose: HeroPose): string | null {
+  if (pose.glow || pose.strong || pose.fast || pose.dash || pose.suit || pose.rope || pose.standing || pose.resting || pose.blink) return null;
+  if (pose.push || pose.front || pose.shakeOut !== undefined || throwOf(pose) !== null || dustOffOf(pose) !== null) return null;
+  // A set mood (the wince after a knock, the beam on a win) lasts a moment: drawn live
+  if (typeof pose.dust === 'number' || (typeof pose.skid === 'number' && pose.skid > 0) || pose.face) return null;
+  const s = snapStep(pose);
+  if (pose.inAir) return `a${s.vy}`;
+  return `${pose.gait === 'walk' ? 'w' : 'r'}${s.step}l${s.land}`;
+}
+
+/** Landing squash steps; while landing the stride takes only LAND_STRIDE_STEPS steps. */
+const LAND_STEPS = 6;
+const LAND_STRIDE_STEPS = 8;
+
+/**
+ * The steps a pose snaps to: the fall speed in 33 steps, the stride in SPRITE_STEPS (8 while
+ * landing, which lasts 0.12 s), the landing in 6. At most 24 + 24 + 6 x 8 x 2 + 33 sprites (201).
+ */
+function snapStep(pose: HeroPose): { vy: number; step: number; steps: number; land: number } {
+  const vy = typeof pose.vy === 'number' && Number.isFinite(pose.vy) ? Math.round(Math.max(-400, Math.min(400, pose.vy)) / 25) : 0;
+  const land = typeof pose.land === 'number' && Number.isFinite(pose.land) ? Math.round(clamp01(pose.land) * LAND_STEPS) : 0;
+  const steps = land > 0 ? LAND_STRIDE_STEPS : SPRITE_STEPS;
+  const ph = Number.isFinite(pose.phase) ? ((pose.phase % 1) + 1) % 1 : 0;
+  return { vy, step: Math.round(ph * steps) % steps, steps, land };
+}
+
+/** The pose a key stands for (the stride and fall speed snapped to the cached steps), facing right. */
+function snapped(pose: HeroPose): HeroPose {
+  const s = snapStep(pose);
+  if (pose.inAir) return { ...pose, facing: 1, vy: s.vy * 25 };
+  return { ...pose, facing: 1, phase: s.step / s.steps, land: s.land / LAND_STEPS };
+}
+
+/** New sprites made per frame at most; past that the hero is drawn live that frame. */
+const MAKE_PER_FRAME = 2;
+
+/** Room round the art box in a sprite (u): the outer half of the ink outline and a little more. */
+const SPRITE_PAD = 3;
+
+/**
+ * The game's hero, drawn from sprites made at the screen's own pixel size (decision 60). The lit
+ * hero takes more drawing than the old flat one; drawn once per pose and copied after, it costs
+ * less than before. Each sprite is made at the exact device pixels per unit and copied to whole
+ * pixels, so it is as crisp as drawing it live, on every screen. A new look or a new screen size
+ * starts again. Poses with effects are drawn live (see spriteKey).
+ */
+export class HeroSprites {
+  private frames = new Map<string, HTMLCanvasElement>();
+  private look = '';
+  private px = 0;
+  /** New sprites made in this frame (about 12 ms): at most MAKE_PER_FRAME, so a new stride never stalls. */
+  private made = 0;
+  private madeAt = -Infinity;
+
+  /** Draws the hero with its feet at the current origin, as drawHero does. */
+  draw(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose): void {
+    const key = typeof document === 'undefined' || typeof g.getTransform !== 'function' ? null : spriteKey(pose);
+    const m = key === null ? null : g.getTransform();
+    // Only a plain scale (no turn, no squeeze) can be copied pixel for pixel
+    if (key === null || m === null || m.b !== 0 || m.c !== 0 || !(m.a > 0) || Math.abs(m.a - m.d) > 1e-6) {
+      drawHero(g, look, pose);
+      return;
+    }
+    const lk = JSON.stringify(clampLook(look)) + bodyOf(look) + ageOf(look);
+    if (lk !== this.look || Math.abs(m.a - this.px) > 1e-6 || this.frames.size > 260) {
+      this.frames.clear();
+      this.look = lk;
+      this.px = m.a;
+    }
+    const px = m.a;
+    const ox = Math.ceil((SPRITE_PAD - HERO_ART_BOX.left) * px);
+    const oy = Math.ceil((SPRITE_PAD - HERO_ART_BOX.top) * px);
+    let c = this.frames.get(key);
+    if (c === undefined) {
+      const now = typeof performance !== 'undefined' ? performance.now() : 0;
+      if (now - this.madeAt > 12) {
+        this.made = 0;
+        this.madeAt = now;
+      }
+      if (this.made >= MAKE_PER_FRAME) {
+        drawHero(g, look, pose);
+        return;
+      }
+      this.made++;
+      c = document.createElement('canvas');
+      c.width = ox + Math.ceil((HERO_ART_BOX.right + SPRITE_PAD) * px);
+      c.height = oy + Math.ceil((HERO_ART_BOX.bottom + SPRITE_PAD) * px);
+      const cg = c.getContext('2d');
+      if (!cg) {
+        drawHero(g, look, pose);
+        return;
+      }
+      cg.setTransform(px, 0, 0, px, ox, oy);
+      drawHero(cg, look, snapped(pose));
+      this.frames.set(key, c);
+    }
+    g.save();
+    g.setTransform(pose.facing === -1 ? -1 : 1, 0, 0, 1, Math.round(m.e), Math.round(m.f));
+    g.drawImage(c, -ox, -oy);
+    g.restore();
+  }
 }
