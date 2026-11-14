@@ -1,0 +1,52 @@
+# Build the Android test app (debug APK) for Gbese! (plan ST1b, draft from ST1a).
+# Runs on every push to main, and by hand from the Actions tab. deploy.yml (the web test link)
+# is separate and does not wait for this.
+# The APK is kept for 14 days as "gbese-debug.apk" on the run's page. It is a debug build:
+# not signed for the store, no keys needed.
+name: Android test app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-app
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      # GitHub's Ubuntu machines come with the Android SDK (ANDROID_HOME is set).
+      - run: npm ci
+      - run: npm test
+
+      # Builds the game for the app (no service worker), copies it and the ST2 pictures into
+      # android/, then builds the debug APK.
+      - run: npm run app:android:debug
+
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk gbese-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gbese-debug.apk
+          path: gbese-debug.apk
+          retention-days: 14
+          if-no-files-found: error
