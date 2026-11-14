@@ -52,6 +52,8 @@ export interface NoteEvent {
   inst: Instrument;
   vol: number;
   accent: boolean;
+  /** The track's layer name, if it has one (Music.setLayer turns a layer off and on). */
+  layer?: string;
 }
 
 /** Turns one track into note events. Holds ("-") carry across bar lines. Throws on a bad token or a bar not 16 long. */
@@ -82,6 +84,7 @@ export function trackEvents(t: Track): NoteEvent[] {
       step++;
     }
   }
+  if (t.layer) for (const e of out) e.layer = t.layer;
   return out;
 }
 
@@ -111,6 +114,8 @@ export function ringSeconds(e: NoteEvent, stepS: number): number {
       return 0.05;
     case 'drum':
       return 0.18;
+    case 'kick':
+      return 0.14;
     case 'kalimba':
       return 0.6;
     case 'horn':
@@ -160,6 +165,8 @@ export class Music {
   private cursor = 0;
   /** Bar to restart from after a pause. */
   private resumeBar = 0;
+  /** Layers turned off (the lane tune's guitar while the Blackout is close). */
+  private readonly off = new Set<string>();
 
   constructor(opts: MusicOptions = {}) {
     this.setI = opts.setInterval ?? ((fn, ms) => setInterval(fn, ms));
@@ -211,6 +218,21 @@ export class Music {
     const ac = this.ac;
     if (!ac || !this.out || this.paused || !this.on) return;
     this.sound({ step: 0, len: 1, notes: [note], inst: 'agogo', vol: 0.9, accent: true }, ac.currentTime + 0.01, 0.1);
+  }
+
+  /**
+   * Turns one named layer of the tune off or on (the lane tune's 'guitar' drops out while the
+   * Blackout is under 15 m, S3f0 part 17). It counts from the next note; the rest plays on.
+   * Stays set across tunes until turned back on.
+   */
+  setLayer(layer: string, on: boolean): void {
+    if (on) this.off.delete(layer);
+    else this.off.add(layer);
+  }
+
+  /** True unless the named layer is turned off. */
+  layerOn(layer: string): boolean {
+    return !this.off.has(layer);
   }
 
   /** Use an AudioContext the game already has (one context is lighter on a phone). */
@@ -386,7 +408,8 @@ export class Music {
       }
       const stepS = stepSeconds(tune, this.tempo);
       while (this.cursor < this.events.length && this.events[this.cursor]!.step === this.step) {
-        this.sound(this.events[this.cursor]!, this.nextTime, stepS);
+        const ev = this.events[this.cursor]!;
+        if (!ev.layer || !this.off.has(ev.layer)) this.sound(ev, this.nextTime, stepS);
         this.cursor++;
       }
       this.step++;
@@ -436,6 +459,10 @@ export class Music {
             break;
           case 'drum':
             this.osc('sine', f, t, ring, vol * 1.2, { bend: [f * 1.5, f * 1.25] });
+            break;
+          case 'kick':
+            // A soft round kick: a low sine that drops fast (no click, no hip-hop boom).
+            this.osc('sine', f * 2, t, ring, vol * 1.6, { bend: [f * 0.9, f * 0.6] });
             break;
           case 'kalimba':
             this.osc('sine', f, t, ring, vol * 0.8);

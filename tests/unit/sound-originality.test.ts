@@ -7,6 +7,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Sound, type SoundName } from '../../src/engine/sound';
+import { addLaneSounds } from '../../src/art/lane-sounds';
+
+addLaneSounds();
 
 interface Played {
   wave: string;
@@ -121,9 +124,12 @@ const ALL_SOUNDS: readonly SoundName[] = [
   'strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'hawk', 'dashStart', 'dashSteps', 'dashReady',
   'payChink', 'payBulb', 'payChip', 'built', 'collect', 'notEnough',
   'sting', 'step', 'boom', 'horn',
+  // S3f1, the lane run (added with addLaneSounds). laneSwish and laneSlide are hiss only.
+  'laneStepA', 'laneStepB', 'laneHop', 'laneLand', 'laneTink0', 'laneTink1', 'laneTink2', 'laneBulb', 'laneChip',
+  'lanePok', 'laneOof', 'laneTunk', 'laneTzing', 'laneBusStop', 'laneCaught',
 ];
 // If a new sound name is added, this line fails to compile until it is in the list above.
-const _everyName: Record<SoundName, true> = Object.fromEntries(ALL_SOUNDS.map((n) => [n, true])) as Record<SoundName, true>;
+const _everyName: Record<Exclude<SoundName, 'laneSwish' | 'laneSlide'>, true> = Object.fromEntries(ALL_SOUNDS.map((n) => [n, true])) as Record<Exclude<SoundName, 'laneSwish' | 'laneSlide'>, true>;
 void _everyName;
 
 const MOTIFS: Record<string, number[]> = {
