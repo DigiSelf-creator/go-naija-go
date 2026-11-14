@@ -28,6 +28,7 @@ import {
   band,
   borderCogs,
   box,
+  bridge,
   building,
   disc,
   drawOutlineHero,
@@ -414,15 +415,11 @@ function back2(g: CanvasRenderingContext2D, e: Ext): void {
   grad(g, e, 0, 130, '#8fd0f2', '#fdf0cf');
   disc(g, 40, 30, 12, '#ffd34d');
   band(g, e, 124, '#5fb3c9');
-  for (let x = Math.floor(e.l / 36) * 36 + 28; x < e.r; x += 36) line(g, 'rgba(255,255,255,0.6)', 1, [x, 130 + (x % 72 ? 4 : 0), x + 12, 130 + (x % 72 ? 4 : 0)]);
 }
 
 function front2(g: CanvasRenderingContext2D, e: Ext): void {
   // Our own bridge into the city, and the pavement in front
-  g.fillStyle = '#d8c9a8';
-  g.fillRect(e.l, 138, e.r - e.l, 6);
-  for (let x = Math.ceil(e.l / 30) * 30; x < e.r; x += 30) box(g, x, 144, 4, 10, '#b9a888', INK, 0.4);
-  line(g, INK, 0.6, [e.l, 138, e.r, 138]);
+  bridge(g, e);
   band(g, e, 154, '#e9d8b4');
 }
 

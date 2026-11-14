@@ -438,14 +438,40 @@ export function building(g: CanvasRenderingContext2D, x: number, base: number, w
   }
 }
 
+/**
+ * Our own bridge into the city over the lagoon (frame 2 and the moving beat 2): a grey asphalt
+ * road (130 to 141) with lane marks, a light rail along its far side, a sandy edge under it and
+ * piers down into the water, so the road never reads as water. Buses stand on y = 138.
+ */
+export function bridge(g: CanvasRenderingContext2D, e: Ext): void {
+  const l = e.l;
+  const w = e.r - e.l;
+  // Ripples on the water between the piers
+  for (let x = Math.floor(l / 36) * 36 + 10; x < e.r; x += 36) line(g, 'rgba(255,255,255,0.6)', 1, [x, 148 + (x % 72 ? 2 : 0), x + 10, 148 + (x % 72 ? 2 : 0)]);
+  // The rail along the far side
+  for (let x = Math.ceil(l / 15) * 15; x < e.r; x += 15) box(g, x, 126, 1.6, 4, '#eee7d6', INK, 0.4);
+  line(g, '#eee7d6', 1.4, [l, 126.5, e.r, 126.5]);
+  line(g, INK, 0.5, [l, 125.6, e.r, 125.6]);
+  // The road: grey asphalt and its lane marks
+  g.fillStyle = '#77736d';
+  g.fillRect(l, 130, w, 11);
+  g.fillStyle = '#5f5b56';
+  g.fillRect(l, 130, w, 1.5);
+  g.fillStyle = '#f4efe2';
+  for (let x = Math.floor(l / 24) * 24; x < e.r; x += 24) g.fillRect(x, 135.5, 9, 1.2);
+  // The sandy edge of the bridge, then the piers
+  g.fillStyle = '#d8c9a8';
+  g.fillRect(l, 141, w, 4);
+  line(g, INK, 0.6, [l, 141, e.r, 141]);
+  line(g, INK, 0.5, [l, 145, e.r, 145]);
+  for (let x = Math.ceil(l / 30) * 30; x < e.r; x += 30) box(g, x, 145, 4, 9, '#b9a888', INK, 0.4);
+}
+
 function frame2(g: CanvasRenderingContext2D, e: Ext, t: number): void {
   grad(g, e, 0, 130, '#8fd0f2', '#fdf0cf');
   disc(g, 40, 30, 12, '#ffd34d');
   // The lagoon and its far shore
   band(g, e, 124, '#5fb3c9');
-  g.strokeStyle = 'rgba(255,255,255,0.6)';
-  g.lineWidth = 1;
-  for (let i = 0; i < 6; i++) line(g, 'rgba(255,255,255,0.6)', 1, [100 + i * 36, 130 + (i % 2) * 4, 112 + i * 36, 130 + (i % 2) * 4]);
   // Lagos growing on the right: some still going up
   const B: [number, number, number, string, boolean][] = [
     [128, 20, 34, '#f0a35e', false], [150, 18, 50, '#9fb6e8', true], [170, 24, 40, '#7fc4a4', false],
@@ -453,11 +479,7 @@ function frame2(g: CanvasRenderingContext2D, e: Ext, t: number): void {
     [258, 26, 38, '#b7d77a', false], [286, 18, 52, '#e7b98a', true],
   ];
   for (const [x, w, h, wall, cr] of B) building(g, x, 124, w, h, wall, '#5b4636', cr);
-  // Our own bridge into the city
-  g.fillStyle = '#d8c9a8';
-  g.fillRect(e.l, 138, e.r - e.l, 6);
-  for (let x = Math.ceil(e.l / 30) * 30; x < e.r; x += 30) box(g, x, 144, 4, 10, '#b9a888', INK, 0.4);
-  line(g, INK, 0.6, [e.l, 138, e.r, 138]);
+  bridge(g, e);
   // Buses and people coming in, welcome
   for (const [x, s] of [[150, 0.3], [220, 0.3]] as const) {
     g.save();
@@ -707,12 +729,23 @@ function frame3(g: CanvasRenderingContext2D, e: Ext, t: number): void {
 // ---------- Frame 4: the Stoppers ----------
 
 /** A grumpy pout: two eyes with low brows and a pushed-out lip. On things only. */
+/** A Stopper's brow: a soft, low arch that dips only a little at the middle, grumpy-silly, not cross. */
+function brow(g: CanvasRenderingContext2D, x: number, y: number, s: number, d: number): void {
+  g.strokeStyle = INK;
+  g.lineWidth = 1.1 * s;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(x + d * 6.8 * s, y - 3.4 * s);
+  g.quadraticCurveTo(x + d * 4.4 * s, y - 4.8 * s, x + d * 1.5 * s, y - 2.9 * s);
+  g.stroke();
+}
+
 function pout(g: CanvasRenderingContext2D, x: number, y: number, s: number, blink = false): void {
   for (const d of [-1, 1]) {
     if (blink) {
       // Eyes shut tight for a blink: a short line under the brow.
       line(g, INK, 0.9 * s, [x + d * 6 * s, y, x + d * 2 * s, y + 0.6 * s]);
-      line(g, INK, 1.1 * s, [x + d * 6.8 * s, y - 3.6 * s, x + d * 1.4 * s, y - 2 * s]);
+      brow(g, x, y, s, d);
       continue;
     }
     disc(g, x + d * 4 * s, y, 2.6 * s, '#ffffff');
@@ -722,7 +755,7 @@ function pout(g: CanvasRenderingContext2D, x: number, y: number, s: number, blin
     g.arc(x + d * 4 * s, y, 2.6 * s, 0, TAU);
     g.stroke();
     disc(g, x + d * 4 * s + 0.5 * s, y + 0.8 * s, 1.2 * s, INK);
-    line(g, INK, 1.1 * s, [x + d * 6.8 * s, y - 3.6 * s, x + d * 1.4 * s, y - 2 * s]);
+    brow(g, x, y, s, d);
   }
   g.fillStyle = '#7a4a4a';
   g.beginPath();
