@@ -408,7 +408,7 @@ export class Menus {
       // S3f0 part 14: "Keep playing", "Start again", "Back to Lagos", then Sound, Music and the buttons switch.
       return h(
         'div',
-        { class: 'card narrow event pause-card', role: 'dialog', 'aria-label': w.heading },
+        { class: 'card narrow event pause-card lane-pause-card', role: 'dialog', 'aria-label': w.heading },
         h('h2', {}, w.heading),
         this.laneSoFar ? h('p', { class: 'small' }, this.laneSoFar) : null,
         h(

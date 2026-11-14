@@ -2362,8 +2362,11 @@ export class CityScreen {
     }
     if (this.lines.length) {
       for (const l of this.lines) {
-        if (l.wait > 0) l.wait -= dt;
-        else l.t += dt / l.dur;
+        if (l.wait > 0) {
+          l.wait -= dt;
+          // A line that waited its turn is read out as it shows (screen readers hear queued lines too).
+          if (l.wait <= 0) this.say.textContent = l.text;
+        } else l.t += dt / l.dur;
       }
       this.lines = this.lines.filter((l) => l.t < 1);
       this.needDraw = true;

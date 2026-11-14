@@ -11,6 +11,7 @@ import { FixedLoop } from '../engine/loop';
 import type { SoundName } from '../engine/sound';
 import { formatMoney, spokenMoney } from '../game/money';
 import { button, h } from '../screens/dom';
+import { SPEAKER } from '../screens/hud';
 import { WORDS } from '../screens/words';
 import { LANE_LEAVE_KEEPS } from '../native/leave-ask';
 import { addLaneSounds, laneStepFor, laneStepGap, laneTinkFor } from '../art/lane-sounds';
@@ -83,6 +84,9 @@ export interface LaneHooks {
   sound(name: SoundName): void;
   /** Ask main to pause (the Pause button): it shows the Pause card and calls pause() here. */
   askPause(): void;
+  /** The Sound switch: now, and flipping it (saved). */
+  soundOn(): boolean;
+  toggleSound(): void;
   /** The `lane` part of the save, and writing it back. */
   laneSave(): LaneSave;
   saveLane(s: LaneSave): void;
@@ -171,6 +175,7 @@ export class LaneSession {
   private readonly hintEl: HTMLDivElement;
   private readonly sayEl: HTMLDivElement;
   private readonly countEl: HTMLDivElement;
+  private readonly soundButton: HTMLButtonElement;
   private card: HTMLElement | null = null;
   private lastFrame = 0;
   private clock = 0;
@@ -206,6 +211,13 @@ export class LaneSession {
     this.loop = new FixedLoop({ update: (dt) => this.update(dt), render: (a) => this.render(a) });
     this.buttons = new LaneButtons(document.body, WORDS.lane.buttons, (m) => this.press(m));
     const pauseButton = button(WORDS.hud.pause, 'lane-pause', () => this.hooks.askPause(), { 'aria-label': WORDS.hud.pause });
+    // Parts 14 and 15: the Sound button beside Pause, 44 x 44.
+    this.soundButton = button('', 'lane-pause lane-sound', () => {
+      this.hooks.toggleSound();
+      this.syncSound();
+    });
+    this.soundButton.innerHTML = SPEAKER;
+    this.syncSound();
     this.chipEls = [h('span', { class: 'lane-chip naira' }), h('span', { class: 'lane-chip power' }), h('span', { class: 'lane-chip tech' })];
     this.darkEl = h('p', { class: 'lane-dark' });
     this.toGo = h('p', { class: 'lane-line' });
@@ -215,7 +227,7 @@ export class LaneSession {
     this.hud = h(
       'div',
       { class: 'lane-hud', 'data-ui': true },
-      h('div', { class: 'lane-row' }, h('div', { class: 'lane-chips' }, ...this.chipEls), pauseButton),
+      h('div', { class: 'lane-row' }, h('div', { class: 'lane-chips' }, ...this.chipEls), h('div', { class: 'lane-buttons-top' }, this.soundButton, pauseButton)),
       h('div', { class: 'lane-row2' }, this.darkEl, h('div', { class: 'lane-right' }, this.toGo, this.bestEl)),
       this.hintEl,
       this.sayEl,
@@ -251,6 +263,12 @@ export class LaneSession {
       e.preventDefault();
       this.press(m);
     });
+  }
+
+  private syncSound(): void {
+    const on = this.hooks.soundOn();
+    this.soundButton.classList.toggle('is-off', !on);
+    this.soundButton.setAttribute('aria-label', on ? WORDS.hud.soundOn : WORDS.hud.soundOff);
   }
 
   /** A move from a swipe, a key or a button: counts only while the run is moving. */

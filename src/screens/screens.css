@@ -2209,3 +2209,79 @@ body.lane {
 .street-card.lane-street {
   grid-column: 1 / -1;
 }
+
+/* qa S3f3 fixes: the HUD's Sound button beside Pause; the lane cards' big button is 56 px tall
+   (part 15); on short screens the cards' buttons share rows so every card fits 320 x 240. */
+.lane-buttons-top {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+.lane-sound {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+}
+.lane-sound .off {
+  display: none;
+}
+.lane-sound.is-off .off {
+  display: inline;
+}
+.lane-sound.is-off .waves {
+  display: none;
+}
+.lane-card .go {
+  min-height: 56px;
+}
+@media (max-height: 300px) and (orientation: landscape) {
+  .lane-card .event .go,
+  .lane-card .event .actions .go {
+    min-height: 56px;
+  }
+  .lane-card .event .actions {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-top: 6px;
+  }
+  .lane-card .event .actions .go {
+    flex: 1 1 auto;
+    width: auto;
+    margin: 0;
+  }
+  .lane-card .event .actions .minor-row {
+    flex: none;
+    margin: 0;
+  }
+  .lane-card .gentle-row {
+    flex-wrap: nowrap;
+  }
+  .lane-card .gentle-row .minor {
+    flex: 0 1 50%;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    line-height: 1.15;
+    white-space: normal;
+  }
+  .lane-pause-card .pause-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .lane-pause-card .pause-grid > *,
+  .lane-pause-card .switches > * {
+    white-space: normal;
+    line-height: 1.1;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+  }
+  .lane-pause-card .switches {
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .lane-pause-card .switches > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}

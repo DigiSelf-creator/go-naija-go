@@ -189,6 +189,9 @@ for (const [spot, name, build, bucket, line] of [
     await expect.poll(async () => (await saved(page)).city?.fixed ?? [], { timeout: 30_000 }).toContain(spot);
     // LR-Q2: the other pin's line is drawn on the map (canvas), once; the save marks it given.
     await expect.poll(async () => ((await saved(page)).city as { hints?: string[] } | undefined)?.hints ?? [], { timeout: 20_000 }).toContain('laneBoth');
+    // ... and screen readers hear it when it shows (it waits behind the built line).
+    const also = bucket === 'power' ? 'The mast is ready to fix too. Walk onto its board.' : 'The lamps are ready to fix too. Walk onto their board.';
+    await expect(page.locator('p[aria-live="polite"]').filter({ hasText: also })).toHaveCount(1, { timeout: 20_000 });
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/after-${build}.png` });
   });
 }
@@ -236,9 +239,6 @@ test('qa: leaving early keeps the pickups ("Start again", "Back to Lagos"); the 
 });
 
 test('qa: phone turned upright mid-jump pauses; back sideways stays on Pause; Keep playing counts "3, 2, 1"', async ({ page }) => {
-  // qa bug (S3f3): the "Turn your phone sideways to play." note shows only with body.playing, which a
-  // lane run never sets (index.html). Remove this line once it is fixed.
-  test.fail();
   await open(page, CITY, './?level=lagos-lane');
   await playing(page);
   await page.evaluate(() => window.__lane!.setGap(60));
@@ -318,9 +318,6 @@ for (const [w, hgt] of [
   [1920, 1080],
 ] as const) {
   test(`qa: at ${w} x ${hgt} the HUD, hint, buttons and every lane card fit; nothing overlaps`, async ({ page }) => {
-    // qa bug (S3f3): at 320 x 240 the Pause card's "Buttons instead of swipes" switch and the caught
-    // card's "Take it home" fall below the screen. Remove this line once it is fixed.
-    test.fail(w === 320, 'Pause and caught cards cut at 320 x 240');
     await page.setViewportSize({ width: w, height: hgt });
     await open(page, CITY, './?level=lagos-lane', { 'gidi-laneButtons': 'true' });
     await playing(page);
@@ -376,9 +373,6 @@ for (const [w, hgt] of [
 }
 
 test('qa: the lane cards\' big button is at least 56 px tall (part 15)', async ({ page }) => {
-  // qa bug (S3f3): "Take it home" on the goal card is 44 px tall at 320 x 240 and 52 px at 851 x 393.
-  // Remove this line once it is fixed.
-  test.fail();
   await open(page, CITY, './?level=lagos-lane');
   await playing(page);
   await page.evaluate(() => {
@@ -392,8 +386,6 @@ test('qa: the lane cards\' big button is at least 56 px tall (part 15)', async (
 });
 
 test('qa: the lane HUD has a Sound button beside Pause (parts 14 and 15)', async ({ page }) => {
-  // qa bug (S3f3): only Pause is in the lane HUD. Remove this line once it is fixed.
-  test.fail();
   await open(page, CITY, './?level=lagos-lane');
   await playing(page);
   await expect(page.locator('.lane-hud').getByRole('button', { name: /^Sound/ })).toBeVisible();

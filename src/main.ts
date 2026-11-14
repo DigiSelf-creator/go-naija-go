@@ -342,6 +342,11 @@ function startGame(): void {
    * wheel. Home: the hero stands at the bus park, or Mission complete brings them by bus (5W W5).
    */
   function leave(to: LeaveTo, mission: Mission | null = null): void {
+    // S3f3 part 2: leaving a lane run early ("Back to Lagos", LR-Q1 a) keeps its pickups and says so.
+    if (lane && to === 'city' && mission === null) {
+      const h = lane.haul;
+      if (h.kobo > 0 || h.power > 0 || h.tech > 0) mission = { build: null, kobo: h.kobo, plain: true, line: WORDS.lane.broughtHome(haulWords(h)) };
+    }
     closeLane();
     playing = false;
     document.body.classList.remove('playing');
@@ -422,6 +427,11 @@ function startGame(): void {
           sound: (name) => sound.play(name),
           touch: () => buttons.touch,
           askPause: () => pause(),
+          soundOn: () => sound.enabled,
+          toggleSound: () => {
+            sound.enabled = menus.toggleSound();
+            director.switches(sound.enabled, menus.music);
+          },
           laneSave: () => readLane(progress.raw?.[KEY_LANE]),
           saveLane: (part) => {
             // A broken copy is left alone (the same rule as the city part).

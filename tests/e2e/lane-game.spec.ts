@@ -65,6 +65,11 @@ test('a bulb: Power 1 in its chip and in the city bucket at once (LR-Q1), and th
   await page.keyboard.press('KeyP');
   await expect(page.getByRole('dialog', { name: 'Paused' }).getByText(/^So far: .*Power 1/)).toBeVisible();
   expect((await saved(page)).city?.power).toBe(1);
+  // "Back to Lagos" keeps it (LR-Q1 a) and says so in the city: "You brought ... home."
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Back to Lagos' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await expect(page.locator('p[aria-live="polite"]').filter({ hasText: /^You brought .*Power 1.* home\.$/ })).toHaveCount(1);
 });
 
 test('caught before the bus stop: "You keep it all", how far it was, the Gentle offer; "Run again" starts at 0 m', async ({ page }) => {
