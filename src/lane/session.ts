@@ -137,6 +137,8 @@ export interface LaneTestHook {
   overflow: number;
   things: { kind: string; d: number; lane: number; state: string; pickup: boolean }[];
   steps: number;
+  /** Canvas pixels per CSS pixel now (2, or 1.5 or 1 on a slow phone). */
+  pixels: number;
   warp(d: number): void;
   /** Sets the Blackout's distance (test only). */
   setGap(m: number): void;
@@ -189,6 +191,9 @@ export class LaneSession {
   private hint: { key: string; until: number } | null = null;
   private warned = false;
   private toldStop = false;
+  /** Pixels per CSS pixel at most: 2, then 1.5 and 1 when frames come slowly (like the moving intro's). */
+  private pixelCap = 2;
+  private slow = { frames: 0, ms: 0 };
   private stepT = 0;
   private steps = 0;
   private meehAt = -Infinity;
@@ -257,7 +262,16 @@ export class LaneSession {
   resize(): void {
     const w = window.innerWidth;
     const hgt = window.innerHeight;
-    this.view.resize(w, hgt, this.hooks.canvas.width / Math.max(1, w));
+    // Part 21: the canvas's own pixels, at most 2 a CSS pixel, fewer on a phone that draws slowly.
+    const ratio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2, this.pixelCap);
+    const c = this.hooks.canvas;
+    const pw = Math.max(1, Math.round(w * ratio));
+    const ph = Math.max(1, Math.round(hgt * ratio));
+    if (c.width !== pw || c.height !== ph) {
+      c.width = pw;
+      c.height = ph;
+    }
+    this.view.resize(w, hgt, pw / Math.max(1, w));
     this.buttons.place(buttonBoxes(w, hgt, this.hooks.safe()));
     // Part 15: under 400 px wide, "To the bus stop" may become "Bus stop" if the two lines meet.
     this.hud.classList.toggle('lane-narrow', w < 400);
@@ -648,6 +662,7 @@ export class LaneSession {
       overflow: s.overflow,
       things: s.things.filter((t) => t.used).map((t) => ({ kind: t.kind, d: t.d, lane: t.lane, state: t.state, pickup: t.pickup })),
       steps: this.loop.stepCount,
+      pixels: this.pixelRatio,
       warp: (d: number) => s.warp(d),
       setGap: (m: number) => {
         s.gap = m;
@@ -678,6 +693,7 @@ export class LaneSession {
     const now = performance.now();
     const dt = this.lastFrame ? Math.min(0.1, (now - this.lastFrame) / 1000) : 0;
     this.lastFrame = now;
+    this.watchSpeed(dt);
     this.view.still = this.hooks.still();
     const s = this.sim;
     const moving = this.stage === 'play' && s.moving;
@@ -693,6 +709,27 @@ export class LaneSession {
     const near = s.gap < WARN_UNDER && s.phase !== 'over';
     this.hooks.closeHum(near && this.stage === 'play');
     this.hooks.music(s.phase === 'over' && this.stage !== 'caught' ? null : { tempo: laneTempoAt(s.dist, s.level.goal), guitar: !near, held: this.stage === 'paused' });
+  }
+
+  /**
+   * A cheap phone that cannot keep 50 frames a second draws the road with fewer pixels: 2 per
+   * CSS pixel, then 1.5, then 1 (checked over 1.5 s of play at a time). It never goes back up.
+   */
+  private watchSpeed(dt: number): void {
+    if ((this.stage !== 'play' && this.stage !== 'count') || dt <= 0 || dt > 0.25 || this.pixelCap <= 1) return;
+    this.slow.frames++;
+    this.slow.ms += dt * 1000;
+    if (this.slow.ms < 1500) return;
+    const mean = this.slow.ms / this.slow.frames;
+    this.slow = { frames: 0, ms: 0 };
+    if (mean <= 20) return;
+    this.pixelCap = this.pixelCap > 1.5 ? 1.5 : 1;
+    this.resize();
+  }
+
+  /** Pixels per CSS pixel the road is drawn at now (tests). */
+  get pixelRatio(): number {
+    return this.hooks.canvas.width / Math.max(1, window.innerWidth);
   }
 
   /** The HUD, the hint bar and the count: the DOM only changes when the words do. */

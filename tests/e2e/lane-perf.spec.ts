@@ -34,7 +34,8 @@ async function startBotAndLog(page: Page): Promise<void> {
     const f = (now: number): void => {
       const l = window.__lane;
       if (l && l.stage === 'play') {
-        log.push([now, l.steps, l.phase === 'endless' ? 'endless' : 'road', l.things.length]);
+        const w = window as unknown as { __settled?: boolean };
+        log.push([now, l.steps, !w.__settled ? 'settle' : l.phase === 'endless' ? 'endless' : 'road', l.things.length]);
         const ahead = l.things.filter((t) => !t.pickup && t.state === 'idle' && t.d > l.dist && t.d - l.dist < 1.1 * l.speed);
         const inLane = (n: number) => ahead.filter((t) => t.lane === n).sort((a, b) => a.d - b.d)[0];
         const mine = inLane(l.lane);
@@ -67,6 +68,11 @@ async function play(page: Page, secs: number): Promise<void> {
   await page.evaluate(() => {
     window.__lane!.warp(100);
     window.__lane!.setGap(1e6);
+  });
+  // A slow phone settles its pixel count in the first seconds (part 21); measure after that.
+  await page.waitForTimeout(3500);
+  await page.evaluate(() => {
+    (window as unknown as { __settled?: boolean }).__settled = true;
   });
   await page.waitForTimeout(secs * 1000);
   // The endless part at the top speed.
@@ -130,9 +136,10 @@ for (const rate of [1, 4] as const) {
     const frames = await page.evaluate(() => (window as unknown as { __frames: [number, number, string, number][] }).__frames);
     const parts = measure(frames);
     const tally = await page.evaluate(() => window.__lane!.tally);
+    const pixels = await page.evaluate(() => window.__lane!.pixels);
     const bar = rate === 4 ? BAR_4X : BAR_1X;
     const report = parts.map((p) => `${p.name}: ${p.fps.toFixed(1)} fps over ${p.secs.toFixed(1)} s, ${p.steps.toFixed(1)} steps/s, up to ${p.things} things${p.fps < bar ? ' (UNDER)' : ''}`).join('; ');
-    console.log(`${rate}x CPU, lane run (dpr ${dpr}, canvas ${canvas}), bar ${bar}: ${report}. Stumbles ${tally['stumbles']}. Fixed work 1x ${work1.toFixed(0)} ms, now ${work.toFixed(0)} ms`);
+    console.log(`${rate}x CPU, lane run (dpr ${dpr}, canvas ${canvas} at the start, ${pixels} canvas px per CSS px after settling), bar ${bar}: ${report}. Stumbles ${tally['stumbles']}. Fixed work 1x ${work1.toFixed(0)} ms, now ${work.toFixed(0)} ms`);
     test.info().annotations.push({ type: `lane fps ${rate}x`, description: report });
     expect(errors).toEqual([]);
     if (rate > 1) expect(work, 'the slowdown is on').toBeGreaterThan(work1 * 2.5);

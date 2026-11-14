@@ -475,6 +475,8 @@ function startGame(): void {
     if (!lane) return;
     lane.close();
     lane = null;
+    // The lane run may have drawn with fewer pixels: back to the game's own canvas size.
+    resize();
   }
 
   /** The live city (city.md (b), 5W): the `city` part of gidi-progress, kept in memory while the game runs. */
