@@ -216,9 +216,142 @@ function rigOf(pose: LaneHeroPose): Rig {
 
 /* ------------------------------------------------------------------ colours */
 
-/** The light edge for a skin: the skin's own brow-ridge light on dark skins (decision 65), a warm tint on lighter ones. */
-function skinRim(s: SkinOption): string {
-  return s.face.rim ?? rimOf(s.base);
+/**
+ * The redraw's light (decisions 60 and 65), seen from behind: a key light from up and to the
+ * screen's left. Every part has its base, one shadow tone low and to the right, a thin warm
+ * rim right at that shadow edge (so dark skin and dark hair still part from the ink), and one
+ * small highlight on the lit side. Flat fills inside a clip: no gradients, blur or filters.
+ */
+const LX = -0.55;
+const LY = -0.835;
+/** Ink drawn before the fill, so only its outer half shows: one even 1.6 u line on every edge. */
+const OUT = 3.2;
+/** Inner detail lines (collar, sole, small parts). */
+const THIN = 1.1;
+
+interface Tone {
+  base: string;
+  deep: string;
+  glow: string;
+  rim: string;
+}
+
+const TONES = new Map<string, Tone>();
+function made(key: string, base: string, deep: string, glow: string, rim: string): Tone {
+  let t = TONES.get(key);
+  if (t === undefined) {
+    t = { base, deep, glow, rim };
+    TONES.set(key, t);
+  }
+  return t;
+}
+
+/** Cloth: shadow toward a deep plum, highlight toward warm cream, a warm rim (as in hero.ts). */
+function cloth(c: string): Tone {
+  const deep = mix(c, '#2a1c38', 0.3);
+  return made(c, c, deep, mix(c, '#fff6e2', 0.33), mix(deep, '#fff0cc', 0.42));
+}
+
+/** Skin: the tone's own hand-picked shadow and highlight; the brow-ridge light as the rim on dark skins. */
+function skinTone(s: SkinOption): Tone {
+  return made(`skin:${s.base}`, s.base, s.deep, s.glow, s.face.rim ?? mix(s.deep, '#fff0cc', 0.42));
+}
+
+/** Hair: near black, so a warm brown rim and a soft sheen keep its shape against the ink. */
+function hairTone(c: string): Tone {
+  return made(`hair:${c}`, c, mix(c, '#000000', 0.3), mix(c, '#b48a6a', 0.38), mix(c, '#c98a5a', 0.55));
+}
+
+interface PartLook {
+  /** Shadow band width (u). */
+  shade?: number;
+  /** Rim width (u) at the shadow edge. */
+  rim?: number;
+  /** The highlight, as a path to stroke (inside the part). */
+  hi?: () => void;
+  hiW?: number;
+  /** Visible ink width (u); 0 for none. */
+  line?: number;
+}
+
+/**
+ * One lit part. `path` only adds subpaths. Ink outside, then the rim, the shadow and the base,
+ * each a copy of the shape moved toward the light, so the far edge shows rim then shadow.
+ */
+function part(g: CanvasRenderingContext2D, path: () => void, t: Tone, o: PartLook = {}): void {
+  const rim = o.rim ?? 0.6;
+  const sh = o.shade ?? 1.3;
+  const ln = o.line ?? OUT / 2;
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  g.beginPath();
+  path();
+  if (ln > 0) {
+    g.strokeStyle = INK;
+    g.lineWidth = ln * 2;
+    g.stroke();
+  }
+  g.fillStyle = t.rim;
+  g.fill();
+  g.save();
+  g.clip();
+  for (const [d, c] of [[rim, t.deep], [rim + sh, t.base]] as const) {
+    g.save();
+    g.translate(LX * d, LY * d);
+    g.beginPath();
+    path();
+    g.fillStyle = c;
+    g.fill();
+    g.restore();
+  }
+  if (o.hi) {
+    g.beginPath();
+    o.hi();
+    g.strokeStyle = t.glow;
+    g.lineWidth = o.hiW ?? 1;
+    g.stroke();
+  }
+  g.restore();
+}
+
+/** The lit side's unit normal of a segment (the side facing the light). */
+function litSide(xa: number, ya: number, xb: number, yb: number): [number, number] {
+  const l = Math.hypot(xb - xa, yb - ya) || 1;
+  let nx = -(yb - ya) / l;
+  let ny = (xb - xa) / l;
+  if (nx * LX + ny * LY < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return [nx, ny];
+}
+
+/**
+ * A full, rounded limb through joints [x, y, r]: one outline round the whole thing (no seam at
+ * the joint), its shadow and rim, and a soft highlight streak down the lit side of each segment.
+ */
+function limbPart(g: CanvasRenderingContext2D, pts: readonly (readonly [number, number, number])[], t: Tone, o: PartLook = {}): void {
+  part(
+    g,
+    () => {
+      for (let i = 1; i < pts.length; i++) capsule(g, pts[i - 1]![0], pts[i - 1]![1], pts[i - 1]![2], pts[i]![0], pts[i]![1], pts[i]![2]);
+    },
+    t,
+    {
+      ...o,
+      hi: () => {
+        for (let i = 1; i < pts.length; i++) {
+          const [xa, ya, ra] = pts[i - 1]!;
+          const [xb, yb, rb] = pts[i]!;
+          const [nx, ny] = litSide(xa, ya, xb, yb);
+          const r2 = ra + (rb - ra) * 0.65;
+          g.moveTo(xa + (xb - xa) * 0.2 + nx * ra * 0.42, ya + (yb - ya) * 0.2 + ny * ra * 0.42);
+          g.lineTo(xa + (xb - xa) * 0.65 + nx * r2 * 0.42, ya + (yb - ya) * 0.65 + ny * r2 * 0.42);
+        }
+      },
+      hiW: o.hiW ?? Math.max(0.8, pts[0]![2] * 0.32),
+    },
+  );
 }
 
 function hairColours(h: HairOption, b: Build): { c: string; acc: string } {
@@ -242,7 +375,7 @@ interface Ctx {
 const bareLegs = (o: OutfitOption): boolean => o.id === 'jersey' || o.id === 'school';
 const shortSleeves = (o: OutfitOption): boolean => o.id === 'jersey' || o.id === 'school';
 
-function drawLeg(c: Ctx, i: 0 | 1, part: 'thigh' | 'shin'): void {
+function drawLeg(c: Ctx, i: 0 | 1, seg: 'thigh' | 'shin'): void {
   const { g, b, o, s, rig } = c;
   const leg = rig.legs[i];
   const side = i === 0 ? -1 : 1;
@@ -254,38 +387,37 @@ function drawLeg(c: Ctx, i: 0 | 1, part: 'thigh' | 'shin'): void {
   const ay = leg[3] * b.len;
   const w = b.limb;
   const bare = bareLegs(o);
-  if (part === 'thigh') {
-    const fill = bare ? s.base : o.legs;
-    shape(g, () => capsule(g, hx, hy, 3.3 * w, kx, ky, 2.7 * w), fill, { shadeC: bare ? s.shade : undefined, rimC: bare ? skinRim(s) : undefined, line: 1.5 });
-    if (bare) shape(g, () => capsule(g, hx, hy - 0.4, 3.7 * b.hw, hx + (kx - hx) * 0.62, hy + (ky - hy) * 0.62, 3.3 * w), o.legs, { line: 1.3 });
+  const fill = bare ? skinTone(s) : cloth(o.legs);
+  if (seg === 'thigh') {
+    limbPart(g, [[hx, hy, 3.8 * w], [kx, ky, 3.1 * w]], fill, { shade: 1.4 });
+    if (bare) limbPart(g, [[hx, hy - 0.4, 4.2 * b.hw], [hx + (kx - hx) * 0.62, hy + (ky - hy) * 0.62, 3.75 * w]], cloth(o.legs), { shade: 1.4 });
     return;
   }
   // The shin, the sock and the shoe
   if (rig.slide) return;
-  const fill = bare ? s.base : o.legs;
-  shape(g, () => capsule(g, kx, ky, 2.7 * w, ax, ay, 2.05 * w), fill, { shadeC: bare ? s.shade : undefined, rimC: bare ? skinRim(s) : undefined, line: 1.5 });
+  limbPart(g, [[kx, ky, 3.1 * w], [ax, ay, 2.4 * w]], fill, { shade: 1.2 });
   if (bare) {
     const sx = kx + (ax - kx) * 0.42;
     const sy = ky + (ay - ky) * 0.42;
-    shape(g, () => capsule(g, sx, sy, 2.35 * w, ax, ay, 2.2 * w), WHITE, { shadeC: '#d9d3c6', line: 1.2 });
-    if (o.id === 'jersey') line(g, [sx - 1.8 * w, sy + 0.9, sx + 1.8 * w, sy + 0.9], o.a, 0.9);
+    limbPart(g, [[sx, sy, 2.7 * w], [ax, ay, 2.55 * w]], made('sock', WHITE, '#d2cbbd', WHITE, '#efe6d2'), { shade: 1, line: THIN });
+    if (o.id === 'jersey') line(g, [sx - 2 * w, sy + 0.9, sx + 2 * w, sy + 0.9], o.a, 1);
   }
-  if (c.suit) shape(g, () => g.roundRect(kx + (ax - kx) * 0.15 - 1.9 * w, ky + (ay - ky) * 0.15, 3.8 * w, (ay - ky) * 0.55, 1.2), SUIT.plate, { line: SUIT.lineW, rim: 0 });
+  if (c.suit) shape(g, () => g.roundRect(kx + (ax - kx) * 0.15 - 2.1 * w, ky + (ay - ky) * 0.15, 4.2 * w, (ay - ky) * 0.55, 1.2), SUIT.plate, { line: SUIT.lineW, rim: 0 });
   const dark = o.shoes === '#1d1a14' || o.shoes === '#3b2a20';
   if (leg[4]) {
     // The sole, kicked back toward the camera: a rounded sole with tread lines.
-    const r = 2.5 * w;
+    const r = 2.8 * w;
     const sy = ay + 1.4;
-    shape(g, () => oval(g, ax, sy, r, r * 1.28), dark ? '#4a3f37' : '#cfc6b6', { line: 1.4, rim: 0.7 });
-    line(g, [ax - r * 0.55, sy - r * 0.35, ax + r * 0.55, sy - r * 0.35], dark ? '#2b241f' : '#9c9282', 0.7);
-    line(g, [ax - r * 0.6, sy + r * 0.25, ax + r * 0.6, sy + r * 0.25], dark ? '#2b241f' : '#9c9282', 0.7);
-    shape(g, () => g.roundRect(ax - r * 0.85, sy - r * 1.55, r * 1.7, r * 0.7, r * 0.3), o.shoes, { line: 1.1, rim: 0.5, shade: 0.6 });
+    part(g, () => oval(g, ax, sy, r, r * 1.28), cloth(dark ? '#4a3f37' : '#cfc6b6'), { shade: 0.9, rim: 0.5 });
+    line(g, [ax - r * 0.55, sy - r * 0.35, ax + r * 0.55, sy - r * 0.35], dark ? '#2b241f' : '#9c9282', 0.8);
+    line(g, [ax - r * 0.6, sy + r * 0.25, ax + r * 0.6, sy + r * 0.25], dark ? '#2b241f' : '#9c9282', 0.8);
+    part(g, () => g.roundRect(ax - r * 0.85, sy - r * 1.55, r * 1.7, r * 0.7, r * 0.3), cloth(o.shoes), { line: THIN, shade: 0.5, rim: 0.4 });
   } else {
     // The heel of a planted shoe
     const top = ay - 0.6;
     const bottom = Math.min(ay + 2.6, 0.2);
-    shape(g, () => g.roundRect(ax - 2.4 * w, top, 4.8 * w, Math.max(1.6, bottom - top), [1.6, 1.6, 0.8, 0.8]), o.shoes, { line: 1.5, shade: 0.9 });
-    line(g, [ax - 2.2 * w, bottom - 0.5, ax + 2.2 * w, bottom - 0.5], dark ? '#5c5048' : '#d8d2c4', 0.9);
+    part(g, () => g.roundRect(ax - 2.7 * w, top, 5.4 * w, Math.max(1.6, bottom - top), [1.8, 1.8, 0.9, 0.9]), cloth(o.shoes), { shade: 0.8, rim: 0.4 });
+    line(g, [ax - 2.4 * w, bottom - 0.5, ax + 2.4 * w, bottom - 0.5], dark ? '#5c5048' : '#d8d2c4', 0.9);
   }
 }
 
@@ -322,8 +454,18 @@ function drawBody(c: Ctx): void {
     g.closePath();
   };
   // Shorts or trousers seat under a short top
-  if (!long) shape(g, () => g.roundRect(-4.9 * hw, hy - 2.2, 9.8 * hw, 4.6 * b.len, 2.2), o.legs, { line: 1.8 });
-  shape(g, torso, o.a, { line: 2, shade: 3, rim: 1.3 });
+  if (!long) part(g, () => g.roundRect(-5.1 * hw, hy - 2.2, 10.2 * hw, 4.8 * b.len, 2.3), cloth(o.legs), { shade: 1.2 });
+  // The back, lit from the left: shadow down the right side and under the hem, a highlight down the left shoulder blade
+  const blade = long ? (sy + hem) / 2 : waistY - 1;
+  part(g, torso, cloth(o.a), {
+    shade: 2.6,
+    rim: 0.9,
+    hiW: 1.3,
+    hi: () => {
+      g.moveTo(-4.4 * sw + L, sy + 1.6);
+      g.quadraticCurveTo(-5.6 * sw + L * 0.7, sy + (blade - sy) * 0.4, -4.4 * hw + L * 0.4, blade);
+    },
+  });
   // Clothes details, seen from behind
   g.save();
   g.beginPath();
@@ -346,7 +488,7 @@ function drawBody(c: Ctx): void {
       break;
     case 'school':
       // A collar folded at the back of the neck and a plain belt
-      shape(g, () => g.roundRect(-3.4 * sw + L, sy - 1.4, 6.8 * sw, 2.4, 1), WHITE, { line: 0.8, shade: 0.6, rim: 0 });
+      part(g, () => g.roundRect(-3.4 * sw + L, sy - 1.4, 6.8 * sw, 2.4, 1), made('collar', WHITE, '#d2cbbd', WHITE, '#efe6d2'), { line: 0.55, shade: 0.6, rim: 0 });
       g.fillStyle = o.b;
       g.fillRect(-5.2 * hw, hy - 1.4, 10.4 * hw, 1.5);
       break;
@@ -382,34 +524,48 @@ function drawArm(c: Ctx, i: 0 | 1): void {
   const w = b.limb;
   const short = shortSleeves(o);
   const sleeve = o.a;
-  // Upper arm and forearm as one outlined limb
-  const limb = (): void => {
-    capsule(g, sx, sy, 2.7 * w, ex, ey, 2.2 * w);
-    capsule(g, ex, ey, 2.2 * w, wx, wy, 1.8 * w);
-  };
-  shape(g, limb, short ? s.base : sleeve, { line: 1.5, shadeC: short ? s.shade : undefined, rimC: short ? skinRim(s) : undefined });
-  if (short) shape(g, () => capsule(g, sx, sy, 3.1 * w, sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5, 2.7 * w), sleeve, { line: 1.3 });
-  else if (o.id === 'ankara' || o.id === 'kaftan') shape(g, () => capsule(g, ex + (wx - ex) * 0.7, ey + (wy - ey) * 0.7, 2 * w, wx, wy, 1.9 * w), o.b, { line: 1.1, rim: 0 });
+  const skin = skinTone(s);
+  const robe = cloth(sleeve);
+  // Upper arm and forearm as one full, outlined limb
+  limbPart(g, [[sx, sy, 3.1 * w], [ex, ey, 2.6 * w], [wx, wy, 2.15 * w]], short ? skin : robe, { shade: 1.2 });
+  if (short) limbPart(g, [[sx, sy, 3.55 * w], [sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5, 3.1 * w]], robe, { shade: 1.2 });
+  else if (o.id === 'ankara' || o.id === 'kaftan') part(g, () => capsule(g, ex + (wx - ex) * 0.7, ey + (wy - ey) * 0.7, 2.35 * w, wx, wy, 2.25 * w), cloth(o.b), { line: THIN, shade: 0.8, rim: 0.4 });
   if (o.id === 'agbada') {
-    // The wide agbada sleeve hangs from the whole arm
+    // The wide agbada sleeve hangs from the whole arm: soft, full, lit like the robe
     const low = Math.max(ey, wy, sy + 6) + 5.5 * b.len;
-    shape(
+    part(
       g,
       () => {
-        g.moveTo(sx, sy - 1.6);
-        g.quadraticCurveTo(ex + side * 2.6, ey, wx + side * 1.2, wy);
-        g.quadraticCurveTo(wx + side * 1.6, low, (sx + wx) / 2 + side * 1.4, low + 0.8);
-        g.quadraticCurveTo(sx + side * 0.4, low - 1, sx - side * 2.4, sy + 4);
+        g.moveTo(sx, sy - 1.8);
+        g.quadraticCurveTo(ex + side * 3, ey, wx + side * 1.6, wy);
+        g.quadraticCurveTo(wx + side * 2, low, (sx + wx) / 2 + side * 1.4, low + 1);
+        g.quadraticCurveTo(sx + side * 0.4, low - 1, sx - side * 2.6, sy + 4);
         g.closePath();
       },
-      sleeve,
-      { line: 1.6, shade: 1.8 },
+      robe,
+      {
+        shade: 1.8,
+        rim: 0.8,
+        hiW: 1.1,
+        hi: () => {
+          g.moveTo(sx + side * 0.4, sy + 0.6);
+          g.quadraticCurveTo((sx + ex) / 2 + side * 1.2, (sy + ey) / 2 + 1, ex + side * 1.2, ey + 1.4);
+        },
+      },
     );
-    line(g, [wx + side * 1.2, wy + 0.4, wx + side * 1.6, low - 1], o.b, 1);
+    line(g, [wx + side * 1.6, wy + 0.4, wx + side * 2, low - 1], o.b, 1.1);
   }
-  if (c.suit) shape(g, () => oval(g, sx, sy + 0.2, 2.6 * w, 2.2 * w), SUIT.plate, { line: SUIT.lineW, rim: 0 });
+  if (c.suit) shape(g, () => oval(g, sx, sy + 0.2, 2.9 * w, 2.5 * w), SUIT.plate, { line: SUIT.lineW, rim: 0 });
   // The hand
-  shape(g, () => oval(g, wx, wy + 0.6, 2.05 * w, 2.25 * w), s.base, { line: 1.4, shadeC: s.shade, rimC: skinRim(s), shade: 0.9 });
+  part(g, () => oval(g, wx, wy + 0.6, 2.35 * w, 2.55 * w), skin, {
+    shade: 0.9,
+    rim: 0.55,
+    hiW: 0.8,
+    hi: () => {
+      g.moveTo(wx - 1.3 * w, wy - 0.2);
+      g.lineTo(wx - 0.6 * w, wy - 1.0);
+    },
+  });
   if (rig.torch && i === 1) {
     // A small torch, clicked on: a short barrel and a soft pale beam forward and down
     g.fillStyle = 'rgba(255,240,170,0.38)';
@@ -432,9 +588,9 @@ function drawHead(c: Ctx): void {
   const sy = (rig.sh - rig.shrug * 0.4) * b.len;
   const hy = sy - 7.6 * k;
   const { c: hc, acc } = hairColours(h, b);
-  const sk = { shadeC: s.shade, rimC: skinRim(s) };
+  const skin = skinTone(s);
   // Neck
-  shape(g, () => capsule(g, hx * 0.6, sy + 0.4, 2.2, hx, hy + 3.4 * k, 2.3), s.base, { ...sk, line: 1.6 });
+  limbPart(g, [[hx * 0.6, sy + 0.4, 2.5], [hx, hy + 3.4 * k, 2.6]], skin, { shade: 1 });
   // Afro sits all round the head
   if (h.id === 'afro') {
     afroMass(g, hx, hy - 1.4 * k, 8.4 * k, hc, acc);
@@ -443,12 +599,20 @@ function drawHead(c: Ctx): void {
   const ears = h.id === 'lowcut' || h.id === 'braids';
   if (ears) {
     for (const e of [-1, 1]) {
-      shape(g, () => oval(g, hx + e * 5.5 * k, hy + 0.6, 1.3 * k, 2 * k), s.base, { ...sk, line: 1.1, shade: 0.5, rim: 0.4 });
+      part(g, () => oval(g, hx + e * 5.5 * k, hy + 0.6, 1.4 * k, 2.1 * k), skin, { line: 1.2, shade: 0.6, rim: 0.45 });
       if (b.female) dot(g, hx + e * 5.6 * k, hy + 2.6, 0.75, STUD);
     }
   }
   // The head itself
-  if (h.id !== 'afro') shape(g, () => oval(g, hx, hy, 5.6 * k, 6.3 * k), s.base, { ...sk, line: 1.8, shade: 1.6, rim: 1 });
+  if (h.id !== 'afro')
+    part(g, () => oval(g, hx, hy, 5.6 * k, 6.3 * k), skin, {
+      shade: 1.6,
+      rim: 0.8,
+      hi: () => {
+        g.moveTo(hx - 3.6 * k, hy - 2.4 * k);
+        g.quadraticCurveTo(hx - 4.3 * k, hy, hx - 3.4 * k, hy + 2.6 * k);
+      },
+    });
   // A face side when looking round
   if (rig.turn !== 0) faceSide(c, hx, hy, k);
   switch (h.id) {
@@ -474,9 +638,10 @@ function drawHead(c: Ctx): void {
         const x1 = x0 + rig.swing * (1.2 + i * 0.3) + (i - 2) * 0.5;
         const y1 = sy + 6.4 - Math.abs(i - 2) * 0.9;
         g.lineCap = 'round';
-        line(g, [x0, y0, (x0 + x1) / 2 + rig.swing * 0.4, (y0 + y1) / 2, x1, y1], INK, 2.6);
-        line(g, [x0, y0, (x0 + x1) / 2 + rig.swing * 0.4, (y0 + y1) / 2, x1, y1], hc, 1.3);
-        shape(g, () => oval(g, x1, y1 + 0.8, 0.95, 1.05), i % 2 ? BEAD_RED : acc, { line: 0.7, shade: 0, rim: 0.3 });
+        line(g, [x0, y0, (x0 + x1) / 2 + rig.swing * 0.4, (y0 + y1) / 2, x1, y1], INK, 3.2);
+        line(g, [x0, y0, (x0 + x1) / 2 + rig.swing * 0.4, (y0 + y1) / 2, x1, y1], hairTone(hc).rim, 1.6);
+        line(g, [x0 - 0.25, y0, (x0 + x1) / 2 + rig.swing * 0.4 - 0.25, (y0 + y1) / 2, x1 - 0.25, y1], hc, 1.1);
+        part(g, () => oval(g, x1, y1 + 0.8, 1.05, 1.15), cloth(i % 2 ? BEAD_RED : acc), { line: 0.6, shade: 0.4, rim: 0 });
       }
       break;
     }
@@ -491,7 +656,7 @@ function drawHead(c: Ctx): void {
 
 function afroMass(g: CanvasRenderingContext2D, x: number, y: number, r: number, c: string, acc: string): void {
   const n = 12;
-  shape(
+  part(
     g,
     () => {
       for (let i = 0; i <= n; i++) {
@@ -506,8 +671,16 @@ function afroMass(g: CanvasRenderingContext2D, x: number, y: number, r: number, 
       }
       g.closePath();
     },
-    c,
-    { line: 1.9, shade: 2.2, rim: 1.1, rimC: mix(c, '#c98a5a', 0.45) },
+    hairTone(c),
+    {
+      shade: 2.2,
+      rim: 1,
+      hiW: 1.2,
+      hi: () => {
+        g.moveTo(x - r * 0.62, y - r * 0.2);
+        g.quadraticCurveTo(x - r * 0.55, y - r * 0.62, x - r * 0.15, y - r * 0.74);
+      },
+    },
   );
   for (const [dx, dy] of [[-4.6, -3.6], [-0.6, -5.8], [3.6, -3.2], [-2.6, 1.2], [2.2, 2.6], [5, 0.6]] as const) dot(g, x + dx * (r / 8.4), y + dy * (r / 8.4), 0.75, acc);
 }
@@ -515,7 +688,7 @@ function afroMass(g: CanvasRenderingContext2D, x: number, y: number, r: number, 
 /** A close hair cap over the top and back of the head down to the nape (low cut; braids' base). */
 function cap(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: string, acc: string, nape: number, turn: number): void {
   const off = turn === 2 ? -1 : -turn * 0.8;
-  shape(
+  part(
     g,
     () => {
       g.moveTo(x + off - 5.9 * k, y + 1.4 * k);
@@ -524,15 +697,22 @@ function cap(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: st
       g.quadraticCurveTo(x + off - 4.6 * k, y + nape * k, x + off - 5.9 * k, y + 1.4 * k);
       g.closePath();
     },
-    c,
-    { line: 1.6, shade: 1.4, rim: 0.9, rimC: mix(c, '#c98a5a', 0.4) },
+    hairTone(c),
+    {
+      shade: 1.4,
+      rim: 0.8,
+      hi: () => {
+        g.moveTo(x + off - 4.2 * k, y - 2.6 * k);
+        g.quadraticCurveTo(x + off - 3.4 * k, y - 5.2 * k, x + off - 0.8 * k, y - 5.8 * k);
+      },
+    },
   );
   for (const [dx, dy] of [[-2.8, -4.4], [0.4, -5.6], [3, -3.4], [-3.8, -0.6], [1.6, -1.2], [-0.8, 1.8], [3.8, 0.8]] as const) dot(g, x + off + dx * k, y + dy * k, 0.45, acc);
 }
 
 function gele(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: string, acc: string, grey: boolean): void {
   // A little hair (or grey) at the nape, under the wrap
-  shape(g, () => oval(g, x, y + 3.6 * k, 4 * k, 1.8 * k), grey ? GREY : '#1b1410', { line: 1, shade: 0, rim: 0 });
+  part(g, () => oval(g, x, y + 3.6 * k, 4 * k, 1.8 * k), hairTone(grey ? GREY : '#1b1410'), { line: 1.1, shade: 0.5, rim: 0.4 });
   // The big folded head tie: a wide wrap round the head and a fan of stiff folds on top
   const wrap = (): void => {
     g.moveTo(x - 7 * k, y + 2.4 * k);
@@ -544,7 +724,15 @@ function gele(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: s
     g.quadraticCurveTo(x, y + 4.4 * k, x - 7 * k, y + 2.4 * k);
     g.closePath();
   };
-  shape(g, wrap, c, { line: 1.9, shade: 2, rim: 1.1 });
+  part(g, wrap, cloth(c), {
+    shade: 2,
+    rim: 0.9,
+    hiW: 1.2,
+    hi: () => {
+      g.moveTo(x - 7.6 * k, y - 4.6 * k);
+      g.quadraticCurveTo(x - 7.2 * k, y - 9 * k, x - 4.4 * k, y - 11.6 * k);
+    },
+  });
   // Fold lines in gold
   const fold = (pts: number[]): void => line(g, pts.map((v, i) => (i % 2 ? y + v * k : x + v * k)), acc, 1.1);
   fold([-7.6, -7, -3.6, -9.4, 0.6, -9.6, 6.4, -8]);
@@ -552,11 +740,11 @@ function gele(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: s
   fold([-4.4, -12, -2.4, -8.6]);
   fold([2, -13, 2.6, -8.4]);
   // The tuck at the back
-  shape(g, () => poly(g, [x - 2.4 * k, y + 1.8 * k, x, y - 1.6 * k, x + 2.4 * k, y + 1.8 * k, x, y + 3.4 * k]), mix(c, '#000000', 0.15), { line: 1.1, shade: 0, rim: 0.5 });
+  part(g, () => poly(g, [x - 2.4 * k, y + 1.8 * k, x, y - 1.6 * k, x + 2.4 * k, y + 1.8 * k, x, y + 3.4 * k]), cloth(mix(c, '#000000', 0.15)), { line: THIN, shade: 0.6, rim: 0.4 });
 }
 
 function scarf(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: string, acc: string, swing: number, grey: boolean): void {
-  if (grey) shape(g, () => oval(g, x - 4.6 * k, y + 2.8 * k, 1.4 * k, 1.2 * k), GREY, { line: 0.8, shade: 0, rim: 0 });
+  if (grey) part(g, () => oval(g, x - 4.6 * k, y + 2.8 * k, 1.4 * k, 1.2 * k), hairTone(GREY), { line: 0.8, shade: 0.4, rim: 0 });
   // Two tails from the knot at the nape
   const tails = (): void => {
     g.moveTo(x - 0.6 * k, y + 4.6 * k);
@@ -568,9 +756,9 @@ function scarf(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: 
     g.lineTo(x + 1.8 * k + swing * 1.6, y + 11.4 * k);
     g.quadraticCurveTo(x + 1 * k + swing, y + 8 * k, x - 0.2 * k, y + 5 * k);
   };
-  shape(g, tails, mix(c, '#000000', 0.12), { line: 1.3, shade: 0.8, rim: 0.5 });
+  part(g, tails, cloth(mix(c, '#000000', 0.12)), { line: 1.3, shade: 0.8, rim: 0.5 });
   // The scarf over the head
-  shape(
+  part(
     g,
     () => {
       g.moveTo(x - 6.4 * k, y + 3.4 * k);
@@ -578,12 +766,20 @@ function scarf(g: CanvasRenderingContext2D, x: number, y: number, k: number, c: 
       g.quadraticCurveTo(x, y + 5.6 * k, x - 6.4 * k, y + 3.4 * k);
       g.closePath();
     },
-    c,
-    { line: 1.8, shade: 1.8, rim: 1 },
+    cloth(c),
+    {
+      shade: 1.8,
+      rim: 0.9,
+      hiW: 1.2,
+      hi: () => {
+        g.moveTo(x - 5.4 * k, y - 2.6 * k);
+        g.quadraticCurveTo(x - 4.6 * k, y - 5.8 * k, x - 1.4 * k, y - 6.6 * k);
+      },
+    },
   );
   line(g, [x - 6.6 * k, y - 0.8 * k, x - 2 * k, y - 2.6 * k, x + 2 * k, y - 2.6 * k, x + 6.6 * k, y - 0.8 * k], acc, 1.1);
   // The knot
-  shape(g, () => oval(g, x, y + 4.4 * k, 1.9 * k, 1.5 * k), mix(c, '#000000', 0.08), { line: 1.2, shade: 0.5, rim: 0.4 });
+  part(g, () => oval(g, x, y + 4.4 * k, 2 * k, 1.6 * k), cloth(mix(c, '#000000', 0.08)), { line: 1.2, shade: 0.6, rim: 0.4 });
 }
 
 /** The side of the face when the head turns: a cheek, an eye, a brow, a nose tip; a grin on turn 2. */
@@ -593,9 +789,10 @@ function faceSide(c: Ctx, hx: number, hy: number, k: number): void {
   const big = rig.turn === 2;
   const fx = hx + d * (big ? 3.6 : 3.4) * k;
   const fy = hy + 0.6 * k;
-  shape(g, () => oval(g, fx, fy, (big ? 3.8 : 3.1) * k, (big ? 4.8 : 4.4) * k), s.base, { shadeC: s.shade, rimC: skinRim(s), line: 1.4, shade: 0.8, rim: 0.7 });
+  const skin = skinTone(s);
+  part(g, () => oval(g, fx, fy, (big ? 3.8 : 3.1) * k, (big ? 4.8 : 4.4) * k), skin, { shade: 0.9, rim: 0.6 });
   // Nose tip past the cheek
-  shape(g, () => oval(g, fx + d * (big ? 3.4 : 2.9) * k, fy - 0.4 * k, 1 * k, 1.2 * k), s.base, { shadeC: s.shade, line: 1, shade: 0.4, rim: 0 });
+  part(g, () => oval(g, fx + d * (big ? 3.4 : 2.9) * k, fy - 0.4 * k, 1.05 * k, 1.25 * k), skin, { line: THIN, shade: 0.4, rim: 0.3 });
   // Eye and brow
   dot(g, fx + d * 1.5 * k, fy - 1.8 * k, 0.8 * k, INK);
   dot(g, fx + d * 1.7 * k, fy - 2.1 * k, 0.28 * k, WHITE);

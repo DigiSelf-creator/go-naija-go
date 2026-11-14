@@ -2985,6 +2985,88 @@ function drawFrontBeard(g: CanvasRenderingContext2D): void {
   g.stroke();
 }
 
+/**
+ * One wide agbada sleeve from the front (side s, -1 or 1), in the torso frame: a soft bell of
+ * robe cloth from the shoulder, flaring out past the robe's edge to the wrist, with the hand
+ * showing under its gold-edged opening. Only the outer edge and the opening carry the ink
+ * line; the inner edge melts into the robe with a soft fold, so the sleeve never reads as a
+ * dark stripe down the chest. Shadow low and outside, a rim on the outer edge, one highlight.
+ */
+function frontAgbadaSleeve(g: CanvasRenderingContext2D, s: number, sy: number, wy: number, p: Paint, trim: string, sp: Paint, w: number): void {
+  const hand = 0.55 + 0.41 * w;
+  // The hand first, so the sleeve's opening falls over its top
+  drawHand(g, s * 7.6, wy + 4.1, 1.6 * hand, sp);
+  const outer = (): void => {
+    g.moveTo(s * 3.4, sy - 1.7);
+    g.bezierCurveTo(s * 8.2, sy - 1.2, s * 10.6, sy + 4.4, s * 11.5, wy + 1.4);
+    g.quadraticCurveTo(s * 8.8, wy + 4.0, s * 5.0, wy + 2.4);
+  };
+  const whole = (): void => {
+    outer();
+    g.bezierCurveTo(s * 4.0, wy - 3, s * 4.4, sy + 5, s * 3.4, sy - 1.7);
+    g.closePath();
+  };
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  // Ink on the outer edge and the opening only (half shows, as on every other edge)
+  g.beginPath();
+  outer();
+  g.strokeStyle = INK;
+  g.lineWidth = OUTLINE;
+  g.stroke();
+  // The shadow tone, then the lit cloth shrunk towards the shoulder's inner top
+  g.beginPath();
+  whole();
+  g.fillStyle = p.deep;
+  g.fill();
+  const ax = s * 4.2;
+  const ay = sy - 0.6;
+  g.save();
+  g.translate(ax, ay);
+  g.scale(0.8, 0.82);
+  g.translate(-ax, -ay);
+  g.beginPath();
+  whole();
+  g.restore();
+  g.fillStyle = p.base;
+  g.fill();
+  // Warm rim along the outer edge, inside the sleeve
+  g.save();
+  g.beginPath();
+  whole();
+  g.clip();
+  g.beginPath();
+  g.moveTo(s * 3.4, sy - 1.7);
+  g.bezierCurveTo(s * 8.2, sy - 1.2, s * 10.6, sy + 4.4, s * 11.5, wy + 1.4);
+  g.strokeStyle = p.rim;
+  g.lineWidth = 1.1;
+  g.stroke();
+  g.restore();
+  // Soft folds (shadow tone, no ink): one where the sleeve meets the robe, one down the bell
+  g.strokeStyle = p.deep;
+  g.lineWidth = 0.8;
+  g.beginPath();
+  g.moveTo(s * 4.7, sy + 3.2);
+  g.quadraticCurveTo(s * 4.9, wy - 3.4, s * 5.6, wy + 1.4);
+  g.moveTo(s * 7.4, sy + 5.6);
+  g.quadraticCurveTo(s * 8.0, wy - 2.6, s * 8.6, wy + 1.4);
+  g.stroke();
+  // One highlight high on the sleeve
+  g.strokeStyle = p.glow;
+  g.lineWidth = 1.0;
+  g.beginPath();
+  g.moveTo(s * 5.6, sy + 0.6);
+  g.quadraticCurveTo(s * 7.8, sy + 1.6, s * 8.8, sy + 5.0);
+  g.stroke();
+  // Gold edge just inside the opening
+  g.strokeStyle = trim;
+  g.lineWidth = 0.9;
+  g.beginPath();
+  g.moveTo(s * 11.1, wy + 0.9);
+  g.quadraticCurveTo(s * 8.7, wy + 3.2, s * 5.3, wy + 1.8);
+  g.stroke();
+}
+
 /** The hero facing us, feet on (0, 0). Called by drawHero for a turn past halfway. */
 function drawHeroFront(g: CanvasRenderingContext2D, f: Frame, pose: HeroPose): void {
   const { skin, b, hair, outfit: o, breathe } = f;
@@ -3170,28 +3252,8 @@ function drawHeroFront(g: CanvasRenderingContext2D, f: Frame, pose: HeroPose): v
     const wx = s * 6.3 * b.sw;
     const wy = ey + FOREARM * L;
     if (robe) {
-      // The wide agbada sleeve hangs from the shoulder over the arm
-      solid(
-        g,
-        () => {
-          g.moveTo(s * 3.8, sy - 1.4);
-          g.quadraticCurveTo(s * 9.6, sy + 1, s * 10.2, wy - 1);
-          g.quadraticCurveTo(s * 8.6, wy + 2.2, s * 6.0, wy + 0.6);
-          g.quadraticCurveTo(s * 5.0, sy + 6, s * 3.8, sy - 1.4);
-          g.closePath();
-        },
-        tp,
-        s * 4.2,
-        sy,
-        0.84,
-        0.96,
-      );
-      g.strokeStyle = o.b;
-      g.lineWidth = 0.9;
-      g.beginPath();
-      g.moveTo(s * 10.0, wy - 1.2);
-      g.quadraticCurveTo(s * 8.6, wy + 1.4, s * 6.2, wy);
-      g.stroke();
+      frontAgbadaSleeve(g, s, sy, wy, tp, o.b, sp, w);
+      continue;
     } else {
       limb(g, sx, sy, 2.1 * w, ex, ey, 1.65 * w, wx, wy, 1.35 * w, bare ? sp : tp);
       if (bare) patch(g, sx, sy, 2.5 * w, sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5, 2.15 * w, o.a);
