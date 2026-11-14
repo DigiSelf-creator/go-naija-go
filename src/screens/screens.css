@@ -2285,3 +2285,8 @@ body.lane {
     min-width: 0;
   }
 }
+
+/* qa S3f3 re-check: the lane Pause card's big "Keep playing" is 56 px tall too (part 15), short screens included. */
+.lane-pause-card .pause-grid .go:not(.secondary) {
+  min-height: 56px;
+}

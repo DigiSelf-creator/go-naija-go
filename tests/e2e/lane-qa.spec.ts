@@ -402,9 +402,6 @@ for (const [w, hgt] of [
   [851, 393],
 ] as const) {
   test(`qa: at ${w} x ${hgt} the lane Pause card's big button is at least 56 px tall (part 15)`, async ({ page }) => {
-    // qa bug (S3f3, 5e9a271): "Keep playing" is 44 px tall at 320 x 240 and 48 px at 851 x 393.
-    // Remove this line once it is fixed.
-    test.fail();
     await page.setViewportSize({ width: w, height: hgt });
     await open(page, CITY, './?level=lagos-lane');
     await playing(page);
