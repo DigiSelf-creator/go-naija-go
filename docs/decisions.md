@@ -66,3 +66,6 @@ Added 14 Nov 2026 at Tp's request: lines 5 to 50, confirmed by Tp in chat betwee
 57. The store app is for iPhone only at first, not iPad. (ST-Q4, a; Tp, 14 Nov)
 58. With the subtitles, the moving intro runs about 44 s, so each of the six lines can be read calmly; a tap jumps ahead. The separate "That hero is you." line is dropped (caption 5 ends with it); "Let's go" stays the button. (city.md a2.12; Tp, 14 Nov)
 59. The store app turns phone backup off: the saved game stays on this phone only. (ST-Q5, a; Tp, 14 Nov)
+60. The hero gets a richer look now: art redraws it in code with shading, highlights, bolder outlines, a bigger, more expressive face and smoother running, keeping every skin, hair and outfit choice and the small size. Art also makes a small Blender 3D test of one hero running, to compare side by side. Our own look only, never like Mario or any other game. (Tp, 14 Nov)
+61. At the end of the intro the hero turns to face the player; art draws a front-facing pose. (Tp, 14 Nov)
+62. Goats make a "meeh" sound when bumped, and the street 3 birds call "hawk hawk". Our own code-made sounds. (Tp, 14 Nov)
