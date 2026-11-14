@@ -363,7 +363,7 @@ The place in brackets is where the pin sits on the map, never words on the card.
 
 | Screen | Who sees it | One job | Exact words |
 |---|---|---|---|
-| Intro (moving scene, step (a2)) | A first-time player, before the hero builder; later anyone from Settings, "Watch the story" | Show the story in about 28 seconds | "Skip" from the start; a tap jumps to the next beat. On screen only "That hero is you." and "Build up Lagos. Get Nigeria working." (if Tp says yes), and "Let's go". Screen readers hear captions 1 to 6. Reduced motion: the six frames with captions. See "The intro" below and (a2) |
+| Intro (moving scene, step (a2)) | A first-time player, before the hero builder; later anyone from Settings, "Watch the story" | Show the story in about 44 seconds, with Tp's six lines as subtitles (a2.12) | "Skip" from the start; a tap jumps to the next beat and its line. On screen: captions 1 to 6, one per beat, in a bottom strip, and "Let's go". Screen readers hear captions 1 to 6, once each. Reduced motion: the six frames with captions. See "The intro" below and (a2), a2.12 |
 | Title | Everyone who opens the game | Start | "Gbese!" / "Build up Lagos. Get Nigeria working." Button "Play". "Sound: on", "Music: on" |
 | City | Anyone who taps "Play" | Pick a problem to fix | Heading "Lagos". Bucket chips "₦24.50", "Power 6", "Tech 3". "Booming" bar, "9 of 20" (W6). Pins with one word each. Buttons "Nigeria's wheel", "Hero", "Settings" (and "Challenge road" if Tp says yes) |
 | Problem card | A player who taps a pin | Say what is wrong, the cost and how to help | Potholes: "Potholes on this road." / "Fixing it costs ₦10." / Big "Run Alausa", or "Walk there" when you have some of the price (part 5W replaces "Fix it"). Lights out: "Lamps are out here." / "Switching them on costs Power 10." / Big "Lane run", or "Switch on (Power 10)". Slow internet: "The internet is slow here." / "Fixing it costs Tech 6." / Big "Lane run", or "Fix it (Tech 6)". Small "Back" on each |
@@ -433,6 +433,8 @@ Done when: every caption fits at 320 x 240 and 851 x 393 with no cut and no scro
 One camera, one Wheel. The Wheel is in every beat, so the scene feels like one story, not six pictures: people finish it, it turns and Lagos grows round it, it sits in the middle of Nigeria, the Stoppers jam it, your hero pushes it back into motion, and its turning becomes the wheel of the yellow bus that takes you into Lagos.
 
 ##### a2.2 The beat sheet (seconds from the start)
+
+**From 14 Nov (decision 53) the times here are replaced by a2.12, point 4; what happens in each beat stays.**
 
 Six beats, one for each confirmed caption. About 28 s from the start to "Let's go", then it waits for the player. Times are for gamedev and qa; art may move any moment inside a beat by up to 0.3 s if it looks better, but the beat starts stay.
 
@@ -509,6 +511,8 @@ Total about 28 s to "Let's go", inside Tp's 20 to 30 s.
 
 ##### a2.4 Words on screen
 
+**From 14 Nov (decision 53) replaced by a2.12: the six captions show as subtitles; the separate hero and end lines go.**
+
 Very few. Tp asked for none, or at most a short line at a key beat. Recommendation (question for Tp in docs/questions.md):
 - Beat 5, 23.0 to 24.5: **"That hero is you."** It is the one moment a picture cannot say alone.
 - Beat 6, from 27.2: **"Build up Lagos. Get Nigeria working."** (the title line Tp chose, 9 Nov). It stays with the button.
@@ -528,6 +532,8 @@ Look: real HTML text over the canvas (not drawn on it), bold, 20 px (16 px under
 - Sound off: no sounds. Music off: no music. Both follow the switches the player already set.
 
 ##### a2.6 Sound and music (our engine, no new sound code)
+
+**From 14 Nov the cue times are in a2.12, point 4.**
 
 Music: our own `menu` tune (`src/art/tunes.ts`, played by `src/engine/music.ts`, using `setLevel` and `restart`). Sounds: names that already exist in `src/engine/sound.ts`.
 
@@ -597,6 +603,94 @@ Order: art S3a3 first; gamedev can build the clock and its tests beside it with 
 13. **Size:** the gzipped first load grows by no more than 20 KB (aim 14 KB) against this branch before a2.
 14. **Rules:** the a2.8 list; part 6; no real people; the Stoppers are things and only flinch; the map is green, white, green land with no pole, crest or flag shape; no party colours; nothing mocks anyone; the "wrong premise" line is not used.
 15. Skip and "Let's go" at least 44 x 44 px; no flash faster than 2 a second.
+
+##### a2.12 Subtitles: Tp's six lines on screen (designer, 14 Nov 2026)
+
+**Why.** Tp watched the moving intro and could not follow the story without the words (decision 53, 14 Nov). So each beat now shows its own confirmed caption as a subtitle, long enough to read. This replaces the "only two lines" part of a2.4 and the times in a2.2 and a2.6. Everything else in (a2) stays: the pictures, the order of what happens, Skip, the hold, pause, size and the a2.8 rules.
+
+**1. Which line goes with which beat.** One caption per beat, from `WORDS.intro.captions`, word for word (T1 to T4; no word changed, added or cut):
+
+| Beat | Caption (word count) |
+|---|---|
+| 1 The people make the Wheel | 1: "Long ago, light shone on West Africa. Its people and its rich land made the Wheel, so everyone could share, stay safe and keep going." (25) |
+| 2 The Wheel turns and Lagos grows | 2: "The Wheel turned, and Lagos grew. More people came, and they need more roads, more light and more buses." (19) |
+| 3 Nigeria's Wheel | 3: "Nigeria's Wheel keeps it all moving. The Wheel was made for everyone." (12) |
+| 4 The Stoppers | 4: "But the Stoppers want it stuck: traffic, potholes, power cuts and red tape." (13) |
+| 5 The Wheel Hero | 5: "Nigeria called a hero to keep the Wheel turning: the Wheel Hero. That hero is you." (16) |
+| 6 Your journey | 6: "Your journey starts now. Build up Lagos. Get Nigeria working." (10) |
+
+In beat 4 the four Stoppers come in in the same order the caption names them (jam, pothole, dark lamp, forms), so the words and the picture match.
+
+**2. "That hero is you."** Caption 5 already ends with it, so the separate hero line goes. gamedev removes `heroLine` from `WORDS.intro` and from the screen.
+
+**3. The end line.** Caption 6 already says "Build up Lagos. Get Nigeria working.", so the separate end line at the top goes too (remove `endLine`). Caption 6 does **not** contain "Let's go": that stays the button. A unit test checks that caption 5 ends with "That hero is you." and caption 6 ends with the title's line (`TAGLINE`), so the story and the title can never drift apart.
+
+**4. New beat lengths.** Rule: a line stays up for (its words ÷ 2.5) + 1 s. Each beat is as long as its line:
+
+| Beat | Line time (s) | New start to end (s) | Was |
+|---|---|---|---|
+| 1 | 25 ÷ 2.5 + 1 = 11.0 | 0.0 to 11.0 | 0.0 to 6.0 |
+| 2 | 19 ÷ 2.5 + 1 = 8.6 | 11.0 to 19.6 | 6.0 to 11.0 |
+| 3 | 12 ÷ 2.5 + 1 = 5.8 | 19.6 to 25.4 | 11.0 to 15.5 |
+| 4 | 13 ÷ 2.5 + 1 = 6.2 | 25.4 to 31.6 | 15.5 to 20.0 |
+| 5 | 16 ÷ 2.5 + 1 = 7.4 | 31.6 to 39.0 | 20.0 to 24.5 |
+| 6 | 10 ÷ 2.5 + 1 = 5.0 | 39.0 to 44.0, then the hold | 24.5 to 27.8 |
+
+`INTRO_BEATS` becomes `[0, 11, 19.6, 25.4, 31.6, 39, 44]`. "Let's go" shows at **44.0 s**.
+
+**This is longer than "about 35 s".** At a 10 year old's pace the six lines need 44 s; they cannot all be shown, word for word, at that pace in 35 s. Recommendation: **keep 44 s**, because Tp's reason was being able to read it, and a tap lets a fast reader move on at any time. If Tp wants 35 s firmly, the same rule at 3 words a second plus 0.5 s gives 8.8, 6.8, 4.5, 4.8, 5.8 and 3.8 s: beats at `[0, 8.8, 15.6, 20.1, 24.9, 30.7, 34.5]`, "Let's go" at 34.5 s. That is quick for a young reader. (Question for po to put to Tp. The times below are for 44 s; for 34.5 s, scale every time inside a beat to the new beat length.)
+
+**What moves when, at the new times.** Each beat's actions keep the speed they had; the extra time goes to calm "living" moments (the Wheel turning, a slow camera drift of at most 5 % zoom), never to slow motion. Camera moves stay 0.6 to 0.8 s.
+
+- **Beat 1 (0 to 11):** sky warms 0 to 1.5; people push the Wheel 0.5 to 4.5 and the child walks in with the pins; the last spoke is lifted in 4.5 to 6.5; it clicks in at **6.5**; the Wheel turns freely and everyone cheers 6.5 to 11 while the camera drifts slowly closer.
+- **Beat 2 (11 to 19.6):** camera slides right 11.0 to 11.8; buildings rise 11.8 to 15.0 (each 0.5 s, 0.4 s apart), cranes swing; two buses roll in over the bridge 14.0 to 17.0; people walk in 15.0 to 19.6; windows light 17.5 to 19.6.
+- **Beat 3 (19.6 to 25.4):** pull back to the map 19.6 to 20.4; the outline draws and fills 20.4 to 21.8; border cogs pop in 21.8 to 23.2; all turn together 23.2 to 25.4, with two soft light pulses at 23.6 and 24.6 (1 a second).
+- **Beat 4 (25.4 to 31.6):** back to the ground 25.4 to 26.0; sky greys 25.7 to 27.0; jam **26.0**, pothole **26.9**, dark lamp **27.8** (flickers twice, slowly), forms **28.7**; the wedge goes in and the Wheel stops 29.4 to **30.4**; the Stoppers pout 30.4 to 31.6.
+- **Beat 5 (31.6 to 39.0):** warm light opens and the hero walks in 31.6 to 33.6; looks, hands on the Wheel 33.6 to 34.4; pushes 34.4 to 35.8, the wedge pops out and spins away; light floods back 35.8 to 37.5, the Stoppers flinch back but stay at the edges 36.0 to 37.0; the hero turns to face us 37.5 to 39.0 (the same turn as beat 6, reused) as the line says "That hero is you."
+- **Beat 6 (39.0 to 44.0, then the hold):** hub-to-bus-wheel zoom 39.0 to 39.8; the bus rolls in and stops 39.8 to 41.0, door opens; people step on and the hero walks to the door 40.4 to 42.6 and turns to face us; "Let's go" at **44.0**; the hold as in a2.2 (drawing stops 3 s into it, at 47.0).
+
+**Music and sounds (replaces the a2.6 times; same names, same rules):**
+
+| s | Music | Sound |
+|---|---|---|
+| 0.0 | `menu` at level 0.6 | |
+| 6.5 | level to 1 over 1 s | `cogBell` (spoke clicks in) |
+| 12.2, 14.6 | | `built`, `honk` |
+| 21.8, 23.4 | | `cogRatchet`, `cogBell` |
+| 26.0, 26.9, 27.8, 28.7 | level down to 0.5 over 2 s from 26.0 | `honk`, `roomThump`, `lightClunk`, `parcel` |
+| 30.2 | level to 0 over 0.3 s | `crateHit` (the Wheel stops) |
+| 31.8, 32.4, 33.0 | silent | `step` x 3 |
+| 34.6 | `menu` restarts from bar 1 at level 1 | `bounce` (wedge pops out) |
+| 40.0, 40.6 | | `skid`, `busBoard` |
+| 44.0 | level to 0.5 | `sting` (now with "Let's go", since the end line is gone) |
+
+The silence now runs 30.2 to 34.6 (4.4 s, was 3.1 s). That still makes sense: it is the stuck Wheel, and it ends the moment the hero pushes.
+
+**5. Subtitle look.**
+- **Where:** a strip along the bottom, full width, in real HTML text (not drawn on the canvas). The picture is fitted into the space **above** the strip, with sky and ground stretched to the edges and the ground carrying on under the strip, so the strip never covers the hero, the Wheel or the bus door. Skip stays top right, far from it.
+- **Look:** a dark ink strip (`#14110F` at 90 %) with cream text (`#FFF6E5`), contrast well over 7 to 1 whatever the sky. Bold, 16 px under 400 px wide or under 280 px tall, 18 px above that; line height 1.3; padding 8 px top and bottom, 16 px at the sides; text centred.
+- **At most 3 lines.** The strip is always 3 lines tall (about 70 px at 16 px), so the picture never jumps. If a caption needs more than 3 lines at the current width (at 320 px, caption 1 and maybe caption 2), it shows in **two pieces, split at a full stop**, one after the other in the same beat, the beat's time shared by word count. Example, caption 1 at 320 px: "Long ago, light shone on West Africa." (7 of 25 words, 3.1 s), then the rest (7.9 s). Words are never cut, and never shrunk below 16 px. Wider screens show the whole caption at once.
+- **Fade:** each line fades in over 0.3 s at its beat start and out over 0.3 s at its beat end (the strip itself stays). Caption 6 does not fade out: it stays through the hold, and "Let's go" (at least 44 x 44 px) sits **inside the strip at its right end**, with caption 6 wrapping in the rest of the strip (3 lines at most at 320 x 240).
+- **Reduced motion:** unchanged. The moving scene does not run; the six still pictures with their captions play as in step (a), with plain cuts and no fades.
+- **320 x 240:** strip 70 px, picture 168 px tall above it (0.93 x). The key action stays in the middle 240 x 120 units, as a2.7 says, so nothing important is under the strip or Skip.
+
+**6. Tap behaviour.** A tap (or Space, Enter, →) jumps to the next beat and shows **its line at once, all of it, with no fade-in**; the old line goes at once. The 0.3 s fast camera move of a2.3 stays. A tap goes to the next beat even when the current caption is on its first piece. In the hold a tap does nothing; Space or Enter presses "Let's go". Skip and Escape work as before.
+
+**7. Screen readers.** The hidden log (`role="log"`, `aria-live="polite"`) is still the only thing that speaks the captions. It adds each beat's whole caption **once**, at the start of the beat, as in a2.5. The on-screen strip is `aria-hidden="true"` (same words, so it must not be read again), and the two pieces of a split caption are never added on their own. A pause and restart of a beat, a resize or a turned phone do **not** add the line again: gamedev keeps a "said" mark for each beat. A jump adds only the new beat's line; a jumped-over beat is not added. "Let's go" stays a real button with its own name.
+
+**8. Who does what.** art (rework of S3a3): retime `drawIntroScene`, `INTRO_BEATS` and `INTRO_CUES` to the tables above, and fit the picture above a bottom inset for the strip. gamedev (rework of S3a4): the strip, the fades, the split, the "said" marks, "Let's go" in the strip, and removing `heroLine` and `endLine`. Size about the same as now (two lines go, one strip comes); no new sound or tune.
+
+**9. Changed checks for qa (these replace the same-numbered a2.11 items; the rest stand):**
+1. **Length:** "Let's go" shows between 43 and 45 s after the start (phone profile, no taps). Each beat starts within 0.5 s of the table in point 4.
+2. **Read and understood:** with Sound off, 3 first-time watchers (at least one aged 9 to 12) can read each line before it goes and can say the story back; at least 2 of 3 get every part.
+3. **Words:** each beat shows its own caption, word for word as `WORDS.intro.captions`; "That hero is you." and the end line no longer show on their own; at most 3 lines at a time; no word cut at 320 x 240, 568 x 320, 640 x 360 and 851 x 393; the strip and "Let's go" never cover the hero, the Wheel, the bus door or Skip; text at least 16 px; contrast at least 7 to 1.
+5. **Tap:** a tap, Space, Enter and → show the next beat and its whole line at once, with no fade-in; six jumps reach the hold.
+7. **Screen reader:** each caption is heard once, in order, word for word; not again after a pause, a resize, a turned phone or a jump; the strip is not read; a split caption is read as one line.
+9. **Sound:** the cues play at the new times in point 4.
+11. **Speed:** 45 fps or better at 4x CPU from 0 to 47 s, including the camera moves at 11, 19.6, 25.4 and 39 s and the line fades.
+12. **No drawing after the end:** none after Skip or "Let's go", and none from 47 s (3 s into the hold) until a resize.
+16. **New, fade:** each line fades in and out in about 0.3 s; caption 6 stays through the hold with "Let's go" in the strip.
+17. **New, words test:** a unit test shows caption 5 ends with "That hero is you." and caption 6 ends with the title line; `heroLine` and `endLine` are gone from `WORDS.intro`.
 
 #### (b) Lagos from above
 

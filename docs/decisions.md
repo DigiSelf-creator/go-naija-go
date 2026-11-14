@@ -59,3 +59,8 @@ Added 14 Nov 2026 at Tp's request: lines 5 to 50, confirmed by Tp in chat betwee
 50. The line "Remember: a wrong premise often leads to a misleading conclusion." is not in the game. It belongs to another project. (Tp, 7 Nov)
 51. The store version (Google Play and the App Store) is built now, alongside Lagos, so Tp can install a test app on a phone soon. Tp makes the two developer accounts when the team is ready to upload. (Tp, 14 Nov)
 52. When a new version of the game is ready, the game shows "New version ready. Tap to update." One tap loads it. (Tp, 14 Nov)
+53. The moving intro shows Tp's six story lines as subtitles, one for each part of the story, long enough to read; the intro may run longer (about 35 s) to fit them. A tap still jumps to the next part. This changes the "only two lines" part of line 49. (Tp, 14 Nov)
+54. The app id is com.coachnaz.gbese. It never changes after the first upload. (ST-Q1, a; Tp, 14 Nov)
+55. The "New version ready" prompt shows on the web test link only; the store app updates through the store. (ST-Q2, a; Tp, 14 Nov)
+56. The privacy page is a short page on the same site as the test link. (ST-Q3, a; Tp, 14 Nov)
+57. The store app is for iPhone only at first, not iPad. (ST-Q4, a; Tp, 14 Nov)
