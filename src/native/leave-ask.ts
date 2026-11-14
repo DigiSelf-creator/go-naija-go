@@ -1,4 +1,11 @@
 import { button, h } from '../screens/dom';
+import type { RunKind } from './back';
+
+/**
+ * LR-Q1 (open for Tp, built on the recommended answer a): leaving a lane run early keeps what was
+ * picked up, so the ask says so. One switch: answer b turns this off (and S3f3's buckets with it).
+ */
+export const LANE_LEAVE_KEEPS = true;
 
 /**
  * Exact words from docs/design.md ST0 part 3. They live here for now so the app code stays out
@@ -9,6 +16,9 @@ export const LEAVE_WORDS = {
   line: 'Your hero and your Lagos are saved on this phone.',
   street: 'This street starts again next time.',
   hall: 'The hall starts again next time.',
+  /** S3f0 part 14: the lane run's lines (the second is LR-Q1, recommended a). */
+  lane: 'This run starts again next time.',
+  laneKeep: 'You keep what you picked up.',
   stay: 'Keep playing',
   leave: 'Leave',
 } as const;
@@ -17,6 +27,7 @@ export const LEAVE_WORDS = {
 export class LeaveAsk {
   private readonly el: HTMLDivElement;
   private readonly runLine: HTMLParagraphElement;
+  private readonly keepLine: HTMLParagraphElement;
   private readonly stayButton: HTMLButtonElement;
 
   constructor(
@@ -25,6 +36,7 @@ export class LeaveAsk {
   ) {
     this.stayButton = button(LEAVE_WORDS.stay, 'go', () => this.close());
     this.runLine = h('p', { hidden: true });
+    this.keepLine = h('p', { hidden: true });
     this.el = h(
       'div',
       { class: 'screen leave-ask', 'data-ui': true, hidden: true, style: 'z-index: 30' },
@@ -34,6 +46,7 @@ export class LeaveAsk {
         h('h2', {}, LEAVE_WORDS.heading),
         h('p', {}, LEAVE_WORDS.line),
         this.runLine,
+        this.keepLine,
         // Never colour alone: "Keep playing" is the big filled button and comes first; "Leave" is
         // smaller, outline only (the menus' "minor" style).
         h('div', { class: 'actions' }, this.stayButton, h('div', { class: 'minor-row' }, button(LEAVE_WORDS.leave, 'minor', () => this.hooks.leave()))),
@@ -46,9 +59,11 @@ export class LeaveAsk {
     return !this.el.hidden;
   }
 
-  show(fromRun: 'street' | 'hall' | null): void {
-    this.runLine.textContent = fromRun === 'hall' ? LEAVE_WORDS.hall : fromRun === 'street' ? LEAVE_WORDS.street : '';
+  show(fromRun: RunKind | null): void {
+    this.runLine.textContent = fromRun === 'hall' ? LEAVE_WORDS.hall : fromRun === 'street' ? LEAVE_WORDS.street : fromRun === 'lane' ? LEAVE_WORDS.lane : '';
     this.runLine.hidden = fromRun === null;
+    this.keepLine.textContent = LEAVE_WORDS.laneKeep;
+    this.keepLine.hidden = !(fromRun === 'lane' && LANE_LEAVE_KEEPS);
     this.el.hidden = false;
     // ST0 part 3 rule 3: the ask opens with "Keep playing" ready.
     this.stayButton.focus({ preventScroll: true });

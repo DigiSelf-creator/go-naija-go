@@ -2052,3 +2052,99 @@ body.has-update .screen.full .wheel-card {
     transition: none;
   }
 }
+
+/* S3f0 the lane run: swipes anywhere (no browser scroll or zoom), the top rows, "3, 2, 1" and the
+   four buttons (56 x 56, 8 px apart, placed by LaneButtons from the safe edges). */
+body.lane {
+  touch-action: none;
+}
+.lane-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: var(--safe-top, 0px) max(8px, var(--safe-right)) 0 max(8px, var(--safe-left));
+  pointer-events: none;
+  color: #fff;
+  font: bold 12px 'Trebuchet MS', Verdana, sans-serif;
+  text-shadow: 0 1px 0 #000, 0 0 3px #000;
+}
+.lane-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 44px;
+}
+@media (min-height: 360px) {
+  .lane-row {
+    height: 48px;
+  }
+}
+.lane-row button {
+  pointer-events: auto;
+}
+.lane-pause {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font: bold 12px 'Trebuchet MS', Verdana, sans-serif;
+}
+.lane-row2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+}
+.lane-row2 > * {
+  margin: 0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(10, 8, 30, 0.45);
+  white-space: nowrap;
+}
+.lane-row2 > :empty {
+  visibility: hidden;
+}
+.lane-count {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  color: #fff;
+  font: bold 56px 'Trebuchet MS', Verdana, sans-serif;
+  text-shadow: 0 3px 0 #000, 0 0 6px #000;
+}
+.lane-count[hidden],
+.lane-buttons[hidden] {
+  display: none;
+}
+.lane-button {
+  position: fixed;
+  z-index: 6;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  touch-action: none;
+}
+.lane-button svg {
+  display: block;
+  margin: -2px;
+  fill: #fff;
+  stroke: #1d1a14;
+  stroke-width: 2;
+}
+.lane-card {
+  z-index: 12;
+}

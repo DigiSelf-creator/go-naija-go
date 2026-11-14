@@ -342,6 +342,25 @@ export const WORDS = {
     /** S2.16 B4: with the Gentle blocks a dash gap is two wide potholes (each half is one). */
     dash: 'Up you come! Jump, then jump again.',
   },
+  /** S3f0 the lane run (docs/design.md S3f0 parts 3, 14 and 15). */
+  lane: {
+    count: ['3', '2', '1'] as readonly string[],
+    go: 'Go!',
+    /** The buttons' spoken names (part 3). */
+    buttons: { left: 'Left lane', right: 'Right lane', jump: 'Jump', slide: 'Slide' },
+    /** Settings and the lane Pause card. */
+    buttonsOn: 'Buttons instead of swipes: on',
+    buttonsOff: 'Buttons instead of swipes: off',
+    toGo: (m: number) => `To the bus stop: ${m} m`,
+    toGoShort: (m: number) => `Bus stop: ${m} m`,
+    /** After the goal: the distance run and the best (whole metres, with a thousands comma). */
+    run: (m: number) => `${m.toLocaleString('en-GB')} m`,
+    best: (m: number) => `Best: ${m.toLocaleString('en-GB')} m`,
+    goalHeading: 'You made it to the bus stop!',
+    takeHome: 'Take it home',
+    keepRunning: 'Keep running for more',
+    pauseHome: 'Back to Lagos',
+  },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
   well: {
     down: 'Go down',

@@ -39,6 +39,7 @@ import { bannerShows } from './update';
 import { UpdateBanner } from './screens/update-banner';
 import { isNativeApp } from './native/is-native';
 import type { NativeApp } from './native/app';
+import type { LaneSession } from './lane/session';
 
 const el = document.getElementById('game');
 if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing #game canvas');
@@ -97,6 +98,8 @@ function startGame(): void {
   const hall = parseLevel(hallData);
   const streets: readonly Level[] = [street1Data, street2Data, street3Data].map((d) => parseLevel(d));
   const asked = new URLSearchParams(location.search).get('level');
+  /** S3f2: ?level=lagos-lane makes "Play" start the lane run (for testing). */
+  const askedLane = asked === 'lagos-lane';
   const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
   const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
@@ -122,7 +125,7 @@ function startGame(): void {
     game.throwFufu();
   }
   const throwButton = new ThrowButton(document.body, throwFufu);
-  onResize.push(placeButtons, () => game.setView(view));
+  onResize.push(placeButtons, () => game.setView(view), () => lane?.resize());
   placeButtons();
   game.setView(view);
   game.look = loadLook(store);
@@ -199,6 +202,8 @@ function startGame(): void {
       if (playing && !game.paused && !document.hidden && inPlay()) cityLife.tick(dt);
     },
     render: () => {
+      // S3f2: a lane run draws itself with its own loop.
+      if (lane || laneLoading) return;
       // The city fills the whole screen and draws itself: the street under it is not drawn
       // (on a slow phone that was a second full-screen picture every frame while walking).
       // The intro story covers the whole screen too (city.md a2.9).
@@ -238,7 +243,7 @@ function startGame(): void {
   // Pause, the result cards and the other screens. One tap reloads into the new version.
   const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
   /** A run is being played with no card over it (the finish bus counts: the result card follows). */
-  const inRun = (): boolean => playing && menus.current === null;
+  const inRun = (): boolean => (playing || lane !== null) && menus.current === null;
   const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
   updateReady = () => {
     syncUpdate();
@@ -248,6 +253,14 @@ function startGame(): void {
 
   /** Pause the run and show the pause screen (button, app switch, or phone upright). */
   function pause(): void {
+    if (lane) {
+      if (!lane.running) return;
+      lane.pause();
+      toast.hide();
+      menus.show('pause');
+      syncUpdate();
+      return;
+    }
     if (!playing || game.paused || !inPlay()) return;
     loop.pause();
     game.paused = true;
@@ -260,6 +273,13 @@ function startGame(): void {
     syncUpdate();
   }
   function resume(): void {
+    if (lane) {
+      if (document.hidden || portrait.matches) return;
+      menus.show(null);
+      lane.resume();
+      syncUpdate();
+      return;
+    }
     if (!playing || document.hidden || portrait.matches) return;
     menus.show(null);
     game.paused = false;
@@ -299,6 +319,7 @@ function startGame(): void {
    * wheel. Home: the hero stands at the bus park, or Mission complete brings them by bus (5W W5).
    */
   function leave(to: LeaveTo, mission: Mission | null = null): void {
+    closeLane();
     playing = false;
     document.body.classList.remove('playing');
     hud.show(false);
@@ -318,6 +339,66 @@ function startGame(): void {
       if (cityLife.state.at) cityLife.set({ ...cityLife.state, at: { ...HERO_START } });
       menus.showCity(mission);
     } else menus.show(to);
+  }
+
+  /** S3f2: the lane run showing now (its code loads the first time one opens), or null. */
+  let lane: LaneSession | null = null;
+  let laneLoading = false;
+  let laneModule: Promise<typeof import('./lane/session')> | null = null;
+  /** Starts a lane run from 0 m ("3, 2, 1" first). Loads the lane run's code the first time. */
+  function startLane(): void {
+    if (laneLoading) return;
+    if (lane) {
+      menus.show(null);
+      lane.start();
+      syncUpdate();
+      return;
+    }
+    missionFor = null;
+    menus.show(null);
+    toast.hide();
+    hud.show(false);
+    buttons.show(false);
+    loop.pause();
+    controls.releaseAll();
+    laneLoading = true;
+    menus.laneRun = true;
+    laneModule ??= import('./lane/session');
+    laneModule
+      .then(({ LaneSession }) => {
+        laneLoading = false;
+        if (!menus.laneRun) return; // left while it loaded
+        lane = new LaneSession({
+          canvas,
+          g,
+          look: () => game.look,
+          gentle: () => menus.gentle,
+          still: () => reduceMotion.matches,
+          buttonsOn: () => menus.laneButtons,
+          safe: readSafeArea,
+          sound: (name) => sound.play(name),
+          askPause: () => pause(),
+          goal: () => syncUpdate(),
+          takeHome: () => leave('city'),
+        });
+        lane.start();
+        syncMusic();
+        syncUpdate();
+        if (portrait.matches || document.hidden) pause();
+      })
+      .catch(() => {
+        // Offline before the lane run was ever cached: back to the city.
+        laneLoading = false;
+        laneModule = null;
+        menus.laneRun = false;
+        menus.showCity();
+      });
+  }
+  function closeLane(): void {
+    menus.laneRun = false;
+    if (!lane) return;
+    lane.close();
+    lane = null;
   }
 
   /** The live city (city.md (b), 5W): the `city` part of gidi-progress, kept in memory while the game runs. */
@@ -346,7 +427,8 @@ function startGame(): void {
     // city.md (b) flow: "Play" (and the builder's "Start running") opens Lagos from above, the
     // home screen. ?level=lagos-2, lagos-3 or lagos-hall still starts that level (for testing).
     start: (at) => {
-      if (askedAt === null) menus.show('city');
+      if (askedLane) startLane();
+      else if (askedAt === null) menus.show('city');
       else startRun(at, firstStreet);
     },
     cityLife,
@@ -361,7 +443,7 @@ function startGame(): void {
       missionFor = null;
       startRun(at, to);
     },
-    restart: (at) => startRun(at),
+    restart: (at) => (lane ? startLane() : startRun(at)),
     next: (at) => {
       missionFor = null;
       startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
@@ -763,7 +845,7 @@ function startGame(): void {
       menus.toggleMusic();
       return;
     }
-    const act = pauseKeyAction(e.code, e.repeat, menus.current, playing && !game.paused && inPlay());
+    const act = pauseKeyAction(e.code, e.repeat, menus.current, (playing && !game.paused && inPlay()) || (lane?.running ?? false));
     if (!act) return;
     e.preventDefault();
     if (act === 'pause') pause();
@@ -776,9 +858,10 @@ function startGame(): void {
   if (import.meta.env.MODE === 'app' && isNativeApp()) {
     void import('./native/app').then(({ startNativeApp }) => {
       nativeApp = startNativeApp({
-        running: () => playing && !game.paused && !menus.current && inPlay(),
+        running: () => (playing && !game.paused && !menus.current && inPlay()) || (lane?.running === true && !menus.current),
         screen: () => menus.current,
         hall: () => where === 'hall',
+        lane: () => lane !== null,
         heroSaved: () => hasSavedLook(store),
         pause: () => pause(),
         home: () => leave('city'),
@@ -862,6 +945,9 @@ function startGame(): void {
   loop.pause();
   menus.show('title');
 
+  // S3f2: the lane run's hooks for end to end tests (null outside a lane run).
+  Object.defineProperty(window, '__lane', { configurable: true, get: () => (lane ? lane.testHook() : null) });
+
   // Read-only hooks for end to end tests.
   window.__game = {
     get paused() {
@@ -894,7 +980,7 @@ function startGame(): void {
       return { gait: game.gait, skid: game.skid, dust: game.dustAge < DUST_TIME };
     },
     get screen() {
-      return menus.current ?? (playing ? 'play' : null);
+      return menus.current ?? (playing || lane ? 'play' : null);
     },
     get run() {
       const r = game.run;
@@ -1211,6 +1297,8 @@ function startGame(): void {
 
 declare global {
   interface Window {
+    /** S3f2: the lane run now, or null. */
+    readonly __lane?: import('./lane/session').LaneTestHook | null;
     __game?: {
       readonly paused: boolean;
       /** U1: a new version is ready; the banner shows. */

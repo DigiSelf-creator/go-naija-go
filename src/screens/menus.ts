@@ -162,6 +162,8 @@ export class Menus {
   private refit: (() => void) | null = null;
   /** S2.2: the title shows the touch words when the phone buttons are shown, else the key words. */
   touchWords: () => boolean = () => true;
+  /** S3f0: the run being played is a lane run (its Pause card has its own buttons). */
+  laneRun = false;
 
   constructor(
     parent: HTMLElement,
@@ -214,6 +216,11 @@ export class Menus {
 
   get gentle(): boolean {
     return this.settings.gentle;
+  }
+
+  /** S3f0 part 3: "Buttons instead of swipes" in the lane run. */
+  get laneButtons(): boolean {
+    return this.settings.buttonsInsteadOfSwipes;
   }
 
   /** The HUD sound button. Remembered on the phone. */
@@ -347,6 +354,19 @@ export class Menus {
     return sw;
   }
 
+  /** S3f0 part 3: "Buttons instead of swipes: off" / "...: on" (Settings and the lane Pause card). It counts at once. */
+  private laneButtonsSwitch(): HTMLButtonElement {
+    const w = WORDS.lane;
+    const label = (): string => (this.settings.buttonsInsteadOfSwipes ? w.buttonsOn : w.buttonsOff);
+    const sw = this.guarded(label(), 'minor', () => {
+      this.settings.buttonsInsteadOfSwipes = !this.settings.buttonsInsteadOfSwipes;
+      saveSettings(this.store, this.settings);
+      sw.textContent = label();
+      sw.setAttribute('aria-checked', String(this.settings.buttonsInsteadOfSwipes));
+    }, { role: 'switch', 'aria-checked': String(this.settings.buttonsInsteadOfSwipes) });
+    return sw;
+  }
+
   /** "Sound: on" / "Sound: off" (title and pause). */
   private soundSwitch(): HTMLButtonElement {
     const w = WORDS.title;
@@ -373,6 +393,22 @@ export class Menus {
   /** S2.10 Pause: four buttons (2 x 2 on small screens), then the two switches in one row. */
   private pause(): HTMLElement {
     const w = WORDS.pause;
+    if (this.laneRun) {
+      // S3f0 part 14: "Keep playing", "Start again", "Back to Lagos", then Sound, Music and the buttons switch.
+      return h(
+        'div',
+        { class: 'card narrow event pause-card', role: 'dialog', 'aria-label': w.heading },
+        h('h2', {}, w.heading),
+        h(
+          'div',
+          { class: 'pause-grid' },
+          this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
+          this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
+          this.guarded(WORDS.lane.pauseHome, 'minor', () => this.hooks.leave('city')),
+        ),
+        h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch(), this.laneButtonsSwitch()),
+      );
+    }
     return h(
       'div',
       { class: 'card narrow event pause-card', role: 'dialog', 'aria-label': w.heading },
@@ -632,6 +668,7 @@ export class Menus {
         this.soundSwitch(),
         this.musicSwitch(),
         this.gentleSwitch(),
+        this.laneButtonsSwitch(),
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
         button(w.back, 'go', () => this.show(this.settingsBack)),
       ),
