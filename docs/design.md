@@ -1797,7 +1797,7 @@ Follow-up for later (small, pm to plan, not needed for S2.16): on an upright pho
 
 Decisions 39 to 41 and 51: Gbese! is an app for Google Play and the App Store; the web link is for the team's testing. This note says how the app looks and behaves where it is not the same as the web link. It is the source for ST1a (Android), ST1c (iPhone), ST2 (icons and splash) and ST5 (qa). Everything this note does not change stays as the rest of this file says. Same game, same words, same look: our own dark green and warm street colours, our own icon, no store or phone maker's look added.
 
-Open for Tp in docs/questions.md: ST-Q2 (no update prompt in the app; recommended) and ST-Q5 (phone backup; part 8). This note is written with the recommended answers; a different answer changes only the lines marked with that question.
+Settled since: no update prompt in the app (decision 55), app id com.coachnaz.gbese (54), privacy page on the test link's site (56), iPhone only at first, no iPad (57). Open for Tp in docs/questions.md: ST-Q5 (phone backup; part 8). This note is written with the recommended answer; a different answer changes only the lines marked ST-Q5.
 
 ### 1. The name under the icon
 
@@ -1898,7 +1898,7 @@ Rules:
 |---|---|---|
 | Game files | Downloaded on the first visit, kept by a service worker | Inside the app. No service worker in the app at all |
 | First open with no internet | Needs one visit online first | Works from the very first open, in airplane mode |
-| "New version ready. Tap to update." (decision 52, U1) | Yes | No: the app updates through the store (ST-Q2, recommended a) |
+| "New version ready. Tap to update." (decision 52, U1) | Yes | No: the app updates through the store (decision 55) |
 | Holding the phone upright | Menus work upright; runs show "Turn your phone sideways to play." | Sideways everywhere (part 2) |
 | Back button | The browser's own | Part 3 |
 | Browser bar, pull down to reload, pinch zoom, long-press menu, "Add to home screen" | Can show, depending on the browser | Never |
@@ -1921,7 +1921,7 @@ Both show the same game, words, sounds and text sizes. The app keeps the game's 
    - "No accounts. No ads. No trackers."
    - ST-Q5 a: "Your hero and your Lagos are saved on this phone only. If you delete the game, they go too." (If Tp picks b: "Your hero and your Lagos are saved on this phone. Your phone's own backup can keep a copy for you. We never see it.")
    - Button "Back".
-   The same words go on the privacy web page (ST-Q3) and into the store answers (ST3), so they never disagree.
+   The same words go on the privacy web page (decision 56) and into the store answers (ST3), so they never disagree.
 6. **The version on Credits.** One small line under "Every picture, sound and tune is our own.": "Version {version}" from package.json, for example "Version 0.1.0". Testers and Tp can say which one they played. On the web link too.
 7. **Small to download.** Aim for the Android download under 10 MB, for cheap phones and small data bundles. The web first load stays under 3 MB (rule 6) and gains nothing from the app.
 8. **The same help as the web.** Every button 44 px or more (56 in play), separate Sound and Music switches, never colour alone, Gentle mode with 5 lives, no time limits, reduced motion: all as S2.10, S2.11 and the rest of this file. Nothing about them changes in the app.
