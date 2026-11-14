@@ -10,7 +10,7 @@ export type BackStep =
   /** Pause the run, the same as the Pause button. */
   | { kind: 'pause' }
   /** Open the "Leave the game?" ask. `fromRun` adds the "starts again next time" line. */
-  | { kind: 'ask'; fromRun: 'street' | 'hall' | null }
+  | { kind: 'ask'; fromRun: RunKind | null }
   /** Close the ask: the same as "Keep playing". */
   | { kind: 'closeAsk' }
   /** Press that screen's own button: the first of these labels that is showing. */
@@ -19,6 +19,9 @@ export type BackStep =
   | { kind: 'home' }
   /** Back from changing a saved hero: the old look stays. */
   | { kind: 'city' };
+
+/** Which run the ask's "starts again next time" line is for. */
+export type RunKind = 'street' | 'hall' | 'lane';
 
 /** Back presses this soon after a new screen (or the ask) are ignored, the same as taps. */
 export const BACK_GUARD_MS = 400;
@@ -34,6 +37,8 @@ export interface BackState {
   running: boolean;
   /** The run is (or was, on Pause) in Go-Slow Hall. */
   hall: boolean;
+  /** S3f2: the run is (or was, on Pause) a lane run. */
+  lane?: boolean;
   /** A hero is saved on this phone (the builder is not the first-time one). */
   heroSaved: boolean;
 }
@@ -54,10 +59,12 @@ export function backStep(s: BackState, labels: BackLabels): BackStep {
   if (s.askOpen) return { kind: 'closeAsk' };
   switch (s.screen) {
     case null:
-      // Between a run's end and its card, back waits for the card.
-      return s.running ? { kind: 'pause' } : { kind: 'ignore' };
+      // Between a run's end and its card, back waits for the card. A lane run's own cards
+      // (the bus stop, caught) take it home, the same as their "Take it home".
+      if (s.running) return { kind: 'pause' };
+      return s.lane ? { kind: 'press', labels: [labels.takeHome] } : { kind: 'ignore' };
     case 'pause':
-      return { kind: 'ask', fromRun: s.hall ? 'hall' : 'street' };
+      return { kind: 'ask', fromRun: s.lane ? 'lane' : s.hall ? 'hall' : 'street' };
     case 'title':
     case 'city':
       return { kind: 'ask', fromRun: null };

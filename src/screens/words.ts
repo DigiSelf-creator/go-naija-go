@@ -261,13 +261,11 @@ export const WORDS = {
         line1: 'Lamps are out here.',
         line2: 'Switching them on costs Power 10.',
         go: 'Lane run',
-        soon: 'Lane run: coming soon',
       },
       slowInternet: {
         line1: 'The internet is slow here.',
         line2: 'Fixing it costs Tech 6.',
         go: 'Lane run',
-        soon: 'Lane run: coming soon',
       },
     },
   },
@@ -341,6 +339,73 @@ export const WORDS = {
     big: 'Up you come! Run, then jump twice.',
     /** S2.16 B4: with the Gentle blocks a dash gap is two wide potholes (each half is one). */
     dash: 'Up you come! Jump, then jump again.',
+  },
+  /** S3f0 the lane run (docs/design.md S3f0 parts 3, 14 and 15). */
+  lane: {
+    count: ['3', '2', '1'] as readonly string[],
+    go: 'Go!',
+    /** The buttons' spoken names (part 3). */
+    buttons: { left: 'Left lane', right: 'Right lane', jump: 'Jump', slide: 'Slide' },
+    /** Settings and the lane Pause card. */
+    buttonsOn: 'Buttons instead of swipes: on',
+    buttonsOff: 'Buttons instead of swipes: off',
+    toGo: (m: number) => `To the bus stop: ${m} m`,
+    toGoShort: (m: number) => `Bus stop: ${m} m`,
+    /** After the goal: the distance run and the best (whole metres, with a thousands comma). */
+    run: (m: number) => `${m.toLocaleString('en-GB')} m`,
+    best: (m: number) => `Best: ${m.toLocaleString('en-GB')} m`,
+    goalHeading: 'You made it to the bus stop!',
+    takeHome: 'Take it home',
+    keepRunning: 'Keep running for more',
+    pauseHome: 'Back to Lagos',
+    // S3f3: the HUD (parts 14 and 15).
+    power: (n: number) => `Power ${n}`,
+    tech: (n: number) => `Tech ${n}`,
+    blackout: (m: number) => `Blackout: ${m} m behind`,
+    blackoutNear: (m: number) => `Blackout: ${m} m behind!`,
+    pushed: (m: number) => `+${m} m`,
+    gained: (m: number) => `−${m} m`,
+    /** The polite live line (part 14). */
+    nearSpoken: (m: number) => `Blackout ${m} metres behind`,
+    stopSpoken: 'Bus stop in 100 metres',
+    // Food lines (part 11), in the hint bar.
+    garri: 'Garri! A shield takes one stumble.',
+    corn: 'Roasted corn! Corn toss for 12 s.',
+    shieldTook: 'The shield took it!',
+    // The cards (part 14). `got` is a haul in words: "₦10.20, Power 12 and Tech 7".
+    got: (got: string) => `You got ${got}.`,
+    caughtAt: (m: number) => `The Blackout caught up at ${m.toLocaleString('en-GB')} m.`,
+    winSafe: (got: string) => `Your win is safe. You got ${got}.`,
+    newBest: (m: number) => `New best: ${m.toLocaleString('en-GB')} m!`,
+    caught: 'The Blackout caught up.',
+    keepAll: (got: string) => `You keep it all: ${got}.`,
+    stopWas: (m: number) => `The bus stop was ${m} m away.`,
+    gentleOffer: 'Want more tries? Gentle mode keeps the Blackout further back.',
+    gentleOff: 'Gentle mode: off',
+    gentleOn: 'Gentle mode: on',
+    runAgain: 'Run again',
+    soFar: (got: string) => `So far: ${got}.`,
+    /** City lines after "Take it home" (part 2) and the LR-Q2 hint. */
+    broughtHome: (got: string) => `You brought ${got} home.`,
+    alsoMast: 'The mast is ready to fix too. Walk onto its board.',
+    alsoLamps: 'The lamps are ready to fix too. Walk onto their board.',
+    /** The Streets card (part 2). */
+    card: 'Lane run',
+    cardLine: 'Run to the bus stop for Naira, Power and Tech.',
+    cardOpen: 'Ready to play',
+    cardDone: (m: number) => `Done ✓ Best: ${m.toLocaleString('en-GB')} m`,
+    /** Hints (part 8 and 14), once each until passed. Swipes, buttons, keys. */
+    hints: {
+      lane: ['Swipe left or right to change lane.', 'Tap ◀ or ▶ to change lane.', 'Press ← or → to change lane.'],
+      jump: ['Swipe up to jump over the cones.', 'Tap ▲ to jump over the cones.', 'Press ↑ or Space to jump.'],
+      slide: ['Swipe down to slide under the bar.', 'Tap ▼ to slide under the bar.', 'Press ↓ to slide under the bar.'],
+      pothole: ['Jump over potholes.', 'Tap ▲ to jump over potholes.', 'Press ↑ to jump over potholes.'],
+      crate: 'Run into crates to burst them.',
+      power: 'Power pushes the Blackout back.',
+      goat: 'Goats move out of your way. Meeh!',
+      food: 'Run into the garri to eat it.',
+      tech: 'Tech chips fix slow internet.',
+    } as Readonly<Record<string, string | readonly string[]>>,
   },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
   well: {

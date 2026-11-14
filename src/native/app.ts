@@ -32,6 +32,8 @@ export interface NativeHooks {
   screen(): MenuScreen;
   /** The run is in Go-Slow Hall. */
   hall(): boolean;
+  /** S3f2: the run is a lane run. */
+  lane(): boolean;
   /** A hero is saved on this phone. */
   heroSaved(): boolean;
   /** Pause the run and show Pause (does nothing outside a run). */
@@ -108,7 +110,7 @@ export function startNativeApp(hooks: NativeHooks): NativeApp {
 
   void App.addListener('backButton', () => {
     const step = backStep(
-      { askOpen: ask.open, sinceScreen: performance.now() - shownAt, screen: hooks.screen(), running: hooks.running(), hall: hooks.hall(), heroSaved: hooks.heroSaved() },
+      { askOpen: ask.open, sinceScreen: performance.now() - shownAt, screen: hooks.screen(), running: hooks.running(), hall: hooks.hall(), lane: hooks.lane(), heroSaved: hooks.heroSaved() },
       LABELS,
     );
     switch (step.kind) {

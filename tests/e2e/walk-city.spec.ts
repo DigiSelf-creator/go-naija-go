@@ -189,10 +189,9 @@ for (const [build, spot, word, paid, left] of [
     await expect(card).toBeVisible({ timeout: 15_000 });
     await expect(card.getByText(`You need ${word} ${left} for this.`)).toBeVisible();
     await expect(card.getByText(`Lane runs earn ${word}.`)).toBeVisible();
-    // Plain words, not a button, until the lane run comes (step f).
-    await expect(card.getByText('Lane run: coming soon')).toBeVisible();
-    await expect(card.getByRole('button', { name: /Lane run/ })).toHaveCount(0);
-    await expect(card.getByRole('button', { name: 'Back' })).toBeFocused();
+    // S3f3: the lane run is here: big "Lane run" (it has focus), small "Back".
+    await expect(card.getByText('Lane run: coming soon')).toHaveCount(0);
+    await expect(card.getByRole('button', { name: 'Lane run' })).toBeFocused();
     await card.getByRole('button', { name: 'Back' }).tap();
     await expect(card).toHaveCount(0);
   });
