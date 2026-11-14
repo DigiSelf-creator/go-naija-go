@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Gbese! icon and splash colours. Copied by scripts/copy-app-res.mjs: edit app-assets. -->
+    <!-- Gbese! splash and icon colours (scripts/make-app-icons.mjs) -->
     <color name="ic_launcher_background">#0e7a3e</color>
     <color name="splash_background">#0f1a12</color>
 </resources>

@@ -2,5 +2,5 @@
 <resources>
     <!-- Gbese! splash and icon colours (scripts/make-app-icons.mjs) -->
     <color name="ic_launcher_background">#0e7a3e</color>
-    <color name="splash_background">#fff8e6</color>
+    <color name="splash_background">#0f1a12</color>
 </resources>

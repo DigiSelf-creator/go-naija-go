@@ -3,8 +3,9 @@
 //
 // The picture is our own: the Wheel (decision 25) as a gold cog wheel with spokes, rolling right
 // with three running streaks behind it, on the web icon's green (scripts/make-icons.mjs). No text
-// on the icons. The splash screens and the Play feature picture add the name "Gbese!" in the
-// phone's own bold sans-serif font (Inter here; another machine may pick a close font).
+// on the icons and none on the splash (docs/design.md ST0 part 6: our icon on #0f1a12, one
+// picture for light and dark mode). Only the Play feature picture, a store listing image, adds
+// the name "Gbese!" in a bold sans-serif font (Inter here; another machine may pick a close font).
 //
 // Uses Playwright's Chromium (already a dev dependency) to turn SVG into PNG, and plain Node
 // (node:zlib) to drop the alpha channel where a store wants none (every iOS icon, the Play
@@ -30,13 +31,11 @@ const GOLD_DARK = '#a87900';
 const GOLD_SHINE = '#fff1b8';
 const CREAM = '#fffaf0';
 const ROAD = '#3e3e42';
-const ROAD_NIGHT = '#26262a';
 const ROAD_LINE = '#f4f1e6';
 const SKY_TOP = '#6fc2f0';
 const SKY_LOW = '#fbe6b4';
 const SKYLINE = '#a9c3cf';
-const SPLASH_LIGHT = '#fff8e6';
-const SPLASH_DARK = DARK;
+const SPLASH_BG = DARK; // ST0 part 6: the game's own first-screen colour, light and dark mode
 
 const OUT = 'app-assets';
 const FONT = "Inter, Verdana, 'DejaVu Sans', Arial, sans-serif";
@@ -131,8 +130,8 @@ const adaptiveBg = () => svg(ADAPT, ADAPT, greenGround(ADAPT, ADAPT));
 const adaptiveMono = () => svg(ADAPT, ADAPT, placed(216, 216, ADAPT_SIDE, { mono: '#ffffff' }));
 
 // Android 12+ splash icon, "with icon background" kind drawn into the picture: 288 dp canvas,
-// the visible part is the 192 dp circle in the middle. A green disc there holds the wheel, so it
-// reads on both the light and the dark splash colour.
+// the visible part is the 192 dp circle in the middle. A green disc there holds the wheel on the
+// dark splash colour.
 const splashIcon12 = () =>
   svg(
     288,
@@ -162,30 +161,20 @@ function road(w, h, top, col) {
     <rect y="${top}" width="${w}" height="${Math.max(2, dash * 0.6)}" fill="${GOLD_DARK}" opacity="0.7"/>${lines}`;
 }
 
-/** A splash screen of any size, sideways or square: icon, name, road. */
-function splash(w, h, dark) {
-  const bg = dark ? SPLASH_DARK : SPLASH_LIGHT;
-  const ink = dark ? CREAM : INK;
+/** A splash screen of any size, sideways or square: our icon alone in the middle, on #0f1a12. */
+function splash(w, h) {
   const m = Math.min(w, h);
-  // A square splash (iOS) is cropped to the screen's shape: keep everything in its middle band.
+  // A square splash (iOS) is cropped to the screen's shape: keep the icon in its middle band.
   const band = w === h ? m * 0.56 : m;
   const icon = band * 0.42;
   const cx = w / 2;
-  const cy = h / 2 - band * 0.12;
+  const cy = h / 2;
   const r = icon * 0.2;
   const tile = `<defs><clipPath id="t"><rect x="${cx - icon / 2}" y="${cy - icon / 2}" width="${icon}" height="${icon}" rx="${r}"/></clipPath>
     <radialGradient id="tg" cx="0.58" cy="0.48" r="0.62"><stop offset="0" stop-color="${GREEN_LIGHT}"/><stop offset="0.7" stop-color="${GREEN}"/><stop offset="1" stop-color="${GREEN_DEEP}"/></radialGradient></defs>
     <g clip-path="url(#t)"><rect x="${cx - icon / 2}" y="${cy - icon / 2}" width="${icon}" height="${icon}" fill="url(#tg)"/>
     ${placed(cx, cy, icon * 0.9)}</g>`;
-  const roadTop = w === h ? h / 2 + band / 2 - band * 0.08 : h * 0.9;
-  return svg(
-    w,
-    h,
-    `<rect width="${w}" height="${h}" fill="${bg}"/>
-    ${w === h ? '' : road(w, h, roadTop, dark ? ROAD_NIGHT : ROAD)}
-    ${tile}
-    ${wordmark(cx, cy + icon / 2 + band * 0.2, band * 0.15, ink)}`,
-  );
+  return svg(w, h, `<rect width="${w}" height="${h}" fill="${SPLASH_BG}"/>${tile}`);
 }
 
 /** Play feature picture, 1024 x 500: sky, far skyline, road, the Wheel rolling, the name. */
@@ -324,17 +313,14 @@ const colours = (bg) => `<?xml version="1.0" encoding="utf-8"?>
     <color name="splash_background">${bg}</color>
 </resources>
 `;
-files.push([`${OUT}/android/res/values/gbese_colours.xml`, colours(SPLASH_LIGHT)]);
-files.push([`${OUT}/android/res/values-night/gbese_colours.xml`, colours(SPLASH_DARK)]);
+// One colour file: ST0 part 6 keeps the splash the same in dark mode, so no values-night.
+files.push([`${OUT}/android/res/values/gbese_colours.xml`, colours(SPLASH_BG)]);
 
-// Android sideways splash pictures (older phones, and Capacitor's splash plugin), light and dark.
+// Android sideways splash pictures (older phones, and Capacitor's splash plugin). One set for
+// light and dark mode (ST0 part 6), so no -night folders.
 const LAND = { mdpi: [480, 320], hdpi: [800, 480], xhdpi: [1280, 720], xxhdpi: [1600, 960], xxxhdpi: [1920, 1280] };
-for (const [d, [w, h]] of Object.entries(LAND)) {
-  add(`${OUT}/android/res/drawable-land-${d}/splash.png`, splash(w, h, false), w, h, true);
-  add(`${OUT}/android/res/drawable-land-night-${d}/splash.png`, splash(w, h, true), w, h, true);
-}
-add(`${OUT}/android/res/drawable/splash.png`, splash(1920, 1280, false), 1920, 1280, true);
-add(`${OUT}/android/res/drawable-night/splash.png`, splash(1920, 1280, true), 1920, 1280, true);
+for (const [d, [w, h]] of Object.entries(LAND)) add(`${OUT}/android/res/drawable-land-${d}/splash.png`, splash(w, h), w, h, true);
+add(`${OUT}/android/res/drawable/splash.png`, splash(1920, 1280), 1920, 1280, true);
 
 // Store uploads.
 add(`${OUT}/store/play-icon-512.png`, fullIcon('square', 0.06), 512, 512, true);
@@ -370,19 +356,14 @@ files.push([
 ]);
 
 // iOS launch picture: one square 2732 picture, shown "aspect fill" by the launch screen, so it
-// fits any phone or iPad held sideways. Light and dark.
+// fits any phone or iPad held sideways. One picture for light and dark mode (ST0 part 6).
 const splashSet = `${OUT}/ios/Splash.imageset`;
-add(`${splashSet}/splash-2732x2732.png`, splash(2732, 2732, false), 2732, 2732, true);
-add(`${splashSet}/splash-2732x2732-dark.png`, splash(2732, 2732, true), 2732, 2732, true);
-const dark = [{ appearance: 'luminosity', value: 'dark' }];
+add(`${splashSet}/splash-2732x2732.png`, splash(2732, 2732), 2732, 2732, true);
 files.push([
   `${splashSet}/Contents.json`,
   `${JSON.stringify(
     {
-      images: ['1x', '2x', '3x'].flatMap((scale) => [
-        { filename: 'splash-2732x2732.png', idiom: 'universal', scale },
-        { appearances: dark, filename: 'splash-2732x2732-dark.png', idiom: 'universal', scale },
-      ]),
+      images: ['1x', '2x', '3x'].map((scale) => ({ filename: 'splash-2732x2732.png', idiom: 'universal', scale })),
       info: { author: 'xcode', version: 1 },
     },
     null,
