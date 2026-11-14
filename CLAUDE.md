@@ -12,7 +12,7 @@ How work flows:
 3. art makes the pictures and sounds the note asks for.
 4. gamedev builds.
 5. qa tests every task, on a slow phone profile too. Nothing is done until qa passes it.
-6. Product questions go to po first. If the brief and decisions do not settle it, po writes it in docs/questions.md for Tp, with a recommended answer. Once Tp confirms an answer, the lead adds it to docs/decisions.md; Tp does not need to paste anything.
+6. Product questions go to po first. If the brief and decisions do not settle it, po writes it in docs/questions.md for Tp, with a recommended answer. Once Tp confirms an answer, the lead adds it to docs/decisions.md; Tp does not need to paste anything. Small choices that are easy to undo follow the team's recommendation and are reported to Tp in one line; big or hard-to-undo choices wait for Tp (decision 64).
 7. po accepts finished work after qa passes it.
 
 ## Rules for everyone

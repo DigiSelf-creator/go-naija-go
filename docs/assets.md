@@ -128,7 +128,7 @@ Owner: art. Every picture below is drawn in code on a canvas (no image files), s
 
 ## Sound
 
-All sounds are made in code with WebAudio in src/engine/sound.ts: original, no sound files, no outside licence. Soft sine and triangle tones plus a little filtered hiss, each under half a second (the win tune is about 1.5 s). Nothing plays until the first tap, and the sound button turns every one off.
+All sounds are made in code with WebAudio in src/engine/sound.ts: original, no sound files, no outside licence. Soft sine and triangle tones plus a little filtered hiss, each under half a second (the win tune is about 1.5 s). Nothing plays until the first tap, and the sound button turns every one off. To hear them all, open the game with `?sounds` on the address (a test board; the goat and bird calls are first).
 
 | Sound | What it is |
 |---|---|
@@ -136,7 +136,7 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | kobo | Shekere-style hiss tick with one soft high pling that dips |
 | food | "Yum" drum bend up and down, then a small sparkle |
 | bounce | Springy sine boing |
-| meeh | Friendly, wobbly two-part goat bleat |
+| meeh | Decision 62: the goat's cheerful "meeh" (0.45 s): a soft "m" hum, then a nasal sawtooth "eeh" through two narrow bands, with a quick 7.5 Hz wobble and a falling pitch. Plays when a goat is bumped, landed on, smashed with amala, or fed a fufu ball; at most one each 0.5 s. Silly, never pained |
 | smash | Soft thump, dust puff, tiny ping |
 | hit | One sagging "oof" bend |
 | shieldPop | Bubble pop: quick rise and a tick |
@@ -178,16 +178,14 @@ All sounds are made in code with WebAudio in src/engine/sound.ts: original, no s
 | fufuFarPlop | A ball drops into a big pit: a small far-off soft plop after a short wait |
 | fufuBonk | A tyre or drum knocked off the road: a rubbery "bonk" |
 | fufuPff | A throw popped in the hall (and the jam's "pfft"): a soft puff of low hiss |
-| goatChew | The goat eats a ball: three soft, muffled munches over 0.6 s, level in pitch |
-| goatMeeh | Then a happy "meeh": two slightly detuned tones that wobble together (play after goatChew) |
+| goatChew | The goat eats a ball: three soft, muffled munches over 0.6 s, level in pitch; then the goat says "meeh" |
 | strongStep | Amala heavy step: a low "dum", a sine from 90 to 60 Hz in 0.08 s at 30 percent; at most one every 0.18 s (`STRONG.stepGap`) |
 | strongSmash | Amala smash: a hearty "gbam", a low drum hit and a wood knock together |
 | strongPick | Amala pick-up: a deep two-note talking drum "gbe-dum" |
 | suitOn | Garri suit put-on: "tik-tik-tik-tum" over 0.4 s, three small clicks from the feet up and a soft low close |
 | suitBreak | Suit breaks: a short bright "krink" and three small falling "tink"s |
 | setHum(on) | The suit's hum while worn: two soft sines, 110 and 165 Hz, at 6 percent with a slow 0.4 Hz wobble; stops at once when Sound is off and comes back when on; the game turns it off on pause and a hidden tab (`Sound.setHum`, `Sound.humming`, `HUM_VOL`) |
-| crowKraa | Pied crow: a short rough "kraa" of filtered noise with a low nasal tone |
-| egretKrk | Cattle egret: a soft "krk-krk", two dry clicks |
+| hawk | Decision 62: the street 3 birds' "hawk hawk" (0.5 s): two raspy caws, the second a little lower. Each is a breathy "h", a rough sawtooth "aw" (a fast 38 Hz wobble through an open band, with band hiss) and a dry "k". Plays when an egret or crow takes off, whatever startled it; at most one call each 1.5 s. Replaces the old crow "kraa" and egret "krk-krk" |
 | birdFlap | A bird flies off: three soft low air puffs |
 | dashStart | Dash start: a quick wood block "tak-tak" |
 | dashSteps | Fast soft footsteps, four in 0.3 s (play each 0.3 s of the dash) |

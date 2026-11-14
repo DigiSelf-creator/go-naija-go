@@ -116,9 +116,9 @@ const ALL_SOUNDS: readonly SoundName[] = [
   'drumWake', 'drumBounce',
   'highHonk', 'hallLamp',
   'cogRatchet', 'cogBell', 'lockedTuk',
-  'lightDing', 'lightTick', 'lightClunk', 'fufuToss', 'fufuPlop', 'fufuHop', 'fufuRoll', 'fufuPlug', 'fufuFarPlop', 'fufuBonk', 'fufuPff', 'goatChew', 'goatMeeh',
+  'lightDing', 'lightTick', 'lightClunk', 'fufuToss', 'fufuPlop', 'fufuHop', 'fufuRoll', 'fufuPlug', 'fufuFarPlop', 'fufuBonk', 'fufuPff', 'goatChew',
   // birdFlap and weedsFsss are hiss only (no notes to check), so they are not in this list.
-  'strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'crowKraa', 'egretKrk', 'dashStart', 'dashSteps', 'dashReady',
+  'strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'hawk', 'dashStart', 'dashSteps', 'dashReady',
   'payChink', 'payBulb', 'payChip', 'built', 'collect', 'notEnough',
   'sting', 'step', 'boom', 'horn',
 ];
