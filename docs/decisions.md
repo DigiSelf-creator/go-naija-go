@@ -64,3 +64,5 @@ Added 14 Nov 2026 at Tp's request: lines 5 to 50, confirmed by Tp in chat betwee
 55. The "New version ready" prompt shows on the web test link only; the store app updates through the store. (ST-Q2, a; Tp, 14 Nov)
 56. The privacy page is a short page on the same site as the test link. (ST-Q3, a; Tp, 14 Nov)
 57. The store app is for iPhone only at first, not iPad. (ST-Q4, a; Tp, 14 Nov)
+58. With the subtitles, the moving intro runs about 44 s, so each of the six lines can be read calmly; a tap jumps ahead. The separate "That hero is you." line is dropped (caption 5 ends with it); "Let's go" stays the button. (city.md a2.12; Tp, 14 Nov)
+59. The store app turns phone backup off: the saved game stays on this phone only. (ST-Q5, a; Tp, 14 Nov)
