@@ -9,6 +9,15 @@ The new words are written in city.md W18, with the old-to-new table and qa's che
 - **TX-R3. Only Naira places pay tax.** Later places that earn Power or Tech (the phone charging kiosk, the repair stall) are not called tax; their words are written when those places are designed. Recommended: yes, "tax" in Power or Tech units would confuse a child.
 - One line for Tp: "The Mama Put and Market trays now say tax: 'Tax ₦1.20', 'Mama Put paid ₦1.20 tax!', and once: 'Busy shops pay a small tax. Lagos uses it to fix more.'"
 
+## designer, 15 Nov 2026: tilt to steer (decision 70; docs/design.md S3f0 part 25)
+
+The note for decision 70 is written, so gamedev can build it. Nothing here needs Tp before building: all four are small rulings, easy to undo (decision 64). The lead reports each to Tp in one line.
+
+- **TS-R1. Two switches, not one 3-way choice.** "Tilt to steer: off/on" sits under "Buttons instead of swipes: off/on" in Settings and on the lane Pause card. Recommended because tilt and buttons can be on together (tilt for lanes, ▲ ▼ for jump and slide), and on/off reads simpler for a 10-year-old. Default: off (swipes).
+- **TS-R2. Offer tilt once, at the start of the second lane run, not the first.** The first run teaches swipes, one thing at a time. A small card: "New: tilt your phone to change lane." / "Try tilt" / "No thanks". Only on phones that can tilt; never again after either answer.
+- **TS-R3. One fixed sensitivity, no Low / Normal / High.** Move at 15° past the held angle, re-arm under 8°, dead zone 5°. One fewer choice; designer retunes the numbers if qa's first-timers find it too stiff or too jumpy.
+- **TS-R4. Swipes left and right still work while tilt is on,** as swipes still work while buttons show. A way out if tilt feels wrong mid-run.
+
 ## designer, 15 Nov 2026: the challenge road (S3e0, docs/design.md "S3e0. The challenge road, with W17 C")
 
 The full note for city.md (e) with W17 C is written, so S3e1a (art) and S3e1b (gamedev) can start. It is built on the recommended answer below; a different answer changes only the lines marked CR-Q1 in the note.

@@ -1994,6 +1994,7 @@ The challenge road (S3e1) is not built yet, so for now the lane run is started f
 - **A swipe** counts once the finger has moved 24 px in one direction within 0.3 s; it fires at that moment, not when the finger lifts. The bigger of the two directions wins. One swipe, one move: the finger must lift before the next swipe counts. A tap with no swipe does nothing. Swipes work anywhere on the screen except on the top HUD row and on buttons.
 - **Buttons:** each 56 x 56 px, 8 px apart, 8 px inside the safe edges, each with its arrow drawn as a shape and a spoken name ("Left lane", "Right lane", "Jump", "Slide"). A press fires on touch down. Holding does not repeat. When "Swap sides" comes (decision 20), ▲ ▼ go left and ◀ ▶ go right.
 - **The switch** "Buttons instead of swipes: off" / "...: on" sits in Settings and on the lane run Pause card. It counts at once. Swipes still work while buttons show.
+- **Tilt to steer** (decision 70): a second switch, "Tilt to steer: off" / "...: on", changes lanes by tilting the phone. All of it is in part 25.
 - **Keys** work whatever the switch says. Holding a key does not repeat.
 - **Moves queue:** one move pressed during a lane change or a jump waits and runs as soon as it can (at most one waiting; a newer press replaces it).
 - **Gentle mode** uses the same controls. It changes only the Blackout and the speed (part 10).
@@ -2357,6 +2358,168 @@ The lane run makes Power and Tech real, so the packed layout from W15 and W16 is
 17. Sounds and the tune by ear: our own, not like any lane runner's or any known song; the corn tune plays over the lane tune.
 18. city.md 2B "What we must NOT copy" (all 11) and city.md part 6 pass; nothing from Mario or any Nintendo game.
 19. Part 22 at 320 x 240 with all three buckets.
+
+### 25. Tilt to steer (designer, 15 Nov 2026; decision 70)
+
+Tp, 15 Nov, after playing the Android test app (decision 70): the lane run can be steered by tilting the phone. Tilt left or right changes lane; swipes or buttons still jump and slide. Everything in parts 1 to 24 stands; this part adds to parts 3, 14, 18 and 20. The small rulings TS-R1 to TS-R4 are in docs/questions.md ("designer, 15 Nov 2026: tilt to steer"); this part is built on their recommended answers.
+
+**25.1 The controls setting (TS-R1).** Two separate switches, one under the other, each a plain on/off sentence. No 3-way choice: tilt and buttons can be on together (tilt for lanes, ▲ ▼ for jump and slide), and on/off is easier for a 10-year-old than picking one of three.
+
+| Switch | Default | Where |
+|---|---|---|
+| "Buttons instead of swipes: off" / "...: on" | off (as now) | Settings and the lane Pause card (as now) |
+| **"Tilt to steer: off" / "Tilt to steer: on"** (new) | **off** | Settings and the lane Pause card, right under "Buttons instead of swipes". Shown only on a phone that can tilt (25.5) |
+
+So the default is swipes. What each mix does:
+
+| Buttons | Tilt | Lane left and right | Jump and slide |
+|---|---|---|---|
+| off | off | swipe left / right | swipe up / down |
+| on | off | ◀ ▶ buttons, or swipe | ▲ ▼ buttons, or swipe |
+| off | on | **tilt**, or swipe left / right | swipe up / down |
+| on | on | **tilt**, or swipe left / right; the ◀ ▶ buttons hide | ▲ ▼ buttons (bottom right, same place), or swipe |
+
+- Keys always work, whatever the switches say (part 3).
+- Swipes left and right still work while tilt is on (TS-R4), just as swipes still work while buttons show. Tilt moves and swipes share the one move queue (part 3: at most one waiting, a newer one replaces it).
+- A switch change counts at once. Turning tilt on from the Pause card calibrates on the "3, 2, 1" after "Keep playing".
+- Not on the streets' Pause card: the streets have no lanes.
+
+**Offering tilt once (TS-R2).** The first lane run does **not** offer tilt: it teaches swipes, one thing at a time. At the start of the player's second lane run (save `lane.runs` is 1 or more), on a phone that can tilt, with tilt off and the offer never shown, one small card shows before "3, 2, 1":
+
+- "New: tilt your phone to change lane." / "You can still swipe to jump and slide." / big **"Try tilt"**, small "No thanks".
+- iPhone only, under the words: "Your phone will ask first. Tap Allow."
+- "Try tilt" turns the switch on (and on iPhone asks, 25.4). "No thanks" leaves it off. Either way the card never shows again (`lane.tiltOffered: true`). Android back counts as "No thanks".
+
+**25.2 How tilt feels**
+
+The run is played sideways (part 15). The player steers like a steering wheel: lower the right side of the phone to go right, the left side to go left.
+
+| Value | Number |
+|---|---|
+| What is measured | the steering angle: `beta` from `deviceorientation`, in degrees, flipped by which way the phone is turned (below) |
+| Smoothing | the angle is eased over 0.08 s (a simple low-pass), so a shaky hand does not twitch |
+| Centre | the angle the player holds the phone at, taken at "3, 2, 1" (below), never "flat" |
+| Dead zone | within **5°** of centre nothing happens, and the centre slowly follows the hand (25 percent of the way to the reading each second), so a slow slump in the seat never steers |
+| Move one lane | the angle goes **15°** or more past centre, left or right: one lane change, at that moment |
+| Holding | holding the tilt does **not** keep moving. One tilt, one lane |
+| Re-arm | the angle comes back within **8°** of centre; then the next tilt counts. The 7° gap between 15° out and 8° back is the hysteresis, so a wobble near 15° never fires twice |
+| Two lanes | tilt, back to centre, tilt again. The fastest two moves are about 0.25 s apart; both go through the move queue |
+| Tilt held for 2 s | if the angle stays 15° or more past centre for 2 s, that angle becomes the new centre (the player has changed how they sit). This makes no move |
+| Very big tilt | still one lane. Angles past 60° from centre count as 60° |
+| From the edge lane | tilting further toward the kerb does nothing (the same as a swipe into the kerb) |
+
+**Sensitivity (TS-R3): one fixed value, no Low / Normal / High.** One fewer choice for a 10-year-old. 15° out and 8° back is a small, clear turn of the wrists. If qa's first-timers find it too stiff or too jumpy (25.10 check 2), designer changes the numbers here, not the rules; a choice comes only if no one number suits them.
+
+**Calibrating on "3, 2, 1".** Every start and every resume already counts "3, 2, 1" (parts 14 and 18). With tilt on:
+- Under the count, one line: **"Hold your phone the way you like."**
+- The centre is the average smoothed angle over the last 0.5 s before "Go!". Tilt makes no move until "Go!".
+- This happens at the start of every run, "Start again", "Run again", "Keep running for more", and every resume (from Pause, the background, a call, the sideways card).
+- "3, 2, 1" is not made longer for tilt.
+
+**Landscape left and landscape right.** The phone can be turned either way (the sideways card shows only when it is upright).
+- Read the turn from `screen.orientation.angle` (or `window.orientation` on older iPhones: 90 is 90, −90 is 270).
+- Turned to **90**: steering angle = `beta`; bigger means right (the left end of the phone goes up).
+- Turned to **270**: steering angle = −`beta`.
+- 0 or 180 (upright): the sideways card shows and the run is paused, as now; tilt is ignored.
+- If the phone flips from 90 to 270 during a run, tilt is ignored for 0.3 s and the centre is taken again the new way round. The flip makes no move.
+- gamedev checks the sign on a real Android phone and a real iPhone, both ways round; qa checks 1f and 2 prove it.
+
+**25.3 Jump and slide.** Jump and slide never use tilt. They stay on swipe up and swipe down, on ▲ and ▼ when buttons are on, and on the keys. Tipping the phone forward or back does nothing.
+
+**25.4 Permission to use motion**
+
+| Where | Asks? | When |
+|---|---|---|
+| iPhone, Safari (the web test link) | yes, Apple's own box | only straight after one of the taps below |
+| iPhone, the store app (decision 57) | yes, the same box from the app's web view | the same taps. gamedev makes the web view ask (the default "prompt"), never grant by itself |
+| Android, Chrome (the web test link) | no | tilt works as soon as the switch is on |
+| Android, the store app | no | the same |
+
+**iPhone: the taps that ask.** `DeviceOrientationEvent.requestPermission()` is called inside the tap handler, never on load or on a timer:
+1. Turning "Tilt to steer" on, in Settings or on the lane Pause card.
+2. "Try tilt" on the offer card (25.1).
+3. When tilt is already on but this visit has not asked yet (Safari forgets when it is closed): the tap that starts or resumes a lane run ("Lane run" on any card or stop, "Run again", "Start again", "Keep playing"). If the phone already said yes this visit, nothing shows.
+
+Our words, under the switch and on the offer card, iPhones only, before the box: **"Your phone will ask first. Tap Allow."** Apple's box has its own words (about "Motion and Orientation", with "Cancel" and "Allow"); we cannot change them, so our line says which to tap.
+
+**If the phone says no** (Cancel, or motion is turned off for the app):
+- The switch goes back to **"Tilt to steer: off"**, and under it: **"Your phone said no to tilt, so swipes are on."** then **"To try again, close the game and open it again."** (Safari asks only once per visit.)
+- In the store app, only if iOS will not ask again: **"To try again, allow Motion for Gbese! in your phone's Settings."** (gamedev checks which one iOS does.)
+- If the no came from a run's start tap (3. above): the run plays with swipes, and the hint bar shows "Your phone said no to tilt, so swipes are on." for 3 s. The save keeps tilt on, so the next visit asks again from a tap; after two noes in a row (`lane.tiltNoes` is 2), the save turns tilt off.
+
+**If the sensor stops** (tilt is on, but no reading comes for 1 s during play): swipes carry on as always, and the hint bar shows once per run **"Tilt is not working. Swipe to change lane."** Tilt comes back by itself if readings come back, with a fresh centre at the next "3, 2, 1".
+
+**Privacy (CLAUDE.md rule 5).** Motion readings are used on the phone, only to steer, only while a lane run is playing. They are never saved, sent, logged or shared. The centre angle lives in memory for that run only. The only things saved are the switch and the offer marks (Saves, below). No network call. Under the switch in Settings, one small line: **"Tilt is only used to steer. Nothing is saved or sent."**
+
+**25.5 Computers and phones with no sensor.** The "Tilt to steer" switch and the offer card show only on a phone that can tilt:
+- iPhone: a touch screen (`pointer: coarse`) and `DeviceOrientationEvent.requestPermission` exists.
+- Android and the rest: a touch screen, and a `deviceorientation` event with a number for `beta` arrives within 1.5 s of opening the game (a quiet listener, removed after that). A computer that sends one event with no numbers does not count.
+- Otherwise the switch is hidden, not greyed out. A saved "on" is kept but treated as off, and the run plays with swipes, buttons and keys as now.
+
+**25.6 Pause, background and the sideways card.** Tilt is read only while the run is playing, between "Go!" and a pause, a card or the end.
+- Paused, on any card (goal, caught, Pause, "Leave the game?", the offer), in the background, on a call, or on the sideways card: readings are ignored and the listener is taken off, so the phone does no extra work.
+- Back to playing: the normal "3, 2, 1" with "Hold your phone the way you like." and a fresh centre.
+- A tilt during "3, 2, 1" never makes a move, even past 15°.
+
+**25.7 Access**
+- **Reduced motion is not changed by tilt.** Tilt is a way to steer, not something moving on the screen; all of part 18 stays.
+- Tilt is never needed: swipes, buttons and keys all still steer. A player who cannot hold a phone steady keeps tilt off (the default).
+- **Screen readers:** the switch is a switch named "Tilt to steer", on or off. When a run starts with tilt on, a polite spoken line, once: **"Tilt your phone left or right to change lane. Swipe up to jump, down to slide."** (with buttons on: "Tilt your phone left or right to change lane. Use Jump and Slide to jump and slide."). The line under "3, 2, 1" is spoken too.
+- Never colour alone: the switch says "on" or "off" in words.
+- No shaking and no fast flicks: one gentle tilt makes one move.
+
+**25.8 Hints.** With tilt on, the change-lane hint (part 8) becomes **"Tilt your phone left or right to change lane."** It shows once, on the first run with tilt on, even if the swipe hint was seen before (hint key `tilt`). The other hints stay as now, in the player's own way (swipes, buttons or keys).
+
+**25.9 Exact words (new; in words.ts `lane`)**
+
+| Key | Words |
+|---|---|
+| `tiltOff` / `tiltOn` | "Tilt to steer: off" / "Tilt to steer: on" |
+| `tiltPrivacy` | "Tilt is only used to steer. Nothing is saved or sent." |
+| `tiltAskFirst` (iPhone only) | "Your phone will ask first. Tap Allow." |
+| `tiltDenied` | "Your phone said no to tilt, so swipes are on." |
+| `tiltRetry` (iPhone Safari) | "To try again, close the game and open it again." |
+| `tiltRetryApp` (iPhone app, only if needed) | "To try again, allow Motion for Gbese! in your phone's Settings." |
+| `tiltLost` | "Tilt is not working. Swipe to change lane." |
+| `tiltHold` (under "3, 2, 1") | "Hold your phone the way you like." |
+| `hints.tilt` | "Tilt your phone left or right to change lane." |
+| `tiltOfferHeading` | "New: tilt your phone to change lane." |
+| `tiltOfferLine` | "You can still swipe to jump and slide." |
+| `tiltOfferYes` / `tiltOfferNo` | "Try tilt" / "No thanks" |
+| `tiltSpoken` | "Tilt your phone left or right to change lane. Swipe up to jump, down to slide." |
+| `tiltSpokenButtons` | "Tilt your phone left or right to change lane. Use Jump and Slide to jump and slide." |
+
+Every line fits 320 x 240 on one or two lines. "Gbese!" is the app name (decision 39); if the name changes, this line follows it.
+
+**Layout.** Settings: the switch under "Buttons instead of swipes", 44 px tall, the full width of the column; the privacy line and (iPhone) the ask line under it in 12 px. Lane Pause card: the switch under "Buttons instead of swipes", 44 px tall; the card scrolls if it is taller than the screen, as now, with "Keep playing" first and on screen when the card opens. The offer card follows part 15's card rules (at most 300 x 220, big button at least 56 px tall, small at least 44 x 44).
+
+**Saves (part 20).** Settings gain `tiltToSteer: false`, under its own key like `buttonsInsteadOfSwipes`. The `lane` part gains `tiltOffered: false` and `tiltNoes: 0`. Merged in; a missing or broken value starts at its default. No angle is ever saved.
+
+**Build notes for gamedev.** A pure `TiltReader` in src/lane/input.ts beside `SwipeReader`, so the rules can be unit tested: `calibrate()`, `read(angleDeg, tMs): LaneMove | null`, `pause()`, with the numbers above as named constants (`TILT_FIRE_DEG = 15`, `TILT_REARM_DEG = 8`, `TILT_DEAD_DEG = 5`, `TILT_FOLLOW_PER_S = 0.25`, `TILT_SMOOTH_S = 0.08`, `TILT_RECENTRE_S = 2`, `TILT_MAX_DEG = 60`, `TILT_LOST_S = 1`). One `deviceorientation` listener, added at "3, 2, 1" and removed at a pause; nothing made new per event. Under 2 KB of code.
+
+**25.10 Done checks for qa**
+1. **Simulated tilt (Playwright, every build).** Send readings from the test with `window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { alpha: 0, beta, gamma: 0 }))` every 16 ms, with `screen.orientation.angle` stubbed to 90 and, for the iPhone path, `DeviceOrientationEvent.requestPermission` stubbed to resolve "granted" or "denied". Each reading is held 0.2 s unless said:
+   a. beta 20 during "3, 2, 1" makes the centre 20; no move during the count, even at beta 40.
+   b. After "Go!": 24 does nothing; 33 does nothing; 36 moves one lane right; holding 36 for 1.9 s makes no second move.
+   c. Back to 27 re-arms, and 36 moves right again. Back to 29 does not re-arm, and 36 then does nothing.
+   d. Back to 20, then 4 moves one lane left.
+   e. Back to 20, then 36 moves right; holding it for 2 s makes 36 the new centre with no move; then 52 moves right.
+   (The numbers leave about 1° for the slow centre follow in the dead zone.)
+   f. With the angle stubbed to 270, the same readings move the other way.
+   g. A flip from 90 to 270 during play makes no move.
+   h. Paused, on any card and on the sideways card, readings make no move; resuming takes a fresh centre.
+   i. No readings for 1 s during play: "Tilt is not working. Swipe to change lane." shows once, and swipes still steer.
+   j. Stubbed "denied": the switch shows "Tilt to steer: off" with the two denied lines; the run plays with swipes.
+   k. The `TiltReader` unit test covers a to g with no browser.
+2. **On real phones:** a cheap Android phone (web link and app) and an iPhone (Safari and app), both ways round: lowering the right side goes right. Three first-timers (one aged 9 to 12) call the tilt "easy" or "OK", not "too hard" or "too jumpy", and reach the bus stop within 3 tries with tilt on.
+3. **Permission on iPhone:** the box only ever shows straight after a tap on the switch, "Try tilt", or a run's start or resume button; never on load, on a timer or mid-run. Cancel turns the switch off with the denied lines, and the run plays with swipes. Allow works at once.
+4. **Android (web and app):** no box ever; tilt works as soon as the switch is on.
+5. **Computers and phones with no sensor:** no "Tilt to steer" switch in Settings or on Pause and no offer card (desktop Chrome, Firefox and Safari; a phone emulator with no sensor). A saved `tiltToSteer: true` plays with swipes.
+6. **The offer:** not on the first lane run; on the second, once, before "3, 2, 1", only on a phone that can tilt; "Try tilt", "No thanks" and Android back all stop it coming back.
+7. **Mixes:** all four rows of the 25.1 table. With buttons and tilt on, ◀ ▶ hide and ▲ ▼ work; swipes left and right still work with tilt on; keys always work; tilt never jumps or slides.
+8. **Privacy:** no network call during a run with tilt on; the save holds only `tiltToSteer`, `tiltOffered` and `tiltNoes`, never an angle.
+9. **Access:** reduced motion behaves exactly as part 18 with tilt on or off; the switch is read as "Tilt to steer", switch, on or off; the spoken start line plays once per run with tilt on; the switch is at least 44 px tall at 320 x 240; every word matches 25.9 and fits 320 x 240 and 640 x 200.
+10. **Light:** with tilt on, the frame rate stays within part 21 on the slow phone profile; at most 2 KB more code; no tilt events handled while paused or in the background.
 
 ## S3e0. The challenge road, with W17 C (designer, 15 Nov 2026)
 
