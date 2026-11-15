@@ -100,6 +100,8 @@ export function clearZones(level: Level): Span[] {
   for (const c of level.coins) if (c.y > gy - 40) add(c.x - 20, c.x + 20);
   for (const f of level.foods) if (f.y > gy - 40) add(f.x - 20, f.x + 20);
   for (const q of level.gutters) add(q.x - 20, q.x + q.w + 20);
+  // O3b: a crack and its sign 120 u before it (it opens into a pothole).
+  for (const c of level.cracks) add(c.x - 150, c.x + c.w + 40);
   // The start fence, the checkpoint bus stop and the bus park have their own people (part 5).
   if (Number.isFinite(level.startWall)) add(level.startWall - 100, level.startWall + 110);
   add(level.checkpoint - 70, level.checkpoint + 170);
@@ -179,6 +181,8 @@ export interface StreetCast {
   readonly welcome?: { readonly to: number; readonly lines: Lines };
   /** People who stand at their own spots (the travellers by the arch). */
   readonly extras?: readonly { readonly x: number; readonly look: FolkLook; readonly flip?: boolean }[];
+  /** O3b: the street's well room keeper (his look, room x and words on the parcel), or the Lagos one. */
+  readonly keeper?: { readonly look: FolkLook; readonly x: number; readonly words: string };
 }
 
 /** O2b: a later state's cast, as streetCast (its looks then the bus park's, without the player's look). */
@@ -724,7 +728,7 @@ export class RoomKeeper {
   private clapAt = -Infinity;
   bubble: Bubble | null = null;
   still = false;
-  update(dt: number, events: readonly CrowdEvent[], groundY: number): void {
+  update(dt: number, events: readonly CrowdEvent[], groundY: number, own?: StreetCast['keeper']): void {
     this.time += dt;
     const t = this.time;
     if (this.bubble) {
@@ -735,7 +739,7 @@ export class RoomKeeper {
       if (e.type === 'room' || e.type === 'wellUp') this.waveAt = t;
       if (e.type === 'parcel') {
         this.clapAt = t;
-        this.bubble = { text: WORDS.folk.storeKeeper, x: STORE_KEEPER_SPOT.x + 4, y: groundY - CROWD.feetUp - 32, left: 2.4, who: 0 };
+        this.bubble = { text: own?.words ?? WORDS.folk.storeKeeper, x: (own?.x ?? STORE_KEEPER_SPOT.x) + 4, y: groundY - CROWD.feetUp - 32, left: 2.4, who: 0 };
       }
       if (e.type === 'hit' || e.type === 'fall') this.bubble = null;
     }

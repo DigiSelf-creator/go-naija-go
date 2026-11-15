@@ -14,6 +14,7 @@ import type { CrateState } from './crates';
 import type { FoodKind, Level } from './level';
 import type { GamePeople } from './people';
 import type { Run, RunEvent } from './run';
+import type { RoomData } from './well';
 
 type G = CanvasRenderingContext2D;
 
@@ -62,6 +63,12 @@ export interface StreetSkin {
   front?(g: G, s: SkinNow): void;
   /** What happened this step. */
   hear?(events: readonly SkinEvent[], s: SkinNow): void;
+  /** O3b: the well room's back and shelves (room units). False: the Lagos room. */
+  room?(g: G, room: RoomData, camX: number, viewW: number, time: number, viewH: number, still: boolean): boolean;
+  /** O3b: the room's gift on its shelf. False: the game's garri parcel. */
+  gift?(g: G, x: number, y: number, time: number): boolean;
+  /** O3b: the HUD parcel chip's icon, centred at (x, y), about `size` across. */
+  parcelIcon?(g: G, x: number, y: number, size: number): void;
   /** A fresh play of the street (start, Play again). */
   restart?(): void;
   /** The street's own people (design.md "People everywhere"), or none for the Lagos casts. */

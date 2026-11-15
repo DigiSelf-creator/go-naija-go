@@ -318,7 +318,7 @@ export class Game {
   /** A food on the road: the skin's own (ikokore, Ijebu garri), else the game's. */
   private drawFoodNow(g: CanvasRenderingContext2D, kind: Level['foods'][number]['kind'], x: number, y: number, t: number): void {
     if (this.skinDo((k) => k.food?.(g, kind, x, y, t))) return;
-    if (kind !== 'ikokore') drawFood(g, kind, x, y, t);
+    if (kind !== 'ikokore' && kind !== 'ofada') drawFood(g, kind, x, y, t);
   }
   /** One object, filled again each call (no garbage a step). */
   private readonly folkNow = {} as PeopleNow;
@@ -883,15 +883,18 @@ export class Game {
     const h = run.hero;
     g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
     g.translate(-camX, 0);
-    drawWellRoom(g, camX, W, calm, H);
-    for (const p of room.terrain.platforms) drawShelf(g, p.x, p.y, p.w);
+    // O3b: a later state's street brings its own room (Ogun's Ijebu garri store).
+    if (!this.skinDo((k) => k.room?.(g, room, camX, W, calm, H, this.still))) {
+      drawWellRoom(g, camX, W, calm, H);
+      for (const p of room.terrain.platforms) drawShelf(g, p.x, p.y, p.w);
+    }
     // S3g1b (PE-R4): the store keeper by the back wall, and feet passing over a light hole.
     const folk = this.peopleNow();
     this.people?.drawRoom(g, view, folk);
     for (const c of play.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
     if (play.crates.length > 0) this.drawCrates(g, play.crates, camX, L, R, lift, false);
     const gift = play.gift;
-    if (gift && !gift.taken) drawGarriParcel(g, gift.x, gift.y, calm);
+    if (gift && !gift.taken && !this.skinDo((k) => k.gift?.(g, gift.x, gift.y, calm))) drawGarriParcel(g, gift.x, gift.y, calm);
     // The bucket that brought the hero down: it lands, then is pulled back up (gone at once if still).
     if (run.phase === 'roomIn') drawRoomRope(g, room.entryX, h.y - 9, 0);
     else if (run.phase === 'room' && !this.still && run.wellSteps < WELL_RULES.bucketBackSteps) {

@@ -139,10 +139,10 @@ export type LaneSoundName =
   | 'laneCaught';
 
 /**
- * O2b: Ogun's street sounds. Their recipes live in the lazy Ogun part (src/worlds/ogun/ota.ts,
- * OTA_SOUNDS), which calls addSounds when it loads. Until then playing one is silent.
+ * O2b, O3b: Ogun's street sounds. Their recipes live in the lazy Ogun part (ota.ts, abeokuta.ts:
+ * OTA_SOUNDS, ABEOKUTA_SOUNDS), which calls addSounds when it loads. Until then playing one is silent.
  */
-export type OgunSoundName = 'mudStepA' | 'mudStepB';
+export type OgunSoundName = 'mudStepA' | 'mudStepB' | 'crackRumble';
 
 export type SoundName = CoreSoundName | LaneSoundName | OgunSoundName;
 

@@ -292,7 +292,7 @@ export class GamePeople {
     const run = n.run;
     const back = this.watch.level;
     this.keeper.still = n.still;
-    this.keeper.update(dt, events, run.room?.room.groundY ?? 300);
+    this.keeper.update(dt, events, run.room?.room.groundY ?? 300, n.cast?.keeper);
     if (this.hall && run.boss) {
       this.hall.still = n.still;
       this.hall.backOff = back;
@@ -464,8 +464,10 @@ export class GamePeople {
     if (!this.on) return;
     const room = n.run.room?.room;
     if (!room) return;
-    this.roomSheet.ready([STORE_KEEPER], view.scale, 'keeper');
-    const d: FolkDraw = { look: 0, frame: this.keeper.frame(), x: STORE_KEEPER_SPOT.x, y: room.groundY - CROWD.feetUp, flip: false, size: 1 };
+    // O3b: a later state's room has its own keeper (Ogun's in the Ijebu garri store).
+    const own = n.cast?.keeper;
+    this.roomSheet.ready([own?.look ?? STORE_KEEPER], view.scale, own ? 'keeper|own' : 'keeper');
+    const d: FolkDraw = { look: 0, frame: this.keeper.frame(), x: own?.x ?? STORE_KEEPER_SPOT.x, y: room.groundY - CROWD.feetUp, flip: false, size: 1 };
     this.roomSheet.draw(g, d);
     this.drawn = [d];
     this.seen = 1;
