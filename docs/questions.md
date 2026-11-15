@@ -1,5 +1,14 @@
 # Open questions for the product owner
 
+## designer, 15 Nov 2026: tray money is tax (decision 71; docs/city.md W18)
+
+The new words are written in city.md W18, with the old-to-new table and qa's checks, so gamedev can apply them. Nothing waits for Tp: decision 71 settles the idea, and these are word and look choices that are easy to undo (decision 64; the lead reports each to Tp in one line).
+
+- **TX-R1. The bubble carries the word.** The tray bubble reads "Tax ₦1.20" (not only "₦1.20"). Recommended: yes. The bubble is what a player sees most, so it is where the idea sticks; it costs about 25 px of width, and qa re-runs the W15 and d5 sign-room tests at 320 x 240. Other way: keep the bubble as the amount, and say "tax" only in the hint and collect line.
+- **TX-R2. The collect line names who paid.** "Mama Put paid ₦1.20 tax!" rather than "Tax collected: ₦1.20". Recommended: the first. It shows a busy shop giving, not someone taking, so it reads warm and never heavy-handed, and it tells a child where the money came from. Both fit at 320 x 240.
+- **TX-R3. Only Naira places pay tax.** Later places that earn Power or Tech (the phone charging kiosk, the repair stall) are not called tax; their words are written when those places are designed. Recommended: yes, "tax" in Power or Tech units would confuse a child.
+- One line for Tp: "The Mama Put and Market trays now say tax: 'Tax ₦1.20', 'Mama Put paid ₦1.20 tax!', and once: 'Busy shops pay a small tax. Lagos uses it to fix more.'"
+
 ## designer, 15 Nov 2026: the challenge road (S3e0, docs/design.md "S3e0. The challenge road, with W17 C")
 
 The full note for city.md (e) with W17 C is written, so S3e1a (art) and S3e1b (gamedev) can start. It is built on the recommended answer below; a different answer changes only the lines marked CR-Q1 in the note.
