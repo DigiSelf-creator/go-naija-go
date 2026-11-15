@@ -128,13 +128,17 @@ async function buttonsFit(page: Page, at: string, safe = 0): Promise<void> {
     expect(r.card!.y + r.card!.h, `${at}: the card inside the bottom`).toBeLessThanOrEqual(r.vh - safe + 0.5);
   }
 }
-async function everySize(page: Page, name: string): Promise<void> {
+async function everySize(page: Page, name: string, safeEdges = true): Promise<void> {
   for (const size of SIZES) {
     await page.setViewportSize(size);
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await buttonsFit(page, `${name} ${size.width}x${size.height}`);
   }
-  // A phone with a notch and rounded corners: 24 px safe edges all round, at the smallest size.
+  if (safeEdges) await safeAt320(page, name);
+  await page.setViewportSize({ width: 851, height: 393 });
+}
+/** A phone with a notch and rounded corners: 24 px safe edges all round, at the smallest size. */
+async function safeAt320(page: Page, name: string): Promise<void> {
   await page.setViewportSize(SIZES[0]);
   await page.evaluate(() => {
     for (const s of ['top', 'right', 'bottom', 'left']) document.documentElement.style.setProperty(`--safe-${s}`, '24px');
@@ -145,7 +149,6 @@ async function everySize(page: Page, name: string): Promise<void> {
   await page.evaluate(() => {
     for (const s of ['top', 'right', 'bottom', 'left']) document.documentElement.style.removeProperty(`--safe-${s}`);
   });
-  await page.setViewportSize({ width: 851, height: 393 });
 }
 
 test.describe('O1c on the web, no service worker', () => {
@@ -367,10 +370,22 @@ test.describe('O1c on the web, no service worker', () => {
     await expect.poll(() => screenNow(page), { timeout: 15_000 }).toBe('ogun');
     await everySize(page, 'arrival card');
     await page.getByRole('button', { name: "Let's go" }).tap();
-    await everySize(page, "Ogun's place");
+    // The 24 px safe edges on Ogun's place are their own test below (O1c-5).
+    await everySize(page, "Ogun's place", false);
     test.info().annotations.push({ type: 'seen only after a scroll', description: scrolled.join(' | ') || 'none' });
     console.log(`seen only after a scroll: ${scrolled.join(' | ') || 'none'}`);
     expect(errors).toEqual([]);
+  });
+
+  test("o1c: Ogun's place keeps 24 px safe edges at 320 x 240", async ({ page }) => {
+    // Game bug O1c-5: .ogun-words (with O2b's "Play Ota") is 90% wide and centred, not inside
+    // --safe-left / --safe-right, so at 320 x 240 with 24 px edges its button starts at x = 16.
+    test.fail(true, "O1c-5: Ogun's place words box ignores the safe edges");
+    await open(page, ARRIVED, { 'gidi-busRide': 'false' });
+    await travel(page, 'lagos', 'ogun');
+    await downloadIfAsked(page);
+    await expect.poll(() => screenNow(page)).toBe('ogun');
+    await safeAt320(page, "Ogun's place");
   });
 
   test('o1c CO3: "Opening the road..." shows while the road is late, then the road comes', async ({ page }) => {
