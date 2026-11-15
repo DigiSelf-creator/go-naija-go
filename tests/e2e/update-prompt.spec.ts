@@ -268,3 +268,30 @@ test('the screens that fill the page start below it: intro, builder, city, wheel
   await expect.poll(() => screenNow(page)).toBe('wheel');
   await shot('wheel');
 });
+
+test('qa decision 68: the lane run\'s own result cards (the bus stop, caught) are result cards: the banner shows there', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await firstVisit(page, '?level=lagos-lane');
+  await startRun(page);
+  await expect.poll(() => page.evaluate(() => window.__lane?.stage), { timeout: 15_000 }).toMatch(/^(count|play)$/);
+  await newVersionMidRun(page);
+  await staysAway(page, ['play']);
+  // The bus stop: the win and the prize are saved at once, so a reload loses nothing.
+  await page.evaluate(() => {
+    window.__lane!.setGap(60);
+    window.__lane!.warp(592);
+  });
+  const goal = page.getByRole('dialog', { name: 'You made it to the bus stop!' });
+  await expect(goal).toBeVisible({ timeout: 10_000 });
+  await expect(banner(page)).toBeVisible({ timeout: 3000 });
+  await coversNothing(page);
+  // Caught after "Keep running": a result card too.
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await goal.getByRole('button', { name: 'Keep running for more' }).tap();
+  await expect.poll(() => page.evaluate(() => window.__lane?.stage), { timeout: 10_000 }).toBe('play');
+  await staysAway(page, ['play']);
+  await page.evaluate(() => window.__lane!.setGap(0.2));
+  await expect(page.getByRole('dialog', { name: /^The Blackout caught up at / })).toBeVisible({ timeout: 10_000 });
+  await expect(banner(page)).toBeVisible({ timeout: 3000 });
+  await coversNothing(page);
+});

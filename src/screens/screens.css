@@ -2261,13 +2261,11 @@ body.lane {
 }
 
 /* S3e0 the challenge road (src/screens/road.ts): a top row, then the road picture with its stops,
-   scaled by `s` (the .road's font-size is s px, so every em below is a road unit). */
+   scaled by `s` (the .road's font-size is s px, so every em below is a road unit). The sky fills
+   the screen edge to edge; the buttons and the road stay inside the safe edges. */
 .road-screen {
   position: fixed;
-  top: var(--safe-top);
-  right: var(--safe-right);
-  bottom: var(--safe-bottom);
-  left: var(--safe-left);
+  inset: 0;
   width: auto;
   max-width: none;
   max-height: none;
@@ -2275,13 +2273,13 @@ body.lane {
   border-radius: 0;
   box-shadow: none;
   overflow: hidden;
-  background: #bfe3f5;
+  background: linear-gradient(#9fd8f3, #fbe6b4);
 }
 .road-top {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
+  top: calc(var(--safe-top) + 8px);
+  left: calc(var(--safe-left) + 8px);
+  right: calc(var(--safe-right) + 8px);
   height: 44px;
   display: flex;
   align-items: center;
@@ -2299,16 +2297,23 @@ body.lane {
   gap: 6px;
   padding: 4px 10px;
 }
-.road-top svg,
-.road-arrow svg {
+.road-top svg {
   width: 16px;
   height: 16px;
   flex: none;
 }
+.road-ic {
+  display: inline-flex;
+  flex: none;
+}
+.road-top .road-ic {
+  width: 16px;
+  height: 16px;
+}
 .road-hint {
   position: absolute;
   z-index: 2;
-  top: 56px;
+  top: calc(var(--safe-top) + 56px);
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
@@ -2326,10 +2331,10 @@ body.lane {
 }
 .road-wrap {
   position: absolute;
-  top: 60px;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  top: calc(var(--safe-top) + 60px);
+  left: calc(var(--safe-left) + 8px);
+  right: calc(var(--safe-right) + 8px);
+  bottom: calc(var(--safe-bottom) + 8px);
 }
 .road-scroll {
   height: 100%;
@@ -2352,8 +2357,7 @@ body.lane {
   margin: auto;
   font-family: 'Trebuchet MS', Verdana, sans-serif;
 }
-.road-pic,
-.road-pic svg {
+.road-pic {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -2438,26 +2442,28 @@ body.lane {
   width: 1.45em;
   height: 1.45em;
 }
+/* Art's Next pennant (44 x 18): its left edge 46 in from the plate's right, 10 above its top;
+   the tick badge (20 x 20) centred on the top right corner, 4 in. */
 .road-next,
 .road-tick {
   position: absolute;
-  top: -1.25em;
-  right: -0.4em;
-  padding: 0 0.4em;
-  border: 2px solid #1d1a14;
-  border-radius: 0.8em;
-  background: #fffaf0;
-  font-size: 10em;
-  font-weight: bold;
-  line-height: 1.4;
+  display: flex;
+}
+.road-next {
+  top: -10em;
+  right: 2em;
 }
 .road-tick {
-  width: 1.4em;
-  height: 1.4em;
-  padding: 0;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
+  top: -6em;
+  right: -6em;
+}
+.road-next svg {
+  width: 44em;
+  height: 18em;
+}
+.road-tick svg {
+  width: 20em;
+  height: 20em;
 }
 .road-arrow {
   position: absolute;
@@ -2470,8 +2476,7 @@ body.lane {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: rgba(29, 26, 20, 0.85);
-  color: #fff;
+  background: none;
   cursor: pointer;
 }
 .road-arrow.l {
@@ -2486,7 +2491,7 @@ body.lane {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 8px;
+  padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 8px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 8px);
   background: rgba(10, 20, 12, 0.5);
 }
 .card.road-card {
@@ -2570,10 +2575,10 @@ body.lane {
     height: 48px;
   }
   .road-hint {
-    top: 60px;
+    top: calc(var(--safe-top) + 60px);
   }
   .road-wrap {
-    top: 64px;
+    top: calc(var(--safe-top) + 64px);
   }
 }
 @media (max-width: 640px), (max-height: 300px) {

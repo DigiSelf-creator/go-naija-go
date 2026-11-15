@@ -8,13 +8,14 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import lagos1 from '../../src/data/levels/lagos-1.json';
-import { FIRST_STRETCH, heldTo } from '../../src/art/firstLook';
+import { FIRST_SCREEN, firstStreetOf } from '../../src/art/firstLook';
 import { fitView } from '../../src/engine/view';
 import { emptyCity, readCity, type CityState } from '../../src/game/city';
 import { Game } from '../../src/game/game';
 import { parseLevel } from '../../src/game/level';
 import { readState, type StateProgress } from '../../src/game/progress';
-import { ROAD_ORDER, STOP_BOX, STOP_PAYS_FIX, openingStop, roadScale, stopCards, type RoadView, type StopInfo } from '../../src/screens/road';
+import * as ART from '../../src/art/road';
+import { CUTS, ROAD_ORDER, STOP_BOX, STOP_PAYS_FIX, openingStop, roadScale, stopCards, type RoadView, type StopInfo } from '../../src/screens/road';
 import { recorder } from './recorder';
 
 const names = ['Alausa', 'Computer Village', 'Ikeja'];
@@ -154,6 +155,13 @@ describe('the road layout (S3e0 part 4)', () => {
     expect(STOP_BOX[1][0]).toBe(144);
     for (const id of ROAD_ORDER) expect(STOP_BOX[id][0] + 112).toBeLessThanOrEqual(680);
   });
+
+  it("the boxes and cuts are art's (src/art/road.ts), in the same road order", () => {
+    const ids = ['alausa', 'lane', 'computerVillage', 'ikeja', 'hall', 'ferry'] as const;
+    expect(ART.ROAD_STOPS).toEqual(ids);
+    ROAD_ORDER.forEach((id, i) => expect(STOP_BOX[id]).toEqual(Object.values(ART.STOP_BOX[ids[i]!])));
+    expect(Object.values(CUTS).map((c) => [...c])).toEqual(Object.values(ART.CARD_CUTS).map((c) => Object.values(c)));
+  });
 });
 
 describe('W17 C: the first screen is scenery only (S3e0 part 6)', () => {
@@ -162,7 +170,7 @@ describe('W17 C: the first screen is scenery only (S3e0 part 6)', () => {
   function scripted(bright: boolean | null): string[] {
     const game = new Game(L1);
     game.begin(false, L1);
-    game.firstLook = bright === null ? null : { street: 0, name: 'Alausa', bright };
+    game.firstLook = bright === null ? null : { street: 'alausa', look: bright ? 'bright' : 'tired' };
     const v = fitView(320, 240, 1);
     game.setView(v);
     const out: string[] = [];
@@ -183,24 +191,22 @@ describe('W17 C: the first screen is scenery only (S3e0 part 6)', () => {
     expect(scripted(true)).toEqual(tired);
     expect(scripted(null)).toEqual(tired);
     // It really ran: past the stretch, with jumps.
-    expect(Number(tired.at(-1)!.split(',')[0])).toBeGreaterThan(FIRST_STRETCH[0]!.end);
+    expect(Number(tired.at(-1)!.split(',')[0])).toBeGreaterThan(FIRST_SCREEN.alausa.to);
     // Coins taken and a life lost on the way: kobo and lives really change.
     expect(new Set(tired.map((l) => l.split(',').slice(2).join())).size).toBeGreaterThan(5);
   });
 
-  it('the sign reads the street name; a tired stretch holds the fixed look back, a bright one never does', () => {
+  it('each street run reads its first screen; the sign reads the street name', () => {
+    expect(['lagos-1', 'lagos-2', 'lagos-3', 'lagos-hall', 'lagos-lane'].map(firstStreetOf)).toEqual(['alausa', 'computerVillage', 'ikeja', null, null]);
     const game = new Game(L1);
     game.begin(false, L1);
-    game.firstLook = { street: 0, name: 'Alausa', bright: false };
+    game.firstLook = { street: 'alausa', look: 'tired' };
     const v = fitView(320, 240, 1);
     game.setView(v);
     const r = recorder();
     game.render(r.g, v);
     expect(r.texts).toContain('Alausa');
     expect(r.bad).toEqual([]);
-    expect(heldTo({ street: 0, name: 'Alausa', bright: false }, 0)).toBe(760);
-    expect(heldTo({ street: 0, name: 'Alausa', bright: true }, 0)).toBe(0);
-    expect(heldTo(null, 0)).toBe(0);
   });
 
   it('the level files are unchanged', () => {

@@ -2,10 +2,10 @@
  * The challenge road (docs/design.md S3e0): the Streets screen became a road of Lagos bus stops.
  * stopCards() works out every stop's state, words and what a win is "for", with no DOM, so it is
  * unit tested; roadScreen() lays the road out, scrolls it and opens the stop card.
- * Plain shapes for now: art S3e1a draws the real road picture and card overlay.
+ * The pictures are art S3e1a's (src/art/road.ts), loaded when the road first opens.
  */
-import { drawCityBus } from '../art/city';
-import { drawHero, type HeroLook } from '../art/hero';
+import type { HeroLook } from '../art/hero';
+import type { RoadIcon, StopId as ArtStop } from '../art/road';
 import { cardSceneSvg } from '../art/cards';
 import type { BuildId } from '../art/payspot';
 import { shownBoom } from '../game/boom';
@@ -222,33 +222,15 @@ export function openingStop(stops: readonly StopInfo[], at: StopId | null | unde
 
 // ---------- The screen ----------
 
-const ICON: Record<string, string> = {
-  locked: '<rect x="3" y="7" width="10" height="8" rx="1"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2"/>',
-  bus: '<rect x="1" y="3" width="14" height="9" rx="2"/><circle cx="4.5" cy="13" r="1.8"/><circle cx="11.5" cy="13" r="1.8"/><rect x="3" y="5" width="4" height="3" fill="#fff"/><rect x="9" y="5" width="4" height="3" fill="#fff"/>',
-  done: '<path d="M2 8l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6"/>',
-  ferry: '<path d="M1 10h14l-3 4H4z"/><rect x="4" y="5" width="7" height="5"/><path d="M0 15.5h16" stroke="currentColor"/>',
-  parcel: '<rect x="2" y="5" width="12" height="9"/><path d="M2 8h12M8 5v9" stroke="#fff"/>',
-  home: '<path d="M1 8l7-6 7 6h-2v7H3V8z"/>',
-};
-const icon = (k: string): string => `<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">${ICON[k]}</svg>`;
-const STATE_ICON: Record<StopState, string> = { locked: 'locked', open: 'bus', next: 'bus', done: 'done', soon: 'ferry', built: 'ferry' };
-const ARROW = (d: string): string => `<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="${d}"/></svg>`;
-
-/** The road picture, plain shapes (art S3e1a draws the real one). */
-function roadSvg(jetty: boolean): string {
-  const shelters = [8, 144, 280, 416].map((x) => `<rect x="${x + 4}" y="84" width="104" height="6" fill="#6b5a45"/>`).join('');
-  return (
-    `<svg viewBox="0 0 ${ROAD_W} ${ROAD_H}" aria-hidden="true">` +
-    `<rect width="680" height="168" fill="#e3d3a8"/><rect x="200" y="10" width="70" height="56" fill="#d98c5f"/><rect x="290" y="22" width="90" height="44" fill="#8fb3d9"/>` +
-    `<rect x="400" y="16" width="60" height="50" fill="#e8c35a"/><rect x="34" y="50" width="6" height="30" fill="#7a5230"/><circle cx="37" cy="44" r="14" fill="#3f9a4a"/>` +
-    `<rect x="606" width="74" height="168" fill="#5fb0d6"/><rect y="152" width="610" height="16" fill="#5d5d63"/><path d="M0 160h606" stroke="#fff" stroke-width="1.5" stroke-dasharray="10 10"/>` +
-    `<rect x="120" y="64" width="24" height="90" fill="#5d5d63"/>` +
-    [72, 96, 120].map((y) => `<rect x="124" y="${y}" width="16" height="14" rx="3" fill="#f2b300" stroke="#1d1a14"/>`).join('') +
-    shelters +
-    (jetty ? '<rect x="600" y="120" width="56" height="10" fill="#9a6b3f"/><path d="M640 104h34l-6 12h-24z" fill="#fff" stroke="#1d1a14"/>' : '<rect x="604" y="124" width="6" height="20" fill="#9a6b3f"/><rect x="620" y="124" width="6" height="20" fill="#9a6b3f"/>') +
-    '</svg>'
-  );
-}
+type Art = typeof import('../art/road');
+let artLoad: Promise<Art> | null = null;
+/** Art S3e1a's road pictures (src/art/road.ts): loaded with the road screen, never with the first page. */
+export const roadArt = (): Promise<Art> => (artLoad ??= import('../art/road'));
+/** Our stop ids to art's. */
+const ART_ID: Record<string, ArtStop> = { 0: 'alausa', 1: 'computerVillage', 2: 'ikeja', hall: 'hall', lane: 'lane', ferry: 'ferry' };
+/** The icon each state shows (a shape for every state, part 3). */
+const STATE_ICON: Record<StopState, RoadIcon> = { locked: 'padlock', open: 'bus', next: 'bus', done: 'tick', soon: 'ferry', built: 'ferry' };
+const ic = (k: string): string => `<i class="road-ic" data-ic="${k}"></i>`;
 
 export interface RoadOpen {
   /** Open on this stop (from a city card, or after that stop's run). */
@@ -305,31 +287,55 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     }, { 'data-where': String(st.id), 'aria-label': st.spoken, 'aria-disabled': st.state === 'locked' ? 'true' : undefined, style: `left:${x}em;top:${y}em;width:${bw}em;height:${bh}em` });
     // The plate inside the button (the button's own box stays still while the Next plate bobs).
     b.innerHTML =
-      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? icon('parcel') : ''}</span><span class="road-st">${icon(STATE_ICON[st.state])}${st.status}</span>` +
+      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? ic('parcel') : ''}</span><span class="road-st">${ic(STATE_ICON[st.state])}${st.status}</span>` +
       (st.line3 ? `<span class="road-l3">${st.line3}</span>` : '') +
-      (st.state === 'next' ? `<span class="road-next">${w.next} ▶</span>` : st.state === 'done' || st.state === 'built' ? `<span class="road-tick">✓</span>` : '') +
+      (st.state === 'next' ? `<span class="road-next" data-ic="next"></span>` : st.state === 'done' || st.state === 'built' ? `<span class="road-tick" data-ic="tick"></span>` : '') +
       '</span>';
     return b;
   });
   const list = h('ol', { class: 'road-stops', 'aria-label': w.list }, ...btns.map((b) => h('li', {}, b)));
   const road = h('div', { class: 'road' }, list);
-  const pic = h('div', { class: 'road-pic' });
-  pic.innerHTML = roadSvg(shownBoom(v.city).boom);
+  const pic = h('canvas', { class: 'road-pic', 'aria-hidden': 'true' });
   road.prepend(pic);
+  const next = stops.find((x) => x.state === 'next');
+  let painted = '';
+  let art: Art | null = null;
+  /** The road picture, painted once at s x devicePixelRatio; again only when s changes. */
+  const paintRoad = (): void => {
+    const k = s * Math.min(window.devicePixelRatio || 1, 2);
+    const g = pic.getContext('2d');
+    if (!art || !g || painted === String(k)) return;
+    painted = String(k);
+    pic.width = Math.round(ROAD_W * k);
+    pic.height = Math.round(ROAD_H * k);
+    g.setTransform(k, 0, 0, k, 0, 0);
+    art.drawRoadPicture(g, { jetty: shownBoom(v.city).boom ? 'after' : 'before', next: next ? ART_ID[next.id]! : null });
+  };
   const scroller = h('div', { class: 'road-scroll' }, road);
   const arrow = (dir: -1 | 1): HTMLButtonElement => {
     const a = button('', `road-arrow ${dir < 0 ? 'l' : 'r'}`, () => scroller.scrollBy({ left: dir * 136 * s, behavior: hooks.still() ? 'auto' : 'smooth' }), { 'aria-hidden': 'true', tabindex: '-1' });
-    a.innerHTML = ARROW(dir < 0 ? 'M11 2L4 8l7 6z' : 'M5 2l7 6-7 6z');
+    a.dataset['ic'] = dir < 0 ? 'left' : 'right';
     return a;
   };
   const left = arrow(-1);
   const right = arrow(1);
   const wrap = h('div', { class: 'road-wrap' }, scroller, left, right);
   const home = button('', 'minor road-home', () => hooks.home());
-  home.innerHTML = `${icon('home')}<span>${w.home}</span>`;
+  home.innerHTML = `${ic('house')}<span>${w.home}</span>`;
   const hint = h('p', { class: 'road-hint', hidden: true, 'aria-live': 'polite' });
   const spot = h('div', { class: 'road-dim', hidden: true });
   const el = h('div', { class: 'card road-screen', role: 'region', 'aria-label': w.heading }, h('div', { class: 'road-top' }, home, h('h2', {}, w.heading), hooks.soundButton), hint, wrap, spot);
+  void roadArt()
+    .then((a) => {
+      art = a;
+      // The icons, the Next pennant, the tick badges and the edge arrows: art's shapes.
+      for (const e of el.querySelectorAll<HTMLElement>('[data-ic]')) {
+        const k = e.dataset['ic']!;
+        e.innerHTML = k === 'next' ? a.nextPennantSvg() : k === 'tick' ? a.tickBadgeSvg() : k === 'left' || k === 'right' ? a.edgeArrowSvg(k) : a.roadIconSvg(k as RoadIcon);
+      }
+      paintRoad();
+    })
+    .catch(() => undefined);
 
   const arrows = (): void => {
     const max = scroller.scrollWidth - scroller.clientWidth;
@@ -431,45 +437,23 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     const g = c.getContext('2d');
     if (!g) return;
     const cut = CUTS[st.cut as Exclude<CutId, 'hall'>];
-    const k = c.width / 112;
-    const over = (): void => {
-      g.save();
-      g.scale(k, k);
-      // The danfo-yellow stop sign with the stop's name, never cut.
-      g.font = "bold 11px 'Trebuchet MS', Verdana, sans-serif";
-      const tw = Math.min(100, g.measureText(st.name).width);
-      g.fillStyle = '#4b4f55';
-      g.fillRect(9, 20, 3, 40);
-      g.fillStyle = '#f2b300';
-      g.strokeStyle = '#1d1a14';
-      g.lineWidth = 1.5;
-      g.fillRect(4, 6, tw + 8, 16);
-      g.strokeRect(4, 6, tw + 8, 16);
-      g.fillStyle = '#1d1a14';
-      g.textBaseline = 'middle';
-      g.fillText(st.name, 8, 14.5, 100);
-      g.save();
-      g.translate(76, 60);
-      drawCityBus(g, 0, 0, 'w');
-      g.restore();
-      g.translate(50, 78);
-      g.scale(30 / 64, 30 / 64);
-      drawHero(g, hooks.look(), { phase: 0, inAir: false, facing: 1, glow: false, standing: true, time: 0 });
-      g.restore();
-    };
-    if (drawCityCut(g, v.city, cut, c.width, c.height, false)) return over();
-    // The still city is not painted yet: a sand box with the sign, the danfo and the hero first.
-    g.fillStyle = '#e6d4ae';
-    g.fillRect(0, 0, c.width, c.height);
-    over();
-    timer = window.setTimeout(() => {
-      if (cardEl?.contains(c) && drawCityCut(g, v.city, cut, c.width, c.height, true)) over();
-    }, 30);
+    void roadArt().then((a) => {
+      const over = (): void => a.drawCardOverlay(g, c.width, c.height, { name: st.name, hero: hooks.look(), still: hooks.still(), bus: st.id !== 'ferry' });
+      if (!cardEl?.contains(c)) return;
+      if (drawCityCut(g, v.city, cut, c.width, c.height, false)) return over();
+      // The still city is not painted yet: art's sand picture with the sign, the danfo and the hero first.
+      a.drawCardFallback(g, c.width, c.height);
+      over();
+      timer = window.setTimeout(() => {
+        if (cardEl?.contains(c) && drawCityCut(g, v.city, cut, c.width, c.height, true)) over();
+      }, 30);
+    });
   }
 
   const refit = (): void => {
     s = roadScale(wrap.clientWidth, wrap.clientHeight);
     road.style.fontSize = `${s}px`;
+    paintRoad();
     if (!fitted && wrap.clientWidth > 0) {
       fitted = true;
       const at = openingStop(stops, open.at);

@@ -34,6 +34,9 @@ import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from
 import type { Where } from './screens/streets';
 import type { StopId } from './screens/road';
 import { h } from './screens/dom';
+import { firstStreetOf } from './art/firstLook';
+/** S3e0 part 6: each street's first screen follows its city spot's fix. */
+const FIRST_FIX = { alausa: 'road', computerVillage: 'mast', ikeja: 'lamps' } as const;
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
@@ -78,6 +81,19 @@ if (query.get('gallery')?.startsWith('lane')) {
     const frame = (now: number): void => {
       g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
       drawLaneGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+} else if (query.get('gallery')?.startsWith('road')) {
+  // Debug only: the challenge road's pictures (S3e1a): ?gallery=road, road2 ... road8; &t=1.5 holds the time.
+  void import('./art/galleryRoad').then(({ drawRoadGallery }) => {
+    const t0 = performance.now();
+    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawRoadGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -269,7 +285,8 @@ function startGame(): void {
   // and the other screens.
   const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
   /** A run is being played or paused (the finish bus counts: the result card follows). */
-  const inRun = (): boolean => inAttempt(playing || lane !== null, menus.current);
+  // The lane run's own result cards (bus stop, caught) count as result cards: the win and pickups are saved.
+  const inRun = (): boolean => inAttempt(playing || (lane !== null && lane.stage !== 'card'), menus.current);
   const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
   updateReady = () => {
     syncUpdate();
@@ -335,7 +352,9 @@ function startGame(): void {
     game.fixed = where !== 'hall' && switchedOn(lagos);
     // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
     // Scenery only: the level and the run are the same either way.
-    game.firstLook = typeof where === 'number' ? { street: where, name: game.level.name, bright: isBuilt(cityLife.state, (['road', 'mast', 'lamps'] as const)[where] ?? 'road') } : null;
+    const street = firstStreetOf(game.level.id);
+    const fix = street ? FIRST_FIX[street] : null;
+    game.firstLook = street && fix ? { street, look: isBuilt(cityLife.state, fix) ? 'bright' : 'tired', still: reduceMotion.matches } : null;
     if (game.firstLook) {
       runSaid.textContent = '';
       runSaid.textContent = game.level.name;
