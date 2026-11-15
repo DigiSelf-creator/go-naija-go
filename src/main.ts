@@ -557,6 +557,7 @@ function startGame(): void {
             }
           },
           closeHum: (on) => sound.setCloseHum(on && !document.hidden),
+          murmur: (on) => sound.setMurmur(on && !document.hidden),
           // Part 11: the corn tune and its 5, 4, 3, 2, 1 count in the lane run, as on the streets
           // (S2.9): the lane tune and the effects turn down under it; the count shows in the hint
           // bar's place even with Music or Sound off.
@@ -588,6 +589,7 @@ function startGame(): void {
     if (!lane) return;
     lane.close();
     lane = null;
+    sound.setMurmur(false);
     // The lane run may have drawn with fewer pixels: back to the game's own canvas size.
     resize();
     // The corn count goes back to the streets' hint bar.

@@ -15,6 +15,7 @@ import { ROAD, atScreen, bakeLaneScenery, bakeLaneSky, drawBlackout, drawBlackou
 import { blitBaked, type Baked } from '../art/lane-shade';
 import { HERO_HEIGHT, SIZE, isDodge, type ThingKind } from './level';
 import type { CoinSlot, LaneSim, Slot } from './sim';
+import { LaneFolk, type LaneFolkNow, type LaneProject } from './folk';
 
 export const CAM_BACK = 4;
 export const CAM_UP = 2.6;
@@ -100,6 +101,10 @@ export class LaneView {
   /** Part 14's look back: the picture is drawn turned round (mirrored) and/or slid sideways (the turn), CSS px. */
   private mirror = false;
   private ox = 0;
+  /** S3g1b (people everywhere part 7): the people on the pavements, at the windows and on the footbridge. */
+  readonly folk = new LaneFolk();
+  /** People on (tests turn them off to check the run is the same). */
+  people = true;
 
   resize(w: number, h: number, ratio: number): void {
     if (w === this.w && h === this.h && ratio === this.ratio && this.sky) return;
@@ -122,6 +127,7 @@ export class LaneView {
     this.near ??= bakeLaneThings(this.nearPpm);
     this.far ??= bakeLaneThings(this.farPpm);
     this.scenery ??= bakeLaneScenery((this.f / (12 + CAM_BACK)) * this.ratio);
+    if (this.people) this.folk.ready(this.f / (8 + CAM_BACK), this.ratio);
     const key = `${look.skin},${look.hair},${look.outfit},${look.body ?? ''},${look.age ?? ''}`;
     if (!this.hero || key !== this.heroFor) {
       this.hero = bakeLaneHero(look, this.nearPpm, true);
@@ -219,23 +225,35 @@ export class LaneView {
     drawLaneRoad(g, v, dist);
     const fade = (d: number): number => Math.min(1, Math.max(0, (sim.level.spawnAhead - (d - dist)) / FADE_M));
     const ppmAt = (d: number): number => this.f / (d - this.camD);
+    const gap = sim.gap;
+    const offTo = dist + Math.max(0, DARK_FROM - gap) * 0.6 - CAM_BACK + night * 40;
+    // S3g1b: people (not in the look back, which shows the road you stand on).
+    const folk = this.people && back < 0 ? this.folk : null;
+    const proj: LaneProject = { sx: (x, d) => this.sx(x, d), sy: (y, d) => this.sy(y, d), ppm: ppmAt, ratio: this.ratio };
+    const now: LaneFolkNow = { dist, gap, offTo, goal: sim.level.goal, atGoal: sim.phase === 'goal', t, still: this.still };
+    if (folk) {
+      folk.jogger.step(now, 0, folk.backOff);
+      folk.drawFronts(g, proj, now, near, far);
+    }
 
     // Far to near: footbridges, scenery, lamps.
     const b1 = Math.floor(far / BRIDGE_EVERY) * BRIDGE_EVERY;
     if (b1 > near + 2 && b1 > 0) {
       g.globalAlpha = fade(b1);
+      folk?.drawBridge(g, proj, now, b1);
       drawFootbridge(g, v, b1 - dist);
       g.globalAlpha = 1;
     }
     const s1 = Math.floor(far / SCENERY_EVERY) * SCENERY_EVERY;
+    const pieces: { i: number; d: number; side: 1 | -1 }[] = [];
     for (let d = s1; d >= near + 4; d -= SCENERY_EVERY) {
       const i = Math.round(d / SCENERY_EVERY);
       const side = i % 2 === 0 ? 1 : -1;
+      pieces.push({ i, d, side });
       const x = side * (ROAD.half + ROAD.kerb + (side < 0 ? ROAD.divider : 0) + 2.6);
       this.blit(g, LANE_SCENERY[i % LANE_SCENERY.length]!, this.sx(x, d), this.sy(0, d), ppmAt(d), fade(d));
     }
-    const gap = sim.gap;
-    const offTo = dist + Math.max(0, DARK_FROM - gap) * 0.6 - CAM_BACK + night * 40;
+    folk?.drawPeople(g, proj, now, near, far, pieces);
     // The look back: the switching off comes from the far end towards you.
     const backFrom = back >= 0 ? far - back * (far - dist - 6) : Infinity;
     const l1 = Math.floor(far / LAMP_EVERY) * LAMP_EVERY;
@@ -260,6 +278,7 @@ export class LaneView {
     }
     const goal = sim.level.goal;
     if (goal > near && goal < far) this.blit(g, sim.phase === 'run' ? 'busStop' : 'busStopBright', this.sx(ROAD.half + ROAD.kerb + 2.4, goal), this.sy(0, goal), ppmAt(goal), fade(goal));
+    folk?.drawGoal(g, proj);
 
     // Road things and coins, far to near, with the hero between those ahead and those behind.
     const list = this.list;

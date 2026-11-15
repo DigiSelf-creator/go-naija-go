@@ -22,6 +22,7 @@ import { parseLane, type LaneLevel } from './level';
 import { NO_HAUL, addHaul, haulWords, lanePrize, subHaul, type Haul, type LaneSave } from './rewards';
 import { LaneSim, type LaneEvent, type LaneMove } from './sim';
 import { DARK_FROM, LaneView, WARN_UNDER, type HeroPose } from './view';
+import { FrameWatch } from '../game/crowd';
 import { drawBucketIcon } from '../art/city';
 import { cornCount } from '../game/music-cue';
 import type { HintBarBox } from '../screens/controls';
@@ -116,6 +117,11 @@ export interface LaneHooks {
    * of corn, held while paused, the count in `box` (the hint bar's place). null: no corn now.
    */
   corn(c: { left: number; held: boolean; box: HintBarBox } | null): void;
+  /**
+   * S3g1b (people everywhere part 12): the crowd murmur, while 5 or more people show and no
+   * warning (a lamp's "tunk", the close hum) or the corn tune plays (PE-R6).
+   */
+  murmur?(on: boolean): void;
 }
 
 /** The size the flying pickups are drawn at (CSS px). */
@@ -238,6 +244,9 @@ export class LaneSession {
   private stepT = 0;
   private steps = 0;
   private meehAt = -Infinity;
+  /** S3g1b: when the last lamp went "tunk" (no murmur over it), and the people's frame watch. */
+  private tunkAt = -Infinity;
+  private readonly folkWatch = new FrameWatch();
   /** Lamps the Blackout has switched off so far (each one goes "tunk"). */
   private lampsOff = 0;
   /** Part 9: pickups on their way to their chips. */
@@ -413,6 +422,9 @@ export class LaneSession {
     this.toldStop = false;
     this.caughtT = 0;
     this.lampsOff = 0;
+    this.tunkAt = -Infinity;
+    // S3g1b part 11: backing off is forgotten at each new run.
+    this.folkWatch.reset();
     this.flights.clear();
     for (const p of this.plus) p.t = 0;
     this.view.camX = 0;
@@ -561,7 +573,10 @@ export class LaneSession {
       }
     }
     const off = Math.floor((Math.max(0, DARK_FROM - s.gap) * 0.6) / 10);
-    if (off > this.lampsOff) this.hooks.sound('laneTunk');
+    if (off > this.lampsOff) {
+      this.hooks.sound('laneTunk');
+      this.tunkAt = performance.now();
+    }
     this.lampsOff = off;
   }
 
@@ -629,6 +644,8 @@ export class LaneSession {
         break;
       case 'goal':
         this.reachGoal();
+        // S3g1b part 7: the crowd at the bus stop cheers (never over the corn tune).
+        if (!(this.sim.corn > 0)) this.hooks.sound('crowdCheerBig');
         break;
       case 'caught':
         this.stage = 'caught';
@@ -894,6 +911,10 @@ export class LaneSession {
     this.drawHud();
     const near = s.gap < WARN_UNDER && s.phase !== 'over';
     this.hooks.closeHum(near && this.stage === 'play');
+    // S3g1b: backing off under 45 fps (part 11) and the murmur (part 12).
+    if (this.stage === 'play' && dt > 0) this.view.folk.backOff = this.folkWatch.frame(dt * 1000);
+    const quiet = near || performance.now() - this.tunkAt < 700 || this.sim.corn > 0;
+    this.hooks.murmur?.(this.stage === 'play' && !quiet && this.view.folk.seen >= 5);
     this.hooks.music(s.phase === 'over' && this.stage !== 'caught' ? null : { tempo: laneTempoAt(s.dist, s.level.goal), guitar: !near, held: this.stage === 'paused' });
   }
 
