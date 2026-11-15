@@ -31,6 +31,15 @@ export const RULES = {
   amalaSteps: secs(12),
   /** O2b (ogun.md 4.1): ikokore's firm feet last 12 s, like every timed food. */
   ikokoreSteps: secs(12),
+  /** O3b (ogun.md 4.1): ofada's steady road lasts 12 s. */
+  ofadaSteps: secs(12),
+  /**
+   * O3b (ogun.md 3.3): a crack rumbles open when the hero first comes this near its left lip
+   * (Gentle mode: farther), over this long (art's CRACK.openTime), and then it is a pothole.
+   */
+  crackReach: 240,
+  crackReachGentle: 300,
+  crackOpenSteps: secs(0.4),
   /** Timed foods warn this long before they end. */
   warnSteps: secs(2),
   smashKobo: 2,
@@ -172,6 +181,8 @@ export type RunEvent =
   | { type: 'powerEnd'; kind: TimedFood }
   /** O2b (ogun.md 1.4): the hero passed under the gateway arch (once a play). */
   | { type: 'arch' }
+  /** O3b (ogun.md 3.3): a crack starts to rumble open (it is a pothole 0.4 s later). */
+  | { type: 'crackOpen'; x: number; w: number }
   | { type: 'gameOver' }
   /** S2.7: the hall fight starts (the boss words). With the parcel, 'parcelShield' comes first. */
   | { type: 'hallStart' }
@@ -243,13 +254,26 @@ export interface Power {
   amala: number;
   /** O2b: steps of ikokore left (mud does not slow you). */
   ikokore: number;
+  /** O3b: steps of ofada left (cracks stay shut). */
+  ofada: number;
   shield: boolean;
 }
 
 /** The foods that work for a time (they tick, warn and end). */
-export type TimedFood = 'corn' | 'amala' | 'ikokore';
-const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore'];
-const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, shield: false };
+export type TimedFood = 'corn' | 'amala' | 'ikokore' | 'ofada';
+const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore', 'ofada'];
+const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false };
+
+/**
+ * O3b (ogun.md 3.3): a crack in this play. shut: a line in the road; opening: rumbling since step
+ * `at` (still road); open: a pothole for the rest of the try; sealed: shut for good (ofada).
+ */
+export interface CrackState {
+  readonly x: number;
+  readonly w: number;
+  state: 'shut' | 'opening' | 'open' | 'sealed';
+  at: number;
+}
 
 /** How a run starts (all optional). */
 export interface RunOptions {
@@ -314,6 +338,8 @@ export class Run {
   dashOn: boolean;
   /** The "catch your breath" words showed in this play. */
   private tiredShown = false;
+  /** O3b: the cracks in this play (open ones stay open after a lost life). */
+  readonly cracks: CrackState[];
   /** O2b: the arch's welcome showed in this play. */
   private archShown = false;
   /** O2b: the feet were in mud since they last stood on firm road (ogun.md 3.3: the run timer starts again on leaving it). */
@@ -384,6 +410,7 @@ export class Run {
     // S2.16 B4 Gentle mode: cement blocks in every dash gap make it two 100 u potholes.
     if (this.gentle && !level.hall) this.terrain.ground = withBlocks(level.ground).map(([x0, x1]) => ({ x0, x1 }));
     this.gutters = level.gutters.map((q) => ({ x: q.x, w: q.w, state: 'weeds', t: 0 }));
+    this.cracks = level.cracks.map((c) => ({ x: c.x, w: c.w, state: 'shut', at: 0 }));
     this.dashOn = opts.dash ?? false;
     this.hero = this.newHero(level.spawnX);
     this.coins = level.coins.map((c) => ({ ...c, taken: false }));
@@ -572,6 +599,7 @@ export class Run {
       this.archShown = true;
       ev.push({ type: 'arch' });
     }
+    if (this.cracks.length > 0) this.stepCracks(ev);
     this.pickUps(ev);
     this.moveHazards(dt, ev);
     this.stepBalls(dt, ev);
@@ -951,6 +979,50 @@ export class Run {
     h.runTime = 0;
   }
 
+  // ---------- Cracks and ofada (O3b, ogun.md 3.3, 4.1) ----------
+
+  /** The cracks open now, as pits. */
+  private openCracks(): Pit[] {
+    return this.cracks.filter((c) => c.state === 'open').map((c) => ({ a: c.x, b: c.x + c.w, w: c.w }));
+  }
+
+  /**
+   * A shut crack starts to open when the hero first comes within 240 u of its left lip (300 in
+   * Gentle mode); 0.4 s later it is a pothole, never while the hero stands over it. With ofada
+   * none opens, and one the hero reaches while it works stays shut for good. A crack the hero is
+   * already at when it comes in reach stays shut too (it never opens under the feet).
+   */
+  private stepCracks(ev: RunEvent[]): void {
+    const h = this.hero;
+    const reach = this.gentle ? RULES.crackReachGentle : RULES.crackReach;
+    for (const c of this.cracks) {
+      if (c.state === 'opening' && this.steps - c.at >= RULES.crackOpenSteps && !this.over(c)) {
+        c.state = 'open';
+        this.terrain = { ...this.terrain, ground: cutGround(this.terrain.ground, c.x, c.x + c.w) };
+      }
+      if (c.state !== 'shut' || c.x - h.x > reach) continue;
+      if (h.x + RULES.heroHalfW >= c.x) c.state = 'sealed';
+      else if (this.power.ofada <= 0) {
+        c.state = 'opening';
+        c.at = this.steps;
+        ev.push({ type: 'crackOpen', x: c.x, w: c.w });
+      }
+    }
+  }
+
+  /** The hero stands on the road over a crack. */
+  private over(c: CrackState): boolean {
+    const h = this.hero;
+    return h.grounded && h.on === null && h.x >= c.x - RULES.heroHalfW && h.x <= c.x + c.w + RULES.heroHalfW;
+  }
+
+  /** Ofada wore off: every shut crack within reach ahead stays shut for good (ogun.md 3.3). */
+  private sealAhead(): void {
+    const x = this.hero.x;
+    const reach = this.gentle ? RULES.crackReachGentle : RULES.crackReach;
+    for (const c of this.cracks) if (c.state === 'shut' && c.x - x <= reach && c.x + c.w >= x - RULES.heroHalfW) c.state = 'sealed';
+  }
+
   private tickPower(ev: RunEvent[]): void {
     for (const kind of TIMED) {
       const left = this.power[kind];
@@ -959,7 +1031,10 @@ export class Run {
       this.power[kind] = now;
       if (now === RULES.warnSteps) ev.push({ type: 'wearingOff', kind });
       if (now > 0 && now <= RULES.warnSteps && now % STEPS_PER_SECOND === 0) ev.push({ type: 'tick' });
-      if (now === 0) ev.push({ type: 'powerEnd', kind });
+      if (now === 0) {
+        ev.push({ type: 'powerEnd', kind });
+        if (kind === 'ofada') this.sealAhead();
+      }
     }
   }
 
@@ -992,6 +1067,7 @@ export class Run {
         if (f.kind === 'corn') this.power.corn = RULES.cornSteps;
         else if (f.kind === 'amala') this.power.amala = RULES.amalaSteps;
         else if (f.kind === 'ikokore') this.power.ikokore = RULES.ikokoreSteps;
+        else if (f.kind === 'ofada') this.power.ofada = RULES.ofadaSteps;
         else if (f.kind === 'fufu') this.fufu = Math.min(FUFU_RULES.max, this.fufu + FUFU_RULES.give);
         else this.power.shield = true; // a second garri while shielded gives nothing extra
         ev.push({ type: 'food', kind: f.kind, x: f.x, y: f.y });
@@ -1038,7 +1114,7 @@ export class Run {
     const world: BallWorld = {
       terrain: this.terrain,
       groundY: this.level.groundY,
-      pits: pitsOf(this.level.ground).filter((p) => !this.plugged.some((q) => q.a === p.a)),
+      pits: [...pitsOf(this.level.ground), ...this.openCracks()].filter((p) => !this.plugged.some((q) => q.a === p.a)),
       hazards: this.hazards,
       hazardBox: HAZARD_BOX,
       crates: this.crates.map((c) => ({ l: c.x - CRATE_RULES.halfW, r: c.x + CRATE_RULES.halfW, t: c.bottomY - CRATE_RULES.h, b: c.bottomY })),
@@ -1349,7 +1425,7 @@ export class Run {
   private pitAt(x: number): Pit | null {
     let best: Pit | null = null;
     let bestD = Infinity;
-    for (const p of pitsOf(this.gentle ? withBlocks(this.level.ground) : this.level.ground)) {
+    for (const p of [...pitsOf(this.gentle ? withBlocks(this.level.ground) : this.level.ground), ...this.openCracks()]) {
       if (this.plugged.some((q) => q.a === p.a)) continue; // a plugged pothole is road
       const d = x < p.a ? p.a - x : x > p.b ? x - p.b : 0;
       if (d < bestD) [best, bestD] = [p, d];
@@ -1365,6 +1441,19 @@ export class Run {
     this.phase = 'over';
     ev.push({ type: 'gameOver' });
   }
+}
+
+/** The road spans with x0 to x1 taken out (a crack opened there). */
+function cutGround(ground: Terrain['ground'], x0: number, x1: number): Terrain['ground'] {
+  const out: Terrain['ground'][number][] = [];
+  for (const s of ground) {
+    if (s.x1 <= x0 || s.x0 >= x1) out.push(s);
+    else {
+      if (s.x0 < x0) out.push({ x0: s.x0, x1: x0 });
+      if (s.x1 > x1) out.push({ x0: x1, x1: s.x1 });
+    }
+  }
+  return out;
 }
 
 function freshHazard(kind: HazardKind, x: number, groundY: number): HazardState {

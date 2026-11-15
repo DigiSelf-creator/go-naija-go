@@ -10,25 +10,21 @@
  * and crate rules cover the rocks too.
  *
  * O2b: the game reads ikokore now (and `mud` and `arch`), so the copy keeps it and the S2.6 food
- * rules cover it as every food. Only ofada (O3b) is still left out.
+ * rules cover it as every food.
+ *
+ * O3b: the game reads `rocks` (as one-way platforms, so parseLevel adds them to the roofs itself),
+ * `cracks`, `waterPits` and ofada now, so the copy no longer leaves ofada out or adds the rocks.
  *
  * O0a3: the "gravel" hazard is not a kind the game reads yet either (O4b). Its placing rules are
  * the tyre's (S2.2 hazard rule 3), so the copy turns each gravel into a tyre at the same x and the
  * S2.6 tests (200 u from a pit, never in a corn fast stretch) cover it.
  */
 export const OGUN_FOODS: readonly string[] = ['ikokore', 'ofada'];
-/** Ogun foods the game does not read yet (ofada comes with O3b). */
-export const UNREAD_FOODS: readonly string[] = ['ofada'];
 
 export function playableOgun<T extends { foods: unknown[][] }>(raw: T): T {
-  const copy = structuredClone(raw) as T & { platforms?: number[][]; rocks?: number[][]; groundY?: number };
-  copy.foods = copy.foods.filter((f) => !UNREAD_FOODS.includes(String(f[2])));
+  const copy = structuredClone(raw);
   // O0a3: hopping gravel is placed by the tyre's rules (ogun.md 3.3), so the copy reads it as a tyre.
   const hz = (copy as { hazards?: unknown[][] }).hazards;
   if (hz) for (const h of hz) if (h[0] === 'gravel') h[0] = 'tyre';
-  if (copy.rocks) {
-    const gy = copy.groundY ?? 300;
-    copy.platforms = [...(copy.platforms ?? []), ...copy.rocks.map(([x, w, h]) => [x!, gy - h!, w!])];
-  }
   return copy;
 }

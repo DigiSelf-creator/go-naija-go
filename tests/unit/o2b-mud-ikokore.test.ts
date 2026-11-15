@@ -91,7 +91,7 @@ describe('the level file reads mud, the arch and ikokore (ogun.md 3.8)', () => {
     expect(() => street({ mud: [[600, 220]] })).toThrow(/mud\[0\]\[1\] should be 80 to 200 wide/);
     expect(() => street({ mud: [[600]] })).toThrow(/mud\[0\] should have 2 items/);
     expect(() => street({ arch: 'x' })).toThrow(/arch should be a number/);
-    expect(() => street({ foods: [[900, 272, 'ofada']] })).toThrow(/foods\[0\]\[2\] should be one of/);
+    expect(() => street({ foods: [[900, 272, 'kola']] })).toThrow(/foods\[0\]\[2\] should be one of/);
     expect(street({ mud: [[900, 80], [600, 200]] }).mud.map((m) => m.x)).toEqual([600, 900]);
   });
 });
@@ -296,7 +296,7 @@ describe('ikokore (ogun.md 4.1): mud does not slow you for 12 s', () => {
     let fell = false;
     for (let i = 0; i < 2000 && !fell; i++) fell = run.step(DT).some((e) => e.type === 'fall');
     expect(fell).toBe(true);
-    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, shield: false });
+    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false });
     // Back at the start, it is there to pick up again.
     expect(run.foods[0]!.taken).toBe(false);
   });
