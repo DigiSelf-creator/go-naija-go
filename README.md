@@ -8,6 +8,16 @@ A free, light, one-tap running game set on Nigerian streets. Build a hero that l
 
 Tap anywhere to jump. Tap again in the air for a second jump. Hold to jump higher. On a computer, Space or the up arrow jumps too. The game is small, keeps your saves on your phone, and plays offline after your first visit.
 
+## Try the Android test app
+
+This is a test build. It is not signed for the store, so your phone will ask before it installs it. Your hero and your saves stay on your phone.
+
+1. Open the "Android test app" workflow page: https://github.com/DigiSelf-creator/go-naija-go/actions/workflows/app.yml
+2. Open the newest run. Under Artifacts, download `gbese-debug.apk` (it comes as a zip).
+3. Unzip it in the Files app.
+4. When the phone asks, allow "Install unknown apps" for the Files app.
+5. Tap the APK to install it, then open Gbese! and hold your phone sideways.
+
 ## Run it on your computer
 
 You need Node 22.
