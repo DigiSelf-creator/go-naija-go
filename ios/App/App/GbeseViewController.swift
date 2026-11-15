@@ -16,9 +16,22 @@ class GbeseViewController: CAPBridgeViewController {
     var inRun = false {
         didSet {
             guard inRun != oldValue else { return }
+            homeBar.autoHidden = inRun
             setNeedsUpdateOfHomeIndicatorAutoHidden()
             setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         }
+    }
+
+    /**
+     * Capacitor's own SystemBars code already answers prefersHomeIndicatorAutoHidden for this
+     * controller (and cannot be overridden here), and with the shared `hidden: true` setting it
+     * would hide the home bar on every screen. UIKit asks childForHomeIndicatorAutoHidden first,
+     * so this small empty child gives our answer: hidden in runs only.
+     */
+    private let homeBar = HomeBarRule()
+
+    override var childForHomeIndicatorAutoHidden: UIViewController? {
+        return homeBar
     }
 
     /** Told whenever the safe edges change (a flip, a size change). */
@@ -30,6 +43,9 @@ class GbeseViewController: CAPBridgeViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        addChild(homeBar)
+        view.addSubview(homeBar.view)
+        homeBar.didMove(toParent: self)
         // The game's own dark green behind everything, so a flip never shows white.
         let green = UIColor(red: 0x0f / 255.0, green: 0x1a / 255.0, blue: 0x12 / 255.0, alpha: 1)
         view.backgroundColor = green
@@ -49,15 +65,27 @@ class GbeseViewController: CAPBridgeViewController {
         return true
     }
 
-    override var prefersHomeIndicatorAutoHidden: Bool {
-        return inRun
-    }
-
     override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
         return inRun ? .bottom : []
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return .landscape
+    }
+}
+
+/** An empty, hidden child that only says whether the home bar fades (see childForHomeIndicatorAutoHidden). */
+final class HomeBarRule: UIViewController {
+    var autoHidden = false
+
+    override func loadView() {
+        let empty = UIView(frame: .zero)
+        empty.isHidden = true
+        empty.isUserInteractionEnabled = false
+        view = empty
+    }
+
+    override var prefersHomeIndicatorAutoHidden: Bool {
+        return autoHidden
     }
 }

@@ -53,7 +53,9 @@ describe('the iPhone app settings (ST1c, ST0)', () => {
     expect(plistBool('UIStatusBarHidden')).toBe(true);
     const vc = read('ios/App/App/GbeseViewController.swift');
     expect(vc).toMatch(/prefersStatusBarHidden: Bool \{\s*return true/);
-    expect(vc).toMatch(/prefersHomeIndicatorAutoHidden: Bool \{\s*return inRun/);
+    expect(vc).toMatch(/childForHomeIndicatorAutoHidden: UIViewController\? \{\s*return homeBar/);
+    expect(vc).toContain('homeBar.autoHidden = inRun');
+    expect(vc).toMatch(/prefersHomeIndicatorAutoHidden: Bool \{\s*return autoHidden/);
     expect(vc).toMatch(/preferredScreenEdgesDeferringSystemGestures: UIRectEdge \{\s*return inRun \? \.bottom : \[\]/);
   });
 
