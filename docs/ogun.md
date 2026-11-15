@@ -188,7 +188,7 @@ A player who finished Lagos knows every move. Ogun starts level with Lagos stree
 | New thing | walk, jump, crate, pit | roof crates, the well | the drum, secret well | **mud**, ikokore | **rock steps, cracks**, ofada | **hopping gravel, two roads** |
 | Big pits | 1 | 1 | 2 | 1 (after mud) | 1 | 2 (one after mud) |
 | Moving hazards | 8 | 11 | 14 | 6 | 5 | 10 |
-| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 6 cracks (O0a2: 3.5 places 6) | 5 mud, 2 cracks |
+| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 6 cracks (O0a2: 3.5 places 6) | 4 mud, 2 cracks (O0a3: 3.6 places 4) |
 | Hints | 15 | 4 | 2 | 4 | 5 | 3 |
 | Well | none | yes | yes, secret | none | yes | yes, on the low road |
 
@@ -292,6 +292,15 @@ Length: spawn 80 to bus 12200 = 12120 u. 78 s at full run, about 105 s typical.
 | Amala | 11000-12200 | | Amala on the road at 11000. Goat 11300, gravel 11500, wide pothole 100 at 11800 (sign 11680). Bus door 12200 |
 
 Kobo: about 140 loose and 12 in crates, plus 17 in the well room.
+
+**Built (O0a3, 15 Nov):** src/data/levels/ogun-3.json (the well room is the shared ogun-well). Pits as ground gaps: wide 100 at 3000, big 170 at 6200, big 170 at 8300, tap 40 at 9300, wide 100 at 11800. Cracks: 2600 (40), 7300 (40). Mud: 3300 (120), 4100 (160), 7900 (100), 9900 (120). Gravel: 1500, 2100, 4450, 6600, 10400, 11500; goats 6850, 11300; tyres 7100, 10700. Platforms: steps up [3800, 240, 100] and [3900, 180, 100], deck [4000, 160, 900], steps down [4950, 200, 100] and [5050, 250, 100]; roofs [8940, 245, 120] and [9540, 245, 120] (kobo crate 9600). Pepper fufu on the deck at (4600, 132). Kobo: 141 loose, 4 kobo crates (12). End: bus door 12200, wall 12400. Checked by tests/unit/street.test.ts (S2.6, with gravel read as a tyre, since its placing rules are the tyre's) and tests/unit/ogun-levels.test.ts (3.3 mud, crack, gravel and two-roads rules).
+
+Gaps ruled in O0a3 (simplest fair choice, decision 64):
+- **Four mud patches, not five.** 3.2 said 5, but the 3.6 table places 4 (3300, 4100, 7900, 9900). The file has the 4 placed; 3.2 now says 4.
+- **Twelve kobo in crates.** The table names three kobo crates (600, 800, the roof at 9600); a fourth on the road at 2400, between the second gravel and the first crack, makes the 12.
+- **The deck and its steps are plain platforms**, not rocks: one-way, like the stall roofs, so they need no new field. Each step is 100 wide and touches the next; the deck has no gaps.
+- **The first gravel stands alone** with no other hazard closer than 600 u (the second gravel at 2100 is exactly 600 u on).
+- **No well hint.** The low-road well is a secret, as Ikeja's is.
 
 ### 3.7 The well room: the Ijebu garri store (src/data/levels/ogun-well.json)
 
