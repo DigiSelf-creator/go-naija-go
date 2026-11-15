@@ -223,3 +223,23 @@ test.describe('tilt that cannot work never stops the run', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe('the update prompt is web only (decision 55)', () => {
+  test.use({ serviceWorkers: 'allow' });
+  test('inside the store app (Capacitor native): no service worker, no update check, no banner', async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as unknown as { Capacitor: { isNativePlatform: () => boolean } }).Capacitor = { isNativePlatform: () => true };
+    });
+    await page.goto('./');
+    await expect.poll(() => screenNow(page)).toBe('title');
+    await page.waitForTimeout(2500);
+    expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0);
+    expect(await page.evaluate(() => window.__game!.update)).toEqual({ ready: false, shown: false });
+    await expect(page.getByText('New version ready. Tap to update.')).toHaveCount(0);
+  });
+  test('on the web link the service worker does register (so the check above means something)', async ({ page }) => {
+    await page.goto('./');
+    await expect.poll(() => screenNow(page)).toBe('title');
+    await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length), { timeout: 10_000 }).toBe(1);
+  });
+});
