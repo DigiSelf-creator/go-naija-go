@@ -1289,7 +1289,7 @@ function startGame(): void {
     },
     /** S3g1b qa: force backing off (part 11: 1 drops the walkers, 2 half the standing people too). */
     forceBackOff(level: number) {
-      if (game.people) game.people.watch.level = Math.max(0, Math.min(2, Math.round(level)));
+      game.people?.watch.force(level);
     },
     /** S3g1b qa: people on or off (the run is the same either way), to measure what they cost. */
     setPeople(on: boolean) {

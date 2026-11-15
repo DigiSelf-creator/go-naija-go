@@ -29,7 +29,8 @@ test('slowed 4x CPU: street 2 in the fixed look, the people take at most 1.5 ms 
   let seen = 0;
   const strip: number[] = [];
   try {
-    await page.evaluate(() => window.__game!.people);
+    // Measure everyone: backing off held at 0 (this computer is far slower than a phone).
+    await page.evaluate(() => window.__game!.forceBackOff(0));
     await page.keyboard.down('ArrowRight');
     for (let i = 0; i < 24; i++) {
       await page.waitForTimeout(500);

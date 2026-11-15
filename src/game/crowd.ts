@@ -841,7 +841,7 @@ export class FrameWatch {
   private span = 0;
   /** Forced from the page for qa (window.__game.crowd.forceBackOff). */
   frame(ms: number): number {
-    if (!(ms > 0) || ms > 250) return this.level;
+    if (this.pinned || !(ms > 0) || ms > 250) return this.level;
     this.sum += ms;
     this.n++;
     this.span += ms;
@@ -852,7 +852,14 @@ export class FrameWatch {
     }
     return this.level;
   }
+  /** qa: hold a level (0 to 2) until the next run, whatever the frame times. */
+  force(level: number): void {
+    this.level = Math.max(0, Math.min(2, Math.round(level)));
+    this.pinned = true;
+  }
+  private pinned = false;
   reset(): void {
+    this.pinned = false;
     this.level = 0;
     this.sum = this.n = this.span = 0;
   }
