@@ -188,7 +188,7 @@ A player who finished Lagos knows every move. Ogun starts level with Lagos stree
 | New thing | walk, jump, crate, pit | roof crates, the well | the drum, secret well | **mud**, ikokore | **rock steps, cracks**, ofada | **hopping gravel, two roads** |
 | Big pits | 1 | 1 | 2 | 1 (after mud) | 1 | 2 (one after mud) |
 | Moving hazards | 8 | 11 | 14 | 6 | 5 | 10 |
-| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 7 cracks | 5 mud, 2 cracks |
+| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 6 cracks (O0a2: 3.5 places 6) | 5 mud, 2 cracks |
 | Hints | 15 | 4 | 2 | 4 | 5 | 3 |
 | Well | none | yes | yes, secret | none | yes | yes, on the low road |
 
@@ -260,6 +260,17 @@ Length: spawn 80 to bus 11800 = 11720 u. 75 s at full run, about 100 s typical.
 | Corn | 8900-11636 | | Corn crate at 8900. Fast stretch to 10268: roof at 9100 with a kobo crate, tap 40 at 9400, roof at 9700, tap 36 at 9950. Second half: tyre 10500, goat 10800, hold pothole 60 at 11200. Bus door 11800 |
 
 Kobo: about 150 loose and 12 in crates, plus 17 in the well room.
+
+**Built (O0a2, 15 Nov):** src/data/levels/ogun-2.json and src/data/levels/ogun-well.json. Pits as ground gaps: wide 100 at 2000 (under the ledge), water tap 40 at 2600, water hold 60 at 2900, big 170 at 6400, tap 40 at 9400, tap 36 at 9950, hold 60 at 11200. Rocks `[x, width, height]`: [1200, 100, 50], [1330, 100, 100], [1460, 100, 150], [1900, 300, 90]. Cracks: 5250 (40), 5700 (60), 6000 (40), 7300 (40), 7900 (60), 8300 (40). Roofs [9040, 245, 120] (kobo crate 9100) and [9640, 245, 120]. Kobo: 151 loose, 4 kobo crates (12), 17 in the room. End: bus door 11800, wall 12000. Checked by tests/unit/street.test.ts (S2.6, with rocks read as roofs) and tests/unit/ogun-levels.test.ts (3.3 mud, rocks, water and crack rules, ofada, the well room). Until gamedev reads `rocks`, `cracks` and the `ofada` food (O3b), the S2.6 test reads a copy that adds each rock as a platform and leaves ofada out; ogun-levels.test.ts treats each crack as a pit for the hazard, food, crate, mud and well distances.
+
+Gaps ruled in O0a2 (simplest fair choice, decision 64):
+- **Tyre and mud before the bus stop.** The table's tyre at 4500 sits 200 u from the exit well at 4700, but S2.6 wants no hazard within 400 u of an exit well. The tyre moves to 4250 and the mud to 4350 (120 wide, ending 230 u before the exit well). The order there is now goat 3900, tyre 4250, mud 4350.
+- **Six cracks, not seven.** 3.2 said 7, but the 3.5 table places 6. The file has the 6 placed; 3.2 now says 6.
+- **Twelve kobo in crates.** The table names two kobo crates (700 and the roof at 9100); two more on the road at 3200 and 10200 make the 12.
+- **The well room.** The table gives no layout, so it follows S2.5 with its own shelves: sacks at [110, 240, 90] (60 high), a plank shelf [240, 200, 90] (100 high) holding the parcel at (285, 176), sacks at [380, 250, 90] (50 high); 14 loose kobo and a kobo crate at 345 (17 in all); `giftIfCarried` 5 kobo centred on 285. The store keeper sits at the back wall at room x 60 to 100, as the Lagos keeper does (look only).
+- **No hint for the well.** Wells were taught in Lagos, so Abeokuta keeps its 5 hints and no well hint.
+- **Rocks are platforms.** A rock is one-way (land on top, pass up from below), its left end stands on the road, and it may reach over a pothole (the ledge at 1900). Steps less than 60 u apart climb from the step before; a lone rock climbs from the road.
+- **Crack spacing.** Each crack keeps at least 200 u of road from any other pit or crack and 60 u from the end of its stretch of road, so there is always firm road to land on before the next one opens.
 
 ### 3.6 Street 3: Sagamu (src/data/levels/ogun-3.json)
 
