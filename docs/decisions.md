@@ -81,4 +81,4 @@ Added 14 Nov 2026 at Tp's request: lines 5 to 50, confirmed by Tp in chat betwee
 72. After General Go-Slow, the next state comes next (this replaces line 46, "Lagos is finished first"). Work already under way in Lagos (the challenge road, tax words, tilt, people everywhere) is finished first, as it makes every state better. (Tp, 15 Nov)
 73. The next state after Lagos is Ogun, with King Pothole as its boss (brief world 2). (Tp, 15 Nov)
 74. Ogun is shown as the Gateway State: the road and gate out of Lagos to the rest of Nigeria. Fixing Ogun opens the way onward, and its bad roads (King Pothole) block the gateway. (Tp, 15 Nov)
-75. No one in the game holds a broom up or at their side, as a held broom can read as a party sign; the Alausa woman carries a basin instead. Sweeping her own front with a broom stays, as an everyday chore. (Tp, 15 Nov)
+75. No one in the game holds a broom up or at their side, as a held broom can read as a party sign; the Alausa woman carries a basin instead. (Tp, 15 Nov)
