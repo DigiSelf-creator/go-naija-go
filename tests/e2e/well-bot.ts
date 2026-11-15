@@ -67,6 +67,13 @@ export async function wellBot(page: Page, h: Hands) {
     await h.up(WELL_FINGER);
   };
 
+  /** The x of each arc kobo (the two high ones between shelves 1 and 2) still in the room. */
+  const arcKoboLeft = (): Promise<number[]> =>
+    page.evaluate(() => {
+      const room = (window.__game!.run as unknown as { room: { coins: { x: number; y: number; taken: boolean }[] } | null }).room;
+      return (room?.coins ?? []).filter((c) => !c.taken && c.x > 200 && c.x < 250 && c.y < 200).map((c) => c.x);
+    });
+
   /** Waits for a run phase. */
   const phase = (p: string, timeout = 8000) => expect.poll(() => page.evaluate(() => window.__game!.run.phase), { timeout }).toBe(p);
 
@@ -88,6 +95,17 @@ export async function wellBot(page: Page, h: Hands) {
     await walkTo(100);
     await walkTo(227, 4);
     await jump(true);
+    // One jump at 227 takes both arc kobo only from x 224 to 230 (hero half width 7, kobo reach
+    // 8). On a slow computer (4x CPU) the thumb lifts late and the hero stops 10 u or more off,
+    // so it missed one (qa: well-perf room kobo 16). A player would jump again: so does the bot,
+    // from the middle of the floor under each kobo left that no shelf roofs over (shelf 1 ends at
+    // 200, shelf 2 starts at 250): 219 for the kobo at 215, 233 for the one at 239.
+    for (let tries = 0; tries < 3; tries++) {
+      const left = await arcKoboLeft();
+      if (left.length === 0) break;
+      await walkTo(left[0]! < 227 ? 219 : 233, 6);
+      await jump(true);
+    }
     // The parcel: a held jump from under the middle shelf lands on it.
     await walkTo(295, 4);
     await jump(true);
