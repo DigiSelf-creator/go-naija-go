@@ -52,6 +52,8 @@ export interface BackLabels {
   wheelClose: string;
   wheelBack: string;
   takeHome: string;
+  /** S3f0 part 25.1: the tilt offer card's "No thanks" (Android back counts as it). */
+  tiltNo?: string;
 }
 
 export function backStep(s: BackState, labels: BackLabels): BackStep {
@@ -62,7 +64,7 @@ export function backStep(s: BackState, labels: BackLabels): BackStep {
       // Between a run's end and its card, back waits for the card. A lane run's own cards
       // (the bus stop, caught) take it home, the same as their "Take it home".
       if (s.running) return { kind: 'pause' };
-      return s.lane ? { kind: 'press', labels: [labels.takeHome] } : { kind: 'ignore' };
+      return s.lane ? { kind: 'press', labels: labels.tiltNo ? [labels.takeHome, labels.tiltNo] : [labels.takeHome] } : { kind: 'ignore' };
     case 'pause':
       return { kind: 'ask', fromRun: s.lane ? 'lane' : s.hall ? 'hall' : 'street' };
     case 'title':

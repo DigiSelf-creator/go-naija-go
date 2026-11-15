@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 /**
  * The store app on iPhone (ST1c, docs/design.md ST0). The game itself is the built web game
@@ -54,7 +55,16 @@ class GbeseViewController: CAPBridgeViewController {
         webView?.scrollView.backgroundColor = green
         // No swipe back or forward through pages: there is only the one game page.
         webView?.allowsBackForwardNavigationGestures = false
+        // S3f0 part 25.4 (decision 70): Capacitor says yes to motion by itself; we let iOS ask
+        // with its own box instead (the page asks only from a tap on "Tilt to steer" or "Try tilt").
+        if let web = webView {
+            motionAsk.inner = web.uiDelegate
+            web.uiDelegate = motionAsk
+        }
     }
+
+    /** Held here: a web view only keeps a weak link to its UI delegate. */
+    private let motionAsk = MotionAsksFirst()
 
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
@@ -71,6 +81,30 @@ class GbeseViewController: CAPBridgeViewController {
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return .landscape
+    }
+}
+
+/**
+ * S3f0 part 25.4: the motion question goes to iOS's own box ("prompt"), never a silent yes.
+ * Every other web view UI call goes on to Capacitor's own handler, as before.
+ */
+final class MotionAsksFirst: NSObject, WKUIDelegate {
+    weak var inner: WKUIDelegate?
+
+    @available(iOS 15.0, *)
+    func webView(_ webView: WKWebView,
+                 requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin,
+                 initiatedByFrame frame: WKFrameInfo,
+                 decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        decisionHandler(.prompt)
+    }
+
+    override func responds(to aSelector: Selector!) -> Bool {
+        return super.responds(to: aSelector) || (inner?.responds(to: aSelector) ?? false)
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        return super.responds(to: aSelector) ? nil : inner
     }
 }
 

@@ -22,6 +22,10 @@ export interface LaneSave {
   runs: number;
   /** Hints seen (passed), by key. */
   hints: string[];
+  /** Part 25: the "Try tilt" offer has been shown (either answer stops it). */
+  tiltOffered: boolean;
+  /** Part 25.4: iPhone noes in a row from a run's start tap; at 2 the switch goes off. */
+  tiltNoes: number;
 }
 
 export interface Haul {
@@ -37,11 +41,11 @@ const count = (v: unknown): number => (typeof v === 'number' && Number.isFinite(
 export function readLane(v: unknown): LaneSave {
   const o = typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
   const hints = Array.isArray(o['hints']) ? o['hints'].filter((h): h is string => typeof h === 'string') : [];
-  return { best: count(o['best']), goals: count(o['goals']), runs: count(o['runs']), hints: [...new Set(hints)] };
+  return { best: count(o['best']), goals: count(o['goals']), runs: count(o['runs']), hints: [...new Set(hints)], tiltOffered: o['tiltOffered'] === true, tiltNoes: Math.min(2, count(o['tiltNoes'])) };
 }
 
 export function writeLane(s: LaneSave): Record<string, unknown> {
-  return { best: s.best, goals: s.goals, runs: s.runs, hints: [...s.hints] };
+  return { best: s.best, goals: s.goals, runs: s.runs, hints: [...s.hints], tiltOffered: s.tiltOffered, tiltNoes: s.tiltNoes };
 }
 
 export const addHaul = (a: Haul, b: Haul): Haul => ({ kobo: a.kobo + b.kobo, power: a.power + b.power, tech: a.tech + b.tech });

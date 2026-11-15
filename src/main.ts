@@ -40,7 +40,8 @@ import { UpdateBanner } from './screens/update-banner';
 import { isNativeApp } from './native/is-native';
 import type { NativeApp } from './native/app';
 import type { LaneSession } from './lane/session';
-import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul } from './lane/rewards';
+import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul, type LaneSave } from './lane/rewards';
+import { TILT_APP_ASKS_AGAIN, TiltAccess } from './game/tilt';
 
 const el = document.getElementById('game');
 if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing #game canvas');
@@ -119,6 +120,8 @@ function startGame(): void {
   let nativeApp: NativeApp | null = null;
   /** S2.8: streets done, best kobo, the saved parcel and the hall, under gidi-progress. */
   const progress = new Progress(store);
+  /** S3f0 part 25.5: can this phone tilt (a quiet 1.5 s check on Android; iPhones know at once). */
+  const tilt = new TiltAccess();
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
   // `theme`, then Go-Slow Hall (S2.7, lagos-hall.json). ?level=lagos-2, lagos-3 or lagos-hall
   // makes "Play" start there (for testing).
@@ -393,6 +396,8 @@ function startGame(): void {
   let laneFor: BuildId | null = null;
   /** The corn count's place in the lane run (part 11); the streets put it back in their hint bar after. */
   let laneCountAt: HintBarBox | null = null;
+  /** Part 25.4: the phone said no while the lane run's code was still loading. */
+  let tiltNoPending = false;
   /**
    * S3f3 part 2, "Bringing it home": a win for a fix not built yet plays Mission complete at that
    * spot; any other end goes back to Lagos with "You brought ... home." (LR-Q2: and the other pin's hint).
@@ -413,6 +418,7 @@ function startGame(): void {
   /** Starts a lane run from 0 m ("3, 2, 1" first). Loads the lane run's code the first time. */
   function startLane(fix: BuildId | null = laneFor): void {
     if (laneLoading) return;
+    askTiltOnRun();
     laneFor = fix === 'lamps' || fix === 'mast' ? fix : null;
     if (lane) {
       menus.show(null);
@@ -444,6 +450,16 @@ function startGame(): void {
           safe: readSafeArea,
           sound: (name) => sound.play(name),
           touch: () => buttons.touch,
+          tiltOn: () => menus.laneTilt,
+          tiltReady: () => tilt.ready,
+          tiltAsks: () => tilt.ios && tilt.answer !== 'granted',
+          askTilt: askTiltOnRun,
+          tiltOffer: () => tilt.canTilt && !menus.tiltSaved && !readLane(progress.raw?.[KEY_LANE]).tiltOffered,
+          tiltOffered: () => saveTiltMarks({ tiltOffered: true }),
+          tryTilt: () => {
+            menus.setTilt(true);
+            if (tilt.ios) void tilt.ask('switch');
+          },
           askPause: () => pause(),
           soundOn: () => sound.enabled,
           toggleSound: () => {
@@ -452,8 +468,11 @@ function startGame(): void {
           },
           laneSave: () => readLane(progress.raw?.[KEY_LANE]),
           saveLane: (part) => {
-            // A broken copy is left alone (the same rule as the city part).
-            if (!(progress.broken && progress.raw === null)) progress.savePart(KEY_LANE, writeLane(part));
+            // A broken copy is left alone (the same rule as the city part). The tilt marks are
+            // main's (saveTiltMarks): the run's copy never writes over them.
+            if (progress.broken && progress.raw === null) return;
+            const now = readLane(progress.raw?.[KEY_LANE]);
+            progress.savePart(KEY_LANE, writeLane({ ...part, tiltOffered: now.tiltOffered, tiltNoes: now.tiltNoes }));
           },
           bank: (d) => cityLife.set({ ...cityLife.state, kobo: cityLife.state.kobo + d.kobo, power: cityLife.state.power + d.power, tech: cityLife.state.tech + d.tech }),
           flush: () => cityLife.flush(),
@@ -498,6 +517,10 @@ function startGame(): void {
           },
         });
         lane.start();
+        if (tiltNoPending) {
+          tiltNoPending = false;
+          lane.tiltDenied();
+        }
         syncMusic();
         syncUpdate();
         if (portrait.matches || document.hidden) pause();
@@ -509,6 +532,18 @@ function startGame(): void {
         menus.laneRun = false;
         menus.showCity();
       });
+  }
+  /**
+   * S3f0 part 25.4: a run's start or resume tap. With tilt on and an iPhone not asked this visit,
+   * Apple's box asks now, inside the tap (never on load or a timer).
+   */
+  function askTiltOnRun(): void {
+    if (menus.tiltSaved && tilt.needsAsk) void tilt.ask('run');
+  }
+  /** The `lane` save's tilt marks (25.1, 25.4): only these and the switch are kept, never an angle. */
+  function saveTiltMarks(m: Partial<Pick<LaneSave, 'tiltOffered' | 'tiltNoes'>>): void {
+    if (progress.broken && progress.raw === null) return;
+    progress.savePart(KEY_LANE, writeLane({ ...readLane(progress.raw?.[KEY_LANE]), ...m }));
   }
   function closeLane(): void {
     menus.laneRun = false;
@@ -576,7 +611,11 @@ function startGame(): void {
       missionFor = null;
       startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
     },
-    resume,
+    resume: () => {
+      // "Keep playing" in a lane run is a resume tap (25.4).
+      if (lane) askTiltOnRun();
+      resume();
+    },
     leave,
     lookChanged: (look) => {
       game.look = look;
@@ -673,6 +712,23 @@ function startGame(): void {
   sound.enabled = menus.sound;
   director.switches(menus.sound, menus.music);
   menus.touchWords = () => buttons.touch;
+  menus.tilt = tilt;
+  menus.tiltAppAsksAgain = TILT_APP_ASKS_AGAIN;
+  tilt.onFound(() => menus.syncTilt());
+  // Part 25.4: every answer from Apple's box. A no from a run's start tap plays with swipes and
+  // says so; two noes in a row turn the switch off. A yes starts the count again.
+  tilt.onAnswer((a, from) => {
+    const noes = a === 'granted' ? 0 : Math.min(2, readLane(progress.raw?.[KEY_LANE]).tiltNoes + 1);
+    saveTiltMarks({ tiltNoes: noes });
+    if (a === 'denied') {
+      if (from === 'switch') menus.setTilt(false);
+      else if (noes >= 2) menus.setTilt(false);
+      if (lane) {
+        if (lane.stage !== 'paused') lane.tiltDenied();
+      } else if (laneLoading) tiltNoPending = true;
+    }
+    menus.syncTilt();
+  });
 
   /** Decision 62: the goats' "meeh" and the birds' "hawk hawk", kept from piling up. */
   const animalCalls = new AnimalCalls((n) => sound.play(n));
