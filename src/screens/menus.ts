@@ -640,11 +640,11 @@ export class Menus {
         'div',
         { class: 'ogun-words' },
         h('p', {}, h('b', {}, w.line)),
-        h('p', {}, this.hooks.ogunDone(3) ? w.sagamuDone : this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
-        // O3b, O4b: the newest open street is the big button, the ones before it small.
-        ...[3, 2, 1].map((n) => {
-          const top = this.hooks.ogunDone(2) ? 3 : this.hooks.ogunDone(1) ? 2 : 1;
-          return n <= top && this.guarded([w.play, w.playAbeokuta, w.playSagamu][n - 1]!, n === top ? 'go ogun-play' : 'minor ogun-play', (e) => this.hooks.playOgun(n, tapPoint(e)));
+        h('p', {}, v.ogun.beaten ? OGUN_WORDS.hall.open : this.hooks.ogunDone(3) ? w.sagamuDone : this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
+        // O3b, O4b: the newest open street is the big button, the ones before it small. O5b: then Pothole Hall.
+        ...[4, 3, 2, 1].map((n) => {
+          const top = this.hooks.ogunDone(3) ? 4 : this.hooks.ogunDone(2) ? 3 : this.hooks.ogunDone(1) ? 2 : 1;
+          return n <= top && this.guarded([w.play, w.playAbeokuta, w.playSagamu, OGUN_WORDS.cleared.toHall][n - 1]!, n === top ? 'go ogun-play' : 'minor ogun-play', (e) => this.hooks.playOgun(n, tapPoint(e)));
         }),
       ),
       h('div', { class: 'ogun-bottom' }, this.travelButton(), this.guarded(WORDS.city.wheel, 'minor two-line', () => this.showWheel('ogun'))),
@@ -843,7 +843,7 @@ export class Menus {
       'div',
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
-      h('p', {}, this.summary.hall ? w.hallText : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
+      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
       this.actions(
@@ -870,7 +870,7 @@ export class Menus {
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome()),
         ...(c.ogun
           ? [
-              ...(c.ogunNext ? [this.guarded(w.next, 'minor', (e) => this.hooks.next(tapPoint(e)))] : []),
+              ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)))] : []),
               this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
             ]
           : [
@@ -885,6 +885,18 @@ export class Menus {
   /** S2.10 Win: lives left (no kobo), the cog line, "See Nigeria's wheel". */
   private win(): HTMLElement {
     const w = WORDS.win;
+    if (this.summary.ogun) {
+      // O5b (ogun.md 5.5): Pothole Hall's Win screen. Ogun's challenge road comes with its city (O6b).
+      const o = OGUN_WORDS.win;
+      return h(
+        'div',
+        { class: 'card narrow event', role: 'dialog', 'aria-label': o.heading },
+        h('h2', {}, o.heading),
+        h('p', {}, o.line),
+        h('p', {}, OGUN_WORDS.win.money(this.summary.kobo)),
+        this.actions(this.guarded(o.takeHome, 'go', () => this.hooks.takeHome()), this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)))),
+      );
+    }
     const o = OGUN_WORDS.lagosWin;
     const n = this.hooks.progress().working.length;
     // O1b2 (ogun.md 1.2): the road to Ogun is open. The first win's big button is "On to Ogun";

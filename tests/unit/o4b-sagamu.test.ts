@@ -483,7 +483,7 @@ describe("Sagamu's words and place", () => {
   it('the place shows "Play Sagamu" once Abeokuta is done, and plain lines', () => {
     expect(OGUN_WORDS.place.playSagamu).toBe('Play Sagamu');
     expect(OGUN_WORDS.place.abeokutaDone).toBe('Abeokuta is moving again. Sagamu is open.');
-    expect(OGUN_WORDS.place.sagamuDone).toBe('Sagamu is moving again. Pothole Hall is coming next.');
+    expect(OGUN_WORDS.place.sagamuDone).toBe('Sagamu is moving again. Pothole Hall is open.');
     expect(OGUN_WORDS.streets[2]).toBe('Sagamu');
     // Every hint fits the hint bar (35 characters or fewer) and matches the file word for word.
     expect(SAG.hints.map((h) => h.words)).toEqual(OGUN_WORDS.hints.sagamu);

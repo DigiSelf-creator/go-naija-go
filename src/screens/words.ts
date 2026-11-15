@@ -610,8 +610,8 @@ export const OGUN_WORDS = {
     otaDone: 'Ota is moving again. Abeokuta is open.',
     /** Once Abeokuta is cleared: O4b, Sagamu plays. */
     abeokutaDone: 'Abeokuta is moving again. Sagamu is open.',
-    /** Once Sagamu is cleared (Pothole Hall comes with O5b). */
-    sagamuDone: 'Sagamu is moving again. Pothole Hall is coming next.',
+    /** Once Sagamu is cleared: O5b, Pothole Hall plays (OG-R18). */
+    sagamuDone: 'Sagamu is moving again. Pothole Hall is open.',
     play: 'Play Ota',
     playAbeokuta: 'Play Abeokuta',
     playSagamu: 'Play Sagamu',
@@ -682,6 +682,8 @@ export const OGUN_WORDS = {
     heading: 'Ogun is switched on!',
     line: 'The road through the gateway is smooth. The way to the rest of Nigeria is open.',
     takeHome: 'Take it home',
+    /** The money line, as Lagos's cards: "You got ₦15." */
+    money: (kobo: number) => `You got ${formatMoney(kobo)}.`,
   },
   /**
    * Part 7: Ogun's bubbles, split by language as WORDS.folk (decision 30). Greetings and cheers
