@@ -78,9 +78,10 @@ export interface HallData {
   leftLimit: number;
   rightLimit: number;
 }
-export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu';
+/** O2b (ogun.md 4.1): ikokore, Ogun's own food: mud does not slow you for 12 s. */
+export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu' | 'ikokore';
 /** S2.15: crates may hold fufu later (it needs a crate stamp from art); none do now. */
-export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu'>;
+export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu' | 'ikokore'>;
 
 /** A crate hung over the road or a roof (S2.4): centre x, bottom edge y. */
 export interface CrateData {
@@ -88,6 +89,14 @@ export interface CrateData {
   bottomY: number;
   contents: CrateContents;
 }
+
+/** O2b (ogun.md 3.3): a mud patch on the road from x to x + w (80 to 200 wide). */
+export interface MudData {
+  x: number;
+  w: number;
+}
+/** ogun.md 3.3: a mud patch is 80 to 200 u wide. */
+export const MUD_WIDTH = { min: 80, max: 200 } as const;
 
 /** A well (S2.5): entrance x, exit x, room file id. */
 export interface WellData {
@@ -136,6 +145,10 @@ export interface Level {
   gutters: readonly GutterData[];
   /** S2.16 B1: rubbish piles (scenery, never solid) by x. */
   piles: readonly number[];
+  /** O2b (ogun.md 3.3): mud patches, left to right (none on most levels). */
+  mud: readonly MudData[];
+  /** O2b (ogun.md 1.4, 3.4): the gateway arch's x (Ota only), or null. */
+  arch: number | null;
   /** S2.16 B4: reaching this x turns the dash on (saved), or null. */
   dashFrom: number | null;
   /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
@@ -159,7 +172,7 @@ const WALL_GAP = 7;
 /** S2.6 street walk speed with roasted corn (the hall file has no speeds; it uses the streets'). */
 const CORN_WALK = 120;
 
-const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu'];
+const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu', 'ikokore'];
 const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', 'corn', 'garri', 'amala'];
 const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow'];
 /** S2.16 B1: the egret paces its patch at 30 u/s; the crow hovers in place. */
@@ -247,6 +260,13 @@ export function parseLevel(raw: unknown): Level {
   });
   const piles = (r['piles'] === undefined ? [] : list(r['piles'], 'piles')).map((x, i) => num(x, `piles[${i}]`));
   const dashFrom = r['dashFrom'] === undefined ? null : num(r['dashFrom'], 'dashFrom');
+  const mud: MudData[] = (r['mud'] === undefined ? [] : list(r['mud'], 'mud')).map((q, i) => {
+    const [x, w] = tuple(q, `mud[${i}]`, 2);
+    const m = { x: num(x, `mud[${i}][0]`), w: num(w, `mud[${i}][1]`) };
+    if (m.w < MUD_WIDTH.min || m.w > MUD_WIDTH.max) fail(`mud[${i}][1]`, `should be ${MUD_WIDTH.min} to ${MUD_WIDTH.max} wide`);
+    return m;
+  });
+  const arch = r['arch'] === undefined ? null : num(r['arch'], 'arch');
 
   const crates: CrateData[] =
     r['crates'] === undefined && schema === 1
@@ -306,6 +326,8 @@ export function parseLevel(raw: unknown): Level {
     hazards: hazards.sort((p, q) => p.x - q.x),
     gutters: gutters.sort((p, q) => p.x - q.x),
     piles,
+    mud: mud.sort((p, q) => p.x - q.x),
+    arch,
     dashFrom,
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
@@ -418,6 +440,8 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     hazards: [],
     gutters: [],
     piles: [],
+    mud: [],
+    arch: null,
     dashFrom: null,
     hints: [],
     checkpoint: Infinity,

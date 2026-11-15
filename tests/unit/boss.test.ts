@@ -489,7 +489,7 @@ describe('the garri parcel at the hall start (S2.5 gift rule 5, S2.7 t = 0)', ()
     expect(run.power.shield).toBe(false);
     expect(run.lives).toBeLessThan(3);
     const again = hall({ parcel: true });
-    expect(again.power).toEqual({ corn: 0, amala: 0, shield: true });
+    expect(again.power).toEqual({ corn: 0, amala: 0, ikokore: 0, shield: true });
     expect(again.lives).toBe(3);
   });
 

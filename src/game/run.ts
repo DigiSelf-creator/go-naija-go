@@ -29,6 +29,8 @@ export const RULES = {
   /** Twice the first 6 s and 7 s after Tp's iPhone test: they wore off too fast. */
   cornSteps: secs(12),
   amalaSteps: secs(12),
+  /** O2b (ogun.md 4.1): ikokore's firm feet last 12 s, like every timed food. */
+  ikokoreSteps: secs(12),
   /** Timed foods warn this long before they end. */
   warnSteps: secs(2),
   smashKobo: 2,
@@ -165,9 +167,11 @@ export type RunEvent =
   /** Gentle mode (S2.13 part 5): back just before the pit fallen in, after the 'fall'. */
   | { type: 'climbOut'; kind: PitKind; x: number }
   | { type: 'checkpoint' }
-  | { type: 'wearingOff'; kind: 'corn' | 'amala' }
+  | { type: 'wearingOff'; kind: TimedFood }
   | { type: 'tick' }
-  | { type: 'powerEnd'; kind: 'corn' | 'amala' }
+  | { type: 'powerEnd'; kind: TimedFood }
+  /** O2b (ogun.md 1.4): the hero passed under the gateway arch (once a play). */
+  | { type: 'arch' }
   | { type: 'gameOver' }
   /** S2.7: the hall fight starts (the boss words). With the parcel, 'parcelShield' comes first. */
   | { type: 'hallStart' }
@@ -237,8 +241,15 @@ export interface Power {
   corn: number;
   /** Steps of amala left. */
   amala: number;
+  /** O2b: steps of ikokore left (mud does not slow you). */
+  ikokore: number;
   shield: boolean;
 }
+
+/** The foods that work for a time (they tick, warn and end). */
+export type TimedFood = 'corn' | 'amala' | 'ikokore';
+const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore'];
+const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, shield: false };
 
 /** How a run starts (all optional). */
 export interface RunOptions {
@@ -271,7 +282,7 @@ export class Run {
   phase: RunPhase = 'run';
   spawnX: number;
   checkpointReached = false;
-  power: Power = { corn: 0, amala: 0, shield: false };
+  power: Power = { ...NO_POWER };
   /** Steps of blinking safety left. */
   safe = 0;
   /** Steps since the run started. */
@@ -303,6 +314,10 @@ export class Run {
   dashOn: boolean;
   /** The "catch your breath" words showed in this play. */
   private tiredShown = false;
+  /** O2b: the arch's welcome showed in this play. */
+  private archShown = false;
+  /** O2b: the feet were in mud since they last stood on firm road (ogun.md 3.3: the run timer starts again on leaving it). */
+  private wasMud = false;
   /** Hints already shown in this play of the level (not again after a fall). */
   private readonly hintsShown = new Set<number>();
   /**
@@ -447,7 +462,7 @@ export class Run {
   dash(dir: -1 | 1): boolean {
     const h = this.hero;
     if (!this.dashOn || this.phase !== 'run' || this.inHall || !h.manual || this.dustOff > 0) return false;
-    if (this.power.corn > 0 || h.move !== dir) return false;
+    if (this.power.corn > 0 || h.move !== dir || this.slowed) return false;
     if (resting(h)) {
       this.pending.push({ type: 'dashTired', first: !this.tiredShown });
       this.tiredShown = true;
@@ -497,6 +512,7 @@ export class Run {
     else h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
 
     if (h.dash > 0 && this.power.corn > 0) endDash(h); // corn is faster already
+    this.mudStep(h);
     const dash0 = h.dash > 0;
     const rest0 = resting(h);
     step(h, this.terrain, dt);
@@ -505,6 +521,7 @@ export class Run {
       return ev;
     }
     if (h.manual) this.walls();
+    if (this.wasMud) this.leftMud(h);
     if (dash0 && h.dash === 0) ev.push({ type: 'dashEnd' });
     if (rest0 && !resting(h)) ev.push({ type: 'dashReady' });
     // S2.16 B4: reaching street 2's dash hint turns the dash on (the game saves it).
@@ -549,6 +566,12 @@ export class Run {
       }
     });
 
+    // O2b (ogun.md 1.4): under the gateway arch, the welcome words (once a play).
+    const arch = this.level.arch;
+    if (arch !== null && !this.archShown && h.x >= arch) {
+      this.archShown = true;
+      ev.push({ type: 'arch' });
+    }
     this.pickUps(ev);
     this.moveHazards(dt, ev);
     this.stepBalls(dt, ev);
@@ -884,8 +907,52 @@ export class Run {
     return b;
   }
 
+  // ---------- Mud (O2b, ogun.md 3.3) ----------
+
+  /** True when x is on a mud patch (its left edge to its right edge). */
+  mudAt(x: number): boolean {
+    for (const m of this.level.mud) if (x >= m.x && x <= m.x + m.w) return true;
+    return false;
+  }
+
+  /** The hero's feet are in mud now: on the road (not a roof or in the air) over a patch. */
+  get inMud(): boolean {
+    const h = this.hero;
+    return h.grounded && h.on === null && this.level.mud.length > 0 && this.mudAt(h.x);
+  }
+
+  /** In mud with no ikokore: top speed is walk speed (ogun.md 3.3). */
+  get slowed(): boolean {
+    return this.power.ikokore <= 0 && this.inMud;
+  }
+
+  /**
+   * ogun.md 3.3: on mud the top speed is walk speed (90; 120 with corn) and the run timer stays
+   * at 0, so a run builds again only after leaving it (walking off, or landing on firm road).
+   * Jumps work as normal; mud never hurts. A dash ends in mud. Ikokore: mud does not slow you.
+   */
+  private mudStep(h: Body): void {
+    if (!h.manual || this.level.mud.length === 0) return;
+    if (this.slowed) {
+      h.gait = { walk: h.gait.walk, run: h.gait.walk };
+      h.runTime = 0;
+      if (h.dash > 0) endDash(h);
+      h.dashEase = false; // mud slows a dash as quickly as a run
+      this.wasMud = true;
+    } else if (this.wasMud && this.inMud) {
+      this.wasMud = false; // ikokore now, still in the mud: the run builds from here
+    }
+  }
+
+  /** After the move: feet on firm road (or a roof) again after mud, so the run builds from 0. */
+  private leftMud(h: Body): void {
+    if (!this.wasMud || !h.grounded || this.inMud) return;
+    this.wasMud = false;
+    h.runTime = 0;
+  }
+
   private tickPower(ev: RunEvent[]): void {
-    for (const kind of ['corn', 'amala'] as const) {
+    for (const kind of TIMED) {
       const left = this.power[kind];
       if (left <= 0) continue;
       const now = left - 1;
@@ -924,6 +991,7 @@ export class Run {
         f.taken = true;
         if (f.kind === 'corn') this.power.corn = RULES.cornSteps;
         else if (f.kind === 'amala') this.power.amala = RULES.amalaSteps;
+        else if (f.kind === 'ikokore') this.power.ikokore = RULES.ikokoreSteps;
         else if (f.kind === 'fufu') this.fufu = Math.min(FUFU_RULES.max, this.fufu + FUFU_RULES.give);
         else this.power.shield = true; // a second garri while shielded gives nothing extra
         ev.push({ type: 'food', kind: f.kind, x: f.x, y: f.y });
@@ -1245,7 +1313,7 @@ export class Run {
     this.lives--;
     ev.push({ type: 'fall' });
     // Food effects end on every fall, the last one too (so the HUD never shows a food at 0 lives).
-    this.power = { corn: 0, amala: 0, shield: false };
+    this.power = { ...NO_POWER };
     this.safe = 0;
     this.fufu = 0;
     this.balls = [];
@@ -1292,7 +1360,7 @@ export class Run {
   private gameOver(ev: RunEvent[]): void {
     this.lives = 0;
     // Food effects end on every game over, a hit or a fall (the HUD never shows a food at 0 lives).
-    this.power = { corn: 0, amala: 0, shield: false };
+    this.power = { ...NO_POWER };
     this.fufu = 0;
     this.phase = 'over';
     ev.push({ type: 'gameOver' });
