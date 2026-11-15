@@ -1,6 +1,20 @@
 # Plan
 
-Owner: pm. Updated 14 Nov 2026. Source: docs/brief.md. Product calls come from po and Tp, never from pm.
+Owner: pm. Updated 15 Nov 2026 (after round 3). Source: docs/brief.md. Product calls come from po and Tp, never from pm.
+
+## Next, in order (15 Nov 2026)
+
+Main track is Lagos: the lane run first, then the challenge road with W17 C (decisions 46, 48, 63). Store work fills gamedev's gaps (decision 51).
+
+| # | id | owner | task | can start when |
+|---|----|-------|------|----------------|
+| 1 | S3f4 | qa, then po | Test the lane run polish and decision 68 at 089c488 (see S3f4 row); po accepts | now |
+| 2 | S3e0 | designer | Full note for the challenge road with W17 C (city.md (e) says "full note before S3e1 starts") | now |
+| 3 | ST1b-r, ST1c | gamedev | README 5-step how-to for the debug APK (the last gap in ST1b), then the iOS simulator build on GitHub's Mac machines | now, beside S3e0 |
+| 4 | S3e1a | art | Challenge road pictures and the W17 C tired and bright first screens | S3e0 written and po checked |
+| 5 | S3e1b | gamedev | Challenge road screen, stop cards, W17 C hookups; lane run stop takes over from the Streets card | S3e0; plain shapes until S3e1a lands |
+
+After these: ST3 (designer and po, can start any time now that decisions 56 and 57 settle the privacy page and devices; screenshots best after S3e1b), S3q and S3p for (e), then ST4 once Tp's accounts exist.
 
 ## How a task moves
 
@@ -287,14 +301,17 @@ Source: docs/questions.md top block "Tp, 10 Nov 2026 (after playing the PR #3 bu
 | S3c4 | gamedev | Earn and collect: Mama Put and market, play-time filling, caps and "Full", trays saved, collecting, boom points, the two hints | S3c3 | city.md 5W W3, W4, W6, W7; nothing fills while closed; still city at most 2 small redraws a second (done: main 12 Nov, PR #8, qa round 5 passed, po accepted) | 3 KB |
 | S3d1a | art | The Booming meter you can see, pictures and sounds: tired ("a bit faded but still warm and proud") and bright pieces for all 12 blocks and the bus park; people per block; market umbrellas; meter icon and bar; first-boom flats, bus shelter, coming-soon padlock pin badge; sounds sting (short highlife, our own), step, boom, horn (src/art/city*.ts, src/engine/sound.ts, docs/assets.md) | S3c4 (done) | city.md (d) d2, d4, d5, d7, d11; d12 item 10 (mock no one); gallery shows 0, 8 and 20 point looks (done: main 13 Nov, PR #9) | ~12 KB |
 | S3d1b | gamedev | Booming meter you can see, code: brightness rules (d3); meter in the "Lagos" heading box; small layout up to 640 px (d5); hide a pin at "Done ✓"; the watch-it-change moment and the boom, with skip and reduced motion (d6), at least one danfo drives the new road; boom card and cog link; coming-soon pins and cards; `boomSeen`; bright hint (d8, d9) | S3d1a | city.md (d) d12 items 1 to 9; 45 fps at 4x CPU in the moment, boom and walking; still city at most 2 small redraws a second (done: main 13 Nov, PR #9) | ~11 KB |
-| S3a3 | art | **Next (Tp asked 13 Nov).** The moving intro scene, drawn in code: `drawIntroScene(g, w, h, t, { look })` in src/art/intro.ts (or src/art/intro-scene.ts), plus `INTRO_BEATS` and `INTRO_CUES`; gallery shows each beat start and 2, 19.4, 23, 27.8 s | S3a1 (done) | city.md (a2) a2.10 S3a3 row: a2.2 matches by eye at 320 x 240 and 851 x 393; a2.8 list; 45 fps at 4x CPU in the gallery; same `t` draws the same picture (unit test) | ~10 KB |
-| S3a4 | gamedev | **Next (Tp asked 13 Nov).** Intro screen: `IntroScene` clock in src/game/intro.ts (unit tested, no DOM), src/screens/intro.ts draws the scene, plays cues, captions in the hidden log, two on-screen lines, "Let's go", Skip, Escape, tap and key jumps, 3 s hold stop; reduced motion keeps the six frames; `heroLine` and `endLine` in `WORDS.intro` | S3a3 (the clock part can start now, alongside S3a3) | city.md (a2) a2.11 "Done when" 1 to 14 | ~4 KB |
-| S3e1 | art and gamedev | The challenge road (replaces the Streets screen), plus W17 C "same street, city and run": stop card with the spot from above, run's first screen tired or bright to match its city spot, plain street sign (Alausa follows New road, Computer Village r1c3, Ikeja r2c1) | S3c3, S3d1b | city.md (e), including the W17 C brief; no level gets harder or easier | 12 KB + ~6 KB (W17 C) |
-| S3f0 | designer | Lane run note in docs/design.md | none | written, with exact numbers and words | |
-| S3f1 | art | Lane run pictures, sounds, tune | S3f0 | city.md (f) | 50 KB |
-| S3f2 | gamedev | Lane run engine, swipes, keys, buttons | S3f0, S3f1 | 60 fps mid phone, 45 at 4x CPU | 30 KB |
-| S3f3 | gamedev | Blackout, buckets, HUD, end card, keep running; pins 2 and 3 open | S3f2 | city.md (f) done checks; first-timers reach the goal in 3 tries | 15 KB |
-| S3f4 | gamedev | Follow-ups from qa round 5 and po (12 Nov) for step (f): packed 320 x 240 layout with Power and Tech, arrows back to 48 x 48 and the drawn arrow matches its tap square; Tech chip and "+" must not cut the Lights out pin word ("Lights ou") | S3f3 | qa at 320 x 240 with all three buckets; po will not accept (f) without it | small |
+| S3a3 | art | The moving intro scene, drawn in code (`drawIntroScene`, `INTRO_BEATS`, `INTRO_CUES`) | S3a1 (done) | city.md (a2) a2.10 (done: main 13 Nov; subtitles rework for decisions 53 and 58 done: main 15 Nov, PR #11, po accepted) | ~10 KB |
+| S3a4 | gamedev | Intro screen: `IntroScene` clock, cues, captions, Skip, tap jumps, reduced motion stills | S3a3 | city.md (a2) a2.11 (done: main 13 Nov; subtitles rework, six captions, about 44 s, done: main 15 Nov, PR #11, po accepted) | ~4 KB |
+| S3e0 | designer | **Next.** Full note for (e) the challenge road with W17 C in docs/city.md (e) or docs/design.md: stop list now that (f) is open (the "Lane run" stop is no longer locked), stop card with the spot from above, tired and bright first-screen rules per street, words, layout at 320 x 240, screen reader list, sizes | **ready now** | written with exact numbers and words; po checked | |
+| S3e1a | art | Challenge road pictures: road, danfo-yellow stop signs, ferry jetty (under 6 KB); W17 C: stop card spot cuts, tired and bright first screens for streets 1 to 3, plain street signs (about 4 KB) | S3e0 | city.md (e) and S3e0; not a path-and-dots world map (part 6 rule 4); mock no one (d2) | ~10 KB |
+| S3e1b | gamedev | Challenge road screen (replaces the Streets screen; the city's "Streets" button becomes "Challenge road"), stop cards, run's first screen follows its spot (Alausa follows New road, Computer Village r1c3, Ikeja r2c1), lane run stop takes over from the Streets card (design.md S3f0) | S3e0, S3e1a (screen with plain shapes can start after S3e0) | city.md (e) and S3e0 done checks; fits 320 x 240 with stops 44 px or more; heard as a list; no level gets harder or easier | ~8 KB |
+| S3f0 | designer | Lane run note in docs/design.md | none | written, with exact numbers and words (done 14 Nov) | |
+| S3f1 | art | Lane run pictures, sounds, tune | S3f0 | city.md (f) (done: main 15 Nov, PR #11, qa passed, po accepted) | 50 KB |
+| S3f2 | gamedev | Lane run engine, swipes, keys, buttons | S3f0, S3f1 | 60 fps mid phone, 45 at 4x CPU (done: main 15 Nov, PR #11, qa passed, po accepted) | 30 KB |
+| S3f3 | gamedev | Blackout, buckets, HUD, end card, keep running; pins 2 and 3 open | S3f2 | city.md (f) done checks; first-timers reach the goal in 3 tries (done: main 15 Nov, PR #11, qa passed, po accepted; LR-Q1 and LR-Q2 confirmed as decisions 66 and 67) | 15 KB |
+| S3f4 | gamedev, then qa | **In qa at 089c488.** Lane run polish from po's round 3 note: pop to chip, lamp dots, look-back intro, corn count, the "+5 m" chip apart from "Blackout: 17 m behind"; corn throws in the lane run (decision 68); no update banner on a street Pause (decision 68, 3243293). qa also confirms design.md part 22 (city at 320 x 240 with Power and Tech: 48 x 48 arrows, "Lights out" and "Slow internet" never cut) | S3f3 | design.md S3f0 part 24, including item 19; po accepts | small |
+| S3f5 | designer and qa | Later: lane run tuning check. qa found first-timers usually win on try 1 ("may be too easy"). Check with 3 first-time players in the people test before changing any number; designer changes numbers only if most win on try 1 without trying | S3f4; the people test | report with tries per player; any change written in design.md S3f0 first | |
 | S3q | qa | Test each step on the phone profile, 4x CPU, offline, size, originality | each step | report per step | |
 | S3p | po | Accept each step; then "slice 3 done" (city.md part 5 goal) | S3q | note in docs/questions.md | |
 
@@ -302,7 +319,7 @@ Lagos first (Tp, 13 Nov, decision line 46 waiting to be pasted): finish (d), (e)
 
 Designer rulings taken under Tp's "I take all you guys recommendations" (13 Nov): Mission complete grows to about 7 to 9 s with the moment (was 4 to 6 s), everything after the bus skippable with one tap; no special message for returning players.
 
-Suggested gamedev order (one at a time): S3c2 to S3c4 and S3d1 done; next S3a4 (clock part now, screen after S3a3), then S3e1, S3f2, S3f3, S3f4. Art: S3a3 first (Tp asked 13 Nov). Art can run P6, P7, P9, S3a1, S3b1, S3c1 side by side (sound tasks one at a time in src/engine/sound.ts).
+Suggested gamedev order (one at a time, 15 Nov): S3a3, S3a4 and S3f1 to S3f3 done; S3f4 in qa; next S3e1b after S3e0, store rows in the gaps. Art: S3a3 first (Tp asked 13 Nov). Art can run P6, P7, P9, S3a1, S3b1, S3c1 side by side (sound tasks one at a time in src/engine/sound.ts).
 
 ### B1 to B5: birds, the strong look, the tech suit, the dash, thorny gutters (design S2.16; Tp, 10 Nov)
 
@@ -331,32 +348,32 @@ Rules for every row here:
 
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
-| U1 | gamedev | **Doing.** When a new version is deployed, the game shows "New version ready. Tap to update." One tap loads it. | none | the prompt shows once a newer build is waiting; one tap loads it; saves kept; never cuts a run in half (waits for a screen, not mid-street); no prompt and no error offline; unit and phone e2e tests pass; size check passes |
-| U2 | qa | Test U1: deploy A, open, deploy B, reopen; phone profile and 4x CPU; offline | U1 | three-line report |
-| U3 | po | Accept U1 | U2 | note in docs/questions.md |
+| U1 | gamedev | When a new version is deployed, the game shows "New version ready. Tap to update." One tap loads it (web only, decision 55) | none | done: main 15 Nov, PR #11; follow-up (decision 68, no banner on a street Pause) in qa with S3f4 |
+| U2 | qa | Test U1: deploy A, open, deploy B, reopen; phone profile and 4x CPU; offline | U1 | passed |
+| U3 | po | Accept U1 | U2 | accepted 14 Nov (docs/questions.md) |
 
-In the store app the game updates through the store, so U1 must not fire there (see ST1a and question ST-Q2).
+In the store app the game updates through the store, so U1 does not fire there (decision 55; `isNativeApp()` skips it).
 
 ### ST. Store version (decisions 39 to 41, 51)
 
 | id | owner | task | depends on | done when |
 |----|-------|------|------------|-----------|
-| ST0 | designer | App note in docs/design.md: name under the icon ("Gbese!"), sideways only (both ways), Android back button (pause first, then a "Leave the game?" ask, never a silent quit), app sent to the background (pause, music stops), notch and home bar, splash length, what the test app shows that the web link does not | none: **ready now** | note written with exact words; po approved |
-| ST1a | gamedev | Capacitor wrapper (current stable, pinned), Android project in `android/`: `capacitor.config.ts`, app id, name "Gbese!", version from package.json (versionCode 1). Loads the built `dist` from inside the app: no web fetch for the game, no service worker in the app, U1 off in the app. Saves stay on the phone. Sideways only. Back button and background as ST0 | ST0, app id (ST-Q1) | `npm run build` and the web e2e unchanged; debug APK installs on an Android emulator, starts in airplane mode and plays street 1; a save survives closing the app and a phone restart; no network request after launch (logged in the test); only sideways; web first load unchanged within 2 KB |
-| ST1b | gamedev | CI: new workflow `.github/workflows/app.yml` (deploy.yml untouched) builds the debug APK on every push to main and by hand, and keeps it as a downloadable artifact | ST1a | the Actions run shows "gbese-debug.apk"; Tp can download it, side-load it ("install unknown apps") and play; how-to in README in 5 plain steps |
-| ST1c | gamedev | iOS project in `ios/`. Needs a Mac with Xcode: use GitHub's Mac build machines (never the company Mac, po 10 Nov). CI builds for the iPhone simulator only, unsigned. TestFlight comes in ST4b | ST1a | the Mac CI job builds and the simulator starts the game sideways, offline |
-| ST2 | art | App icons and splash screens at every store size, our own art (from the code-drawn icon in scripts/make-icons.mjs or new): Android adaptive icon (foreground and background), Play icon 512 x 512, Play feature picture 1024 x 500, iOS icon 1024 x 1024, splash for Android 12 and later and iOS, light and dark | ST0 | every size made by one script from our sources; readable at 48 px; originality check passed (rule 2); no real people, party colours or brand |
-| ST3 | designer and po | Store listing: short and long words, keywords, age rating answers (everyone 10 and up, not the kids section, decision 41), privacy statement ("no data collected": no accounts, no trackers, no ads, saves on the phone), the Play data safety and Apple privacy answers, 8 screenshots sideways (phone sizes both stores ask for) | ST0; privacy page place (ST-Q3), devices (ST-Q4) | words in docs/store.md, plain for a 10 year old; po approved; Apple has no "10+" rating: honest answers give 4+ or 9+, which is fine; screenshots from the real game, nothing promised that is not built |
-| ST4a | gamedev | Android signing and Play upload: release build (AAB) signed in CI from secrets; upload to Play internal testing | ST1b, ST2, ST3; **blocked on Tp's Google Play account** | the AAB is accepted by Play Console internal testing and installs from the Play test link on Tp's phone |
-| ST4b | gamedev | iOS signing and TestFlight upload from the Mac CI job | ST1c, ST2, ST3; **blocked on Tp's Apple developer account** | the build is in TestFlight and installs on Tp's iPhone |
+| ST0 | designer | App note in docs/design.md: name "Gbese!", sideways only, back button ask, background pause, notch, splash | none | done; po accepted 14 Nov; merged main 15 Nov, PR #11 |
+| ST1a | gamedev | Capacitor wrapper, Android project in `android/`, app id com.coachnaz.gbese (decision 54), backup off (decision 59), no service worker and no U1 in the app | ST0, ST-Q1 | done; qa passed, po accepted 14 Nov; merged main 15 Nov, PR #11. Not yet tried: the debug APK on a real phone |
+| ST1b | gamedev | CI: `.github/workflows/app.yml` (deploy.yml untouched) builds the debug APK and keeps it as "gbese-debug.apk" | ST1a | **Done except one gap.** Checked 15 Nov against the row: runs on every push to main and to claude/serene-hopper-ydve2g and by hand (workflow_dispatch), runs `npm test` first, uploads "gbese-debug.apk" for 14 days, no keys. Gap: README has no 5-step how-to (download, allow "install unknown apps", install, play) yet; that is task ST1b-r. Then Tp side-loads it |
+| ST1c | gamedev | iOS build in CI: iOS project in `ios/`, a new job or workflow on GitHub's Mac machines (`macos-latest`), never the company Mac (po 10 Nov). Builds for the iPhone simulator only, unsigned, no keys or secrets. iPhone only, not iPad (decision 57); backup off (decision 59). TestFlight comes in ST4b | ST1a (done); **ready now** | the Mac CI job passes on push and by hand; the simulator starts the game sideways and offline (screenshot kept as an artifact); deploy.yml and app.yml's Android job unchanged; web first load unchanged within 2 KB |
+| ST2 | art | App icons and splash screens at every store size, our own art (`npm run app-icons`, app-assets/) | ST0 | done; po accepted 14 Nov; merged main 15 Nov, PR #11 |
+| ST3 | designer and po | Store listing in docs/store.md: short and long words, keywords; age rating answers (everyone 10 and up, not the kids section, decision 41; Apple gives 4+ or 9+ on honest answers); privacy page, a short page on the test link's site (decision 56): no accounts, trackers, ads or data collected, saves stay on this phone and backup is off (decision 59); Play data safety and Apple privacy answers; 8 sideways screenshots from the real game at the sizes both stores ask, iPhone only (decision 57) | ST0 (done); **ready now** for words and privacy; screenshots best after S3e1b | words plain for a 10 year old; po approved; privacy page builds with the site and passes the size check; screenshots show only what is built; a 3D hero render may be used for store pictures (decision 65) |
+| ST4a | gamedev | ST4, Android: signing and Play upload. Release build (AAB) signed in CI from GitHub secrets Tp types in; upload to Play internal testing | ST1b, ST2, ST3; **blocked on Tp's Google Play account** | the AAB is accepted by Play Console internal testing and installs from the Play test link on Tp's phone |
+| ST4b | gamedev | ST4, iOS: signing and TestFlight upload from the Mac CI job | ST1c, ST2, ST3; **blocked on Tp's Apple developer account** | the build is in TestFlight and installs on Tp's iPhone |
 | ST5 | qa | Test each ST row on an emulator and, when there is one, a real cheap Android phone: offline, sideways, saves, back button, background, size, originality | each row | three-line report per row |
 | ST6 | po | Accept each ST row | ST5 | note in docs/questions.md |
 
-Order: ST0 and ST2 can start now beside Lagos art. Then ST1a, ST1b (Tp's first test app on an Android phone), ST1c, ST3, then ST4a and ST4b once Tp's accounts exist.
+Order (15 Nov): ST0, ST1a, ST2 done; ST1b done but for the README steps. Next ST1b-r, then ST1c, then ST3, then ST4 (ST4a and ST4b) once Tp's accounts exist. Uploading to a store is Tp's call (decision 64).
 
 ### What Tp must do for the store version, and when
 
-1. Now: answer ST-Q1 to ST-Q4 in docs/questions.md.
+1. Done 14 Nov: ST-Q1 to ST-Q5 answered (decisions 54 to 57, 59).
 2. After ST1b: download the debug APK from the Actions run, side-load it on an Android phone, play, say what feels wrong.
 3. When ST3 is near done (pm will say): make the Google Play developer account (play.google.com/console, one-time $25) and the Apple developer account (developer.apple.com, about $99 a year), in Tp's own name or own company (decision 40). Apple can take a few days to approve. New personal Play accounts must run a closed test with a set number of testers for about two weeks before going public; check the current rule when making the account.
 4. For ST4a: in Play Console, create the app "Gbese!" with the app id from ST-Q1. gamedev gives Tp a short guide to make the upload key and add it, the key password and a Play service account as GitHub Actions secrets, typed in by Tp on github.com.
@@ -371,25 +388,20 @@ Order: ST0 and ST2 can start now beside Lagos art. Then ST1a, ST1b (Tp's first t
 
 ## Status
 
-Done: slice 1 A to F and G1. Slice 2 H (85741b9), I (53a659d), J (8636479), K (5ee5f06), L (cc8e594), M (ae69d29): each qa passed and po accepted. Tp answered Q16 to Q25 on 8 Nov.
-Done (13 Nov update): walk the city S3c0 to S3c4, merged to main 12 Nov (PR #8), qa round 5 passed, po accepted.
-Done (13 Nov): S3d1 (S3d1a and S3d1b), merged to main 13 Nov (PR #9).
-Deploy (13 Nov): quick checks and phone tests run before going live; timing and perf tests run after, in a separate job.
-Next: the moving intro (Tp asked 13 Nov, city.md (a2)): S3a3 (art, ready now), then S3a4 (gamedev; the clock part can start now). Then S3e1 with W17 C, then S3f0 to S3f4. No second state until Lagos (d) to (f) is accepted.
-Done (14 Nov): the lead added decision lines 5 to 52 for Tp.
-Doing (14 Nov): U1 update prompt (gamedev). Store track (decision 51) planned beside Lagos: ST0 and ST2 ready now; ST1a waits on ST-Q1 (app id); ST4 waits on Tp's store accounts.
-Waiting on Tp: play on a real phone; the new sounds by ear, and later the highlife sting once S3d1a makes it.
-Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked.
-P2 (designer, 10 Nov): design.md S2.13 has the P2 doc fixes (foods 12 s, corn hazard rule, pothole signs, Gentle mode climb-out) and the tasks for gamedev and art; the hall difficulty part of P2 is still to do.
-Note for Tp: until N2, the Win card says "with 0 kobo" and the parcel is lost when the page closes.
+Done: slice 1 A to F and G1; slice 2 H to M; walk the city S3c0 to S3c4 (PR #8); S3d1 (PR #9); the moving intro S3a3 and S3a4 (main 0018f83).
+Done (15 Nov, PR #11, 10a8240, live on the test link): the lane run S3f1 to S3f3; intro subtitles (decisions 53, 58); the hero redraw and front turn (decisions 60, 61, 65); U1 (U2 qa passed, U3 po accepted); goat and bird sounds (decision 62); ST0, ST1a, ST2; ST1b but for the README steps.
+In qa: S3f4 lane run polish and decision 68 at 089c488.
+Next: see "Next, in order" at the top. S3e0, then S3e1a and S3e1b; store rows in gamedev's gaps.
+Later: S3f5, the lane run tuning check with first-time players (qa: "may be too easy").
+Blocked: ST4a and ST4b on Tp's store accounts.
 
 ## Waiting on Tp
 
-1. Create the GitHub repo (name, public or private) and push access, or push it yourself. Turn on Pages with source "GitHub Actions". Blocks G2 to G4.
-2. Answer ST-Q1 to ST-Q4 (store version) in docs/questions.md. ST-Q1 (app id) blocks ST1a.
-3. Later, when pm says: make the Google Play and Apple developer accounts (see "What Tp must do for the store version"). Blocks ST4a and ST4b.
-4. Remove the "wrong premise" line from docs/brief.md Done when 8.
-5. Play streets 2 and 3 and Go-Slow Hall on your phone (with and without the parcel); say if any took more than 3 tries, or if the hall felt too easy (feeds P2, P3).
+1. By ear, Sound on, test link with ?sounds: goat "meeh", birds "hawk hawk", the lane sounds (listen closely to "caught"). Recommend: yes, unless one sounds like a known game.
+2. Side-load the debug APK from the Actions run (after ST1b-r's README steps) and play on an Android phone.
+3. The people test: three first-time players (one aged 9 to 12) for the intro and the lane run. Feeds S3f5.
+4. Later, when pm says (near the end of ST3): make the Google Play and Apple developer accounts. Blocks ST4.
+5. Play streets 2 and 3 and Go-Slow Hall on a phone; say if any took more than 3 tries.
 
 ## Questions for po
 
