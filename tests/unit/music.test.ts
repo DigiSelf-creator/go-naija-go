@@ -7,6 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CORN, G_PENTATONIC, TUNES, laneTempoAt, type MusicPlace, type Tune } from '../../src/art/tunes';
+import { GATEWAY_TUNE } from '../../src/art/ogunGate';
 import { LOOKAHEAD, MUSIC_GAIN, Music, midiHz, noteNumber, ringSeconds, stepSeconds, trackEvents, tuneEvents } from '../../src/engine/music';
 
 const PLACES = Object.keys(TUNES) as MusicPlace[];
@@ -461,6 +462,25 @@ describe('music player', () => {
     const n = scheduled.length;
     advance(5);
     expect(scheduled.length).toBe(n);
+  });
+
+  it("O1b2: playTune plays a tune that is not a place (Ogun's welcome tune) once, then stops; off with Music off", () => {
+    const { m, advance, timers } = rig();
+    m.playTune(GATEWAY_TUNE);
+    advance(0.5);
+    expect(scheduled.length).toBeGreaterThan(0);
+    advance(4);
+    expect(timers()).toBe(0);
+    expect(m.place).toBeNull();
+    const n = scheduled.length;
+    advance(3);
+    expect(scheduled.length).toBe(n);
+    const off = rig();
+    off.m.setEnabled(false);
+    scheduled = [];
+    off.m.playTune(GATEWAY_TUNE);
+    off.advance(2);
+    expect(scheduled).toEqual([]);
   });
 
   it('stop ends everything; nothing plays before unlock or attach', () => {
