@@ -154,6 +154,19 @@ if (query.get('gallery')?.startsWith('lane')) {
     };
     requestAnimationFrame(frame);
   });
+} else if (query.get('gallery') === 'hall-ogun') {
+  // Debug only: Pothole Hall and King Pothole (O5a): ?gallery=hall-ogun; &t=1.5 holds the time, &still=1 the reduced-motion look.
+  void import('./art/galleryHallOgun').then(({ drawHallOgunGallery }) => {
+    const t0 = performance.now();
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const still = query.get('still') === '1';
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawHallOgunGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, still);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
 } else if (query.get('gallery')?.startsWith('road')) {
   // Debug only: the challenge road's pictures (S3e1a): ?gallery=road, road2 ... road8; &t=1.5 holds the time.
   void import('./art/galleryRoad').then(({ drawRoadGallery }) => {
