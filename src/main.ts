@@ -102,6 +102,20 @@ if (query.get('gallery')?.startsWith('lane')) {
     };
     requestAnimationFrame(frame);
   });
+} else if (query.get('gallery')?.startsWith('ogun-city')) {
+  // Debug only: Ogun's city, challenge road and Expressway (O6a): ?gallery=ogun-city, ogun-city2, ogun-city3; &t=1.5 holds the time, &still=1 the reduced-motion look.
+  void import('./art/galleryOgunCity').then(({ drawOgunCityGallery }) => {
+    const t0 = performance.now();
+    const page = Math.max(0, (Number(query.get('gallery')!.slice(9)) || 1) - 1);
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const still = query.get('still') === '1';
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawOgunCityGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page, still);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
 } else if (query.get('gallery')?.startsWith('ogun')) {
   // Debug only: Ogun's gateway pieces (O1a): ?gallery=ogun, ogun2, ogun3; &t=1.5 holds the time.
   void import('./art/galleryOgun').then(({ drawOgunGallery }) => {
