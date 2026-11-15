@@ -2,8 +2,9 @@
  * One lane run on screen. S3f2: its own fixed-step loop on the game canvas, the camera and the
  * road, swipes, keys and the four buttons, "3, 2, 1" on every start and resume. S3f3: the
  * Blackout, the buckets, the food, the HUD and hint bar, the goal and caught cards, "Keep running",
- * the best distance and the `lane` save. main.ts loads this file only when a lane run opens, so
- * none of it is in the first load.
+ * the best distance and the `lane` save. Round 4: pickups fly to their chips, the lamp dots, the
+ * first run's look back, the corn count, and the "+5 m" in its own chip. main.ts loads this file
+ * only when a lane run opens, so none of it is in the first load.
  */
 import laneData from '../data/levels/lagos-lane.json';
 import type { HeroLook } from '../art/hero';
@@ -21,6 +22,10 @@ import { parseLane, type LaneLevel } from './level';
 import { NO_HAUL, addHaul, haulWords, lanePrize, subHaul, type Haul, type LaneSave } from './rewards';
 import { LaneSim, type LaneEvent, type LaneMove } from './sim';
 import { DARK_FROM, LaneView, WARN_UNDER, type HeroPose } from './view';
+import { drawBucketIcon } from '../art/city';
+import { cornCount } from '../game/music-cue';
+import type { HintBarBox } from '../screens/controls';
+import { DOTS_FROM_W, INTRO_TIME, LAMP_DOTS, PLUS_TIME, PopFlights, introAt, laneCountBox, litDots, type ChipKind } from './polish';
 
 /** "3, 2, 1": each number shows this long, then "Go!" while the run starts (part 14). */
 export const COUNT_STEP = 0.6;
@@ -106,9 +111,19 @@ export interface LaneHooks {
   music(m: { tempo: number; guitar: boolean; held: boolean } | null): void;
   /** Part 17: the Blackout's close hum. */
   closeHum(on: boolean): void;
+  /**
+   * Part 11: the corn tune and its 5, 4, 3, 2, 1 count, as on the streets (S2.9): `left` seconds
+   * of corn, held while paused, the count in `box` (the hint bar's place). null: no corn now.
+   */
+  corn(c: { left: number; held: boolean; box: HintBarBox } | null): void;
 }
 
-export type LaneStage = 'count' | 'play' | 'paused' | 'caught' | 'card' | 'off';
+/** The size the flying pickups are drawn at (CSS px). */
+const FLY_PX = 18;
+/** Pickups float this high (m) on the road, as the view draws them. */
+const PICKUP_UP = 0.8;
+
+export type LaneStage = 'intro' | 'count' | 'play' | 'paused' | 'caught' | 'card' | 'off';
 
 export interface LaneTestHook {
   stage: LaneStage;
@@ -126,7 +141,21 @@ export interface LaneTestHook {
   buttons: boolean;
   count: string;
   line: string;
+  /** The Blackout words, then the "+5 m" / "−15 m" chip when it shows (two spaces between). */
   blackout: string;
+  /** The "+5 m" / "−15 m" chip alone, '' when hidden; whether it sits under the words (narrow screens). */
+  change: string;
+  changeBelow: boolean;
+  /** Lamp dots lit now (of 6), and whether they show (from 400 px wide). */
+  dots: { lit: number; shown: boolean };
+  /** Pickups flying to their chips now. */
+  flying: number;
+  /** Reduced motion's short "+1" on each chip ('' when none). */
+  plus: string[];
+  /** The first run's look back: seconds into it (only while stage is 'intro'). */
+  introT: number;
+  /** The corn count showing now (5 to 1), 0 for none. */
+  cornCount: number;
   hint: string;
   chips: string[];
   gap: number;
@@ -169,7 +198,14 @@ export class LaneSession {
   private readonly buttons: LaneButtons;
   private readonly hud: HTMLDivElement;
   private readonly chipEls: HTMLSpanElement[];
+  private readonly chipNums: HTMLSpanElement[];
+  private readonly plusEls: HTMLSpanElement[];
   private readonly darkEl: HTMLParagraphElement;
+  private readonly leftEl: HTMLDivElement;
+  private readonly rightEl: HTMLDivElement;
+  private readonly changeEl: HTMLSpanElement;
+  private readonly dotsEl: HTMLSpanElement;
+  private readonly dotEls: HTMLSpanElement[];
   private readonly toGo: HTMLParagraphElement;
   private readonly bestEl: HTMLParagraphElement;
   private readonly hintEl: HTMLDivElement;
@@ -204,6 +240,23 @@ export class LaneSession {
   private meehAt = -Infinity;
   /** Lamps the Blackout has switched off so far (each one goes "tunk"). */
   private lampsOff = 0;
+  /** Part 9: pickups on their way to their chips. */
+  readonly flights = new PopFlights();
+  /** Reduced motion: each chip's short "+1" (what it adds up to, and seconds left). */
+  private plus: { amount: number; t: number }[] = [0, 1, 2].map(() => ({ amount: 0, t: 0 }));
+  /** The chips' middles (CSS px), measured at the start of a frame while something flies. */
+  private chipAt: { x: number; y: number }[] = [];
+  /** The flying icons, made once per pixel ratio. */
+  private icons: { ratio: number; img: HTMLCanvasElement[] } | null = null;
+  /** Part 14: seconds into the first run's look back. */
+  private introT = 0;
+  /** Part 15: row 2 is measured again after a resize (does "To the bus stop" fit, does the change chip?). */
+  private fitDirty = true;
+  private stopShort = false;
+  private changeBelow = false;
+  /** The corn count showing now (it takes the hint bar's place). */
+  private countN = 0;
+  private countBox: HintBarBox | null = null;
 
   constructor(private readonly hooks: LaneHooks) {
     addLaneSounds();
@@ -218,8 +271,16 @@ export class LaneSession {
     });
     this.soundButton.innerHTML = SPEAKER;
     this.syncSound();
-    this.chipEls = [h('span', { class: 'lane-chip naira' }), h('span', { class: 'lane-chip power' }), h('span', { class: 'lane-chip tech' })];
+    this.chipNums = [0, 1, 2].map(() => h('span', { class: 'lane-chip-n' }));
+    this.plusEls = [0, 1, 2].map(() => h('span', { class: 'lane-plus', 'aria-hidden': 'true', hidden: true }));
+    this.chipEls = (['naira', 'power', 'tech'] as const).map((k, i) => h('span', { class: `lane-chip ${k}` }, this.chipNums[i]!, this.plusEls[i]!));
     this.darkEl = h('p', { class: 'lane-dark' });
+    // Part 15: 6 lamp dots after the Blackout words (the words carry it for screen readers).
+    this.dotEls = Array.from({ length: LAMP_DOTS }, () => h('span', { class: 'lane-dot' }));
+    this.dotsEl = h('span', { class: 'lane-dots', 'aria-hidden': 'true' }, ...this.dotEls);
+    // po's polish note: the "+5 m" / "−15 m" in its own small chip, so "17 m behind" never reads as 22.
+    this.changeEl = h('span', { class: 'lane-change', hidden: true });
+    this.leftEl = h('div', { class: 'lane-left' }, this.darkEl, this.dotsEl, this.changeEl);
     this.toGo = h('p', { class: 'lane-line' });
     this.bestEl = h('p', { class: 'lane-best', hidden: true });
     this.hintEl = h('div', { class: 'lane-hint', hidden: true });
@@ -228,7 +289,7 @@ export class LaneSession {
       'div',
       { class: 'lane-hud', 'data-ui': true },
       h('div', { class: 'lane-row' }, h('div', { class: 'lane-chips' }, ...this.chipEls), h('div', { class: 'lane-buttons-top' }, this.soundButton, pauseButton)),
-      h('div', { class: 'lane-row2' }, this.darkEl, h('div', { class: 'lane-right' }, this.toGo, this.bestEl)),
+      h('div', { class: 'lane-row2' }, this.leftEl, (this.rightEl = h('div', { class: 'lane-right' }, this.toGo, this.bestEl))),
       this.hintEl,
       this.sayEl,
     );
@@ -248,6 +309,11 @@ export class LaneSession {
     const fromUi = (e: Event): boolean => e.target instanceof Element && e.target.closest('button, [data-ui] .lane-row, .screen') !== null;
     on('pointerdown', (e) => {
       if (fromUi(e)) return;
+      // Part 14: a tap skips the look back to "3, 2, 1".
+      if (this.stage === 'intro') {
+        this.countDown();
+        return;
+      }
       this.swipes.down(e.pointerId, e.clientX, e.clientY, e.timeStamp);
     });
     on('pointermove', (e) => {
@@ -258,10 +324,12 @@ export class LaneSession {
     on('pointercancel', (e) => this.swipes.up(e.pointerId));
     on('keydown', (e) => {
       const m = keyMove(e.code, e.repeat);
-      if (!m || this.stage === 'off' || this.card) return;
+      const skip = this.stage === 'intro' && !e.repeat && (m !== null || e.code === 'Enter');
+      if ((!m && !skip) || this.stage === 'off' || this.card) return;
       if (document.querySelector('.screen:not([hidden]) .card')) return;
       e.preventDefault();
-      this.press(m);
+      if (skip) this.countDown();
+      else if (m) this.press(m);
     });
   }
 
@@ -291,8 +359,37 @@ export class LaneSession {
     }
     this.view.resize(w, hgt, pw / Math.max(1, w));
     this.buttons.place(buttonBoxes(w, hgt, this.hooks.safe()));
-    // Part 15: under 400 px wide, "To the bus stop" may become "Bus stop" if the two lines meet.
-    this.hud.classList.toggle('lane-narrow', w < 400);
+    // Part 15: the lamp dots from 400 px wide; "To the bus stop" becomes "Bus stop" only if the
+    // two lines still meet (measured on the next frame the HUD shows).
+    this.hud.classList.toggle('lane-narrow', w < DOTS_FROM_W);
+    this.fitDirty = true;
+    this.countBox = laneCountBox(w, hgt, this.hooks.safe().top);
+    this.icons = null;
+  }
+
+  /**
+   * Part 15 and po's polish note: with the longest words row 2 can show ("Blackout: 10 m behind!",
+   * the lamp dots, "−15 m" and "To the bus stop: 600 m"), do the two sides meet? Then the right
+   * one says "Bus stop: 600 m"; if they still meet, the change chip shows under the Blackout words.
+   */
+  private fitRow2(): void {
+    const w = WORDS.lane;
+    this.fitDirty = false;
+    this.lastHud = '';
+    this.changeEl.classList.remove('below');
+    this.hud.classList.remove('change-below');
+    this.changeEl.hidden = false;
+    this.changeEl.textContent = w.gained(15);
+    this.darkEl.textContent = w.blackoutNear(10);
+    this.toGo.textContent = w.toGo(600);
+    // The row does not wrap: the two sides meet when their widths and the 8 px gap overflow it.
+    const row = this.leftEl.parentElement!;
+    const meet = (): boolean => this.leftEl.getBoundingClientRect().width + 8 + this.rightEl.getBoundingClientRect().width > row.getBoundingClientRect().width;
+    this.stopShort = meet();
+    if (this.stopShort) this.toGo.textContent = w.toGoShort(600);
+    this.changeBelow = this.stopShort && meet();
+    this.changeEl.classList.toggle('below', this.changeBelow);
+    this.changeEl.hidden = true;
   }
 
   /** From 0 m with the Blackout reset: "3, 2, 1", then go. Gentle mode counts from here (Q15). */
@@ -304,6 +401,8 @@ export class LaneSession {
     this.banked = { ...NO_HAUL };
     this.prize = null;
     this.save = this.hooks.laneSave();
+    // Part 14: the look back on the first lane run only.
+    const first = this.save.runs === 0;
     this.save.runs++;
     this.bestAtStart = this.save.best;
     this.hooks.saveLane(this.save);
@@ -314,12 +413,20 @@ export class LaneSession {
     this.toldStop = false;
     this.caughtT = 0;
     this.lampsOff = 0;
+    this.flights.clear();
+    for (const p of this.plus) p.t = 0;
     this.view.camX = 0;
-    this.countDown();
+    if (first) {
+      this.stage = 'intro';
+      this.introT = 0;
+      this.swipes.cancel();
+      this.loop.resume();
+    } else this.countDown();
     this.loop.start();
   }
 
   private countDown(): void {
+    this.introT = 0;
     this.stage = 'count';
     this.count = COUNT_STEP * 3;
     this.goT = 0;
@@ -329,7 +436,7 @@ export class LaneSession {
 
   /** Stops the run on the Pause card (main shows it). The saves are written now (part 20). */
   pause(): void {
-    if (this.stage !== 'play' && this.stage !== 'count') return;
+    if (this.stage !== 'play' && this.stage !== 'count' && this.stage !== 'intro') return;
     this.stage = 'paused';
     this.loop.pause();
     this.swipes.cancel();
@@ -361,6 +468,7 @@ export class LaneSession {
     this.stage = 'off';
     this.hooks.music(null);
     this.hooks.closeHum(false);
+    this.hooks.corn(null);
     this.loop.stop();
     for (const f of this.off) f();
     this.off.length = 0;
@@ -373,7 +481,7 @@ export class LaneSession {
 
   /** In a run with nothing over it (the Android back button pauses then). */
   get running(): boolean {
-    return (this.stage === 'play' || this.stage === 'count') && !this.card;
+    return (this.stage === 'play' || this.stage === 'count' || this.stage === 'intro') && !this.card;
   }
 
   /** This run's pickups, plus the prize once won. */
@@ -409,7 +517,15 @@ export class LaneSession {
 
   private update(dt: number): void {
     if (this.flash.t > 0) this.flash.t -= dt;
-    if (this.line.t > 0) this.line.t -= dt;
+    // A line that comes due during the corn count waits until the count ends (S2.9).
+    if (this.line.t > 0 && this.countN === 0) this.line.t -= dt;
+    this.flights.step(dt);
+    for (const p of this.plus) if (p.t > 0) p.t -= dt;
+    if (this.stage === 'intro') {
+      this.introT += dt;
+      if (this.introT >= INTRO_TIME) this.countDown();
+      return;
+    }
     if (this.stage === 'count') {
       this.count -= dt;
       if (this.count <= 0) {
@@ -470,15 +586,18 @@ export class LaneSession {
         break;
       case 'burst':
         t.bursts++;
+        this.popOut(e.kind, this.sim.laneX(e.lane), e.d, 0.5);
         break;
       case 'goat':
         t.goats++;
+        this.popOut('goat', this.sim.laneX(e.lane), e.d, 0.5);
         if (this.sim.time - this.meehAt < MEEH_GAP) name = '';
         else this.meehAt = this.sim.time;
         break;
       case 'coin':
         t.coins++;
         this.hooks.sound(laneTinkFor(Math.random()));
+        this.fly('naira', 10, 1, this.sim.laneX(e.lane), e.d, e.h);
         break;
       case 'toss':
         t.tosses++;
@@ -493,15 +612,20 @@ export class LaneSession {
         break;
       case 'pickup':
         name = e.kind;
-        if (e.kind === 'bulb') t.bulbs++;
-        else if (e.kind === 'chip') t.chips++;
-        else {
+        if (e.kind === 'bulb') {
+          t.bulbs++;
+          this.fly('power', 1, 1, this.sim.x, this.sim.dist, PICKUP_UP);
+        } else if (e.kind === 'chip') {
+          t.chips++;
+          this.fly('tech', 1, 1, this.sim.x, this.sim.dist, PICKUP_UP);
+        } else {
           t.foods++;
           this.say(e.kind === 'garri' ? w.garri : w.corn, FOOD_LINE);
         }
         break;
       case 'garriExtra':
         this.hooks.sound(laneTinkFor(Math.random()));
+        this.fly('naira', 10, 3, this.sim.x, this.sim.dist, PICKUP_UP);
         break;
       case 'goal':
         this.reachGoal();
@@ -516,6 +640,36 @@ export class LaneSession {
     }
     const s = LANE_SOUNDS[name];
     if (s) this.hooks.sound(s);
+  }
+
+  /** Part 9: what a burst or a goat pops out flies straight to its chip. */
+  private popOut(kind: string, x: number, d: number, up: number): void {
+    const p = this.sim.level.pops[kind];
+    if (!p) return;
+    if (p.coins > 0) this.fly('naira', 10, p.coins, x, d, up);
+    if (p.power > 0) this.fly('power', 1, p.power, x, d, up);
+    if (p.tech > 0) this.fly('tech', 1, p.tech, x, d, up);
+  }
+
+  /**
+   * Sends `n` pickups of a kind from a road point to their chip. Reduced motion: nothing flies;
+   * the chip counts up at once with a short "+1" (part 18).
+   */
+  private fly(kind: ChipKind, amount: number, n: number, x: number, d: number, up: number): void {
+    const i = kind === 'naira' ? 0 : kind === 'power' ? 1 : 2;
+    if (this.hooks.still()) {
+      const p = this.plus[i]!;
+      if (p.t <= 0) p.amount = 0;
+      p.amount += amount * n;
+      p.t = PLUS_TIME;
+      return;
+    }
+    const v = this.view;
+    // Where it was on screen (never from behind the camera or off the screen's sides).
+    const ahead = Math.max(d, this.sim.dist - 1);
+    const sx = Math.min(Math.max(v.sx(x, ahead), 0), v.w);
+    const sy = Math.min(Math.max(v.sy(up, ahead), 0), v.h);
+    this.flights.send(kind, amount, n, sx, sy);
   }
 
   /** Part 8: a hint shows from its distance until its thing is passed; then it counts as seen. */
@@ -665,9 +819,16 @@ export class LaneSession {
       buttons: this.buttons.shown,
       count: this.countEl.hidden ? '' : (this.countEl.textContent ?? ''),
       line: this.toGo.textContent ?? '',
-      blackout: this.darkEl.textContent ?? '',
+      blackout: `${this.darkEl.textContent ?? ''}${this.changeEl.hidden ? '' : `  ${this.changeEl.textContent ?? ''}`}`,
+      change: this.changeEl.hidden ? '' : (this.changeEl.textContent ?? ''),
+      changeBelow: this.changeBelow,
+      dots: { lit: this.dotEls.filter((d) => d.classList.contains('on')).length, shown: !this.hud.classList.contains('lane-narrow') },
+      flying: this.flights.list.length,
+      plus: this.plusEls.map((p) => (p.hidden ? '' : (p.textContent ?? ''))),
+      introT: this.introT,
+      cornCount: this.countN,
       hint: this.hintEl.hidden ? '' : (this.hintEl.textContent ?? ''),
-      chips: this.chipEls.map((c) => c.textContent ?? ''),
+      chips: this.chipNums.map((c) => c.textContent ?? ''),
       gap: s.gap,
       shield: s.shield,
       corn: s.corn,
@@ -712,21 +873,106 @@ export class LaneSession {
     const dt = this.lastFrame ? Math.min(0.1, (now - this.lastFrame) / 1000) : 0;
     this.lastFrame = now;
     this.watchSpeed(dt);
-    this.view.still = this.hooks.still();
+    const still = this.hooks.still();
+    this.view.still = still;
     const s = this.sim;
     const moving = this.stage === 'play' && s.moving;
-    if (moving || this.stage === 'caught') this.clock += dt;
+    if (moving || this.stage === 'caught' || this.stage === 'intro') this.clock += dt;
     // Between two physics steps: draw where the hero is by now (alpha of a step).
     const dist = s.dist + (moving ? (s.speed * alpha) / 60 : 0);
     this.view.follow(s.x, dt);
     const night = this.stage === 'caught' ? Math.min(1, this.caughtT / CAUGHT_TIME) : this.card && s.phase === 'over' ? 1 : 0;
-    this.view.draw(this.hooks.g, s, this.hooks.look(), dist, this.clock, this.pose(), night);
-    this.buttons.show(this.hooks.buttonsOn() && !this.card && this.stage !== 'caught');
+    const g = this.hooks.g;
+    if (this.stage === 'intro') this.drawIntro(g, still);
+    else this.view.draw(g, s, this.hooks.look(), dist, this.clock, this.pose(), night);
+    // Measure the chips before the HUD's words change this frame (no forced layout).
+    if (this.flights.list.length > 0) this.measureChips();
+    this.drawFlights(g);
+    this.buttons.show(this.hooks.buttonsOn() && !this.card && this.stage !== 'caught' && this.stage !== 'intro');
     this.hud.hidden = this.card !== null;
+    this.syncCorn();
     this.drawHud();
     const near = s.gap < WARN_UNDER && s.phase !== 'over';
     this.hooks.closeHum(near && this.stage === 'play');
     this.hooks.music(s.phase === 'over' && this.stage !== 'caught' ? null : { tempo: laneTempoAt(s.dist, s.level.goal), guitar: !near, held: this.stage === 'paused' });
+  }
+
+  /** Part 14: looking back as the far lamps switch off, then the turn to behind the hero. */
+  private drawIntro(g: CanvasRenderingContext2D, still: boolean): void {
+    const f = introAt(this.introT, still);
+    const s = this.sim;
+    const look = this.hooks.look();
+    const v = this.view;
+    if (f.view === 'back') {
+      v.drawBack(g, s, look, f.lamps, this.clock);
+      return;
+    }
+    if (f.view === 'front') {
+      v.draw(g, s, look, s.dist, this.clock, this.pose(), 0);
+      return;
+    }
+    // The turn: the look back slides out to one side as the road ahead slides in.
+    const w = v.w;
+    const cut = Math.round((1 - f.turn) * w);
+    const clip = (x0: number, x1: number, draw: () => void): void => {
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.beginPath();
+      g.rect(x0 * (g.canvas.width / Math.max(1, w)), 0, (x1 - x0) * (g.canvas.width / Math.max(1, w)), g.canvas.height);
+      g.clip();
+      draw();
+      g.restore();
+    };
+    clip(0, cut, () => v.drawBack(g, s, look, 1, this.clock, cut - w));
+    clip(cut, w, () => v.draw(g, s, look, s.dist, this.clock, this.pose(), 0, cut));
+  }
+
+  /** The chips' middles now (CSS px): where the flying pickups land. */
+  private measureChips(): void {
+    this.chipAt = this.chipEls.map((c) => {
+      const r = c.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+  }
+
+  /** Part 9: each pickup on its way to its chip, art's flight path (lanePopAt) and bucket icon. */
+  private drawFlights(g: CanvasRenderingContext2D): void {
+    const list = this.flights.list;
+    if (list.length === 0 || this.chipAt.length < 3 || this.card) return;
+    const ratio = this.hooks.canvas.width / Math.max(1, window.innerWidth);
+    if (!this.icons || this.icons.ratio !== ratio) {
+      const size = Math.ceil(FLY_PX * ratio) + 4;
+      const img = (['naira', 'power', 'tech'] as const).map((k) => {
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const cg = c.getContext('2d');
+        if (cg) drawBucketIcon(cg, k, size / 2, size / 2, FLY_PX * ratio);
+        return c;
+      });
+      this.icons = { ratio, img };
+    }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    for (const f of list) {
+      const i = f.kind === 'naira' ? 0 : f.kind === 'power' ? 1 : 2;
+      const to = this.chipAt[i]!;
+      const at = PopFlights.at(f, to.x, to.y);
+      if (!at) continue;
+      const img = this.icons.img[i]!;
+      g.drawImage(img, Math.round(at.x * ratio - img.width / 2), Math.round(at.y * ratio - img.height / 2));
+    }
+  }
+
+  /** Part 11: the corn tune and its count follow the corn timer, as on the streets. */
+  private syncCorn(): void {
+    const s = this.sim;
+    const on = this.stage === 'play' || this.stage === 'count' || this.stage === 'paused';
+    if (!on || !this.countBox) {
+      this.countN = 0;
+      this.hooks.corn(null);
+      return;
+    }
+    this.countN = cornCount(Math.ceil(s.corn * 60));
+    this.hooks.corn({ left: s.corn, held: this.stage === 'paused', box: this.countBox });
   }
 
   /**
@@ -734,7 +980,7 @@ export class LaneSession {
    * CSS pixel, then 1.5, then 1 (checked over 1.5 s of play at a time). It never goes back up.
    */
   private watchSpeed(dt: number): void {
-    if ((this.stage !== 'play' && this.stage !== 'count') || dt <= 0 || dt > 0.25 || this.pixelCap <= 1) return;
+    if ((this.stage !== 'play' && this.stage !== 'count' && this.stage !== 'intro') || dt <= 0 || dt > 0.25 || this.pixelCap <= 1) return;
     this.slow.frames++;
     this.slow.ms += dt * 1000;
     if (this.slow.ms < 1500) return;
@@ -752,26 +998,57 @@ export class LaneSession {
 
   /** The HUD, the hint bar and the count: the DOM only changes when the words do. */
   private drawHud(): void {
+    if (this.fitDirty && !this.hud.hidden) this.fitRow2();
     const w = WORDS.lane;
     const s = this.sim;
-    const haul = this.haul;
+    // Each chip counts up as its flying pickup lands (the bucket already has it: LR-Q1 a).
+    const all = this.haul;
+    const air = this.flights.inFlight();
+    const haul = { kobo: all.kobo - air.kobo, power: all.power - air.power, tech: all.tech - air.tech };
     const gap = Math.max(0, Math.ceil(s.gap));
-    const dark = `${gap < WARN_UNDER ? w.blackoutNear(gap) : w.blackout(gap)}${this.flash.t > 0 ? `  ${this.flash.text}` : ''}`;
+    const dark = gap < WARN_UNDER ? w.blackoutNear(gap) : w.blackout(gap);
+    const change = this.flash.t > 0 ? this.flash.text : '';
+    const lit = litDots(s.gap);
     const left = Math.max(0, Math.ceil(s.level.goal - s.dist));
-    const narrow = this.hud.classList.contains('lane-narrow');
-    const line = s.phase === 'run' ? (narrow ? w.toGoShort(left) : w.toGo(left)) : w.run(Math.floor(s.dist));
+    const line = s.phase === 'run' ? (this.stopShort ? w.toGoShort(left) : w.toGo(left)) : w.run(Math.floor(s.dist));
     const best = s.phase === 'run' ? '' : w.best(Math.max(this.save.best, this.prize ? Math.floor(s.dist) : 0));
     const n = this.stage === 'count' ? w.count[Math.min(2, Math.floor((COUNT_STEP * 3 - this.count) / COUNT_STEP))]! : this.goT > 0 ? w.go : '';
-    const hint = this.line.t > 0 ? this.line.text : this.hint ? this.hintWords(this.hint.key) : '';
+    let hint = this.line.t > 0 ? this.line.text : this.hint ? this.hintWords(this.hint.key) : '';
+    if (this.stage === 'intro') {
+      const f = introAt(this.introT, this.hooks.still());
+      hint = f.line === 0 ? w.lookBack : f.line === 1 ? w.runToStop : `${w.lookBack} ${w.runToStop}`;
+    }
+    // The corn count takes the hint bar's place; the hint waits (S2.9).
+    if (this.countN > 0) hint = '';
     const chips = [formatMoney(haul.kobo), w.power(haul.power), w.tech(haul.tech)];
-    const key = `${chips.join()}|${dark}|${line}|${best}|${n}|${hint}`;
+    const plus = this.plus.map((p, i) => (p.t > 0 && p.amount > 0 ? w.plus(i === 0 ? formatMoney(p.amount) : String(p.amount)) : ''));
+    const key = `${chips.join()}|${dark}|${change}|${lit}|${line}|${best}|${n}|${hint}|${plus.join()}`;
     if (key === this.lastHud) return;
     this.lastHud = key;
     chips.forEach((c, i) => {
-      this.chipEls[i]!.textContent = c;
+      this.chipNums[i]!.textContent = c;
+    });
+    plus.forEach((p, i) => {
+      const el = this.plusEls[i]!;
+      if (el.textContent !== p) el.textContent = p;
+      el.hidden = p === '';
     });
     this.darkEl.textContent = dark;
     this.darkEl.classList.toggle('near', gap < WARN_UNDER);
+    if (this.changeEl.textContent !== change || this.changeEl.hidden !== (change === '')) {
+      this.changeEl.textContent = change;
+      this.changeEl.hidden = change === '';
+      // Under the words (narrow screens): the hint bar steps down for that second, so nothing overlaps.
+      this.hud.classList.toggle('change-below', this.changeBelow && change !== '');
+      this.changeEl.classList.toggle('up', change.startsWith('+'));
+      // A fresh float each time (none with reduced motion: screens.css).
+      this.changeEl.classList.remove('float');
+      if (change) {
+        void this.changeEl.offsetWidth;
+        this.changeEl.classList.add('float');
+      }
+    }
+    this.dotEls.forEach((d, i) => d.classList.toggle('on', i < lit));
     this.toGo.textContent = line;
     this.toGo.setAttribute('aria-label', s.phase === 'run' ? w.toGo(left) : line);
     this.bestEl.textContent = best;

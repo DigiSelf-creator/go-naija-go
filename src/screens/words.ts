@@ -365,6 +365,11 @@ export const WORDS = {
     blackoutNear: (m: number) => `Blackout: ${m} m behind!`,
     pushed: (m: number) => `+${m} m`,
     gained: (m: number) => `−${m} m`,
+    /** Reduced motion: a chip counts up with a short "+1" (part 18); Naira says the money ("+₦0.10"). */
+    plus: (n: string) => `+${n}`,
+    /** The first lane run's start, the look back (part 14). */
+    lookBack: 'The Blackout is switching off the lamps.',
+    runToStop: 'Run to the bus stop!',
     /** The polite live line (part 14). */
     nearSpoken: (m: number) => `Blackout ${m} metres behind`,
     stopSpoken: 'Bus stop in 100 metres',

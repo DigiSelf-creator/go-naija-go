@@ -58,8 +58,9 @@ test('a bulb: Power 1 in its chip and in the city bucket at once (LR-Q1), and th
     window.__lane!.setGap(30);
   });
   await expect.poll(async () => (await lane(page))!.haul.power, { timeout: 5000 }).toBe(1);
+  // The bulb flies to its chip (part 9): the chip counts up as it lands.
+  await expect.poll(async () => (await lane(page))!.chips[1], { timeout: 3000 }).toBe('Power 1');
   const l = (await lane(page))!;
-  expect(l.chips[1]).toBe('Power 1');
   expect(l.gap).toBeGreaterThan(32);
   // Pause writes the save: Power 1 is already home.
   await page.keyboard.press('KeyP');
