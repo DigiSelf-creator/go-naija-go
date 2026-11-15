@@ -286,7 +286,7 @@ Kobo: about 140 loose and 12 in crates, plus 17 in the well room.
 
 The same room rules as S2.5 (room, coins, going up), our own Ogun look: a cool store room under a compound, sacks and basins of garri, folded adire on a shelf, light falling through two holes in the ceiling. The gift is **the Ijebu garri parcel**: the same shield as Lagos's garri parcel (decision 18), for every Pothole Hall try until the hall is cleared. If the player already carries one, the room shows coins instead (`giftIfCarried`).
 
-- **The store keeper** (PE-R4's idea, Ogun's own person): an elder man in buba and sokoto with a soft fila, sitting on a low stool by the back wall, well away from the rope. He waves when the hero comes down; when the hero takes the parcel he claps and his bubble says **"For King Pothole. Go well!"**
+- **The store keeper** (PE-R4's idea, Ogun's own person): an elder man in buba and sokoto with a soft fila, sitting on a low stool by the back wall, well away from the rope. He waves when the hero comes down; when the hero takes the parcel he claps and his bubble says **"For Pothole Hall. Go well!"**
 - Toast on taking it: "Ijebu garri parcel! Shield for the hall."
 
 ### 3.8 Level file fields (schema 2, plus)
@@ -544,9 +544,9 @@ The five rules of "People everywhere" hold everywhere in Ogun (never in the way,
 |---|---|
 | Welcome (Ota, by the arch) | "Welcome!", "Ẹ káàbọ̀!" (Yoruba), "Barka da zuwa!" (Hausa), "Nnọọ!" (Igbo), "You don land!" (Pidgin) |
 | Greetings (any time) | as Lagos: "Hello!", "Sannu!", "Ndewo!", "Ẹ n lẹ́ o!", "How far?" |
-| Traders | Ota: "Ofada rice dey!", "Fresh bread!", "Credit here!" · Abeokuta: "Fine adire!", "New cloth!", "Ofada, hot!" · Sagamu: "Fresh kola!", "Garri Ijebu!", "Ikokore, hot!" |
+| Traders | Ota: "Ofada rice dey!", "Fresh bread!", "Recharge card dey!" · Abeokuta: "Fine adire!", "New cloth!", "Ofada, hot!" · Sagamu: "Fresh kola!", "Garri Ijebu!", "Ikokore, hot!" |
 | Cheers | as Lagos: "Well done!", "Ẹ kú iṣẹ́!", "Madalla!", "I meela!", "You do well!", "Oya, go!" |
-| The store keeper | "For King Pothole. Go well!" |
+| The store keeper | "For Pothole Hall. Go well!" |
 | Bus | "Bus don come!", "Safe trip!" |
 
 Plain spellings if a phone cannot show the marks: "E kaabo!", "Nnoo!".

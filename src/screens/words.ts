@@ -662,12 +662,12 @@ export const OGUN_WORDS = {
     /** By the arch on Ota. */
     welcome: { en: ['Welcome!'], pcm: ['You don land!'], yo: ['Ẹ káàbọ̀!'], ha: ['Barka da zuwa!'], ig: ['Nnọọ!'] },
     traders: {
-      ota: ['Ofada rice dey!', 'Fresh bread!', 'Credit here!'],
+      ota: ['Ofada rice dey!', 'Fresh bread!', 'Recharge card dey!'],
       abeokuta: ['Fine adire!', 'New cloth!', 'Ofada, hot!'],
       sagamu: ['Fresh kola!', 'Garri Ijebu!', 'Ikokore, hot!'],
     },
     /** The well room's store keeper as the hero takes the parcel. */
-    storeKeeper: 'For King Pothole. Go well!',
+    storeKeeper: 'For Pothole Hall. Go well!',
     /** The plain spelling, if a phone shows a tone mark as a box. */
     plain: { 'Ẹ káàbọ̀!': 'E kaabo!', 'Nnọọ!': 'Nnoo!' } as Readonly<Record<string, string>>,
   },
