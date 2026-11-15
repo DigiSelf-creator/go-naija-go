@@ -1,0 +1,109 @@
+# Build the iPhone test app for the iPhone simulator (plan ST1c). GitHub's own Mac machines
+# (macos-latest), never the company Mac. Runs on every push to main and to the team's working
+# branch, and by hand from the Actions tab. deploy.yml (the web test link) and app.yml (the
+# Android test app) are separate and do not wait for this.
+# The build is for the simulator only and is not signed: no keys, no secrets, no Apple account.
+# It cannot go on a real iPhone; TestFlight comes in ST4b.
+# Kept for 14 days on the run's page: "gbese-simulator.app" (the zipped App.app) and, when the
+# simulator starts, "gbese-simulator-screenshot" (the game's first screen, sideways).
+name: iPhone test app
+
+on:
+  push:
+    branches: [main, claude/serene-hopper-ydve2g]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-app
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Capacitor 8 wants a recent Xcode. Use the newest full release on the machine (no betas).
+      - name: Pick Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_[0-9]*.app | grep -viE 'beta|release_candidate|_rc' | sort -V | tail -1)
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - run: npm ci
+      - run: npm test
+
+      # Builds the game for the app (no service worker), copies it into ios/App/App/public, and
+      # puts the ST2 icon set and splash into the Xcode project.
+      - run: npm run app:build
+      - run: npx cap sync ios
+      - run: node scripts/copy-app-res.mjs ios
+
+      - name: Build for the iPhone simulator (not signed)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build \
+            MARKETING_VERSION="$(node -p "require('./package.json').version")" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Zip the app
+        run: |
+          APP=ios/build/Build/Products/Debug-iphonesimulator/App.app
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" gbese-simulator.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gbese-simulator.app
+          path: gbese-simulator.zip
+          retention-days: 14
+          if-no-files-found: error
+
+      # Starts the app on a simulator iPhone and keeps a picture of its first screen (plan ST1c
+      # check: the game comes up sideways, from the files inside the app). The build above is the
+      # real test; if the simulator itself will not start on GitHub's machine, this step says so
+      # but does not fail the run.
+      - name: Start it on the simulator and take a screenshot
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          ids = [x["udid"] for rt, xs in sorted(d.items(), reverse=True) if "iOS" in rt for x in xs if x["name"].startswith("iPhone")]
+          print(ids[0] if ids else "")')
+          test -n "$DEVICE"
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" ios/build/Build/Products/Debug-iphonesimulator/App.app
+          xcrun simctl launch "$DEVICE" com.coachnaz.gbese
+          sleep 20
+          xcrun simctl io "$DEVICE" screenshot gbese-simulator-screenshot.png
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gbese-simulator-screenshot
+          path: gbese-simulator-screenshot.png
+          retention-days: 14
+          if-no-files-found: warn
