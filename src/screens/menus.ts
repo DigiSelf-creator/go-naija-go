@@ -5,7 +5,7 @@
  * canvas; one screen shows at a time.
  */
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
-import { MUSIC_SVG } from '../art/cards';
+import { MUSIC_SVG } from '../art/musicIcon';
 import { WHEEL_STATES, wheelSvg } from '../art/wheel';
 import { readSafeArea } from '../engine/view';
 import {
@@ -31,7 +31,7 @@ import { CityScreen, type CitySound, type Mission } from './city';
 import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
 import { button, h } from './dom';
 import { wheelFit } from './streets';
-import { roadScreen, type RoadOpen, type RoadView, type StopInfo } from './road';
+import type { RoadOpen, RoadView, StopInfo } from './road';
 import { GAME_NAME, WORDS } from './words';
 import { isNativeApp } from '../native/is-native';
 
@@ -43,6 +43,25 @@ const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city', 'road'];
 /** Screens that open during play (design.md: Pause, Game over, Street cleared, Win): their buttons ignore taps for 0.4 s. */
 const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'cleared', 'win'];
 export const EVENT_SCREEN_GUARD_MS = 400;
+
+/**
+ * CO3: the challenge road screen (./road and the card pictures) is its own chunk, so the first
+ * load is lighter. The service worker keeps it with every other file, so it opens offline. The
+ * city asks for it while idle (preloadRoad), so the road usually builds at once, as before.
+ */
+type RoadModule = typeof import('./road');
+let roadModule: RoadModule | null = null;
+let roadLoading: Promise<RoadModule> | null = null;
+export function preloadRoad(): Promise<RoadModule> {
+  roadLoading ??= import('./road').then(
+    (m) => (roadModule = m),
+    (err: unknown) => {
+      roadLoading = null; // the next try loads afresh
+      throw err;
+    },
+  );
+  return roadLoading;
+}
 
 /**
  * The second tap of a double tap lands about where the first one did, very soon after.
@@ -599,8 +618,31 @@ export class Menus {
     );
   }
 
-  /** S3e0: the challenge road (src/screens/road.ts). */
+  /**
+   * S3e0: the challenge road (src/screens/road.ts). CO3: when its chunk is not in yet, a short
+   * "Opening the road..." shows, and the road takes its place as soon as the chunk is in.
+   */
   private road(): HTMLElement {
+    if (roadModule) return this.roadWith(roadModule);
+    const wait = h('section', { class: 'road-opening', role: 'status' });
+    wait.textContent = WORDS.city.roadOpening;
+    let gone = false;
+    this.cleanup = () => (gone = true);
+    void preloadRoad().then(
+      (m) => {
+        if (gone || this.screen !== 'road' || !wait.isConnected) return;
+        const el = this.roadWith(m);
+        wait.replaceWith(el);
+        (this.refit as (() => void) | null)?.();
+      },
+      () => {
+        if (!gone && this.screen === 'road' && wait.isConnected) this.show('city');
+      },
+    );
+    return wait;
+  }
+
+  private roadWith(m: RoadModule): HTMLElement {
     const w = WORDS.city;
     const sound = this.guarded('', 'minor road-sound', () => {
       this.settings.sound = !this.settings.sound;
@@ -614,7 +656,7 @@ export class Menus {
       sound.setAttribute('aria-label', t);
     };
     label();
-    const screen = roadScreen(
+    const screen = m.roadScreen(
       {
         view: () => this.hooks.roadView(),
         look: () => this.look,
@@ -841,6 +883,9 @@ export class Menus {
     });
     this.cityScreen = screen;
     this.cleanup = () => screen.close();
+    // CO3: fetch the road's chunk while the city sits idle, so the road opens at once.
+    const idle = (window as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 200));
+    idle(() => void preloadRoad().catch(() => undefined));
     return screen.el;
   }
 

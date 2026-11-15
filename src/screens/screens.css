@@ -2433,6 +2433,16 @@ body.lane {
 .road-arrow[hidden] {
   display: none;
 }
+/* CO3: the moment while the road's part opens. */
+.road-opening {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.1rem;
+}
 .road-wrap {
   position: absolute;
   top: calc(var(--safe-top) + 60px);

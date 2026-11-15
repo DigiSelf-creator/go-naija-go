@@ -215,6 +215,8 @@ export const WORDS = {
     soundOff: 'Sound: off',
     settings: 'Settings',
     road: 'Challenge road',
+    /** CO3: shown for a moment while the road's part opens (gamedev's words, for designer to check). */
+    roadOpening: 'Opening the road...',
     /** S3e0 part 7: the problem cards' small button. */
     seeStop: 'See the stop',
     hero: 'Hero',
