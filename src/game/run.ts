@@ -40,6 +40,16 @@ export const RULES = {
   crackReach: 240,
   crackReachGentle: 300,
   crackOpenSteps: secs(0.4),
+  /**
+   * O4b (ogun.md 3.3): hopping gravel hops 40 u high every 0.7 s, the first 0.35 s of each on
+   * the road, the last 0.35 s in the air (art's GRAVEL and gravelHop). It crumbles when landed on
+   * while rising too, so its stomp check is a little kinder than the others'.
+   */
+  gravelHop: 40,
+  gravelPeriodSteps: secs(0.7),
+  gravelAirSteps: secs(0.35),
+  gravelSpeed: 70,
+  gravelStompSlack: 14,
   /** Timed foods warn this long before they end. */
   warnSteps: secs(2),
   smashKobo: 2,
@@ -111,6 +121,8 @@ export const HAZARD_BOX: Record<HazardKind, { halfW: number; h: number }> = {
   /** S2.16 B1: the egret stands on the road; the crow's box bottom is 20 u above it (HazardState y). */
   egret: { halfW: 8, h: 28 },
   crow: { halfW: 11, h: 14 },
+  /** O4b: hopping gravel, 18 wide and 16 tall; its y is its bottom (the road minus its hop). */
+  gravel: { halfW: 9, h: 16 },
 };
 
 /** S2.16 B1: the crow's box bottom is this far above the road. */
@@ -183,6 +195,10 @@ export type RunEvent =
   | { type: 'arch' }
   /** O3b (ogun.md 3.3): a crack starts to rumble open (it is a pothole 0.4 s later). */
   | { type: 'crackOpen'; x: number; w: number }
+  /** O4b (ogun.md 3.3): a hopping gravel lands on the road ("tk", a dust puff). */
+  | { type: 'gravelHop'; x: number }
+  /** O4b: a gravel crumbles into dust (bounced on, amala, ikokore). */
+  | { type: 'crumble'; x: number; y: number }
   | { type: 'gameOver' }
   /** S2.7: the hall fight starts (the boss words). With the parcel, 'parcelShield' comes first. */
   | { type: 'hallStart' }
@@ -1222,6 +1238,8 @@ export class Run {
             this.paceEgret(z, dt);
           } else if (z.kind === 'crow') {
             // Hovers in place over the pile: the box never moves.
+          } else if (z.kind === 'gravel') {
+            this.hopGravel(z, nx, ev);
           } else {
             z.x = nx;
             z.rot += (z.vx * dt) / 11;
@@ -1276,8 +1294,9 @@ export class Run {
         this.touchBird(z, top, ev);
         continue;
       }
-      if (h.vy > 0 && h.prevY <= top + RULES.stompSlack) {
-        // Landed on it: bounce. The goat runs off unhurt; the tyre is knocked away.
+      const gravel = z.kind === 'gravel';
+      if (h.vy > 0 && h.prevY <= top + (gravel ? RULES.gravelStompSlack : RULES.stompSlack)) {
+        // Landed on it: bounce. The goat runs off unhurt; the tyre is knocked away; gravel crumbles.
         bounce(h);
         h.y = Math.min(h.y, top);
         this.knockAway(z);
@@ -1286,11 +1305,16 @@ export class Run {
         this.knockAway(z);
         this.kobo += RULES.smashKobo;
         ev.push({ type: 'smash', kind: z.kind, x: z.x, y: top });
+      } else if (gravel && this.power.ikokore > 0) {
+        // O4b (ogun.md 4.1): with ikokore's firm feet a touch crumbles it, no hurt.
+        this.knockAway(z);
       } else {
         // Decision 62: a goat bumped says "meeh" (once, as the bump lands, not every safe step).
         if (z.kind === 'goat' && this.safe <= 0) ev.push({ type: 'goatBump', x: z.x, y: top });
         this.hurt(ev);
+        continue;
       }
+      if (gravel) ev.push({ type: 'crumble', x: z.x, y: z.y });
     }
   }
 
@@ -1358,6 +1382,23 @@ export class Run {
         ev.push({ type: 'weedsTrample', x: q.x + q.w / 2 });
       } else this.hurt(ev);
     }
+  }
+
+  /**
+   * O4b (ogun.md 3.3): one step of a hopping gravel: on to the left at its speed, on the road for
+   * the first half of each 0.7 s and in a 40 u arc for the second ("tk" as it lands). Landing
+   * over a pothole (or an open crack) it drops in, like a tyre.
+   */
+  private hopGravel(z: HazardState, nx: number, ev: RunEvent[]): void {
+    const P = RULES.gravelPeriodSteps;
+    const A = RULES.gravelAirSteps;
+    const gy = this.level.groundY;
+    z.x = nx;
+    const p = ++z.t % P;
+    const k = (p - (P - A)) / A;
+    z.y = k > 0 ? gy - RULES.gravelHop * 4 * k * (1 - k) : gy;
+    if (p === 0) ev.push({ type: 'gravelHop', x: z.x });
+    if (z.y >= gy && !groundAt(this.terrain, z.x)) z.mode = 'falling';
   }
 
   private knockAway(z: HazardState): void {
@@ -1464,6 +1505,7 @@ function freshHazard(kind: HazardKind, x: number, groundY: number): HazardState 
 function speedOf(speeds: Level['hazardSpeeds'], kind: HazardKind): number {
   if (kind === 'egret') return speeds.egret ?? EGRET_SPEED;
   if (kind === 'crow') return 0;
+  if (kind === 'gravel') return speeds.gravel ?? RULES.gravelSpeed;
   return speeds[kind];
 }
 

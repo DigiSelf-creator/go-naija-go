@@ -35,7 +35,7 @@ function shape(raw: Raw) {
   const corns = [...L.foods.filter((f) => f.kind === 'corn').map((f) => f.x), ...L.crates.filter((c) => c.contents === 'corn').map((c) => c.x)];
   const reach = (RULES.cornSteps / STEPS_PER_SECOND) * L.cornSpeed;
   const hintBefore = (x: number) => L.hints.filter((h) => h.x < x).at(-1);
-  // The file's own hazards (the parsed level reads gravel as a tyre, ogun-level-data.ts).
+  // The file's own hazards (O4b: the parsed level reads gravel as gravel too).
   const hazards = raw.hazards.map(([kind, x]) => ({ kind: String(kind), x: Number(x) }));
   return { L, pits, big, cracks, holes, onRoad, nearest, mud, ogunFoods, corns, reach, hintBefore, hazards };
 }

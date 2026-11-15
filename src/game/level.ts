@@ -12,8 +12,8 @@
 import { FALL_Y, GAIT, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
 import { FEATURE_NAMES, type Feature } from './features';
 
-/** S2.16 B1: the egret and the crow are birds by the rubbish (never hurt; they fly off). */
-export type HazardKind = 'goat' | 'tyre' | 'drum' | 'egret' | 'crow';
+/** S2.16 B1: the egret and the crow are birds by the rubbish (never hurt; they fly off). O4b: hopping gravel (Sagamu). */
+export type HazardKind = 'goat' | 'tyre' | 'drum' | 'egret' | 'crow' | 'gravel';
 export type BirdKind = 'egret' | 'crow';
 export const isBird = (k: HazardKind): k is BirdKind => k === 'egret' || k === 'crow';
 
@@ -149,8 +149,8 @@ export interface Level {
   koboSpacing: number;
   /** A hazard starts moving when it is this far ahead of the hero. */
   wakeDistance: number;
-  /** Rolling and walking speeds, u/s; birds: the egret's pacing speed (30 when left out), the crow hovers. */
-  hazardSpeeds: Record<'goat' | 'tyre' | 'drum', number> & Partial<Record<BirdKind, number>>;
+  /** Rolling and walking speeds, u/s; birds: the egret's pacing speed (30 when left out), the crow hovers; gravel 70 when left out. */
+  hazardSpeeds: Record<'goat' | 'tyre' | 'drum', number> & Partial<Record<BirdKind | 'gravel', number>>;
   /** Road spans as [startX, endX], for drawing. */
   ground: readonly (readonly [number, number])[];
   terrain: Terrain;
@@ -197,7 +197,7 @@ const CORN_WALK = 120;
 
 const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu', 'ikokore', 'ofada'];
 const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', 'corn', 'garri', 'amala'];
-const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow'];
+const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow', 'gravel'];
 /** S2.16 B1: the egret paces its patch at 30 u/s; the crow hovers in place. */
 export const EGRET_SPEED = 30;
 
@@ -355,6 +355,7 @@ export function parseLevel(raw: unknown): Level {
       drum: speeds['drum'] === undefined ? tyreSpeed : num(speeds['drum'], 'hazardSpeeds.drum'),
       // S2.16 B1: only a street with birds names the egret's pacing speed.
       ...(speeds['egret'] === undefined ? {} : { egret: num(speeds['egret'], 'hazardSpeeds.egret') }),
+      ...(speeds['gravel'] === undefined ? {} : { gravel: num(speeds['gravel'], 'hazardSpeeds.gravel') }),
     },
     ground,
     terrain: { groundY, ground: spans, platforms, fallY: Math.max(FALL_Y, groundY + 120) },
