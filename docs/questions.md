@@ -2,7 +2,7 @@
 
 ## designer, 15 Nov 2026: Ogun, the Gateway State (decisions 72 and 73; docs/ogun.md)
 
-The Ogun note is written in docs/ogun.md, built on the recommended answers below, so art can start O1a now and designer can write the level files once OG-Q1 is answered. Lines that change with a different answer are marked with the question's id in the note.
+**Answered by Tp, 15 Nov: all seven recommended answers (OG-Q1 to OG-Q7, all a). Added as decisions 76 to 82.** The Ogun note is written in docs/ogun.md, built on the recommended answers below, so art can start O1a now and designer can write the level files once OG-Q1 is answered. Lines that change with a different answer are marked with the question's id in the note.
 
 **Tp's direction, 15 Nov ("Ogun is gateway state, remember"), for the lead to add once Tp confirms the wording:** "74. Ogun is the Gateway State: the road and the gate out of Lagos to the rest of Nigeria. The player arrives under our own welcome gateway (never the real gantry, crest or emblem), sees "Welcome to Ogun, the Gateway State", and fixing Ogun (beating King Pothole) opens the way to the next states. (Tp, 15 Nov)" "The Gateway State" is Ogun's well-known nickname, a phrase, not a crest or logo, so it passes decision 19.
 
