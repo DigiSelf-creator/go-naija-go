@@ -1,20 +1,75 @@
 # Plan
 
-Owner: pm. Updated 15 Nov 2026 (after round 3). Source: docs/brief.md. Product calls come from po and Tp, never from pm.
+Owner: pm. Updated 15 Nov 2026 (after round 4). Source: docs/brief.md. Product calls come from po and Tp, never from pm.
 
-## Next, in order (15 Nov 2026)
+## Next, in order (15 Nov 2026, after round 4)
 
-Main track is Lagos: the lane run first, then the challenge road with W17 C (decisions 46, 48, 63). Store work fills gamedev's gaps (decision 51).
+Round 4 is live on main (PR #12): the challenge road, tilt, tax words, people everywhere. Main track is now Ogun, the Gateway State (decisions 72 to 74, 76 to 82; designer note docs/ogun.md). Store work and carry-overs fill the gaps (decision 51).
 
-| # | id | owner | task | can start when |
-|---|----|-------|------|----------------|
-| 1 | S3f4 | qa, then po | Test the lane run polish and decision 68 at 089c488 (see S3f4 row); po accepts | now |
-| 2 | S3e0 | designer | Full note for the challenge road with W17 C (city.md (e) says "full note before S3e1 starts") | now |
-| 3 | ST1b-r, ST1c | gamedev | README 5-step how-to for the debug APK (the last gap in ST1b), then the iOS simulator build on GitHub's Mac machines | now, beside S3e0 |
-| 4 | S3e1a | art | Challenge road pictures and the W17 C tired and bright first screens | S3e0 written and po checked |
-| 5 | S3e1b | gamedev | Challenge road screen, stop cards, W17 C hookups; lane run stop takes over from the Streets card | S3e0; plain shapes until S3e1a lands |
+Start now, side by side (no one waits on anyone):
 
-After these: ST3 (designer and po, can start any time now that decisions 56 and 57 settle the privacy page and devices; screenshots best after S3e1b), S3q and S3p for (e), then ST4 once Tp's accounts exist.
+| # | id | owner | task | done when |
+|---|----|-------|------|-----------|
+| 1 | O0a1 | designer | Ota level file and Ogun words (see slice O) | level test passes on ogun-1.json; words in docs/ogun.md part 8 final |
+| 2 | O1a | art | Gateway arch, bus ride scene, "To Ogun" stop, Travel icon, Ogun cog pennant | ogun.md 1.4 rules; 6 KB at most |
+| 3 | O1b1 | gamedev | State list, lazy Ogun part, saves, size check line | old saves load; first load grows 3 KB at most |
+
+Then gamedev: CO3 (road screen lazy, pays back the 13 KB), O1b2, CO1, CO2b, then O2b onward. ST3 (designer and po) any time designer has a gap.
+
+## Slice O: Ogun, the Gateway State (brief: Worlds 2, Tech 3; docs/ogun.md part 10)
+
+Rules for the whole slice:
+- Level files need the designer first: no gamedev street task starts before its O0a file passes the level test.
+- Budget (brief Tech 3, ogun.md 9.1): the first load stays under 3 MB and grows 8 KB gzip at most for all of slice O. Everything else (art, code, levels, sounds) goes in one Ogun part under dist/worlds/ogun/, 150 KB gzip at most, fetched only when the player first goes to Ogun (web), inside the app already (store). The CI size check prints the first load and the Ogun part on two lines and fails either budget.
+- Product words and looks follow docs/ogun.md as written (all seven OG answers were "a"). Any new product question goes to po; pm does not guess.
+- Every row: qa passes it, on the slow phone profile (4x CPU) too, then po accepts. Then pm marks it done.
+
+| # | id | owner | task | depends on | done when | size (gzip) |
+|---|----|-------|------|------------|-----------|-------------|
+| 1 | O0a1 | designer | src/data/levels/ogun-1.json (Ota, ogun.md 3.4) and every Ogun word for src/screens/words.ts (part 8, hints in part 3); make the download card size match OG-R6 (it says 150 KB, OG-R6 says 130 KB) | none: ready now | level test passes all S2.6 and 3.3 mud rules; words list final and po checked | 2 KB |
+| 2 | O0a2 | designer | ogun-2.json (Abeokuta, 3.5) and ogun-well.json (3.7) | O0a1 | level test passes, crack rules 3.3 included (none in corn reach, none near spawn or checkpoint) | 3 KB |
+| 3 | O0a3 | designer | ogun-3.json (Sagamu, 3.6) with the two roads | O0a2 | level test passes, gravel rules and the deck has no gaps | 3 KB |
+| 4 | O0a4 | designer | ogun-hall.json (5.2) and ogun-lane.json (6.6) | O0a1 | level test passes; hall safe places as S2.7 | 2 KB |
+| 5 | O1a | art | Gateway arch (front, back, faded, bright), bus ride scene, "To Ogun" stop and road branch, Travel icon, Ogun cog pennant | none: ready now | ogun.md 1.4; not the real gantry, no crest or emblem; still under reduced motion; listed in docs/assets.md | 6 KB |
+| 6 | O1b1 | gamedev | State list; the lazy Ogun part (dist/worlds/ogun/, service worker keeps it after first fetch, bundled in the store build); saves to ogun.md 1.8 with old-save, half-done and broken-part tests; CI size check second line | none: ready now | old saves load as Lagos; Lagos plays the same; the Ogun part is not fetched until asked; size check fails over 150 KB; first load +3 KB at most | 3 KB first load |
+| 7 | O1b2 | gamedev | Download card (web), Travel button and card, bus ride, arrival card, Win button "On to Ogun", "To Ogun" road stop, wheel lines | O1b1, O1a | part 1 and part 8 words exact; store build has no download card; first load +5 KB at most | 5 KB first load |
+| 8 | O1c | qa | O1 pass | O1b2 | part 1 at 320 x 240, 568 x 320, 640 x 200, 851 x 393; offline after one visit; no fetch before Ogun is opened; first load still under 3 MB | |
+| 9 | O2a | art | Ota backdrop, mud look and "splosh", ikokore, Ijebu garri crates, Ota cast | O0a1 | 2.2, 2.3, 7; no brand, no uniform | 22 KB |
+| 10 | O2b | gamedev | Mud rules, ikokore, `arch` field, Ota plays | O0a1, O1b1, O2a | 3.3 mud rules in unit tests; Ota plays end to end | 4 KB |
+| 11 | O2c | qa | Ota pass | O2b | a Lagos finisher clears Ota in 3 tries or fewer; mud reads in greyscale | |
+| 12 | O3a | art | Abeokuta backdrop, rock ledges, water potholes, cracks and their sign, ofada, garri store room and keeper, Abeokuta cast | O0a2 | own adire patterns only; unnamed rocks, nothing holy (decision 77, OG-R1) | 26 KB |
+| 13 | O3b | gamedev | Rocks, water look, cracks, ofada, well room, Ijebu parcel save | O2b, O3a | 3.3 crack rules in tests (never opens under the hero, corn rule, Gentle 300 u) | 5 KB |
+| 14 | O3c | qa | Abeokuta pass | O3b | 4 tries or fewer; every crack warned | |
+| 15 | O4a | art | Sagamu backdrop, hopping gravel, Sagamu cast | O0a3 | 2.2; quarry far, no children, no blasting (OG-R5) | 20 KB |
+| 16 | O4b | gamedev | Gravel, two roads, low-road secret well, Sagamu plays | O3b, O4a | gravel and corn rules in tests | 4 KB |
+| 17 | O4c | qa | Sagamu pass | O4b | 4 tries or fewer | |
+| 18 | O5a | art | Pothole Hall (road works yard), King Pothole, road mix bag, carrying pose for every body, roller, door people, hall tune | O0a4 | 5.1, 5.2, decision 78: cone crown only; no beads, staff, throne, robes or palace | 12 KB |
+| 19 | O5b | gamedev | Carrying, the moving pit, throws, phases, finish, Pothole Hall Win | O4b, O5a | 5.3 to 5.5 numbers; tests: never slides under a standing hero, never moves while the hero is in the air | 5 KB |
+| 20 | O5c | qa | Hall pass | O5b | a Sagamu finisher wins in 3 tries; Gentle works; at least 45 fps at 4x CPU; never Nintendo-like | |
+| 21 | O6a | art | Ogun city blocks (tired and bright), places, pins, Expressway run look | O1a | 6.1; no real building, bridge or brand | 30 KB |
+| 22 | O6b | gamedev | Ogun city (reuse Lagos city), Dry taps, tax places, one wallet (decision 80), trays fill anywhere, Booming meter and cog, Ogun challenge road, Expressway run | O1b2, O6a, O0a4 (lane file) | 6.2 to 6.6; money adds up across states; W18 words with Ogun names | 6 KB |
+| 23 | O6c | qa | City, road and Expressway pass | O6b | drag at least 45 fps at 4x CPU; idle draws nothing; W18 tax rules | |
+| 24 | O7 | qa, then po | Ogun full pass and accept | O2c to O6c | Ogun part 150 KB at most; first load under 3 MB; offline; slow phone; originality and "mock no one" check; every bubble checked by a speaker; po accepts | |
+
+Order and what runs side by side:
+- Now: O0a1 (designer), O1a (art), O1b1 (gamedev) together.
+- Designer runs ahead of art: O0a2, O0a3, O0a4 one after another. Each street's art starts once its level file is in.
+- Gamedev, one at a time: O1b1, CO3, O1b2, CO1, CO2b, O2b, O3b, O4b, O5b, O6b (O6b may move before O3b if art for streets lags).
+- Streets go in order O2, O3, O4 (each teaches what the next uses). O6 runs beside O3 to O5 once O1 is done. O5 is the last play piece. O7 closes the slice.
+- Blocks: O1b1 blocks every gamedev O row. O0a files block their street. O1a blocks O1b2 and O6a.
+
+### CO. Carry-overs from round 4
+
+| # | id | owner | task | depends on | done when |
+|---|----|-------|------|------------|-----------|
+| 1 | CO1 | gamedev | Go-Slow Hall people cost 2 to 3 fps at 4x CPU (about 30 to 35 fps on that run). Try drawing each hall person from their own small canvas, baked once | none | at 4x CPU the hall people cost 1 fps or less against people off (people-perf test); no change in look (qa screenshot compare) |
+| 2 | CO2a | designer | Rule: after a lane people fault switches people off, should the lane house fronts stay? (They vanish today.) One line in design.md S3f0 | none | ruling written; small and easy to undo, so it follows decision 64 and is reported to Tp in one line |
+| 3 | CO2b | gamedev | Build CO2a's ruling | CO2a | a forced lane people fault leaves the street as ruled; fault test passes (not test.fail) |
+| 4 | CO3 | gamedev | The build is about 13 KB gzip over round 4's budget. Load the challenge road screen lazily (its own chunk, kept by the service worker) | none | first load back within the round 4 budget; the road opens offline after one visit and in the store build; no slower first road frame on the slow phone profile |
+| 5 | S3f5 | designer and qa | Lane run tuning check with first-time players (see S3f5 row) | the people test (Tp) | report with tries per player; any change written in design.md S3f0 first |
+| 6 | ST3 | designer and po | Store words, privacy page and screenshots (see ST3 row). Screenshots can now use the challenge road | none: ready now | as the ST3 row |
+
+qa checks every CO row; po accepts.
 
 ## How a task moves
 
@@ -390,9 +445,9 @@ Order (15 Nov): ST0, ST1a, ST2 done; ST1b done but for the README steps. Next ST
 
 Done: slice 1 A to F and G1; slice 2 H to M; walk the city S3c0 to S3c4 (PR #8); S3d1 (PR #9); the moving intro S3a3 and S3a4 (main 0018f83).
 Done (15 Nov, PR #11, 10a8240, live on the test link): the lane run S3f1 to S3f3; intro subtitles (decisions 53, 58); the hero redraw and front turn (decisions 60, 61, 65); U1 (U2 qa passed, U3 po accepted); goat and bird sounds (decision 62); ST0, ST1a, ST2; ST1b but for the README steps.
-In qa: S3f4 lane run polish and decision 68 at 089c488.
-Next: see "Next, in order" at the top. S3e0, then S3e1a and S3e1b; store rows in gamedev's gaps.
-Later: S3f5, the lane run tuning check with first-time players (qa: "may be too easy").
+Done (15 Nov, PR #12, live on main): round 4, the challenge road S3e0 to S3e1, tilt (decision 70), tax words (decision 71), people everywhere S3g1, and qa round 5 fixes.
+Next: slice O, Ogun. Start O0a1 (designer), O1a (art), O1b1 (gamedev) now. Then CO3 and the rest of slice O and the carry-overs in the order above.
+Later: S3f5, the lane run tuning check with first-time players.
 Blocked: ST4a and ST4b on Tp's store accounts.
 
 ## Waiting on Tp
