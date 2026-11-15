@@ -3071,3 +3071,7 @@ The city already has standing people per block (`BLOCK_LIFE`) and walkers in the
 11. **Speed:** at least 45 fps at 4x CPU and 60 on a mid phone in a bright street 2, the hall's finish, a lane run at a footbridge with a jogger, and the city after the first boom; people take at most 1.5 ms a frame at 4x CPU; a street's first frame comes no more than 30 ms later than before; backing off works when forced.
 12. **Reduced motion:** walkers, joggers, the okada and the feet shadows hold still; waves and cheers are still poses; bubbles show.
 13. **Size:** S3g1 adds no more than 20 KB gzipped; the first load stays under 3 MB.
+
+## Ogun
+
+The Ogun note (decisions 72 and 73: the Gateway State, three streets, King Pothole in Pothole Hall, the Ogun city, people, tasks) is docs/ogun.md.
