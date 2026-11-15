@@ -1,5 +1,24 @@
 # Open questions for the product owner
 
+## designer, 15 Nov 2026: the challenge road (S3e0, docs/design.md "S3e0. The challenge road, with W17 C")
+
+The full note for city.md (e) with W17 C is written, so S3e1a (art) and S3e1b (gamedev) can start. It is built on the recommended answer below; a different answer changes only the lines marked CR-Q1 in the note.
+
+- **CR-Q1, for Tp (a game rule, decision 64). Does a win from a stop pay for that stop's fix?** W5 (12 Nov) said a challenge road win goes to the bus park with "You brought ₦12 home." Since then decision 48 made each stop the same place as its city spot, and the Lane run stop replaces the Streets card. a) Yes, where the run earns that fix's kind: Alausa plays for the New road while it is not built (the same as the Potholes card's "Run Alausa", ₦14 on the first win), and the Lane run plays for the Lamps, then the Mast (the same as their cards); Computer Village, Ikeja and the hall stay as today. b) No: every stop's win goes to the bus park, as W5 wrote it. **Recommended: a.** The stop card shows the spot and says "A win pays for the New road (₦10)."; then "Mission complete!" plays right there, which is the whole point of W17 C. It changes nothing for a player who starts from the city cards, and b would make the same run pay differently depending on which button started it. Blocks: nothing (built on a; b is a two-line change). Line for the lead once Tp confirms: "69. A win from a challenge road stop pays for that stop's fix when the run earns its kind: Alausa for the New road, the Lane run for the Lamps, then the Mast. (CR-Q1, a; Tp)"
+- **Small rulings, under decision 64 (easy to undo; the lead reports each to Tp in one line):**
+  - **CR-R1.** The Lane run stop sits on a side road off the main road between Alausa and Computer Village, always open, never marked "Next", so it shows on the first look at 320 x 240 (city.md (e) put it last, when it was still locked).
+  - **CR-R2.** The road screen drops the Streets screen's "Nigeria's wheel" button (the city's bottom row has one); its buttons are "Home" and Sound.
+  - **CR-R3.** The well room gets no stop: it is a secret inside streets 2 and 3, and a stop would give it away.
+
+### po check of S3e0, 15 Nov 2026 (done by designer with .claude/agents/po.md's checklist; po may re-check)
+
+- **Telescope (reasoned):** it serves Tp's 13 Nov ask ("feel the city get better", decisions 47, 48) and decision 38's challenge road; every stop now says which part of Lagos it is for, and the first screen of each street shows that place tired or bright. Fun: one more reason to replay a street after its fix.
+- **Microscope (verified against the docs):** stops, unlocks, prizes and buckets match S2.8, decisions 34, 38, 45, 63, 66, 67 and the code (`BUILDS`: road ₦10, Mama Put ₦4, Market ₦8, Lamps Power 10, Mast Tech 6; `HALL_PRIZE` ₦15; `FIRST_WIN` ₦14). Spot cuts come from `CITY_SPOTS` focus boxes and `drawJetty` in src/art/city.ts. First-screen stretches sit before each street's first roof, crate or pothole in the level files, and Ikeja's secret well at x 160 is left alone.
+- **Words (verified):** plain, warm, every line 44 characters or fewer; no line that says something is wrong names a real place (headings are "Stop 1" to "Stop 4", the name lives on the sign in the picture and in the challenge name, city.md part 1 "Words"). Fixed in the check: the hall line said "turns Lagos's cog", which can be false after the first boom; it now says "switches Lagos on".
+- **Never accept list (verified by reading the note):** a road with bus stops and a side road, not a path-and-dots map; nothing from Mario or any Nintendo game; no real people, brands, crests, signs or party colours (the street sign is a plain cream plate); tired is warm and proud with someone doing something proud on every tired screen (d2); no accounts, trackers, ads or photos; nothing out of scope for version 1. Not edited: docs/brief.md, docs/decisions.md.
+- **Play it as a teen on a cheap phone (reasoned):** fits 320 x 240 with a sideways scroll and a peeking stop plus an arrow; Android back closes a card, then goes home, never starts a run; a half-loaded city picture falls back to a plain card picture. To watch in qa: "See the stop" beside "Back" on the city cards at 320 x 240, and the two-line "Challenge road" and "Nigeria's wheel" buttons in the city's bottom row.
+- **Verdict:** ready for S3e1a and S3e1b on CR-Q1 a. Waits for Tp: CR-Q1 only.
+
 ## po note, 14 Nov 2026 (newest): round 3 accepted for the live test link (1d5686b)
 
 - Accepted, all six items on claude/serene-hopper-ydve2g at 1d5686b, after qa passed them: intro subtitles; hero front turn and richer hero; the update prompt U1; goat "meeh" and birds "hawk hawk" with the ?sounds board; the lane run S3f1 to S3f3; the store app work ST0, ST1a, ST2. See "po acceptance, 14 Nov 2026: round 3" below.
