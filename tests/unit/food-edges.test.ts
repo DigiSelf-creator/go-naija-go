@@ -39,7 +39,7 @@ describe('break it: dying exactly as a food is picked up', () => {
     const run = new Run(sameSpot('garri', 'goat'));
     run.lives = 1;
     const ev = toFood(run);
-    expect(ev.map((e) => e.type)).toEqual(['food', 'shieldPop']);
+    expect(ev.map((e) => e.type)).toEqual(['food', 'goatBump', 'shieldPop']);
     while (run.hero.x < 800 && run.phase === 'run') run.step(DT);
     expect(run.phase).toBe('run');
     expect(run.lives).toBe(1);
@@ -58,7 +58,7 @@ describe('break it: dying exactly as a food is picked up', () => {
     const run = new Run(sameSpot('corn', 'goat'));
     run.lives = 1;
     const ev = toFood(run);
-    expect(ev.map((e) => e.type)).toEqual(['food', 'hit', 'gameOver']);
+    expect(ev.map((e) => e.type)).toEqual(['food', 'goatBump', 'hit', 'gameOver']);
     expect(run.phase).toBe('over');
     const left = run.power.corn;
     expect(run.step(DT)).toEqual([]);

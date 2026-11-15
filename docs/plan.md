@@ -1,6 +1,6 @@
 # Plan
 
-Owner: pm. Updated 8 Nov 2026. Source: docs/brief.md. Product calls come from po and Tp, never from pm.
+Owner: pm. Updated 14 Nov 2026. Source: docs/brief.md. Product calls come from po and Tp, never from pm.
 
 ## How a task moves
 
@@ -318,6 +318,51 @@ Added by designer. The street changes sit on top of P5 (S2.14) and P8 (S2.15), s
 | P18 | qa | Test P13 to P17: the S2.16 done checks, phone profile and 4x CPU, first-timers (Tp first) on streets 2 and 3, Normal and Gentle | P13 to P17 | three-line report | |
 | P19 | po | Accept P13 to P17 | P18 | note in docs/questions.md | |
 
+## Update prompt and the store version (decisions 39 to 41, 51, 52; Tp, 14 Nov)
+
+Runs alongside Lagos. S3e1 and onwards stay the main track; the store track never holds them up. Gamedev does one task at a time: Lagos first, store tasks in the gaps, unless Tp says otherwise.
+
+Rules for every row here:
+- The web test link keeps working: deploy.yml still deploys on every push to main, and `npm run check-size` still passes (first load under 3 MB).
+- Native code and tools never go into the web first load. The app is built from the same `dist`.
+- Never paste keys, passwords or signing files in chat, in the repo or in a PR. They go only into GitHub Actions secrets or the store websites, typed in by Tp.
+
+### U. Update prompt (decision 52)
+
+| id | owner | task | depends on | done when |
+|----|-------|------|------------|-----------|
+| U1 | gamedev | **Doing.** When a new version is deployed, the game shows "New version ready. Tap to update." One tap loads it. | none | the prompt shows once a newer build is waiting; one tap loads it; saves kept; never cuts a run in half (waits for a screen, not mid-street); no prompt and no error offline; unit and phone e2e tests pass; size check passes |
+| U2 | qa | Test U1: deploy A, open, deploy B, reopen; phone profile and 4x CPU; offline | U1 | three-line report |
+| U3 | po | Accept U1 | U2 | note in docs/questions.md |
+
+In the store app the game updates through the store, so U1 must not fire there (see ST1a and question ST-Q2).
+
+### ST. Store version (decisions 39 to 41, 51)
+
+| id | owner | task | depends on | done when |
+|----|-------|------|------------|-----------|
+| ST0 | designer | App note in docs/design.md: name under the icon ("Gbese!"), sideways only (both ways), Android back button (pause first, then a "Leave the game?" ask, never a silent quit), app sent to the background (pause, music stops), notch and home bar, splash length, what the test app shows that the web link does not | none: **ready now** | note written with exact words; po approved |
+| ST1a | gamedev | Capacitor wrapper (current stable, pinned), Android project in `android/`: `capacitor.config.ts`, app id, name "Gbese!", version from package.json (versionCode 1). Loads the built `dist` from inside the app: no web fetch for the game, no service worker in the app, U1 off in the app. Saves stay on the phone. Sideways only. Back button and background as ST0 | ST0, app id (ST-Q1) | `npm run build` and the web e2e unchanged; debug APK installs on an Android emulator, starts in airplane mode and plays street 1; a save survives closing the app and a phone restart; no network request after launch (logged in the test); only sideways; web first load unchanged within 2 KB |
+| ST1b | gamedev | CI: new workflow `.github/workflows/app.yml` (deploy.yml untouched) builds the debug APK on every push to main and by hand, and keeps it as a downloadable artifact | ST1a | the Actions run shows "gbese-debug.apk"; Tp can download it, side-load it ("install unknown apps") and play; how-to in README in 5 plain steps |
+| ST1c | gamedev | iOS project in `ios/`. Needs a Mac with Xcode: use GitHub's Mac build machines (never the company Mac, po 10 Nov). CI builds for the iPhone simulator only, unsigned. TestFlight comes in ST4b | ST1a | the Mac CI job builds and the simulator starts the game sideways, offline |
+| ST2 | art | App icons and splash screens at every store size, our own art (from the code-drawn icon in scripts/make-icons.mjs or new): Android adaptive icon (foreground and background), Play icon 512 x 512, Play feature picture 1024 x 500, iOS icon 1024 x 1024, splash for Android 12 and later and iOS, light and dark | ST0 | every size made by one script from our sources; readable at 48 px; originality check passed (rule 2); no real people, party colours or brand |
+| ST3 | designer and po | Store listing: short and long words, keywords, age rating answers (everyone 10 and up, not the kids section, decision 41), privacy statement ("no data collected": no accounts, no trackers, no ads, saves on the phone), the Play data safety and Apple privacy answers, 8 screenshots sideways (phone sizes both stores ask for) | ST0; privacy page place (ST-Q3), devices (ST-Q4) | words in docs/store.md, plain for a 10 year old; po approved; Apple has no "10+" rating: honest answers give 4+ or 9+, which is fine; screenshots from the real game, nothing promised that is not built |
+| ST4a | gamedev | Android signing and Play upload: release build (AAB) signed in CI from secrets; upload to Play internal testing | ST1b, ST2, ST3; **blocked on Tp's Google Play account** | the AAB is accepted by Play Console internal testing and installs from the Play test link on Tp's phone |
+| ST4b | gamedev | iOS signing and TestFlight upload from the Mac CI job | ST1c, ST2, ST3; **blocked on Tp's Apple developer account** | the build is in TestFlight and installs on Tp's iPhone |
+| ST5 | qa | Test each ST row on an emulator and, when there is one, a real cheap Android phone: offline, sideways, saves, back button, background, size, originality | each row | three-line report per row |
+| ST6 | po | Accept each ST row | ST5 | note in docs/questions.md |
+
+Order: ST0 and ST2 can start now beside Lagos art. Then ST1a, ST1b (Tp's first test app on an Android phone), ST1c, ST3, then ST4a and ST4b once Tp's accounts exist.
+
+### What Tp must do for the store version, and when
+
+1. Now: answer ST-Q1 to ST-Q4 in docs/questions.md.
+2. After ST1b: download the debug APK from the Actions run, side-load it on an Android phone, play, say what feels wrong.
+3. When ST3 is near done (pm will say): make the Google Play developer account (play.google.com/console, one-time $25) and the Apple developer account (developer.apple.com, about $99 a year), in Tp's own name or own company (decision 40). Apple can take a few days to approve. New personal Play accounts must run a closed test with a set number of testers for about two weeks before going public; check the current rule when making the account.
+4. For ST4a: in Play Console, create the app "Gbese!" with the app id from ST-Q1. gamedev gives Tp a short guide to make the upload key and add it, the key password and a Play service account as GitHub Actions secrets, typed in by Tp on github.com.
+5. For ST4b: in App Store Connect, create the app with the same id, make an App Store Connect API key, and add it as GitHub Actions secrets the same way.
+6. **Never paste keys, passwords, key files or codes in chat, in a file or in a PR.** If one is ever pasted, tell the lead at once: it must be replaced.
+
 ## Known facts
 
 1. Node 22 via nvm: ~/.nvm/versions/node/v22.19.0.
@@ -331,7 +376,9 @@ Done (13 Nov update): walk the city S3c0 to S3c4, merged to main 12 Nov (PR #8),
 Done (13 Nov): S3d1 (S3d1a and S3d1b), merged to main 13 Nov (PR #9).
 Deploy (13 Nov): quick checks and phone tests run before going live; timing and perf tests run after, in a separate job.
 Next: the moving intro (Tp asked 13 Nov, city.md (a2)): S3a3 (art, ready now), then S3a4 (gamedev; the clock part can start now). Then S3e1 with W17 C, then S3f0 to S3f4. No second state until Lagos (d) to (f) is accepted.
-Waiting on Tp: paste decision lines 44 to 48; play on a real phone; the new sounds by ear, and later the highlife sting once S3d1a makes it.
+Done (14 Nov): the lead added decision lines 5 to 52 for Tp.
+Doing (14 Nov): U1 update prompt (gamedev). Store track (decision 51) planned beside Lagos: ST0 and ST2 ready now; ST1a waits on ST-Q1 (app id); ST4 waits on Tp's store accounts.
+Waiting on Tp: play on a real phone; the new sounds by ear, and later the highlife sting once S3d1a makes it.
 Blocked: G2 to G4, waiting on Tp's GitHub repo. Nothing in slice 2 is blocked.
 P2 (designer, 10 Nov): design.md S2.13 has the P2 doc fixes (foods 12 s, corn hazard rule, pothole signs, Gentle mode climb-out) and the tasks for gamedev and art; the hall difficulty part of P2 is still to do.
 Note for Tp: until N2, the Win card says "with 0 kobo" and the parcel is lost when the page closes.
@@ -339,8 +386,8 @@ Note for Tp: until N2, the Win card says "with 0 kobo" and the parcel is lost wh
 ## Waiting on Tp
 
 1. Create the GitHub repo (name, public or private) and push access, or push it yourself. Turn on Pages with source "GitHub Actions". Blocks G2 to G4.
-2. Copy the game name (Gbese!) and credits lines into docs/decisions.md (questions.md, first slice note).
-3. Paste lines 7 to 21 from docs/questions.md ("Lines for Tp to copy") into docs/decisions.md. Q16 to Q25 are answered.
+2. Answer ST-Q1 to ST-Q4 (store version) in docs/questions.md. ST-Q1 (app id) blocks ST1a.
+3. Later, when pm says: make the Google Play and Apple developer accounts (see "What Tp must do for the store version"). Blocks ST4a and ST4b.
 4. Remove the "wrong premise" line from docs/brief.md Done when 8.
 5. Play streets 2 and 3 and Go-Slow Hall on your phone (with and without the parcel); say if any took more than 3 tries, or if the hall felt too easy (feeds P2, P3).
 

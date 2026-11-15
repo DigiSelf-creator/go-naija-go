@@ -18,6 +18,8 @@ const KEY_SOUND = 'sound';
 /** S2.8, S2.9 rule 5: the Music switch, its own key (the player itself comes with O2). */
 const KEY_MUSIC = 'music';
 const KEY_GENTLE = 'gentle';
+/** S3f0 part 20: the lane run's "Buttons instead of swipes" switch. */
+const KEY_LANE_BUTTONS = 'laneButtons';
 
 function isLookShape(v: unknown): v is HeroLook {
   if (typeof v !== 'object' || v === null) return false;
@@ -98,17 +100,21 @@ export interface Settings {
   /** Music on or off (default on). */
   music: boolean;
   gentle: boolean;
+  /** S3f0: "Buttons instead of swipes" in the lane run (default off). */
+  buttonsInsteadOfSwipes: boolean;
 }
 
 export function loadSettings(store: Store): Settings {
   const sound = store.load(KEY_SOUND, (v): v is boolean => typeof v === 'boolean');
   const music = store.load(KEY_MUSIC, (v): v is boolean => typeof v === 'boolean');
   const gentle = store.load(KEY_GENTLE, (v): v is boolean => typeof v === 'boolean');
-  return { sound: sound ?? true, music: music ?? true, gentle: gentle ?? false };
+  const buttons = store.load(KEY_LANE_BUTTONS, (v): v is boolean => typeof v === 'boolean');
+  return { sound: sound ?? true, music: music ?? true, gentle: gentle ?? false, buttonsInsteadOfSwipes: buttons ?? false };
 }
 
 export function saveSettings(store: Store, s: Settings): void {
   store.save(KEY_SOUND, s.sound);
   store.save(KEY_MUSIC, s.music);
   store.save(KEY_GENTLE, s.gentle);
+  store.save(KEY_LANE_BUTTONS, s.buttonsInsteadOfSwipes);
 }

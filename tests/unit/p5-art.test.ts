@@ -178,7 +178,8 @@ describe('throw pose (S2.15): every body, age, skin, hair and outfit, on the gro
                   expect(b.box.right, at).toBeLessThanOrEqual(right + 0.01);
                   expect(b.box.top, at).toBeGreaterThanOrEqual(HERO_ART_BOX.top - 0.01);
                 }
-  });
+    // 750 looks x 2 frames x 6 poses through stand-in contexts: the lit hero (decision 60) has more parts.
+  }, 30_000);
 
   it('frame 0 holds a ball (one more circle); frame 1 and no throw draw the same as before', () => {
     const look = { skin: 3, hair: 2, outfit: 1, body: 1, age: 1 };

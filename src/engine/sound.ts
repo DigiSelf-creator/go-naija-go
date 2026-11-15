@@ -5,7 +5,7 @@
  */
 import { audioCtor, playSilence, wake } from './audio-unlock';
 
-export type SoundName =
+type CoreSoundName =
   | 'jump'
   | 'airJump'
   | 'kobo'
@@ -62,7 +62,6 @@ export type SoundName =
   | 'fufuBonk'
   | 'fufuPff'
   | 'goatChew'
-  | 'goatMeeh'
   // P13: amala's strong look (S2.16 B2)
   | 'strongStep'
   | 'strongSmash'
@@ -70,9 +69,8 @@ export type SoundName =
   // P13: the garri tech suit (S2.16 B3); the hum is setHum, not a one-shot
   | 'suitOn'
   | 'suitBreak'
-  // P15: birds (S2.16 B1)
-  | 'crowKraa'
-  | 'egretKrk'
+  // P15: birds (S2.16 B1); decision 62: their "hawk hawk"
+  | 'hawk'
   | 'birdFlap'
   // P15: the dash (S2.16 B4)
   | 'dashStart'
@@ -94,10 +92,36 @@ export type SoundName =
   | 'horn';
 
 /**
+ * The lane run's sounds (design.md S3f0 part 17). Their recipes live in src/art/lane-sounds.ts,
+ * which loads with the lane run, not with the first page; addSounds puts them in. Until then
+ * playing one is silent.
+ */
+export type LaneSoundName =
+  | 'laneStepA'
+  | 'laneStepB'
+  | 'laneSwish'
+  | 'laneHop'
+  | 'laneLand'
+  | 'laneSlide'
+  | 'laneTink0'
+  | 'laneTink1'
+  | 'laneTink2'
+  | 'laneBulb'
+  | 'laneChip'
+  | 'lanePok'
+  | 'laneOof'
+  | 'laneTunk'
+  | 'laneTzing'
+  | 'laneBusStop'
+  | 'laneCaught';
+
+export type SoundName = CoreSoundName | LaneSoundName;
+
+/**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
  * style bend); to = Hz at the end; at = start delay in s; vol = loudness.
  */
-interface Tone {
+export interface Tone {
   f: number;
   len: number;
   wave?: OscillatorType;
@@ -105,18 +129,26 @@ interface Tone {
   to?: number;
   at?: number;
   vol?: number;
+  /** Vibrato: the pitch wobbles `depth` (a share of the pitch, 0.04 = 4 percent) `hz` times a second. */
+  vib?: { hz: number; depth: number };
+  /** Nasal: the tone goes through a narrow band filter at this Hz (a voice-like "eh" or "aw"). */
+  nasal?: number;
+  /** How narrow that band is (filter Q). Default 3. */
+  q?: number;
 }
 
 /** A short burst of hiss (shekere shake, splash). hp/lp = filter Hz. */
-interface Hiss {
+export interface Hiss {
   len: number;
   at?: number;
   vol?: number;
   hp?: number;
   lp?: number;
+  /** Band filter Hz instead (rasp in a bird's call). */
+  bp?: number;
 }
 
-interface Recipe {
+export interface Recipe {
   tones: readonly Tone[];
   hiss?: readonly Hiss[];
 }
@@ -145,11 +177,50 @@ const BOOM: readonly (readonly [number, number, number])[] = [
 ];
 
 /**
+ * Decision 62, the goat's "meeh" (0.45 s): a soft low "m" hum, then a nasal voiced "eeh"
+ * that lifts a little and falls away, with a quick goat wobble (7.5 times a second). Two
+ * sawtooth voices through two narrow "eh" bands make the nasal sound, and a soft triangle
+ * gives it a body. A happy, silly bleat: never a cry.
+ */
+const MEEH: readonly Tone[] = [
+  // "m": a short closed-mouth hum
+  { f: 360, len: 0.07, wave: 'triangle', to: 400, vol: 0.035 },
+  // "eeh": the nasal voice, two bands ("e" at 1150 Hz and a thin top at 2500 Hz)
+  { f: 400, len: 0.4, wave: 'sawtooth', peak: 440, to: 330, at: 0.05, vol: 0.13, nasal: 1150, q: 4, vib: { hz: 7.5, depth: 0.045 } },
+  { f: 400, len: 0.34, wave: 'sawtooth', peak: 440, to: 345, at: 0.05, vol: 0.05, nasal: 2500, q: 5, vib: { hz: 7.5, depth: 0.045 } },
+  // the body under it
+  { f: 400, len: 0.38, wave: 'triangle', peak: 440, to: 335, at: 0.05, vol: 0.03, vib: { hz: 7.5, depth: 0.045 } },
+];
+
+/** One "hawk" of the birds' call at time `at`, pitch `f`: a breathy "h", a raspy "aw", a dry "k". */
+function hawkOnce(f: number, at: number): { tones: Tone[]; hiss: Hiss[] } {
+  return {
+    tones: [
+      // "aw": a rough sawtooth through a low open band; the fast wobble makes it raspy
+      { f, len: 0.15, wave: 'sawtooth', peak: f * 1.06, to: f * 0.8, at: at + 0.015, vol: 0.12, nasal: 1300, q: 2.5, vib: { hz: 38, depth: 0.05 } },
+      { f: f / 2, len: 0.13, wave: 'triangle', peak: (f / 2) * 1.05, to: (f / 2) * 0.82, at: at + 0.015, vol: 0.025 },
+    ],
+    hiss: [
+      { len: 0.03, hp: 2200, at, vol: 0.025 }, // "h"
+      { len: 0.14, bp: 1500, at: at + 0.015, vol: 0.05 }, // the rasp
+      { len: 0.015, hp: 3000, at: at + 0.16, vol: 0.03 }, // "k"
+    ],
+  };
+}
+
+/** Decision 62, "hawk hawk" (0.5 s): two raspy caws, the second a little lower. */
+const HAWK: Recipe = (() => {
+  const a = hawkOnce(620, 0);
+  const b = hawkOnce(560, 0.3);
+  return { tones: [...a.tones, ...b.tones], hiss: [...a.hiss, ...b.hiss] };
+})();
+
+/**
  * All our own. Soft sine and triangle waves, short. Avoided on purpose: the
  * square-wave B5-to-E6 coin, rising square power-up runs, descending "lose" runs,
  * and pipe or warp slides.
  */
-const SOUNDS: Record<SoundName, Recipe> = {
+const SOUNDS: Record<CoreSoundName, Recipe> = {
   // Talking-drum bend: up, then settles a little lower.
   jump: { tones: [{ f: 330, len: 0.14, wave: 'triangle', peak: 520, to: 440, vol: 0.07 }] },
   airJump: { tones: [{ f: 470, len: 0.12, wave: 'triangle', peak: 720, to: 620, vol: 0.06 }] },
@@ -165,13 +236,8 @@ const SOUNDS: Record<SoundName, Recipe> = {
   },
   // Springy boing.
   bounce: { tones: [{ f: 300, len: 0.13, wave: 'sine', peak: 640, to: 520, vol: 0.08 }] },
-  // Friendly goat bleat, wobbly.
-  meeh: {
-    tones: [
-      { f: 540, len: 0.09, wave: 'triangle', peak: 580, to: 500 },
-      { f: 530, len: 0.17, wave: 'triangle', peak: 570, to: 470, at: 0.1 },
-    ],
-  },
+  // Decision 62: the goat's "meeh". A cheerful, silly bleat, never a pained one.
+  meeh: { tones: MEEH },
   // Soft thump, a puff of dust, a tiny ping.
   smash: {
     tones: [
@@ -447,15 +513,6 @@ const SOUNDS: Record<SoundName, Recipe> = {
     tones: [0, 1, 2].map((i): Tone => ({ f: i % 2 ? 230 : 250, len: 0.05, wave: 'triangle', to: 190, at: i * 0.2, vol: 0.04 })),
     hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.04, lp: 900, at: i * 0.2, vol: 0.03 })),
   },
-  // Then a happy "meeh": two slightly detuned tones that wobble up and down together.
-  goatMeeh: {
-    tones: [
-      { f: 560, len: 0.08, wave: 'triangle', peak: 600, to: 540, vol: 0.05 },
-      { f: 566, len: 0.08, wave: 'triangle', peak: 606, to: 546, vol: 0.03 },
-      { f: 545, len: 0.22, wave: 'triangle', peak: 590, to: 480, at: 0.09, vol: 0.055 },
-      { f: 551, len: 0.22, wave: 'triangle', peak: 584, to: 486, at: 0.09, vol: 0.03 },
-    ],
-  },
   // --- S2.16. Volumes: 100 percent in the notes is 0.3 here, so "30 percent" is 0.09.
   // Amala heavy step: a low "dum", a sine falling 90 to 60 Hz in 0.08 s (at most one every 0.18 s: STRONG.stepGap).
   strongStep: { tones: [{ f: 90, len: 0.08, wave: 'sine', to: 60, vol: 0.09 }] },
@@ -491,19 +548,8 @@ const SOUNDS: Record<SoundName, Recipe> = {
     ],
     hiss: [{ len: 0.05, hp: 3000, vol: 0.04 }],
   },
-  // Pied crow: a short, rough, filtered-noise "kraa" with a low nasal tone under it. Our own.
-  crowKraa: {
-    tones: [
-      { f: 520, len: 0.2, wave: 'sawtooth', peak: 560, to: 430, vol: 0.012 },
-      { f: 260, len: 0.2, wave: 'triangle', peak: 280, to: 220, vol: 0.03 },
-    ],
-    hiss: [{ len: 0.2, lp: 1800, vol: 0.05 }],
-  },
-  // Cattle egret: a soft "krk-krk", two dry clicks.
-  egretKrk: {
-    tones: [0, 1].map((i): Tone => ({ f: 700, len: 0.035, wave: 'triangle', to: 520, at: i * 0.12, vol: 0.03 })),
-    hiss: [0, 1].map((i): Hiss => ({ len: 0.035, lp: 2500, at: i * 0.12, vol: 0.04 })),
-  },
+  // Decision 62: the street 3 birds' "hawk hawk", a raspy two-note caw. Our own.
+  hawk: HAWK,
   // Wings as a bird flies off: three soft low air puffs.
   birdFlap: { tones: [], hiss: [0, 1, 2].map((i): Hiss => ({ len: 0.05, lp: 600, at: i * 0.09, vol: 0.04 - i * 0.008 })) },
   // Dash start: a quick wood block "tak-tak" (no zoom, no fwoosh).
@@ -599,13 +645,48 @@ const SOUNDS: Record<SoundName, Recipe> = {
   },
 };
 
-/** How long a sound lasts, in seconds (its last tone or hiss end). For the music dip under the sting and the boom. */
+/** Every built-in sound's name, in recipe order (for the ?sounds test board). Added sounds are not in it. */
+export const SOUND_NAMES = Object.keys(SOUNDS) as SoundName[];
+
+/** Sounds added later by a part of the game that loads on its own (the lane run). */
+const ADDED: Partial<Record<SoundName, Recipe>> = {};
+
+/** Adds recipes for sounds that load later (the lane run's, src/art/lane-sounds.ts). Safe to call more than once. */
+export function addSounds(recipes: Partial<Record<SoundName, Recipe>>): void {
+  Object.assign(ADDED, recipes);
+}
+
+/** A sound's recipe, or undefined if it has not been added yet. */
+function recipeOf(name: SoundName): Recipe | undefined {
+  return (SOUNDS as Partial<Record<SoundName, Recipe>>)[name] ?? ADDED[name];
+}
+
+/** How long a sound lasts, in seconds (its last tone or hiss end). For the music dip under the sting and the boom. 0 if not added yet. */
 export function soundLength(name: SoundName): number {
-  const r = SOUNDS[name];
+  const r = recipeOf(name);
+  if (!r) return 0;
   let end = 0;
   for (const t of r.tones) end = Math.max(end, (t.at ?? 0) + t.len);
   for (const h of r.hiss ?? []) end = Math.max(end, (h.at ?? 0) + h.len);
   return end;
+}
+
+/**
+ * Vibrato without extra nodes: the pitch path (f, up to peak at 35 percent, down to `to`) is
+ * drawn as short straight steps, each nudged up or down by the wobble. Cheap: a few dozen
+ * points on one oscillator, nothing left running after the tone.
+ */
+function wobble(p: AudioParam, tone: Tone, t: number): void {
+  const vib = tone.vib!;
+  const peak = tone.peak ?? tone.f;
+  const to = tone.to ?? peak;
+  const steps = Math.max(4, Math.ceil(tone.len * vib.hz * 6));
+  for (let i = 1; i <= steps; i++) {
+    const u = i / steps;
+    const base = u < 0.35 ? tone.f + (peak - tone.f) * (u / 0.35) : peak + (to - peak) * ((u - 0.35) / 0.65);
+    const w = 1 + vib.depth * Math.sin(2 * Math.PI * vib.hz * u * tone.len);
+    p.linearRampToValueAtTime(base * w, t + u * tone.len);
+  }
 }
 
 /** Every tone and hiss fades in over this long from near silence, so none starts with a tick. */
@@ -614,11 +695,20 @@ export const ATTACK = 0.003;
 /** The suit's hum: 6 percent volume (100 percent is 0.3, as in the S2.16 recipes). */
 export const HUM_VOL = 0.018;
 
+type HumName = 'suit' | 'close';
+
+/** The held hums: their pitches (Hz), loudness, fade-in (s) and slow wobble (Hz). */
+const HUMS: Record<HumName, { freqs: readonly number[]; vol: number; fadeIn: number; wobbleHz: number }> = {
+  suit: { freqs: [110, 165], vol: HUM_VOL, fadeIn: 0.3, wobbleHz: 0.4 },
+  // E2, B2 and B3: the lane tune's key, low and steady; B3 lets a phone speaker carry it.
+  close: { freqs: [82.4, 123.5, 246.9], vol: 0.022, fadeIn: 0.5, wobbleHz: 0.25 },
+};
+
 export class Sound {
   private ac: AudioContext | null = null;
   private on = true;
 
-  /** Sound switch. Turning it off also stops the suit's hum at once; on again brings it back if still wanted. */
+  /** Sound switch. Turning it off also stops the held hums at once; on again brings it back if still wanted. */
   get enabled(): boolean {
     return this.on;
   }
@@ -628,14 +718,21 @@ export class Sound {
     this.syncHum();
   }
 
-  /* ---- S2.16 B3: the tech suit's soft hum, held while the suit is worn ---- */
+  /* ---- Held hums: the tech suit's (S2.16 B3) and the Blackout's close hum (S3f0 part 17) ---- */
 
-  private humWanted = false;
-  private humNodes: { gain: GainNode; stops: OscillatorNode[] } | null = null;
+  private hums: Record<HumName, { wanted: boolean; nodes: { gain: GainNode; stops: OscillatorNode[] } | null }> = {
+    suit: { wanted: false, nodes: null },
+    close: { wanted: false, nodes: null },
+  };
 
-  /** True while the hum is playing. */
+  /** True while the suit's hum is playing. */
   get humming(): boolean {
-    return this.humNodes !== null;
+    return this.hums.suit.nodes !== null;
+  }
+
+  /** True while the Blackout's close hum is playing. */
+  get closeHumming(): boolean {
+    return this.hums.close.nodes !== null;
   }
 
   /**
@@ -644,23 +741,39 @@ export class Sound {
    * while the Sound switch is off or before the first tap.
    */
   setHum(on: boolean): void {
-    this.humWanted = on;
+    this.hums.suit.wanted = on;
+    this.syncHum();
+  }
+
+  /**
+   * The lane run's close hum (the Blackout under 15 m): a low steady hum on E2, B2 and B3 that
+   * fades in over 0.5 s. Call with false when the Blackout is back over 15 m, on pause, a hidden
+   * tab and at the run's end. Never while the Sound switch is off or before the first tap.
+   */
+  setCloseHum(on: boolean): void {
+    this.hums.close.wanted = on;
     this.syncHum();
   }
 
   private syncHum(): void {
+    for (const name of ['suit', 'close'] as const) this.syncOne(name);
+  }
+
+  private syncOne(name: HumName): void {
     const ac = this.ac;
-    const want = this.humWanted && this.on && ac !== null && ac.state === 'running';
-    if (want && !this.humNodes && ac) {
+    const hum = this.hums[name];
+    const spec = HUMS[name];
+    const want = hum.wanted && this.on && ac !== null && ac.state === 'running';
+    if (want && !hum.nodes && ac) {
       try {
         const t = ac.currentTime;
         const gain = ac.createGain();
         gain.gain.value = 0.0001;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(HUM_VOL, t + 0.3);
+        gain.gain.linearRampToValueAtTime(spec.vol, t + spec.fadeIn);
         gain.connect(this.bus(ac));
         const stops: OscillatorNode[] = [];
-        for (const f of [110, 165]) {
+        for (const f of spec.freqs) {
           const o = ac.createOscillator();
           o.type = 'sine';
           o.frequency.setValueAtTime(f, t);
@@ -668,22 +781,22 @@ export class Sound {
           o.start(t);
           stops.push(o);
         }
-        // The slow wobble: a 0.4 Hz sine moving the hum's volume a little
+        // The slow wobble: a slow sine moving the hum's volume a little
         const lfo = ac.createOscillator();
         lfo.type = 'sine';
-        lfo.frequency.setValueAtTime(0.4, t);
+        lfo.frequency.setValueAtTime(spec.wobbleHz, t);
         const depth = ac.createGain();
-        depth.gain.setValueAtTime(HUM_VOL * 0.3, t);
+        depth.gain.setValueAtTime(spec.vol * 0.3, t);
         lfo.connect(depth).connect(gain.gain);
         lfo.start(t);
         stops.push(lfo);
-        this.humNodes = { gain, stops };
+        hum.nodes = { gain, stops };
       } catch {
-        this.humNodes = null;
+        hum.nodes = null;
       }
-    } else if (!want && this.humNodes) {
-      const { gain, stops } = this.humNodes;
-      this.humNodes = null;
+    } else if (!want && hum.nodes) {
+      const { gain, stops } = hum.nodes;
+      hum.nodes = null;
       try {
         const t = ac?.currentTime ?? 0;
         gain.gain.cancelScheduledValues(t);
@@ -780,10 +893,24 @@ export class Sound {
 
   private noise: AudioBuffer | null = null;
 
+  /** A narrow band filter for a nasal tone, or null if this browser cannot make one (the tone then plays plain). */
+  private band(ac: AudioContext, hz: number, q: number, t: number): BiquadFilterNode | null {
+    try {
+      const f = ac.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.setValueAtTime(hz, t);
+      (f.Q as AudioParam | undefined)?.setValueAtTime(q, t);
+      return f;
+    } catch {
+      return null;
+    }
+  }
+
   play(name: SoundName): void {
     const ac = this.ac;
     if (!this.enabled || !ac || ac.state !== 'running') return;
-    const recipe = SOUNDS[name];
+    const recipe = recipeOf(name);
+    if (!recipe) return;
     const now = ac.currentTime;
     let out: AudioNode;
     try {
@@ -800,12 +927,17 @@ export class Sound {
         gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
         osc.type = tone.wave ?? 'triangle';
         osc.frequency.setValueAtTime(tone.f, t);
-        if (tone.peak) osc.frequency.linearRampToValueAtTime(tone.peak, t + tone.len * 0.35);
-        if (tone.to) osc.frequency.linearRampToValueAtTime(tone.to, end);
+        if (tone.vib) wobble(osc.frequency, tone, t);
+        else {
+          if (tone.peak) osc.frequency.linearRampToValueAtTime(tone.peak, t + tone.len * 0.35);
+          if (tone.to) osc.frequency.linearRampToValueAtTime(tone.to, end);
+        }
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.linearRampToValueAtTime(tone.vol ?? 0.06, t + ATTACK);
         gain.gain.exponentialRampToValueAtTime(0.0001, Math.max(end, t + ATTACK + 0.01));
-        osc.connect(gain).connect(out);
+        const band = tone.nasal ? this.band(ac, tone.nasal, tone.q ?? 3, t) : null;
+        if (band) osc.connect(band).connect(gain).connect(out);
+        else osc.connect(gain).connect(out);
         osc.start(t);
         osc.stop(end + 0.02);
       }
@@ -826,8 +958,8 @@ export class Sound {
         const src = ac.createBufferSource();
         src.buffer = this.noise;
         const filter = ac.createBiquadFilter();
-        filter.type = h.lp ? 'lowpass' : 'highpass';
-        filter.frequency.setValueAtTime(h.lp ?? h.hp ?? 4000, t);
+        filter.type = h.bp ? 'bandpass' : h.lp ? 'lowpass' : 'highpass';
+        filter.frequency.setValueAtTime(h.bp ?? h.lp ?? h.hp ?? 4000, t);
         const gain = ac.createGain();
         gain.gain.value = 0.0001; // a new gain starts at 1: start it quiet so no sample slips out before the envelope
         gain.gain.setValueAtTime(0.0001, t);

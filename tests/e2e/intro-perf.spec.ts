@@ -1,17 +1,17 @@
 /**
  * Slice 3 step (a2), task S3a4 (docs/city.md a2.9 and a2.11 item 11): the moving intro at 4x CPU
- * slowdown, from the start to 3 s into the hold, untouched. Frames per second for each beat and
+ * slowdown, from the start to 3 s into the hold (0 to 47 s, a2.12), untouched. Frames per second for each beat and
  * the hold, and the longest frame. (A phone that runs the first second slow draws the rest at a
  * pixel ratio of 1.5; the first second counts here too.)
  */
 import { expect, test } from '@playwright/test';
 
-const BEATS = [0, 6, 11, 15.5, 20, 24.5, 27.8, 30.8];
+const BEATS = [0, 11, 19.6, 25.4, 31.6, 39, 44, 47];
 /** The goal is 45 fps (a2.9); the test fails below this whole-scene average. */
 const MIN_AVERAGE = 45;
 
-test('slowed 4x CPU: the moving intro from 0 to 31 s, fps for each beat', async ({ page }) => {
-  test.setTimeout(120_000);
+test('slowed 4x CPU: the moving intro from 0 to 47 s, fps for each beat', async ({ page }) => {
+  test.setTimeout(150_000);
   await page.goto('./');
   const cdp = await page.context().newCDPSession(page);
   let out: { fps: number[]; average: number; longest: number; slow: number; beatChange: number[]; ratio: number };
@@ -27,11 +27,11 @@ test('slowed 4x CPU: the moving intro from 0 to 31 s, fps for each beat', async 
         const s = window.__game?.intro;
         if (!s) return;
         w.__f.push([now, s.time]);
-        if (s.time < 30.8) requestAnimationFrame(f);
+        if (s.time < 47) requestAnimationFrame(f);
       };
       requestAnimationFrame(f);
     });
-    await page.waitForFunction(() => (window.__game?.intro?.time ?? 0) >= 30.8, undefined, { timeout: 60_000, polling: 500 });
+    await page.waitForFunction(() => (window.__game?.intro?.time ?? 0) >= 47, undefined, { timeout: 90_000, polling: 500 });
     const frames = await page.evaluate(() => (window as unknown as { __f: [number, number][] }).__f);
     const fps: number[] = [];
     const beatChange: number[] = [];

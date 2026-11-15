@@ -15,7 +15,7 @@
  * keys, the lengths, the note count, and every run of 5 melody notes against
  * the openings of well-known game tunes, hymns and songs.
  */
-export type Instrument = 'bass' | 'guitar' | 'agogo' | 'shekere' | 'drum' | 'kalimba' | 'horn' | 'drone';
+export type Instrument = 'bass' | 'guitar' | 'agogo' | 'shekere' | 'drum' | 'kalimba' | 'horn' | 'drone' | 'kick';
 
 export interface Track {
   inst: Instrument;
@@ -27,6 +27,8 @@ export interface Track {
   from?: number;
   /** This is the tune's melody (used for the originality check). */
   lead?: boolean;
+  /** A layer name the game can turn off and on (Music.setLayer), e.g. the lane tune's 'guitar'. */
+  layer?: string;
 }
 
 export interface Tune {
@@ -313,6 +315,71 @@ export const CORN: Tune = {
   ],
 };
 
-export type MusicPlace = 'menu' | 'street' | 'well' | 'hall' | 'cleared' | 'win' | 'corn';
+// ---------------------------------------------------------------- lane run
+// The lane run (S3f0 part 17): our own Afrobeat-style groove at 120 BPM in E minor pentatonic
+// (E G A B D, the same notes as the street tunes' G major pentatonic, so the corn tune never
+// clashes). 8 bars looping: a soft kick on beats 1 and 3, shekere on every 16th, a bass riff,
+// a highlife guitar line, and a talking-drum call every 4 bars (the guitar rests for it).
+// Under 15 m the 'guitar' layer drops out (Music.setLayer('guitar', false)) and only drums and
+// bass play. After the goal: one tempo step (1 BPM) per 100 m, up to 132; the pitch never moves.
+// Not like any lane runner's music or any known song: no whistle lead, no hip-hop beat (no
+// snare backbeat, no boom-bap), no chase-movie strings; plucked guitar over drums and bass.
 
-export const TUNES: Record<MusicPlace, Tune> = { menu: MENU, street: STREET, well: WELL, hall: HALL, cleared: CLEARED, win: WIN, corn: CORN };
+const LANE_CHORDS = ['Em', 'Em', 'G', 'G', 'Am', 'Am', 'D', 'Em'] as const;
+
+/** E minor pentatonic: the lane tune's only notes. */
+export const E_PENTATONIC = ['E', 'G', 'A', 'B', 'D'] as const;
+
+const LANE_BASS: Record<string, string> = {
+  Em: 'E2 - . E2 . . G2 . . A2 . B2 . . D3 .',
+  G: 'G2 - . G2 . . B2 . . D3 . E3 . . D3 .',
+  Am: 'A2 - . A2 . . E2 . . G2 . A2 . . B2 .',
+  D: 'D3 - . D2 . . A2 . . B2 . D3 . . A2 .',
+};
+
+export const LANE: Tune = {
+  name: 'lane',
+  bpm: [120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132],
+  bars: 8,
+  loop: true,
+  gain: 1,
+  key: E_PENTATONIC,
+  chords: LANE_CHORDS,
+  tracks: [
+    {
+      inst: 'guitar',
+      lead: true,
+      layer: 'guitar',
+      vol: 0.5,
+      bars: [
+        'B4 . G4 B4 . E5 . D5 . B4 . A4 B4 . . .',
+        'G4 . E4 G4 . A4 . . B4 . A4 G4 . E4 . .',
+        'D5 . B4 D5 . G4 . E5 . D5 . B4 A4 . . .',
+        'B4 . A4 B4 . D5 . . G4 . . . . . . .',
+        'A4 . E5 . A4 . G4 A4 . D5 . E5 . . A4 .',
+        'G4 A4 . E4 . . G4 . A4 . . B4 - . . .',
+        'D5 . A4 D5 . B4 . A4 . G4 . E4 . G4 . .',
+        'E5 . D5 B4 . . G4 . . . . . . . . .',
+      ],
+    },
+    { inst: 'bass', bars: byChord(LANE_BASS, LANE_CHORDS), vol: 0.8 },
+    { inst: 'kick', bars: rep('E2 . . . . . . . E2 . . . . . . .', 8), vol: 0.7 },
+    { inst: 'shekere', bars: rep('X x x X x x X x X x x X x x X x', 8), vol: 0.32 },
+    // The talking-drum call at the end of bars 4 and 8, where the guitar rests.
+    {
+      inst: 'drum',
+      vol: 0.6,
+      bars: [0, 1, 2, 3, 4, 5, 6, 7].map((b) => (b % 4 === 3 ? '. . . . . . . . . . . . E3 . G3 B3' : '. . . . . . . . . . . . . . . .')),
+    },
+  ],
+};
+
+/** The lane tune's tempo step for a distance run (m): 0 up to the goal, then one step per 100 m after it, up to 132 BPM. */
+export function laneTempoAt(distance: number, goal = 600): number {
+  if (!Number.isFinite(distance) || distance <= goal) return 0;
+  return Math.min(LANE.bpm.length - 1, Math.floor((distance - goal) / 100));
+}
+
+export type MusicPlace = 'menu' | 'street' | 'well' | 'hall' | 'cleared' | 'win' | 'corn' | 'lane';
+
+export const TUNES: Record<MusicPlace, Tune> = { menu: MENU, street: STREET, well: WELL, hall: HALL, cleared: CLEARED, win: WIN, corn: CORN, lane: LANE };

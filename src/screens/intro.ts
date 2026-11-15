@@ -1,12 +1,15 @@
 /**
  * The intro story screen (docs/city.md part 5 "The intro", build steps (a) and (a2)).
  *
- * Moving (a2, the usual way): one scene of about 28 s drawn in code (src/art/intro-scene.ts),
+ * Moving (a2, the usual way): one scene of about 44 s drawn in code (src/art/intro-scene.ts),
  * loaded as its own chunk while the screen opens; until it is there the first still frame shows.
- * On screen only "Skip", "That hero is you." (beat 5), "Build up Lagos. Get Nigeria working."
- * (beat 6) and, at 27.8 s, "Let's go". The six captions go, one per beat, into a hidden log that
- * screen readers hear. A tap anywhere but a button, or Space, Enter or →, jumps to the next beat;
- * in the hold Space or Enter presses "Let's go". 3 s into the hold the picture stops being drawn.
+ * a2.12: each beat's caption shows as a subtitle in a dark strip along the bottom (always 3
+ * lines tall; the picture fits above it). A caption that needs more than 3 lines shows in two
+ * pieces, split at a full stop. Lines fade in and out in 0.3 s; caption 6 stays through the hold,
+ * with "Let's go" (at 44 s) at the strip's right end. The strip is hidden from screen readers:
+ * the six captions go, once per beat, into a hidden log that they hear. A tap anywhere but a
+ * button, or Space, Enter or →, jumps to the next beat and shows its whole line at once; in the
+ * hold Space or Enter presses "Let's go". 3 s into the hold the picture stops being drawn.
  *
  * Still (a, with reduce motion on, or when the moving scene cannot load): the six pictures
  * (src/art/intro.ts), each with its caption as real text. A tap, Space, Enter or → goes on; after
@@ -19,7 +22,7 @@ import { INTRO_FRAMES, drawIntroFrame } from '../art/intro';
 import type { HeroLook } from '../art/hero';
 import type { IntroCue } from '../art/intro-scene';
 import type { SoundName } from '../engine/sound';
-import { INTRO_CHOICES, IntroFlow, IntroScene, endLineShown, heroLineShown, musicLevelAt } from '../game/intro';
+import { INTRO_CHOICES, IntroFlow, IntroScene, musicLevelAt, splitCaption, subtitleAt } from '../game/intro';
 import { button, h } from './dom';
 import { WORDS } from './words';
 
@@ -94,15 +97,24 @@ export class IntroScreen {
   private readonly hint: HTMLElement;
   private readonly go: HTMLButtonElement;
   private readonly log: HTMLElement;
-  private readonly heroLine: HTMLElement;
-  private readonly endLine: HTMLElement;
+  /** a2.12: the subtitle strip (aria-hidden) and its line. */
+  private readonly strip: HTMLElement;
+  private readonly sub: HTMLElement;
+  /** The beat whose line the strip holds, how it is split, and the width it was split for. */
+  private subBeat = -1;
+  private subPieces: string[] = [];
+  private subKey = '';
+  /** The piece and opacity showing (the page is touched only when these change). */
+  private subShown = '';
+  /** The beat reached by a jump: its line shows at once, with no fade-in. */
+  private jumpedTo = -1;
   private frameId = 0;
   private last = 0;
   private closed = false;
   /** The frame last drawn and its fade (a still picture is drawn again only when these change). */
   private drawnKey = '';
-  /** The moving scene's beat whose caption was added to the log last (-1: none yet). */
-  private logged = -1;
+  /** a2.12 point 7: the beats whose caption the log has said (never again after a pause, a resize or a turn). */
+  private readonly said: boolean[] = [];
   /** We paused the music for a turned phone. */
   private musicHeld = false;
   /** The canvas's pixel ratio cap: 2, or SLOW_RATIO once the moving scene ran slow. */
@@ -118,9 +130,9 @@ export class IntroScreen {
     this.hint = h('p', { class: 'intro-hint', 'aria-hidden': 'true' });
     // a2.5: the moving intro's captions, added one per beat, for screen readers only.
     this.log = h('div', { class: 'sr-only intro-log', role: 'log', 'aria-live': 'polite' });
-    // a2.4: the two lines on screen; the log already says them.
-    this.heroLine = h('p', { class: 'intro-line intro-hero-line', 'aria-hidden': 'true', hidden: '' }, w.heroLine);
-    this.endLine = h('p', { class: 'intro-line intro-end-line', 'aria-hidden': 'true', hidden: '' }, w.endLine);
+    // a2.12: the subtitles; the log already says them, so screen readers skip the strip.
+    this.sub = h('p', { class: 'intro-sub' });
+    this.strip = h('div', { class: 'intro-strip', 'aria-hidden': 'true' }, this.sub);
     const skip = button(w.skip, 'minor intro-skip', (e) => {
       if (this.opts.ignoreTap(e)) return;
       this.finish(true);
@@ -133,7 +145,8 @@ export class IntroScreen {
       'div',
       { class: 'card intro-card', role: 'dialog', 'aria-label': w.label },
       skip,
-      h('div', { class: 'intro-stage' }, this.pic, this.heroLine, this.endLine),
+      h('div', { class: 'intro-stage' }, this.pic),
+      this.strip,
       h('div', { class: 'intro-words' }, this.caption, this.go, this.hint),
       this.log,
     );
@@ -215,6 +228,8 @@ export class IntroScreen {
     if (this.mode === 'moving') {
       const scene = this.scene!;
       if (!INTRO_CHOICES.tapJumps || !scene.jump()) return;
+      // a2.12 point 6: the new beat's whole line at once; the old one goes at once.
+      this.jumpedTo = scene.beat;
       // The level the new beat should have; then its own cues from its start.
       const level = musicLevelAt(this.art!.INTRO_CUES, scene.t);
       if (level !== null) this.opts.music?.({ kind: 'level', level, ramp: 0.2 });
@@ -281,8 +296,9 @@ export class IntroScreen {
       this.flow.resume();
       if (this.mode === 'still') this.show();
     }
-    // Draw again for a new size or a turn (also 3 s into the hold).
+    // Draw again for a new size or a turn (also 3 s into the hold); split the line again too.
     this.drawnKey = '';
+    this.subKey = '';
     this.wake();
   };
 
@@ -303,11 +319,53 @@ export class IntroScreen {
     if (!scene) return;
     const b = Math.min(scene.beat, INTRO_FRAMES - 1);
     this.el.dataset['frame'] = String(b + 1);
+    if (scene.beat !== this.jumpedTo) this.jumpedTo = -1;
     // The speed watch starts again: a new beat's first frames warm its layers.
     if (this.trial) this.trial = [];
-    if (b <= this.logged) return;
-    this.logged = b;
+    // Once per beat, the whole caption (never a split piece on its own)
+    if (this.said[b]) return;
+    this.said[b] = true;
     this.log.append(h('p', {}, WORDS.intro.captions[b] ?? ''));
+  }
+
+  /**
+   * a2.12: the strip's line at story time t. The line is split again only for a new beat or a
+   * new size; the page is touched only when the piece or its opacity changes.
+   */
+  private subtitle(t: number): void {
+    const scene = this.scene!;
+    if (!INTRO_CHOICES.subtitles) return;
+    const beats = this.art!.INTRO_BEATS;
+    const last = INTRO_FRAMES - 1;
+    const b = Math.min(scene.beat, last);
+    // From beat 6 on, room is kept at the right end for "Let's go", so the line never jumps
+    const room = b === last;
+    const key = `${b}|${room}|${this.sub.clientWidth}|${this.strip.clientHeight}`;
+    if (key !== this.subKey) {
+      this.subKey = key;
+      this.strip.classList.toggle('with-go', room);
+      this.subBeat = b;
+      this.subPieces = splitCaption(WORDS.intro.captions[b] ?? '', (piece) => this.fits(piece));
+      this.subShown = '';
+    }
+    const start = beats[b] ?? 0;
+    const end = beats[b + 1] ?? start;
+    const s = subtitleAt(this.subPieces, start, end, Math.min(t, end), scene.beat !== this.jumpedTo, b !== last);
+    const alpha = Math.round(s.alpha * 20) / 20;
+    const shown = `${this.subBeat}|${s.piece}|${alpha}`;
+    if (shown === this.subShown) return;
+    const text = this.subPieces[s.piece] ?? '';
+    if (this.sub.textContent !== text) this.sub.textContent = text;
+    this.sub.style.opacity = String(alpha);
+    this.subShown = shown;
+  }
+
+  /** True when `piece` fits the strip's 3 lines at the current width (a layout read). */
+  private fits(piece: string): boolean {
+    const p = this.sub;
+    p.textContent = piece;
+    const line = parseFloat(getComputedStyle(p).lineHeight) || 21;
+    return p.offsetHeight <= line * 3 + 1;
   }
 
   /** Asks for a frame, unless one is coming. */
@@ -369,18 +427,18 @@ export class IntroScreen {
     if (scene.beat !== wasBeat) this.atBeatStart();
     const t = scene.t;
     // Touch the page only when something changes (cheap frames on a slow phone).
-    const hero = !heroLineShown(t);
-    if (this.heroLine.hidden !== hero) this.heroLine.hidden = hero;
-    const end = !endLineShown(t);
-    if (this.endLine.hidden !== end) this.endLine.hidden = end;
+    this.subtitle(t);
     const go = !scene.inHold;
     if (this.go.hidden !== go) this.go.hidden = go;
     // Paused: the picture stays as it is, and nothing is drawn until the beat starts again.
     if (scene.paused) return false;
-    const key = `${t}|${this.pic.clientWidth}x${this.pic.clientHeight}`;
+    const strip = INTRO_CHOICES.subtitles ? this.strip.offsetHeight : 0;
+    const key = `${t}|${this.pic.clientWidth}x${this.pic.clientHeight}|${strip}`;
     if (key !== this.drawnKey) {
       this.drawnKey = key;
-      this.paint((g, pw, ph) => art.drawIntroScene(g, pw, ph, t, { look: this.opts.look }));
+      const cw = this.pic.clientWidth;
+      // The picture fits above the strip (a2.12), in canvas pixels
+      this.paint((g, pw, ph) => art.drawIntroScene(g, pw, ph, t, { look: this.opts.look, inset: cw > 0 ? (strip * pw) / cw : 0 }));
     }
     // 3 s into the hold the picture no longer changes: no more frames until a resize or a turn.
     return !scene.still;

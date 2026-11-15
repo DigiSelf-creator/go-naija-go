@@ -1,0 +1,317 @@
+{
+ "schema": 1,
+ "type": "lane",
+ "id": "lagos-lane",
+ "state": "lagos",
+ "name": "Lane run",
+ "theme": "dusk",
+ "schemaNote": "See docs/design.md, S3f0 The lane run, part 13. Metres along the road from the start; lanes 0 left, 1 middle, 2 right; the hero starts in lane 1. things: [d, lane, kind] (dodge: danfo, cones, pothole, barrier; burst: crate:power, crate:tech, crate:coins, junk, sign; goat). pickups: [d, lane, kind] (bulb, chip, garri, corn). coins: [d, lane, count, shape] (line and low: first coin at d, 2 m apart; arc: centred on d over a jump thing). hints: [d, key], once each on the first run, words in src/screens/words.ts. pops: what a burst or a goat gives. chunks: the endless part after the goal, rows in beats (endless.beat seconds apart), lanes as above.",
+ "goal": 600,
+ "lanes": 3,
+ "laneWidth": 2.5,
+ "speed": {
+  "start": 9,
+  "atGoal": 13,
+  "afterGoalPer100": 1,
+  "max": 16,
+  "gentle": {
+   "start": 9,
+   "atGoal": 11,
+   "afterGoalPer100": 0.5,
+   "max": 14
+  }
+ },
+ "move": {
+  "laneChange": 0.18,
+  "jumpTime": 0.7,
+  "jumpHeight": 1.2,
+  "clearFeet": 0.35,
+  "slideTime": 0.7,
+  "dropTime": 0.12,
+  "stumbleSlow": 0.7,
+  "stumbleTime": 0.5,
+  "safeAfterStumble": 1.0
+ },
+ "blackout": {
+  "start": 40,
+  "max": 60,
+  "creep": 0.2,
+  "stumble": 15,
+  "powerPush": 5,
+  "warnUnder": 15,
+  "afterGoalCreepPer100": 0.15,
+  "afterGoalCreepMax": 2.0,
+  "gentle": {
+   "start": 60,
+   "max": 60,
+   "creep": 0.1,
+   "stumble": 10,
+   "powerPush": 5,
+   "warnUnder": 15,
+   "afterGoalCreepPer100": 0.075,
+   "afterGoalCreepMax": 1.0
+  }
+ },
+ "prize": {
+  "kobo": 500,
+  "power": 4,
+  "tech": 2
+ },
+ "pops": {
+  "crate:power": {
+   "coins": 2,
+   "power": 1
+  },
+  "crate:tech": {
+   "coins": 2,
+   "tech": 1
+  },
+  "crate:coins": {
+   "coins": 4
+  },
+  "junk": {
+   "coins": 2,
+   "tech": 1
+  },
+  "sign": {
+   "power": 1,
+   "tech": 1
+  },
+  "goat": {
+   "coins": 3
+  }
+ },
+ "spawnAhead": 60,
+ "things": [
+  [35, 1, "danfo"],
+  [70, 1, "cones"],
+  [100, 1, "barrier"],
+  [128, 1, "crate:power"],
+  [152, 0, "danfo"],
+  [152, 2, "danfo"],
+  [178, 1, "goat"],
+  [240, 0, "danfo"],
+  [262, 0, "cones"],
+  [262, 1, "cones"],
+  [282, 1, "danfo"],
+  [282, 2, "danfo"],
+  [305, 0, "junk"],
+  [305, 1, "pothole"],
+  [328, 0, "barrier"],
+  [328, 1, "barrier"],
+  [350, 1, "crate:tech"],
+  [350, 2, "cones"],
+  [372, 0, "danfo"],
+  [372, 2, "danfo"],
+  [395, 0, "goat"],
+  [395, 2, "pothole"],
+  [418, 2, "danfo"],
+  [440, 0, "crate:power"],
+  [440, 1, "cones"],
+  [440, 2, "cones"],
+  [462, 1, "barrier"],
+  [462, 2, "sign"],
+  [484, 1, "danfo"],
+  [506, 0, "pothole"],
+  [506, 1, "cones"],
+  [528, 0, "crate:tech"],
+  [528, 2, "barrier"],
+  [550, 0, "danfo"],
+  [550, 1, "danfo"],
+  [572, 1, "cones"],
+  [572, 2, "goat"]
+ ],
+ "pickups": [
+  [152, 1, "bulb"],
+  [204, 1, "garri"],
+  [240, 1, "chip"],
+  [282, 0, "bulb"],
+  [305, 2, "bulb"],
+  [328, 2, "chip"],
+  [350, 0, "bulb"],
+  [372, 1, "bulb"],
+  [398, 1, "bulb"],
+  [418, 0, "chip"],
+  [418, 1, "corn"],
+  [484, 0, "chip"],
+  [484, 2, "bulb"],
+  [506, 2, "bulb"],
+  [528, 1, "bulb"],
+  [550, 2, "bulb"],
+  [572, 0, "chip"],
+  [594, 1, "bulb"]
+ ],
+ "coins": [
+  [22, 0, 4, "line"],
+  [22, 2, 4, "line"],
+  [50, 1, 4, "line"],
+  [70, 1, 5, "arc"],
+  [98, 1, 3, "low"],
+  [176, 0, 3, "line"],
+  [176, 2, 3, "line"],
+  [215, 1, 5, "line"],
+  [258, 2, 4, "line"],
+  [305, 1, 5, "arc"],
+  [346, 0, 4, "line"],
+  [390, 1, 4, "line"],
+  [458, 0, 4, "line"],
+  [506, 0, 5, "arc"],
+  [545, 2, 5, "line"],
+  [584, 1, 5, "line"]
+ ],
+ "hints": [
+  [12, "lane"],
+  [48, "jump"],
+  [80, "slide"],
+  [108, "crate"],
+  [134, "power"],
+  [160, "goat"],
+  [186, "food"],
+  [222, "tech"],
+  [288, "pothole"]
+ ],
+ "endless": {
+  "beat": 1.8,
+  "foodEvery": 400,
+  "foods": ["garri", "corn"],
+  "noRepeat": 2,
+  "mirror": true,
+  "fewerBulbsAfter": 1600,
+  "clearAfterCard": 2.5
+ },
+ "chunks": [
+  {
+   "id": "wall-left",
+   "beats": [
+    ["danfo", "danfo", null],
+    [null, "cones", null],
+    [null, null, "barrier"],
+    ["crate:coins", null, null]
+   ],
+   "pickups": [
+    [0, 2, "bulb"],
+    [2, 0, "chip"]
+   ],
+   "coins": [
+    [1, 0, 4, "line"],
+    [1, 1, 5, "arc"]
+   ]
+  },
+  {
+   "id": "zigzag",
+   "beats": [
+    ["cones", null, "danfo"],
+    [null, "danfo", "danfo"],
+    ["danfo", null, "cones"],
+    [null, null, null]
+   ],
+   "pickups": [
+    [1, 0, "bulb"],
+    [3, 1, "chip"]
+   ],
+   "coins": [
+    [0, 1, 4, "line"],
+    [2, 1, 4, "line"]
+   ]
+  },
+  {
+   "id": "jump-row",
+   "beats": [
+    ["pothole", "cones", null],
+    [null, null, null],
+    [null, "barrier", "barrier"],
+    ["junk", null, null]
+   ],
+   "pickups": [
+    [0, 2, "chip"],
+    [2, 0, "bulb"]
+   ],
+   "coins": [
+    [0, 1, 5, "arc"],
+    [1, 1, 4, "line"]
+   ]
+  },
+  {
+   "id": "middle-gap",
+   "beats": [
+    ["danfo", null, "danfo"],
+    ["cones", null, "cones"],
+    ["danfo", null, "danfo"],
+    [null, "crate:power", null]
+   ],
+   "pickups": [
+    [0, 1, "bulb"],
+    [2, 1, "chip"]
+   ],
+   "coins": [
+    [1, 1, 4, "line"]
+   ]
+  },
+  {
+   "id": "slide-run",
+   "beats": [
+    ["barrier", "barrier", null],
+    [null, null, null],
+    [null, "barrier", "barrier"],
+    ["sign", null, null]
+   ],
+   "pickups": [
+    [1, 1, "bulb"],
+    [3, 2, "chip"]
+   ],
+   "coins": [
+    [0, 0, 3, "low"],
+    [2, 2, 3, "low"]
+   ]
+  },
+  {
+   "id": "goat-crossing",
+   "beats": [
+    [null, "goat", null],
+    ["danfo", null, "pothole"],
+    [null, null, null],
+    ["cones", "cones", null]
+   ],
+   "pickups": [
+    [1, 1, "bulb"],
+    [3, 2, "bulb"]
+   ],
+   "coins": [
+    [2, 0, 4, "line"],
+    [2, 2, 4, "line"]
+   ]
+  },
+  {
+   "id": "crate-row",
+   "beats": [
+    ["crate:tech", "crate:power", "crate:coins"],
+    [null, null, null],
+    ["danfo", "danfo", null],
+    [null, "pothole", null]
+   ],
+   "pickups": [
+    [2, 2, "chip"]
+   ],
+   "coins": [
+    [3, 1, 5, "arc"]
+   ]
+  },
+  {
+   "id": "long-danfo",
+   "beats": [
+    [null, "danfo", null],
+    [null, "danfo", "cones"],
+    ["barrier", "danfo", null],
+    [null, null, null]
+   ],
+   "pickups": [
+    [1, 0, "bulb"],
+    [3, 1, "chip"]
+   ],
+   "coins": [
+    [0, 0, 4, "line"],
+    [2, 2, 4, "line"]
+   ]
+  }
+ ]
+}

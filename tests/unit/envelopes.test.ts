@@ -141,8 +141,8 @@ const ALL_SOUNDS: readonly SoundName[] = [
   'cogRatchet',
   'cogBell',
   'lockedTuk',
-  'lightDing', 'lightTick', 'lightClunk', 'fufuToss', 'fufuPlop', 'fufuHop', 'fufuRoll', 'fufuPlug', 'fufuFarPlop', 'fufuBonk', 'fufuPff', 'goatChew', 'goatMeeh',
-  'strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'crowKraa', 'egretKrk', 'birdFlap', 'dashStart', 'dashSteps', 'dashReady', 'weedsFsss',
+  'lightDing', 'lightTick', 'lightClunk', 'fufuToss', 'fufuPlop', 'fufuHop', 'fufuRoll', 'fufuPlug', 'fufuFarPlop', 'fufuBonk', 'fufuPff', 'goatChew',
+  'strongStep', 'strongSmash', 'strongPick', 'suitOn', 'suitBreak', 'hawk', 'birdFlap', 'dashStart', 'dashSteps', 'dashReady', 'weedsFsss',
   'payChink', 'payBulb', 'payChip', 'built', 'collect', 'notEnough',
 ];
 
