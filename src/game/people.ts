@@ -19,6 +19,9 @@ import type { Run } from './run';
 type G = CanvasRenderingContext2D;
 export type CrowdSound = 'crowdCheer' | 'crowdCheerBig';
 
+/** The hall's sheet is baked at this person size: the door people's (HallCrowd.draw). */
+const HALL_BAKE_SIZE = 0.9;
+
 /** The okada passes every 25 s of play at 300 u/s on the far road (part 4). */
 export const OKADA = { every: 25, speed: 300, firstAt: 6, scale: 0.55 } as const;
 
@@ -461,17 +464,28 @@ export class GamePeople {
   private drawHallNow(g: G, view: View, n: PeopleNow, outside: boolean): void {
     if (!outside) this.drawn = [];
     if (!this.on || !this.hall || !n.run.boss) return;
-    this.hallSheet.ready(this.hallLooks, view.scale, `hall|${this.key}`);
+    // Baked at the door people's size (0.9), so most of them are a 1:1 copy at whole device pixels
+    // (as the street's batch): scaled copies from the sheet cost a slow phone several fps (qa round 5).
+    this.hallSheet.ready(this.hallLooks, view.scale * HALL_BAKE_SIZE, `hall|${this.key}`);
     const list = outside ? this.later : this.hall.draw(this.hallView(n));
     if (!outside) {
       this.later = list;
       this.drawn = list;
       this.seen = list.length;
     }
+    const k = view.scale;
+    let set = false;
     for (const d of list) {
       const out = d.x < 0 || d.x > 566;
-      if (out === outside) this.hallSheet.draw(g, d);
+      if (out !== outside) continue;
+      if (!set) {
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        set = true;
+      }
+      this.hallSheet.drawDevice(g, d, (d.x - n.camX) * k, (d.y - n.lift) * k, k);
     }
+    if (set) g.restore();
   }
 
   /* ------------------------------------------------------------ the one bubble */
