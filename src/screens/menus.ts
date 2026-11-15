@@ -640,10 +640,12 @@ export class Menus {
         'div',
         { class: 'ogun-words' },
         h('p', {}, h('b', {}, w.line)),
-        h('p', {}, this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
-        // O3b: once Ota is done, Abeokuta is the big button and Ota a small one.
-        this.hooks.ogunDone(1) && this.guarded(w.playAbeokuta, 'go ogun-play', (e) => this.hooks.playOgun(2, tapPoint(e))),
-        this.guarded(w.play, this.hooks.ogunDone(1) ? 'minor ogun-play' : 'go ogun-play', (e) => this.hooks.playOgun(1, tapPoint(e))),
+        h('p', {}, this.hooks.ogunDone(3) ? w.sagamuDone : this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
+        // O3b, O4b: the newest open street is the big button, the ones before it small.
+        ...[3, 2, 1].map((n) => {
+          const top = this.hooks.ogunDone(2) ? 3 : this.hooks.ogunDone(1) ? 2 : 1;
+          return n <= top && this.guarded([w.play, w.playAbeokuta, w.playSagamu][n - 1]!, n === top ? 'go ogun-play' : 'minor ogun-play', (e) => this.hooks.playOgun(n, tapPoint(e)));
+        }),
       ),
       h('div', { class: 'ogun-bottom' }, this.travelButton(), this.guarded(WORDS.city.wheel, 'minor two-line', () => this.showWheel('ogun'))),
     );

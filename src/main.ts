@@ -495,8 +495,8 @@ function startGame(): void {
    * Its progress saves under states.ogun (decision 80: the one wallet, Ogun's own streets).
    */
   let ogunPlay: { level: Level; n: number } | null = null;
-  /** O3b: the Ogun streets built so far (Ota, Abeokuta); "Next street" stops at the last one. */
-  const OGUN_BUILT = 2;
+  /** O3b, O4b: the Ogun streets built so far (Ota, Abeokuta, Sagamu); "Next street" stops at the last one. */
+  const OGUN_BUILT = 3;
   /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
   function lagosRun(at: TapPoint | null, to: Where): void {
     ogunPlay = null;
@@ -864,7 +864,7 @@ function startGame(): void {
     restart: (at) => (lane ? startLane() : startRun(at)),
     next: (at) => {
       missionFor = null;
-      // O3b: Ota's card goes on to Abeokuta (the Ogun streets built so far).
+      // O3b, O4b: Ota's card goes on to Abeokuta, Abeokuta's to Sagamu.
       if (ogunPlay) {
         if (ogunPlay.n < OGUN_BUILT) ogunRun(at, ogunPlay.n + 1);
         return;
@@ -1168,6 +1168,13 @@ function startGame(): void {
       case 'crackOpen':
         // O3b (ogun.md 3.3): the low "krrk" as a crack rumbles open.
         sound.play('crackRumble');
+        break;
+      case 'gravelHop':
+        // O4b (ogun.md 3.3): the hopping gravel's "tk" as it lands, and its crumble.
+        sound.play('gravelTk');
+        break;
+      case 'crumble':
+        sound.play('gravelCrumble');
         break;
       case 'arch':
         // O2b (ogun.md 1.4): under the gateway arch on Ota.
