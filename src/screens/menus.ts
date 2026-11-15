@@ -166,6 +166,10 @@ export interface MenuHooks {
   arrived(): void;
   /** O1b2: the welcome tune as the bus passes under the arch (the Music switch rules). */
   playTune(tune: Tune): void;
+  /** O2b: Ogun's place: play Ogun street n (Ota is 1). */
+  playOgun(n: number, at: TapPoint | null): void;
+  /** O2b: Ogun street n is done (saved under states.ogun). */
+  ogunDone(n: number): boolean;
 }
 
 /** What the game over and win screens show. */
@@ -176,6 +180,8 @@ export interface RunSummary {
   hall?: boolean;
   /** O1b2: the first Go-Slow Hall win: the Win screen's big "On to Ogun" (later wins: a small "Go to Ogun"). */
   firstHall?: boolean;
+  /** O2b: lost on an Ogun street: "You keep {money} for Ogun..." and no Challenge road. */
+  ogun?: boolean;
 }
 
 /** What the Street cleared screen shows (S2.10). */
@@ -187,6 +193,8 @@ export interface ClearedSummary {
   last: boolean;
   /** Got on the bus with the garri parcel: it is saved for the hall. */
   parcel: boolean;
+  /** O2b: an Ogun street: home is Ogun's place; no "Next street" (until Abeokuta, O3b) and no Challenge road. */
+  ogun?: boolean;
 }
 
 export class Menus {
@@ -232,6 +240,8 @@ export class Menus {
   touchWords: () => boolean = () => true;
   /** S3f0: the run being played is a lane run (its Pause card has its own buttons). */
   laneRun = false;
+  /** O2b: the run is an Ogun street (Pause has no Challenge road; Home is Ogun's place). Set by main. */
+  ogunRun = false;
   /** S3f3: the lane Pause card's "So far: ..." line. */
   laneSoFar = '';
   /** S3f0 part 25: can this phone tilt, and what it said (main sets it). Null: no tilt at all. */
@@ -623,7 +633,14 @@ export class Menus {
       { class: 'card ogun-screen', role: 'dialog', 'aria-label': w.heading },
       pic,
       h('div', { class: 'ogun-top' }, h('h2', {}, w.heading), h('div', { class: 'minor-row' }, sound, this.guarded(WORDS.city.settings, 'minor', () => this.showSettings('ogun')))),
-      h('div', { class: 'ogun-words' }, h('p', {}, h('b', {}, w.line)), h('p', {}, w.soon)),
+      // O2b: Ota plays (Ogun's city comes with O6b).
+      h(
+        'div',
+        { class: 'ogun-words' },
+        h('p', {}, h('b', {}, w.line)),
+        h('p', {}, this.hooks.ogunDone(1) ? w.otaDone : w.soon),
+        this.guarded(w.play, 'go ogun-play', (e) => this.hooks.playOgun(1, tapPoint(e))),
+      ),
       h('div', { class: 'ogun-bottom' }, this.travelButton(), this.guarded(WORDS.city.wheel, 'minor two-line', () => this.showWheel('ogun'))),
     );
     this.refit = () => ui.paintHome(pic, { lit: v.ogun.beaten });
@@ -801,7 +818,8 @@ export class Menus {
         { class: 'pause-grid' },
         this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
         this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+        // O2b: the challenge road is Lagos's; from an Ogun street Home is Ogun's place.
+        !this.ogunRun && this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
@@ -819,12 +837,12 @@ export class Menus {
       'div',
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
-      h('p', {}, this.summary.hall ? w.hallText : w.text(this.summary.kobo)),
+      h('p', {}, this.summary.hall ? w.hallText : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+        ...(this.summary.ogun ? [] : [this.guarded(w.road, 'minor', () => this.hooks.leave('road'))]),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
     );
@@ -839,13 +857,18 @@ export class Menus {
       { class: 'card narrow event', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       h('p', {}, w.text(c.name, c.kobo)),
-      c.parcel && h('p', { class: 'parcel-line' }, w.parcel),
+      c.parcel && h('p', { class: 'parcel-line' }, c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
+      // O2b: from Ogun it goes home to Ogun's place; Abeokuta's "Next street" comes with O3b.
       this.actions(
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome()),
-        this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),
-        this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+        ...(c.ogun
+          ? [this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)))]
+          : [
+              this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),
+              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
+              this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+            ]),
       ),
     );
   }

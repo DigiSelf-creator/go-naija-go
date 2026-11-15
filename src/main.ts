@@ -31,7 +31,7 @@ import type { Mission } from './screens/city';
 import { KOBO_PER_COIN } from './game/money';
 import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
 import { CornCount, Hud, Toast } from './screens/hud';
-import { WORDS, hintWords } from './screens/words';
+import { OGUN_WORDS, WORDS, WORLD_PART_WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
 import type { StopId } from './screens/road';
@@ -98,6 +98,20 @@ if (query.get('gallery')?.startsWith('lane')) {
     const frame = (now: number): void => {
       g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
       drawFolkGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+} else if (query.get('gallery')?.startsWith('ogun-city')) {
+  // Debug only: Ogun's city, challenge road and Expressway (O6a): ?gallery=ogun-city, ogun-city2, ogun-city3; &t=1.5 holds the time, &still=1 the reduced-motion look.
+  void import('./art/galleryOgunCity').then(({ drawOgunCityGallery }) => {
+    const t0 = performance.now();
+    const page = Math.max(0, (Number(query.get('gallery')!.slice(9)) || 1) - 1);
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const still = query.get('still') === '1';
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawOgunCityGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page, still);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -219,6 +233,8 @@ function startGame(): void {
   /** S3f2: ?level=lagos-lane makes "Play" start the lane run (for testing). */
   const askedLane = asked === 'lagos-lane';
   const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
+  /** O2b: ?level=ogun-1 makes "Play" load the Ogun part and start Ota (for testing). */
+  const askedOgun = /^ogun-([1-3])$/.exec(asked ?? '');
   const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
   let where: Where = firstStreet;
@@ -474,6 +490,33 @@ function startGame(): void {
     loop.resume();
     syncUpdate();
   }
+  /**
+   * O2b: the Ogun street being played (Ota; its level from the Ogun part), or null for Lagos.
+   * Its progress saves under states.ogun (decision 80: the one wallet, Ogun's own streets).
+   */
+  let ogunPlay: { level: Level; n: number } | null = null;
+  /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
+  function lagosRun(at: TapPoint | null, to: Where): void {
+    ogunPlay = null;
+    startRun(at, to);
+  }
+  /** O2b: Ogun street n from its start (its part must have loaded; Ota is the one built so far). */
+  function ogunRun(at: TapPoint | null, n: number): void {
+    const raw = worlds.get(OGUN)?.levels[`ogun-${n}`];
+    let level: Level | null = null;
+    try {
+      level = raw === undefined ? null : parseLevel(raw);
+    } catch (err) {
+      console.warn(err);
+    }
+    if (!level) {
+      toast.show(WORLD_PART_WORDS.broken, 4000);
+      return;
+    }
+    ogunPlay = { level, n };
+    missionFor = null; // Lagos's fixes are never an Ogun street's mission
+    startRun(at, n - 1);
+  }
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
   function startRun(at: TapPoint | null, to: Where = where): void {
     if (to !== where) missionFor = null;
@@ -492,12 +535,18 @@ function startGame(): void {
     // S2.5 gift rules 5 and 6: with a saved parcel every hall try starts with the shield on, and
     // well rooms show 5 kobo instead of a second parcel.
     void loadPeople().catch(() => undefined); // S3g1b: in case the title's early fetch was missed
-    game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: lagos.parcel } : { parcelSaved: lagos.parcel, dash: dashSaved() });
-    // S2.8: once Lagos is switched on its streets show their fixed look.
-    game.fixed = where !== 'hall' && switchedOn(lagos);
+    const og = ogunPlay;
+    const own = og ? progress.state(OGUN) : lagos;
+    // O2b: an Ogun street brings its own look from the Ogun part (set before begin: it restarts it).
+    game.skin = og ? (worlds.get(OGUN)?.street?.(og.level) ?? null) : null;
+    menus.ogunRun = og !== null;
+    if (og) hud.setIcon('ikokore', (g) => game.skinDo((k) => k.icon?.(g, 'ikokore', 16, 16, 0.85)));
+    game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' && !og ? { parcel: lagos.parcel } : { parcelSaved: own.parcel, dash: dashSaved() });
+    // S2.8: once Lagos (or Ogun, for its streets) is switched on its streets show their fixed look.
+    game.fixed = where !== 'hall' && switchedOn(own);
     // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
     // Scenery only: the level and the run are the same either way.
-    const street = firstStreetOf(game.level.id);
+    const street = og ? null : firstStreetOf(game.level.id);
     const fix = street ? FIRST_FIX[street] : null;
     game.firstLook = street && fix ? { street, look: isBuilt(cityLife.state, fix) ? 'bright' : 'tired', still: reduceMotion.matches } : null;
     if (game.firstLook) {
@@ -525,6 +574,11 @@ function startGame(): void {
       if (h.kobo > 0 || h.power > 0 || h.tech > 0) mission = { build: null, kobo: h.kobo, plain: true, line: WORDS.lane.broughtHome(haulWords(h)) };
     }
     closeLane();
+    // O2b: from an Ogun street, Home (and Take it home) go back to Ogun's place.
+    const fromOgun = ogunPlay !== null;
+    ogunPlay = null;
+    game.skin = null;
+    menus.ogunRun = false;
     playing = false;
     document.body.classList.remove('playing');
     hud.show(false);
@@ -535,7 +589,8 @@ function startGame(): void {
     where = firstStreet;
     game.fixed = false;
     game.reset(startLevel);
-    if (to === 'wheel') {
+    if (fromOgun && (to === 'city' || to === 'road')) menus.show('ogun');
+    else if (to === 'wheel') {
       menus.showWheel('city');
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
       sound.play('cogRatchet');
@@ -755,9 +810,13 @@ function startGame(): void {
     // home screen. ?level=lagos-2, lagos-3 or lagos-hall still starts that level (for testing).
     start: (at) => {
       if (askedLane) startLane(null);
+      else if (askedOgun) {
+        const n = Number(askedOgun[1]);
+        void worlds.load(OGUN).then((r) => (r.ok ? ogunRun(at, n) : toast.show(r.message, 4000)));
+      }
       // O1b2 (ogun.md 1.6): the game opens on the city last used.
       else if (askedAt === null) menus.openHome();
-      else startRun(at, firstStreet);
+      else lagosRun(at, firstStreet);
     },
     cityLife,
     // The Potholes card's "Run Alausa" starts street 1, for the New road. The lane run (step (f)) comes later.
@@ -768,7 +827,7 @@ function startGame(): void {
         return;
       }
       if (spot !== 'potholes') return;
-      startRun(at, 0);
+      lagosRun(at, 0);
       missionFor = isBuilt(cityLife.state, 'road') ? null : 'road';
     },
     takeHome: () => leave('city', { build: missionFor, kobo: brought }),
@@ -776,7 +835,7 @@ function startGame(): void {
     playStop: (stop, at) => {
       if (stop.id === 'lane') startLane(stop.forFix);
       else if (stop.id !== 'ferry' && stop.id !== 'ogun') {
-        startRun(at, stop.id);
+        lagosRun(at, stop.id);
         missionFor = stop.forFix;
       }
     },
@@ -793,6 +852,8 @@ function startGame(): void {
     restart: (at) => (lane ? startLane() : startRun(at)),
     next: (at) => {
       missionFor = null;
+      // O2b: an Ogun street's card has no "Next street" until Abeokuta is built (O3b).
+      if (ogunPlay) return;
       startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
     },
     resume: () => {
@@ -867,6 +928,9 @@ function startGame(): void {
       if (!musicAudible(menus.sound, menus.music) || document.hidden) return;
       gateMusic.playTune(tune);
     },
+    // O2b: Ogun's place, "Play Ota".
+    playOgun: (n, at) => ogunRun(at, n),
+    ogunDone: (n) => streetRecord(progress.state(OGUN), n).done,
   });
   const hud = new Hud(document.body, {
     pause: () => pause(),
@@ -946,6 +1010,8 @@ function startGame(): void {
   const W = WORDS.toast;
   /** S2.2: a level hint shows 3.5 s in the hint bar. */
   const HINT_MS = 3500;
+  /** O2b: the next mud step is the B sound. */
+  let mudB = false;
   game.onEvent = (e) => {
     switch (e.type) {
       case 'kobo':
@@ -970,7 +1036,7 @@ function startGame(): void {
         sound.play(e.kind === 'amala' ? 'strongPick' : e.kind === 'garri' ? 'suitOn' : 'food');
         // S2.15: fufu's words say which key or button throws.
         if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
-        else toast.show(W[e.kind], 3200);
+        else toast.show(e.kind === 'ikokore' ? OGUN_WORDS.toast.ikokore : W[e.kind], 3200);
         break;
       case 'fufuToss':
         sound.play('fufuToss');
@@ -1081,6 +1147,16 @@ function startGame(): void {
       case 'wearingOff':
         // S2.9: corn's ending is the 5, 4, 3, 2, 1 count now; amala keeps its toast.
         if (e.kind === 'amala') toast.show(W.amalaWearingOff);
+        else if (e.kind === 'ikokore') toast.show(OGUN_WORDS.toast.ikokoreWearingOff);
+        break;
+      case 'arch':
+        // O2b (ogun.md 1.4): under the gateway arch on Ota.
+        toast.show(OGUN_WORDS.toast.arch, HINT_MS);
+        break;
+      case 'mudStep':
+        // O2b (ogun.md 3.3): the soft "splosh", A, B, A, B.
+        sound.play(mudB ? 'mudStepB' : 'mudStepA');
+        mudB = !mudB;
         break;
       case 'tick':
         sound.play('tick');
@@ -1093,9 +1169,9 @@ function startGame(): void {
         controls.releaseAll();
         pauseLoop();
         toast.hide();
-        // (c) Losing keeps it all (Tp, question 2): the coins go home to Lagos.
+        // (c) Losing keeps it all (Tp, question 2): the coins go home to the one wallet (decision 80).
         payHome(game.run.kobo * KOBO_PER_COIN);
-        menus.showGameOver({ kobo: game.run.kobo * KOBO_PER_COIN, lives: 0, hall: game.run.inHall });
+        menus.showGameOver({ kobo: game.run.kobo * KOBO_PER_COIN, lives: 0, hall: game.run.inHall, ogun: ogunPlay !== null });
         break;
       case 'parcelShield':
         // S2.7 t = 0 with a parcel: the shield is on; the boss words follow.
@@ -1142,7 +1218,12 @@ function startGame(): void {
         toast.hide();
         // S2.8: saved only now, when the bus is boarded (with the parcel, if carried).
         // N1: a coin is 10 kobo; bests and the card's money are whole kobo.
-        {
+        if (ogunPlay) {
+          // O2b: an Ogun street saves under states.ogun; the money goes to the one wallet (decision 80).
+          const coins = game.run.kobo * KOBO_PER_COIN;
+          progress.finish({ state: OGUN, street: ogunPlay.n, kobo: coins, parcel: game.run.parcel });
+          payHome(coins + winPrize(coins));
+        } else {
           const coins = game.run.kobo * KOBO_PER_COIN;
           // 5W W5: a win brings home at least what is left of the fix it was for; the first street 1
           // win from the Potholes card brings ₦14 (road ₦10, Mama Put ₦4).
@@ -1156,6 +1237,7 @@ function startGame(): void {
           kobo: brought,
           last: typeof where === 'number' && where + 1 >= streets.length,
           parcel: game.run.parcel,
+          ogun: ogunPlay !== null,
         });
         break;
       case 'bossThrow':
@@ -1428,6 +1510,9 @@ function startGame(): void {
         checkpoint: r.checkpointReached,
         safe: r.safe,
         power: { ...r.power },
+        /** O2b: feet in mud now, and slowed by it (no ikokore). */
+        mud: r.inMud,
+        slowed: r.slowed,
         /** S2.15: fufu balls held, balls about, potholes plugged (left lips). */
         fufu: r.fufu,
         balls: r.balls.map((b) => ({ x: b.x, y: b.y, mode: b.mode, touches: b.touches })),
@@ -1520,6 +1605,10 @@ function startGame(): void {
     },
     get fixedLook() {
       return game.fixed;
+    },
+    /** O2b: an Ogun street's own look is on (a fault turns it off; the Lagos look stands in). */
+    get skin() {
+      return game.skin !== null;
     },
     get boss() {
       const b = game.run.boss;
@@ -1812,7 +1901,9 @@ declare global {
         readonly busTime: number;
         readonly checkpoint: boolean;
         readonly safe: number;
-        readonly power: { readonly corn: number; readonly amala: number; readonly shield: boolean };
+        readonly power: { readonly corn: number; readonly amala: number; readonly ikokore: number; readonly shield: boolean };
+        readonly mud: boolean;
+        readonly slowed: boolean;
         readonly fufu: number;
         readonly balls: readonly { readonly x: number; readonly y: number; readonly mode: string; readonly touches: number }[];
         readonly plugged: readonly (readonly [number, number])[];
@@ -1886,6 +1977,7 @@ declare global {
       loadOgun(): Promise<{ ok: true; levels: string[] } | { ok: false; why: 'missing' | 'broken'; message: string }>;
       /** The street shows its fixed look (Lagos switched on, S2.8). */
       readonly fixedLook: boolean;
+      readonly skin: boolean;
       readonly corn: {
         readonly count: number;
         readonly countBox: { readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly font: number } | null;

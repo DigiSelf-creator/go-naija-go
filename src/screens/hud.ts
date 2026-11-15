@@ -10,9 +10,10 @@ import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
 import { h } from './dom';
 import { pressOnDown, type HintBarBox } from './controls';
-import { WORDS, barWords } from './words';
+import { OGUN_WORDS, WORDS, barWords } from './words';
 
-type Slot = 'corn' | 'garri' | 'amala';
+/** O2b: ikokore's chip (Ogun); its icon is painted by the Ogun part (paintIcon). */
+type Slot = 'corn' | 'garri' | 'amala' | 'ikokore';
 
 export interface HudHooks {
   pause(): void;
@@ -27,7 +28,7 @@ export class Hud {
   private readonly kobo: HTMLElement;
   private readonly koboWord: HTMLElement;
   private readonly koboCount: Text;
-  private readonly slots: Record<Slot, { el: HTMLElement; text: HTMLElement }>;
+  private readonly slots: Record<Slot, { el: HTMLElement; text: HTMLElement; icon: HTMLCanvasElement }>;
   /** The garri parcel (S2.5): its icon and "Parcel" next to the kobo while carried. */
   private readonly parcel: HTMLElement;
   /** S2.15: the fufu chip ("Fufu 8"; tight: the icon and "8"), while balls are held. */
@@ -62,18 +63,14 @@ export class Hud {
     this.koboWord = h('span', { class: 'hud-word' });
     this.koboCount = document.createTextNode('');
     this.kobo = h('span', { class: 'hud-kobo' }, coin, h('span', { class: 'hud-text' }, this.koboWord, this.koboCount));
-    const slot = (kind: Slot): { el: HTMLElement; text: HTMLElement } => {
+    const slot = (kind: Slot): { el: HTMLElement; text: HTMLElement; icon: HTMLCanvasElement } => {
       const icon = h('canvas', { class: 'hud-icon', width: '56', height: '56', 'aria-hidden': 'true' });
-      const g = icon.getContext('2d');
-      if (g) {
-        g.scale(56 / 32, 56 / 32);
-        drawFoodIcon(g, kind, 16, 16, 0.85);
-      }
+      if (kind !== 'ikokore') this.paintIcon(icon, (g) => drawFoodIcon(g, kind, 16, 16, 0.85));
       const text = h('span', { class: 'hud-text' });
       const el = h('span', { class: 'hud-food', hidden: true }, icon, text);
-      return { el, text };
+      return { el, text, icon };
     };
-    this.slots = { garri: slot('garri'), corn: slot('corn'), amala: slot('amala') };
+    this.slots = { garri: slot('garri'), corn: slot('corn'), amala: slot('amala'), ikokore: slot('ikokore') };
     const parcelIcon = h('canvas', { class: 'hud-icon', width: '56', height: '56', 'aria-hidden': 'true' });
     const pg = parcelIcon.getContext('2d');
     if (pg) {
@@ -95,10 +92,24 @@ export class Hud {
     pressOnDown(this.sound, () => hooks.toggleSound());
     const pause = h('button', { type: 'button', class: 'hud-btn hud-pause', 'aria-label': WORDS.hud.pause, 'data-ui': true }, 'II');
     pressOnDown(pause, () => hooks.pause());
-    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el, this.fufu);
+    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el, this.slots.ikokore.el, this.fufu);
     this.root = h('div', { class: 'hud', hidden: true }, this.left, h('div', { class: 'hud-right' }, this.sound, pause));
     parent.append(this.root);
     window.addEventListener('resize', () => this.fit(true));
+  }
+
+  /** Paints a chip's 56 px icon with a 32 u drawing centred at (16, 16). */
+  private paintIcon(icon: HTMLCanvasElement, draw: (g: CanvasRenderingContext2D) => void): void {
+    const g = icon.getContext('2d');
+    if (!g) return;
+    g.setTransform(56 / 32, 0, 0, 56 / 32, 0, 0);
+    g.clearRect(0, 0, 32, 32);
+    draw(g);
+  }
+
+  /** O2b: a later state's food icon (ikokore), drawn by its lazy part. */
+  setIcon(kind: 'ikokore', draw: (g: CanvasRenderingContext2D) => void): void {
+    this.paintIcon(this.slots[kind].icon, draw);
   }
 
   show(on: boolean): void {
@@ -116,7 +127,7 @@ export class Hud {
     const p = run.power;
     const secs = (steps: number): number => Math.ceil(steps / STEPS_PER_SECOND);
     const warn = (steps: number): boolean => steps > 0 && steps <= RULES.warnSteps;
-    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), warn(p.corn), warn(p.amala), soundOn, run.inHall, run.fufu].join('|');
+    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), secs(p.ikokore), warn(p.corn), warn(p.amala), warn(p.ikokore), soundOn, run.inHall, run.fufu].join('|');
     if (key === this.last) return;
     this.last = key;
     this.hall = run.inHall;
@@ -129,11 +140,12 @@ export class Hud {
     this.koboWord.textContent = kobo.endsWith(n) ? kobo.slice(0, kobo.length - n.length) : kobo;
     this.koboCount.data = kobo.endsWith(n) ? n : '';
     this.lastKobo = run.kobo;
-    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}${String(run.fufu).length}`;
+    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}${String(secs(p.ikokore)).length}${String(run.fufu).length}`;
     this.parcel.hidden = !run.parcel;
     this.setSlot('garri', p.shield, WORDS.hud.shield, false);
     this.setSlot('corn', p.corn > 0, WORDS.hud.fast(secs(p.corn)), warn(p.corn));
     this.setSlot('amala', p.amala > 0, WORDS.hud.strong(secs(p.amala)), warn(p.amala));
+    this.setSlot('ikokore', p.ikokore > 0, OGUN_WORDS.hud.ikokore(secs(p.ikokore)), warn(p.ikokore));
     this.fufu.hidden = run.fufu <= 0;
     this.setText(this.fufuText, WORDS.hud.fufu(run.fufu));
     this.fufu.setAttribute('aria-label', WORDS.hud.fufuSpoken(run.fufu));

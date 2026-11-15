@@ -195,7 +195,7 @@ describe('lives and game over', () => {
     expect(again.coins.some((c) => c.taken)).toBe(false);
     expect(again.foods.some((f) => f.taken)).toBe(false);
     expect(again.hazards.every((z) => z.mode === 'wait' && z.x === z.x0)).toBe(true);
-    expect(again.power).toEqual({ corn: 0, amala: 0, shield: false });
+    expect(again.power).toEqual({ corn: 0, amala: 0, ikokore: 0, shield: false });
   });
 });
 
@@ -227,7 +227,7 @@ describe('after a fall (Q14)', () => {
     // The tyre is back where it started, waiting.
     expect(run.hazards[0]).toMatchObject({ x: 1200, mode: 'wait' });
     // Food effects ended, the shield too.
-    expect(run.power).toEqual({ corn: 0, amala: 0, shield: false });
+    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, shield: false });
   });
 });
 
@@ -339,6 +339,6 @@ describe('designer decisions (ef3d033)', () => {
     const run = new Run(level({ foods: [[100, 272, 'garri']], ground: [[-400, 300], [400, 20000]] }));
     run.lives = 1;
     runUntil(run, (r) => r.phase === 'over');
-    expect(run.power).toEqual({ corn: 0, amala: 0, shield: false });
+    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, shield: false });
   });
 });

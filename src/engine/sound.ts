@@ -138,7 +138,13 @@ export type LaneSoundName =
   | 'laneBusStop'
   | 'laneCaught';
 
-export type SoundName = CoreSoundName | LaneSoundName;
+/**
+ * O2b: Ogun's street sounds. Their recipes live in the lazy Ogun part (src/worlds/ogun/ota.ts,
+ * OTA_SOUNDS), which calls addSounds when it loads. Until then playing one is silent.
+ */
+export type OgunSoundName = 'mudStepA' | 'mudStepB';
+
+export type SoundName = CoreSoundName | LaneSoundName | OgunSoundName;
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum
