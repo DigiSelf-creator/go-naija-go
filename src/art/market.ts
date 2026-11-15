@@ -624,13 +624,15 @@ export function drawKekeShape(g: CanvasRenderingContext2D, x: number, y: number,
 }
 
 /** Screen space: a keke passing on the back lane now and then (small, so it reads as far). */
-export function drawPassingKeke(g: CanvasRenderingContext2D, camX: number, viewW: number, time: number, groundY = GROUND_Y): void {
+export function drawPassingKeke(g: CanvasRenderingContext2D, camX: number, viewW: number, time: number, groundY = GROUND_Y, riders?: (g: CanvasRenderingContext2D, x: number) => void): void {
   const span = viewW + 700;
   const x = ((((time * 70 - camX * 0.7) % span) + span) % span) - 200;
   g.save();
   g.translate(x, groundY - 26);
   g.scale(0.55, 0.55);
   drawKekeShape(g, 0, 0, time);
+  // S3g1b (people everywhere part 4): its driver and two passengers, in the keke's transform.
+  riders?.(g, x);
   g.restore();
 }
 

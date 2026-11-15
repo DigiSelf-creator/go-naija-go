@@ -468,9 +468,9 @@ describe('S3f3: what goes home (rewards.ts)', () => {
   });
 
   it('the lane save part: missing or broken starts at zeros', () => {
-    expect(readLane(undefined)).toEqual({ best: 0, goals: 0, runs: 0, hints: [] });
-    expect(readLane({ best: 'x', goals: 2, runs: -1, hints: ['lane', 3, 'lane'] })).toEqual({ best: 0, goals: 2, runs: 0, hints: ['lane'] });
-    expect(writeLane({ best: 840, goals: 1, runs: 3, hints: ['jump'] })).toEqual({ best: 840, goals: 1, runs: 3, hints: ['jump'] });
+    expect(readLane(undefined)).toEqual({ best: 0, goals: 0, runs: 0, hints: [], tiltOffered: false, tiltNoes: 0 });
+    expect(readLane({ best: 'x', goals: 2, runs: -1, hints: ['lane', 3, 'lane'], tiltOffered: 'yes', tiltNoes: 7 })).toEqual({ best: 0, goals: 2, runs: 0, hints: ['lane'], tiltOffered: false, tiltNoes: 2 });
+    expect(writeLane({ best: 840, goals: 1, runs: 3, hints: ['jump'], tiltOffered: true, tiltNoes: 1 })).toEqual({ best: 840, goals: 1, runs: 3, hints: ['jump'], tiltOffered: true, tiltNoes: 1 });
     expect(ONE_RUN_BOTH_FIXES).toBe(true);
   });
 });

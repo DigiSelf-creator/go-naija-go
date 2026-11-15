@@ -28,8 +28,22 @@ export function asTheme(theme: string): StreetTheme {
  * first (S3e1, W17 C): the first screen's tired or bright look (firstLook.ts): its back piece
  * behind the row, its row layer on the row, and the fixed look held back inside a tired stretch.
  * Pair it with drawFirstGround in world space.
+ * riders (S3g1b): draws the passengers of the passing bus or keke, in its own transform.
  */
-export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: number, viewW: number, time: number, viewH = 420, groundY = GROUND_Y, fixed = false, first: FirstDraw | null = null): void {
+export function drawBackdrop(
+  g: CanvasRenderingContext2D,
+  theme: string,
+  camX: number,
+  viewW: number,
+  time: number,
+  viewH = 420,
+  groundY = GROUND_Y,
+  fixed = false,
+  first: FirstDraw | null = null,
+  riders?: (g: CanvasRenderingContext2D, x: number, kind: 'bus' | 'keke') => void,
+): void {
+  const bus = riders ? (c: CanvasRenderingContext2D, x: number): void => riders(c, x, 'bus') : undefined;
+  const keke = riders ? (c: CanvasRenderingContext2D, x: number): void => riders(c, x, 'keke') : undefined;
   const row = (): void => {
     if (!first) return;
     drawFirstRow(g, first, camX, viewW, groundY);
@@ -45,7 +59,7 @@ export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: n
       drawMarketRow(g, camX, viewW, groundY);
       row();
       fix();
-      drawPassingKeke(g, camX, viewW, time, groundY);
+      drawPassingKeke(g, camX, viewW, time, groundY, keke);
       return;
     case 'evening':
       drawEveningSky(g, camX, viewW, time, viewH, groundY);
@@ -54,7 +68,7 @@ export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: n
       drawParkRow(g, camX, viewW, time, groundY);
       row();
       fix();
-      drawPassingBus(g, camX, viewW, time, groundY);
+      drawPassingBus(g, camX, viewW, time, groundY, bus);
       return;
     default:
       drawSky(g, camX, viewW, time, viewH);
@@ -63,7 +77,7 @@ export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: n
       drawShopRow(g, camX, viewW, groundY);
       row();
       fix();
-      drawPassingBus(g, camX, viewW, time, groundY);
+      drawPassingBus(g, camX, viewW, time, groundY, bus);
   }
 }
 

@@ -232,12 +232,13 @@ const payPage: Page = (g, time) => {
   ground(g, 320, 400, 330, 314);
   label(g, 'Tray bubbles (real size), the collect line', 485, 404);
   const trays: [number, boolean][] = [[30, false], [80, false], [120, false], [150, true], [240, true]];
+  // W18 (decision 71): Naira trays read as tax ("Tax ₦1.20"); two columns, as the label is wider.
   trays.forEach(([k, full], i) => {
-    drawTrayBubble(g, 380 + (i % 3) * 110, 490 + Math.floor(i / 3) * 80, 'naira', trayWords(k), full, i === 0 ? Math.abs(Math.sin(time * Math.PI)) * 2 : 0);
+    drawTrayBubble(g, 420 + (i % 2) * 130, 490 + Math.floor(i / 2) * 70, 'naira', `Tax ${trayWords(k)}`, full, i === 0 ? Math.abs(Math.sin(time * Math.PI)) * 2 : 0);
   });
-  drawTrayBubble(g, 600, 570, 'power', '3', false);
-  drawCollectLine(g, 485, 660, '+₦1.20 from Mama Put', (time / PAY.collectLine) % 1);
-  drawCollectLine(g, 485, 700, '+₦2.40 from the market', 0.3, true);
+  drawTrayBubble(g, 550, 630, 'power', '3', false);
+  drawCollectLine(g, 485, 672, 'Mama Put paid ₦1.20 tax!', (time / PAY.collectLine) % 1);
+  drawCollectLine(g, 485, 704, 'The market paid ₦2.40 tax!', 0.3, true);
 
   // Edge arrows round a small phone screen (320 x 240 scaled to 0.9)
   ground(g, 660, 400, 290, 314);
@@ -371,7 +372,7 @@ const placesPage: Page = (g, time) => {
   const [bx, by] = toScreen(1320, 818);
   drawPriceBoard(g, bx - 66, by + 10, 'market', 8);
   const [tx, ty] = toScreen(905, 700);
-  drawTrayBubble(g, tx, ty, 'naira', trayWords(120), false);
+  drawTrayBubble(g, tx, ty, 'naira', `Tax ${trayWords(120)}`, false);
   const out = edgeArrowPlace(toScreen(101, 430)[0] - ox, toScreen(101, 430)[1] - oy, w, h, 0);
   if (out) drawEdgeArrow(g, ox + out.x, oy + out.y, out.angle, 'potholes');
   label(g, `map ${CITY_MAP.w} x ${CITY_MAP.h}; camera at ${camX}, ${camY}`, ox + w / 2, oy + h - 14, 9);

@@ -79,3 +79,5 @@ Added 14 Nov 2026 at Tp's request: lines 5 to 50, confirmed by Tp in chat betwee
 70. The lane run can be steered by tilting the phone: tilt left or right to change lanes; swipes or buttons still jump and slide. It is a choice beside "Buttons instead of swipes". (Tp, 15 Nov)
 71. The money that fixed places in the city earn (the Mama Put, the Market and the others, collected from their trays) is explained to the player as taxes: the businesses that are working again pay a small tax, and Lagos uses it to fix more. Plain, positive words; no real officials, parties or tax bodies. (Tp, 15 Nov)
 72. After General Go-Slow, the next state comes next (this replaces line 46, "Lagos is finished first"). Work already under way in Lagos (the challenge road, tax words, tilt, people everywhere) is finished first, as it makes every state better. (Tp, 15 Nov)
+73. The next state after Lagos is Ogun, with King Pothole as its boss (brief world 2). (Tp, 15 Nov)
+74. Ogun is shown as the Gateway State: the road and gate out of Lagos to the rest of Nigeria. Fixing Ogun opens the way onward, and its bad roads (King Pothole) block the gateway. (Tp, 15 Nov)

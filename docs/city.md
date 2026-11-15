@@ -1315,6 +1315,7 @@ Tp, 15 Nov: the money that fixed places earn is explained as **taxes**. The shop
 - **Bubble label.** Only Naira trays get the word "Tax" (TX-R3). The amount still changes in steps, never as a running number. The bucket icon stays. The word sits before the amount on the same line, so "Full" keeps its band (never colour alone).
 - **First hint** (hint id `collect`, as now): same trigger and same end (the first collect). Two lines at most at 320 x 240.
 - **Explanation** (new hint id `tax`, saved once): shows right after the first collect, once the collect line has started. It stays at least 4 s, then goes on the next walk, or at 8 s if the hero stands still. If the `bright` hint is due at the same moment, `tax` goes first and `bright` waits for the next free moment (one hint at a time, W7). Two lines at most at 320 x 240; it sits in the hint bar under the top row like every city hint, never over the hero, a board or a bubble.
+- **Tiny screens** (lead's ruling, decision 64, 15 Nov): at 320 x 240 with both trays full and at 640 x 200, where no spot is clear, the hint bar may briefly cover a sign or a bubble but never the hero: beside the hero on the side away from it, else over the top row.
 - **Spoken collect.** The live line says the collect in spoken money words ("1 naira 20 kobo", not "₦1.20"), then the Naira chip as now.
 - **Capitals.** A line that starts with a place name starts with a capital ("The market paid ..."); in the middle of a line it stays "the market".
 

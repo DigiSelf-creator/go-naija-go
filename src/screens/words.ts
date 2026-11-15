@@ -225,7 +225,9 @@ export const WORDS = {
     hintWalk: 'Tap where you want to go.',
     hintWalkKeys: 'Use the arrow keys to walk.',
     hintBuka: () => `Walk onto the ${formatMoney(400)} board to build a Mama Put.`,
-    hintCollect: 'Mama Put made money! Walk over to collect it.',
+    hintCollect: 'Mama Put pays a small tax! Walk over to collect it.',
+    /** W18 (decision 71): once, in the hint bar, right after the first collect (hint id `tax`). */
+    hintTax: 'Busy shops pay a small tax. Lagos uses it to fix more.',
     /** 5W W2: the problem card's button that walks the hero to the board. */
     walkThere: 'Walk there',
     /** 5W W8 Not enough card. */
@@ -243,10 +245,14 @@ export const WORDS = {
       lamps: 'Lamps on! The street is awake.',
       mast: 'Fast internet! Shops are busy.',
     },
-    /** 5W W8 Collect line (1.5 s): "+₦1.20 from Mama Put". */
-    collectLine: (money: string, name: string) => `+${money} from ${name}`,
-    /** Spoken: "Mama Put has 1 naira 20 kobo for you. Full." */
-    traySpoken: (name: string, money: string, full: boolean) => `${name.charAt(0).toUpperCase()}${name.slice(1)} has ${money} for you.${full ? ' Full.' : ''}`,
+    /** W18 (decision 71): the tray bubble's label for a Naira place: "Tax 80 kobo", "Tax ₦1.20". */
+    trayLabel: (money: string) => `Tax ${money}`,
+    /** W18 Collect line (1.5 s): "Mama Put paid ₦1.20 tax!", "The market paid ₦2.40 tax!". */
+    collectLine: (money: string, name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)} paid ${money} tax!`,
+    /** W18 Collect, spoken, with spoken money: "Mama Put paid 1 naira 20 kobo tax." */
+    collectSpoken: (money: string, name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)} paid ${money} tax.`,
+    /** W18 Spoken: "Tax from Mama Put: 1 naira 20 kobo. Full." ("the market" stays lower case mid-line). */
+    traySpoken: (name: string, money: string, full: boolean) => `Tax from ${name}: ${money}.${full ? ' Full.' : ''}`,
     /** Spoken: "New road. Costs 10 naira. You have 6 naira. Walk there." */
     boardSpoken: (name: string, price: string, have: string, part: boolean) => `${name}. ${part ? `${price} left` : `Costs ${price}`}. You have ${have}. Walk there.`,
     /** 5W W5 Mission complete in the walkable city. */
@@ -383,6 +389,28 @@ export const WORDS = {
     /** Settings and the lane Pause card. */
     buttonsOn: 'Buttons instead of swipes: on',
     buttonsOff: 'Buttons instead of swipes: off',
+    /** Part 25.9 (decision 70): tilt to steer. The switch's spoken name is `tiltName`, with on or off. */
+    tiltName: 'Tilt to steer',
+    tiltOff: 'Tilt to steer: off',
+    tiltOn: 'Tilt to steer: on',
+    tiltPrivacy: 'Tilt is only used to steer. Nothing is saved or sent.',
+    /** iPhone only, under the switch and on the offer card. */
+    tiltAskFirst: 'Your phone will ask first. Tap Allow.',
+    tiltDenied: 'Your phone said no to tilt, so swipes are on.',
+    /** iPhone Safari. */
+    tiltRetry: 'To try again, close the game and open it again.',
+    /** iPhone store app, only if iOS will not ask again. "Gbese!" is the app name (decision 39). */
+    tiltRetryApp: "To try again, allow Motion for Gbese! in your phone's Settings.",
+    tiltLost: 'Tilt is not working. Swipe to change lane.',
+    /** Under "3, 2, 1" with tilt on. */
+    tiltHold: 'Hold your phone the way you like.',
+    tiltOfferHeading: 'New: tilt your phone to change lane.',
+    tiltOfferLine: 'You can still swipe to jump and slide.',
+    tiltOfferYes: 'Try tilt',
+    tiltOfferNo: 'No thanks',
+    /** The polite spoken line when a run starts with tilt on (part 25.7). */
+    tiltSpoken: 'Tilt your phone left or right to change lane. Swipe up to jump, down to slide.',
+    tiltSpokenButtons: 'Tilt your phone left or right to change lane. Use Jump and Slide to jump and slide.',
     toGo: (m: number) => `To the bus stop: ${m} m`,
     toGoShort: (m: number) => `Bus stop: ${m} m`,
     /** After the goal: the distance run and the best (whole metres, with a thousands comma). */
@@ -439,6 +467,8 @@ export const WORDS = {
       goat: 'Goats move out of your way. Meeh!',
       food: 'Run into the garri to eat it.',
       tech: 'Tech chips fix slow internet.',
+      /** Part 25.8: the change-lane hint with tilt on (its own key, shown once). */
+      tilt: 'Tilt your phone left or right to change lane.',
     } as Readonly<Record<string, string | readonly string[]>>,
   },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
@@ -447,6 +477,33 @@ export const WORDS = {
     downKeys: 'Go down (\u2193)',
     up: 'Go up',
     upKeys: 'Go up (Enter)',
+  },
+  /**
+   * S3g1b, design.md "People everywhere" part 6: what people say in their bubbles (never read
+   * out, no meaning). Each kind is split by language, and a line is picked language first, so
+   * English, Pidgin, Yoruba, Hausa and Igbo get an equal share (decision 30, PE-R2).
+   */
+  folk: {
+    /** Morning greetings (Alausa). */
+    greetMorning: { en: ['Good morning!'], yo: ['Ẹ káàárọ̀!'], ha: ['Ina kwana!'], ig: ['Ụtụtụ ọma!'] },
+    /** Greetings at any time. */
+    greet: { en: ['Hello!'], pcm: ['How far?'], yo: ['Ẹ n lẹ́ o!'], ha: ['Sannu!'], ig: ['Ndewo!'] },
+    /** Each street's traders call only their own lines. */
+    traders: {
+      alausa: ['Hot akara!', 'Fresh bread!'],
+      village: ['Phone case here!', 'Charger, charger!', 'Fine cloth!', 'Fresh pepper!'],
+      ikeja: ['Suya dey!', 'Tickets here!', 'Hot food!'],
+    },
+    /** A problem cleared, the bus stop. */
+    cheers: { en: ['Well done!', 'Nice one!'], pcm: ['You do well!', 'Oya, go!', 'Ehen!'], yo: ['Ẹ kú iṣẹ́!'], ha: ['Madalla!'], ig: ['I meela!'] },
+    /** The bus park. */
+    bus: { pcm: ['Bus don come!'], en: ['Safe trip!'] },
+    /** The well room's store keeper as the hero takes the garri parcel (PE-R4). */
+    storeKeeper: 'For the boss. Go well!',
+    /** The hall's door people on hit 1 and hit 2. */
+    hallHit: ['Ehen!', 'Well done!'],
+    /** The plain spelling, if a phone shows a tone mark as a box. */
+    plain: { 'Ẹ káàárọ̀!': 'E kaaro!', 'Ụtụtụ ọma!': 'Ututu oma!', 'Ẹ n lẹ́ o!': 'E n le o!', 'Ẹ kú iṣẹ́!': 'E ku ise!' } as Readonly<Record<string, string>>,
   },
 } as const;
 
