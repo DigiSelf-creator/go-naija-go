@@ -1,6 +1,6 @@
 /**
- * N2: progress on the phone (docs/design.md S2.8 "Save shape", "Unlocking"), the Streets cards
- * (S2.10) and the wheel fit rule (S2.8 "The wheel screen on every size").
+ * N2: progress on the phone (docs/design.md S2.8 "Save shape", "Unlocking") and the wheel fit rule
+ * (S2.8 "The wheel screen on every size"). The stops that replaced the Streets cards: road.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -15,7 +15,7 @@ import {
   switchedOn,
 } from '../../src/game/progress';
 import { hasSavedLook, isOldSave, loadLook } from '../../src/game/save';
-import { streetCards, wheelFit } from '../../src/screens/streets';
+import { wheelFit } from '../../src/screens/streets';
 import { createStore } from '../../src/storage';
 
 function fakeStorage(seed: Record<string, string> = {}): { storage: Storage; data: Map<string, string> } {
@@ -200,35 +200,6 @@ describe('unlocking (S2.8)', () => {
     expect(hallOpen(st([1, 2, 3]))).toBe(true);
     expect(switchedOn(st([1, 2, 3]))).toBe(false);
     expect(switchedOn(st([1, 2, 3], true))).toBe(true);
-  });
-});
-
-describe('Streets cards (S2.10)', () => {
-  const names = ['Alausa', 'Computer Village', 'Ikeja'];
-  const st = (o: object) => readState(o);
-
-  it('first visit: street 1 ready, the rest locked with the street to finish first', () => {
-    const c = streetCards(st({}), names);
-    expect(c.map((x) => [x.num, x.name, x.state, x.status])).toEqual([
-      ['Street 1', 'Alausa', 'open', 'Ready to play'],
-      ['Street 2', 'Computer Village', 'locked', 'Finish street 1 first'],
-      ['Street 3', 'Ikeja', 'locked', 'Finish street 2 first'],
-      ['', 'Go-Slow Hall', 'locked', 'Finish street 3 first'],
-    ]);
-    expect(c[3]!.extra).toBeNull();
-  });
-
-  it('done streets show their best money with a tick (N2); the hall card says when a parcel is saved', () => {
-    const c = streetCards(st({ streets: { 1: { done: true, best: 870 }, 2: { done: true, best: 90 } }, parcel: true }), names);
-    expect(c.map((x) => x.status)).toEqual(['Done ✓ Best: \u20a68.70', 'Done ✓ Best: 90 kobo', 'Ready to play', 'Finish street 3 first']);
-    expect(c.map((x) => x.state)).toEqual(['done', 'done', 'open', 'locked']);
-    expect(c[3]!.extra).toBe('You have a garri parcel.');
-  });
-
-  it('a won hall reads "Done ✓" (no kobo in the hall)', () => {
-    const c = streetCards(st({ streets: { 1: { done: true }, 2: { done: true }, 3: { done: true } }, hall: { done: true, best: 0 } }), names);
-    expect(c[3]!.status).toBe('Done ✓');
-    expect(c[3]!.state).toBe('done');
   });
 });
 

@@ -104,7 +104,7 @@ async function checkWin(page: Page): Promise<void> {
   await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeVisible();
   await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeFocused();
   await expect(won.getByRole('button', { name: 'Play again' })).toBeVisible();
-  await expect(won.getByRole('button', { name: 'Streets' })).toBeVisible();
+  await expect(won.getByRole('button', { name: 'Challenge road' })).toBeVisible();
   await expect(won.getByRole('button', { name: 'Home' })).toHaveCount(0);
 }
 

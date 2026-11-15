@@ -74,7 +74,7 @@ export const WORDS = {
     heading: 'Paused',
     keepPlaying: 'Keep playing',
     restart: 'Start again',
-    streets: 'Streets',
+    road: 'Challenge road',
     home: 'Home',
   },
   gameOver: {
@@ -88,7 +88,7 @@ export const WORDS = {
     /** S2.13 part 5: a street's offer; the hall's stays the short one. */
     gentleOffer: 'Want more tries? Gentle mode gives you 5 lives, and you climb out of holes.',
     hallGentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
-    streets: 'Streets',
+    road: 'Challenge road',
     home: 'Home',
   },
   /** S2.10 Street cleared, with Tp's line (8 Nov 2026, "Cleared words for real places"). A card line, never a toast. */
@@ -103,7 +103,7 @@ export const WORDS = {
     next: 'Next street',
     toHall: 'Go to Go-Slow Hall',
     playAgain: 'Play again',
-    streets: 'Streets',
+    road: 'Challenge road',
   },
   /** S2.10 Win, after Go-Slow Hall. No kobo here (po M4 note). */
   win: {
@@ -113,25 +113,57 @@ export const WORDS = {
     more: 'More of Nigeria is coming soon.',
     wheel: "See Nigeria's wheel",
     playAgain: 'Play again',
-    streets: 'Streets',
+    road: 'Challenge road',
   },
-  /** S2.10 Streets: one state's streets and its hall, as cards. */
-  streets: {
-    heading: 'Lagos',
-    line: 'Fix 3 streets, then clear Go-Slow Hall.',
-    /** The small first line of a street card. */
-    num: (n: number) => `Street ${n}`,
-    /** The whole name on one line, for screen readers and wide cards. */
-    full: (n: number, name: string) => `Street ${n}: ${name}`,
-    /** N2: "Done \u2713 Best: \u20a68.70" (`best` is whole kobo). */
-    done: (best: number) => `Done \u2713 Best: ${formatMoney(best)}`,
-    /** The hall has no kobo to collect (po M4 note), so its done line has no "Best". */
-    hallDone: 'Done \u2713',
-    open: 'Ready to play',
-    locked: (n: number) => `Finish street ${n} first`,
-    parcel: 'You have a garri parcel.',
-    wheel: "Nigeria's wheel",
+  /** S3e0: the challenge road, its stops and the stop card (docs/design.md S3e0 parts 3 to 5, 9). */
+  road: {
+    heading: 'Challenge road',
+    list: 'Challenge road stops',
     home: 'Home',
+    back: 'Back',
+    hint: 'Tap a stop to see it.',
+    next: 'Next',
+    locked: 'Locked',
+    open: 'Ready to play',
+    done: 'Done \u2713',
+    soon: 'Coming soon',
+    built: 'Built \u2713',
+    moreSoon: 'More soon',
+    best: (b: string) => `Best: ${b}`,
+    yourBest: (b: string) => `Your best: ${b}`,
+    metres: (m: number) => `${m.toLocaleString('en-GB')} m`,
+    toGo: (n: number) => `Fixes to go: ${n}`,
+    stop: (n: number) => `Stop ${n}`,
+    side: 'Side road',
+    lane: 'Lane run',
+    hall: 'Go-Slow Hall',
+    ferry: 'Ferry',
+    theFerry: 'The ferry',
+    finish: (name: string) => `Finish ${name} first.`,
+    run: (name: string) => `Run ${name}`,
+    toHall: 'Go to Go-Slow Hall',
+    parcel: 'You have a garri parcel.',
+    earns: 'Earns Naira for Lagos.',
+    earnsAll: 'Earns Naira, Power and Tech.',
+    /** CR-Q1 a: "A win pays for the New road (\u20a610)." or "(\u20a66 left)". */
+    pays: (fix: string, price: string, part: boolean) => `A win pays for the ${fix} (${price}${part ? ' left' : ''}).`,
+    road: ['Potholes on this road.', 'New road here. Buses are moving again.'],
+    cv: ['The internet is slow here.', 'Fast internet here. Shops are busy.', 'Earns Naira. Tech comes from the Lane run.'],
+    ikeja: ['Lamps are out here.', 'The lamps are on. The street is awake.', 'Earns Naira. Power comes from the Lane run.'],
+    hallLines: ['General Go-Slow is jamming the hall.', 'The hall is moving. Lagos is switched on.', 'A win brings \u20a615 and switches Lagos on.', 'A win brings \u20a615 for Lagos.'],
+    bothOn: 'Lamps on and fast internet here.',
+    ferryLines: ['A ferry jetty is coming to this shore.', 'The jetty is built. The ferry is here!', 'New stops over the water are coming soon.'],
+    ferryBoom: (n: number) => `It is built when Lagos booms: ${n} of 20.`,
+    /** Spoken (part 9). */
+    sayBest: (b: string) => `Best ${b}.`,
+    sayMetres: (m: number) => `${m} metres`,
+    saySoon: (n: number) => `Coming soon. Fixes to go: ${n}.`,
+    sayBuilt: 'Built. More stops coming soon.',
+    pic: (name: string) => `Seen from above. A stop sign says ${name}. Your hero is getting on a danfo.`,
+    picHall: 'Go-Slow Hall, with its traffic lights.',
+    sound: 'Sound',
+    left: 'More road to the left',
+    right: 'More road to the right',
   },
   /** city.md (a) Settings: one column of buttons (Sound, Music and Gentle mode use the title's words). */
   settings: {
@@ -173,7 +205,9 @@ export const WORDS = {
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
     settings: 'Settings',
-    streets: 'Streets',
+    road: 'Challenge road',
+    /** S3e0 part 7: the problem cards' small button. */
+    seeStop: 'See the stop',
     hero: 'Hero',
     wheel: "Nigeria's wheel",
     zoomIn: '+',
@@ -394,11 +428,6 @@ export const WORDS = {
     broughtHome: (got: string) => `You brought ${got} home.`,
     alsoMast: 'The mast is ready to fix too. Walk onto its board.',
     alsoLamps: 'The lamps are ready to fix too. Walk onto their board.',
-    /** The Streets card (part 2). */
-    card: 'Lane run',
-    cardLine: 'Run to the bus stop for Naira, Power and Tech.',
-    cardOpen: 'Ready to play',
-    cardDone: (m: number) => `Done ✓ Best: ${m.toLocaleString('en-GB')} m`,
     /** Hints (part 8 and 14), once each until passed. Swipes, buttons, keys. */
     hints: {
       lane: ['Swipe left or right to change lane.', 'Tap ◀ or ▶ to change lane.', 'Press ← or → to change lane.'],
