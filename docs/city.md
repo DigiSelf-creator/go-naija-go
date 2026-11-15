@@ -949,6 +949,8 @@ All lines are 40 characters or fewer except the boom card's body, which wraps. N
 
 #### (e) The challenge road
 
+**The full note is written: docs/design.md "S3e0. The challenge road, with W17 C" (15 Nov 2026).** It covers the road screen, every stop, the stop cards, the run's first screen, links, rules, reach, sizes, the art list and qa's checks. Where it differs from the short lines below, the note wins (for example: the Lane run stop is open and sits on a side road; the stop card's heading is "Stop 1", with the place name only on the sign in its picture).
+
 Words and rules: part 1 "The challenge road" (Tp said yes). Stops in slice 3: "Alausa", "Computer Village", "Ikeja", "Go-Slow Hall", then "Lane run" (locked until (f)). It replaces the Streets screen; the city's "Streets" button becomes "Challenge road".
 Owners and budgets: art draws the road, the danfo-yellow stop signs and the ferry jetty (under 6 KB). gamedev builds the screen and the list for screen readers (under 6 KB).
 Done when: it fits 320 x 240 with stops at least 44 px; screen readers hear it as a list; it is not a path-and-dots world map (part 6 rule 4).
@@ -1062,12 +1064,12 @@ Later places (after slice 3, numbers to be tuned): a phone charging kiosk that e
 
 **When a tray is full.** It stops filling until you collect. Not colour alone: the bubble says "Full". The place rests instead of serving: the Mama Put cook sits and fans herself and the queue chats; the market stalls are piled high and the danfo waits with its door open. Nothing is lost and nothing goes bad.
 
-**The tray bubble.** Over each working place, once it holds at least 10 kobo: a small bubble with the bucket icon and the amount ("80 kobo", "₦1.20"), or "₦1.50 Full". At least 48 x 48 px tap area. The amount changes in steps (once a plate or once a danfo), never as a running number.
+**The tray bubble.** Over each working place, once it holds at least 10 kobo: a small bubble with the bucket icon and the amount, as tax ("Tax 80 kobo", "Tax ₦1.20"), or "Tax ₦1.50" with "Full" (W18, decision 71). At least 48 x 48 px tap area. The amount changes in steps (once a plate or once a danfo), never as a running number.
 
 ### W4. Collecting
 
 - Walk into the place's front (within 48 map units of its door), or tap its bubble to walk there. No standing wait: collecting is instant on arrival.
-- The money flies from the place to the hero (the same arcs as paying, the other way), the counter chip counts up, a short "+₦1.20 from Mama Put" shows for 1.5 s.
+- The money flies from the place to the hero (the same arcs as paying, the other way), the counter chip counts up, a short "Mama Put paid ₦1.20 tax!" shows for 1.5 s (W18; was "+₦1.20 from Mama Put").
 - A tray under 10 kobo shows no bubble and is not collected (no tiny pickups).
 - The trays are part of the save. They are saved on every collect, every 10 s of play, and when the tab is hidden.
 
@@ -1101,7 +1103,7 @@ Part 1 and step (d) stand, with this change, so working places feed the meter as
 2. The Potholes pin bobs; tapping it opens its card: "Potholes on this road." / "Fixing it costs ₦10." / big "Run Alausa". (The road's price board is already on the ground: "₦10 / New road".) If they walk onto it with ₦0, they get the "You need ₦10" card, which also says "Run Alausa".
 3. **They win street 1.** Mission complete (W5): the bus brings them home, they walk onto the board by themselves, the coins fly in, the road is built. This shows paying before asking them to do it.
 4. **Back in the city, the Mama Put board appears** (₦4) by the bus park, with the hint: "Walk onto the ₦4 board to build a Mama Put." Every first-timer has ₦4 left after the first win (the W5 top-up). They pay by themselves for the first time.
-5. **The Mama Put serves.** When its tray first holds ₦1 or more, the hint: "Mama Put made money! Walk over to collect it." They collect for the first time.
+5. **The Mama Put serves.** When its tray first holds ₦1 or more, the hint: "Mama Put pays a small tax! Walk over to collect it." They collect for the first time, and the hint bar explains once: "Busy shops pay a small tax. Lagos uses it to fix more." (W18, decision 71.)
 6. **Then the market board** (₦8) shows, then the lane run pins later. Each board appears only after the one before is built, so there is never more than one new board at a time.
 
 Hints show once each (saved), in the bar under the top row, real text, never over the hero or a board.
@@ -1115,9 +1117,9 @@ Hints show once each (saved), in the bar under the top row, real text, never ove
 | Not enough card | A player on a board with nothing in that bucket | Say how to earn it | "You need ₦10 for this." / "Run Alausa to earn more." Big "Run Alausa". Power: "You need Power 10 for this." / "Lane runs earn Power." Tech: "You need Tech 6 for this." / "Lane runs earn Tech." Big "Lane run" (until (f): "Lane run: coming soon", plain text). Small "Back" (W14) |
 | Part paid line | A player who paid some | Say what is left | "You paid ₦6. ₦4 more to go." |
 | Built lines (2 s) | A player who just finished a board | Show what the build does | "New road! Danfos are back." / "Mama Put is open! Food for the queue." / "The market is open! Danfos come for goods." / "Lamps on! The street is awake." / "Fast internet! Shops are busy." |
-| Tray bubble | Anyone who can see a working place | Show money waiting | "80 kobo", "₦1.20", "₦1.50 Full". Spoken: "Mama Put has 1 naira 20 kobo for you. Full." |
-| Collect line (1.5 s) | A player who collected | Say what came in | "+₦1.20 from Mama Put", "+₦2.40 from the market" |
-| Hints (once each) | A first-timer | Teach one thing | "Walk onto the ₦4 board to build a Mama Put." / "Mama Put made money! Walk over to collect it." |
+| Tray bubble | Anyone who can see a working place | Show the tax waiting | "Tax 80 kobo", "Tax ₦1.20", "Tax ₦1.50" with "Full". Spoken: "Tax from Mama Put: 1 naira 20 kobo. Full." (W18) |
+| Collect line (1.5 s) | A player who collected | Say what came in, and from whom | "Mama Put paid ₦1.20 tax!", "The market paid ₦2.40 tax!". Spoken: "Mama Put paid 1 naira 20 kobo tax. Naira: 6 naira." (W18) |
+| Hints (once each) | A first-timer | Teach one thing | "Walk onto the ₦4 board to build a Mama Put." / "Mama Put pays a small tax! Walk over to collect it." / after the first collect: "Busy shops pay a small tax. Lagos uses it to fix more." (W18) |
 | Problem card | A player who taps a pin | As part 5, but the fix button changes | Big "Walk there" when you have some of the price (small "Run Alausa"); else big "Run Alausa" (small "Walk there"). Small "Back" |
 | Mission complete | A player who just won | Show the win doing its job | "Mission complete!" plus the line for that fix (part 1). Not enough: "₦4 more to finish it." From elsewhere: "You brought ₦12 home." "Tap to skip" |
 
@@ -1282,6 +1284,67 @@ Done when (for A + B): a first-timer looking at the far view before and after th
 **Questions for Tp (po copies them to docs/questions.md):**
 1. Which way? a) A + B in S3d1, then C in S3e1 (recommended). b) A only. c) B only. d) C only.
 2. How tired is Lagos at the start? a) Faded but friendly: washed-out paint, dark windows, shutters, small rubbish heaps, few people (recommended: clearly "before", never sad or ugly). b) Only faded colour, no rubbish or shutters.
+
+### W18. Tray money is tax (decision 71; designer, 15 Nov 2026)
+
+Tp, 15 Nov: the money that fixed places earn is explained as **taxes**. The shops that work again pay a small tax, and Lagos uses it to fix more. Tp wants players to understand where the money comes from. This section is the source of truth for every tray and collect line; W3, W4, W7 and W8 point here. Built on the small rulings TX-R1 to TX-R3 in docs/questions.md (decision 64: word tweaks follow the team's recommendation and are reported to Tp in one line).
+
+**The idea in one line, for a 10 year old.** You fixed the street, so the Mama Put and the Market are busy again. Busy shops happily pay a small tax, and Lagos uses that tax to fix more. The hero brings it to Lagos's fixing money (the Naira chip), the same money a run brings home ("You keep ₦4 for Lagos").
+
+**Old and new words**
+
+| Where it shows | Old words | New words | Chars |
+|---|---|---|---|
+| Tray bubble (over the Mama Put or Market, from 10 kobo) | "80 kobo", "₦1.20" | "Tax 80 kobo", "Tax ₦1.20" | 11, 9 |
+| Tray bubble, full | "₦1.50" + band "Full" | "Tax ₦1.50" + band "Full" (band unchanged) | 9 |
+| Tray bubble, spoken (the bubble button's name) | "Mama Put has 1 naira 20 kobo for you. Full." | "Tax from Mama Put: 1 naira 20 kobo. Full." / "Tax from the market: 2 naira 40 kobo." | |
+| First hint, once, when the Mama Put tray first holds ₦1 (W7 step 5) | "Mama Put made money! Walk over to collect it." | "Mama Put pays a small tax! Walk over to collect it." | 51 |
+| Collect line over the hero (1.5 s) | "+₦1.20 from Mama Put", "+₦2.40 from the market" | "Mama Put paid ₦1.20 tax!", "The market paid ₦2.40 tax!" | 24, 26 |
+| Collect, spoken (the city's live line after a collect) | the collect line read as it is, then "Naira: 6 naira." | "Mama Put paid 1 naira 20 kobo tax. Naira: 6 naira." | |
+| **New:** first-time explanation, once, in the hint bar right after the very first collect | (none) | "Busy shops pay a small tax. Lagos uses it to fix more." | 54 |
+| **New:** the same, spoken | (none) | the same words (the hint bar is already a polite live region) | |
+
+**Lines checked and kept as they are** (they still read true with taxes):
+- Built lines: "Mama Put is open! Food for the queue." / "The market is open! Danfos come for goods."
+- Mission complete: "Mama Put is open here." / "The market is open here."
+- Not enough card: "Run Alausa to earn more." Runs stay the main way to get Naira (W3 caps), so the card keeps pointing at the run.
+- Booming meter: "Booming", "9 of 20", "Lagos is getting brighter!", spoken "Booming meter. 9 of 20 to the next boom." No player-facing line names the collect points; a full collect still fills 1 (at most 4 a boom, decision 45). When a full collect crosses a step, "Lagos is getting brighter!" now reads as the tax at work, which is the point.
+- The off-screen edge arrow for a bubble is hidden from screen readers, so it needs no word.
+
+**How the new lines behave**
+- **Bubble label.** Only Naira trays get the word "Tax" (TX-R3). The amount still changes in steps, never as a running number. The bucket icon stays. The word sits before the amount on the same line, so "Full" keeps its band (never colour alone).
+- **First hint** (hint id `collect`, as now): same trigger and same end (the first collect). Two lines at most at 320 x 240.
+- **Explanation** (new hint id `tax`, saved once): shows right after the first collect, once the collect line has started. It stays at least 4 s, then goes on the next walk, or at 8 s if the hero stands still. If the `bright` hint is due at the same moment, `tax` goes first and `bright` waits for the next free moment (one hint at a time, W7). Two lines at most at 320 x 240; it sits in the hint bar under the top row like every city hint, never over the hero, a board or a bubble.
+- **Tiny screens** (lead's ruling, decision 64, 15 Nov): at 320 x 240 with both trays full and at 640 x 200, where no spot is clear, the hint bar may briefly cover a sign or a bubble but never the hero: beside the hero on the side away from it, else over the top row.
+- **Spoken collect.** The live line says the collect in spoken money words ("1 naira 20 kobo", not "₦1.20"), then the Naira chip as now.
+- **Capitals.** A line that starts with a place name starts with a capital ("The market paid ..."); in the middle of a line it stays "the market".
+
+**The rules for tax words and pictures** (decision 71, CLAUDE.md rules 3, 4 and 5)
+1. **Warm, never heavy.** Shops pay because their street works again. No "must pay", "owe", "fine", "debt" or "or else"; no late tax, no penalty; nothing is taken by force, and a tray is only ever emptied by the hero walking by. The cook keeps serving and smiling while the coins fly; the queue keeps eating. Nobody is shown as a bad payer.
+2. **No real tax people or bodies.** No real revenue service names or short names; no officials, uniforms, badges, stamps, receipts, forms or offices that look real; no party names or colours; no politicians. The hero is not a tax officer: no tax hat, no tax badge. Just the words "tax" and "Lagos".
+3. **No tax numbers.** No rates, no percentages, no "VAT", no tax on the player, nothing about real tax rules. The child takes away only "shops that work pay a little, and it fixes the city".
+4. **Never real money.** It is the game's own Naira, earned only in play (W3a). It cannot be bought, cashed out or sent anywhere. No ads, no shop.
+5. **Every region, with pride.** When later Naira places come (a suya spot, places from the north, east, west and south), each uses the same words with its own name ("The suya spot paid ₦1 tax!"). No place pays more or less because of where it is.
+
+**For gamedev** (src/ is gamedev's to change; the words go in src/screens/words.ts):
+- New `city.trayLabel(money)` returns `Tax ${money}`; the bubble draws `trayLabel(trayWords(kobo))` for Naira places. `trayWords` itself stays the bare amount.
+- `city.traySpoken(name, money, full)` returns `Tax from ${name}: ${money}.`, plus ` Full.` when full.
+- `city.collectLine(money, name)` returns `${Name} paid ${money} tax!` (first letter upper case).
+- New `city.collectSpoken(money, name)` returns `${Name} paid ${money} tax.` with spoken money; `announce()` reads it, then the Naira chip, instead of the visible collect line.
+- `city.hintCollect` becomes "Mama Put pays a small tax! Walk over to collect it."
+- New `city.hintTax`: "Busy shops pay a small tax. Lagos uses it to fix more." New saved hint id `tax`. A save from before this change that has already collected sees `tax` once, on its next collect (it is new to them too).
+- The bubble gets about 25 px wider with "Tax ". Keep `BUBBLE.maxW`, and keep every bubble at least 48 x 48 px to tap.
+- art: the gallery samples in src/art/galleryWalk.ts use the new words ("Tax ₦1.20", "Mama Put paid ₦1.20 tax!", "The market paid ₦2.40 tax!").
+
+**What qa should check**
+1. Every line in the table shows word for word, in the right place, at the right time; the old lines are gone (search words.ts and the gallery for "made money", "for you", "from Mama Put", "from the market").
+2. At 320 x 240, 568 x 320, 640 x 200 and 851 x 393: "Tax 80 kobo", "Tax ₦1.20" and "Tax ₦1.50" with "Full" fit in the bubble with nothing cut; the first hint and the explanation take at most two lines and cover no hero, board or bubble; "The market paid ₦2.40 tax!" fits on one line.
+3. The W15 and d5 sign-room tests still pass with the wider bubbles (the 320 x 240 save with Power 0, Tech 3, boom 20 and both trays full): no bubble overlaps a chip, a bottom button or another sign; coming-soon pins give way as d5 says.
+4. The explanation shows once only: after the first collect; never again after a reload; never during Mission complete; never at the same time as another hint. An old save that has collected before sees it once, on its next collect.
+5. Screen reader: the bubble reads "Tax from Mama Put: 1 naira 20 kobo. Full."; a collect reads "Mama Put paid 1 naira 20 kobo tax. Naira: 6 naira."; the explanation is read once.
+6. Gentle mode (collecting in passing) shows the same lines. Reduced motion: the collect line does not rise and still says the new words.
+7. Money adds up exactly as before (amounts, caps, Booming points): only words changed.
+8. The rules above: no real tax body, official, uniform, receipt or party colour in any picture or word; no rates or percentages; nothing reads as a trader being forced or blamed; the Mama Put and the Market look happy while paying.
 
 ## 6. Original only: the check list for every new piece
 

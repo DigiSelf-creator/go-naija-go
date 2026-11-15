@@ -289,6 +289,16 @@ function paintShops(g: CanvasRenderingContext2D): void {
   }
 }
 
+/** The shop row tile (as cached below), drawn with the row's base at y = 0 (S3e1a: the first screen's tired look repaints it). */
+export function paintShopTile(g: CanvasRenderingContext2D): void {
+  g.save();
+  g.translate(0, -SHOP_TOP);
+  paintShops(g);
+  g.restore();
+}
+/** How far the shop row tile reaches above its base. */
+export const SHOP_TILE_H = SHOP_TOP;
+
 const shopLayer = { layer: null as PixelLayer | null };
 
 /** Shop row at half camera speed, plus the pavement band down to the road. */
@@ -355,16 +365,25 @@ export function drawBusShape(g: CanvasRenderingContext2D, x: number, y: number, 
   g.restore();
 }
 
-/** Screen space: a bus passing on the far lane now and then. */
-export function drawPassingBus(g: CanvasRenderingContext2D, camX: number, viewW: number, time: number, groundY = GROUND_Y): void {
+/** Where the passing bus is (screen x of its middle) for drawPassingBus. */
+export function passingBusX(camX: number, viewW: number, time: number): number {
   const span = viewW + 600;
-  const x = ((((time * 90 - camX * 0.7) % span) + span) % span) - 200;
+  return ((((time * 90 - camX * 0.7) % span) + span) % span) - 200;
+}
+
+/**
+ * Screen space: a bus passing on the far lane now and then. `riders` (S3g1b, people everywhere
+ * part 4): draws its passengers in the bus's own transform, right after the bus.
+ */
+export function drawPassingBus(g: CanvasRenderingContext2D, camX: number, viewW: number, time: number, groundY = GROUND_Y, riders?: (g: CanvasRenderingContext2D, x: number) => void): void {
+  const x = passingBusX(camX, viewW, time);
   // gamedev (qa C7): small, on the back lane in front of the shops, so it reads as
   // far away and nobody tries to jump it. Full-size buses belong to the bus stop.
   g.save();
   g.translate(x, groundY - 26);
   g.scale(0.5, 0.5);
   drawBusShape(g, 0, 0, time);
+  riders?.(g, x);
   g.restore();
 }
 

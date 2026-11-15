@@ -156,44 +156,83 @@ test('a new version served: the next open shows the banner; a tap loads the new 
   expect(other).toEqual([]);
 });
 
-test('never mid-run: it waits for Pause, goes when the run carries on, at 320 x 240 too', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await firstVisit(page, '?level=lagos-1');
-  await startRun(page);
-  await expect.poll(() => screenNow(page)).toBe('play');
-  root = builds.b;
-  // The game comes back to the front mid-run: it looks for a new sw.js and finds one.
-  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-  await expect.poll(async () => (await update(page)).ready, { timeout: 20_000 }).toBe(true);
-  // Ready, but the run is on: no banner while the screen is 'play'.
+/** Ready, but an attempt is on: for a while no banner shows and no button is put in. */
+async function staysAway(page: Page, screens: readonly string[]): Promise<void> {
   for (let i = 0; i < 6; i++) {
     const s = await page.evaluate(() => ({ screen: window.__game!.screen, shown: window.__game!.update.shown, n: document.querySelectorAll('.update-btn').length }));
-    if (s.screen !== 'play') break;
+    if (!screens.includes(s.screen ?? '')) break;
     expect(s.shown).toBe(false);
     expect(s.n).toBe(0);
     await page.waitForTimeout(250);
   }
-  // Pause (if the run is still going): now it shows.
+}
+
+/** The run comes back to the front mid-run: it looks for a new sw.js and finds build B. */
+async function newVersionMidRun(page: Page): Promise<void> {
+  root = builds.b;
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect.poll(async () => (await update(page)).ready, { timeout: 20_000 }).toBe(true);
+}
+
+test("decision 68: never mid-run and never on a street's Pause; it shows once the run is left, at 320 x 240 too", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await firstVisit(page, '?level=lagos-1');
+  await startRun(page);
+  await expect.poll(() => screenNow(page)).toBe('play');
+  await newVersionMidRun(page);
+  // Ready, but the run is on: no banner while the screen is 'play'.
+  await staysAway(page, ['play']);
+  // Pause (if the run is still going): still no banner, since a tap would restart the street.
   if ((await screenNow(page)) === 'play') await page.getByRole('button', { name: 'Pause', exact: true }).tap();
+  if ((await screenNow(page)) === 'pause') {
+    await staysAway(page, ['pause']);
+    await page.setViewportSize({ width: 320, height: 240 });
+    await page.waitForTimeout(300);
+    await staysAway(page, ['pause']);
+    expect((await update(page)).ready).toBe(true);
+    if (SHOTS) await page.screenshot({ path: join(SHOTS, 'update-pause-none-320x240.png') });
+    await page.setViewportSize({ width: 851, height: 393 });
+    // Keep playing: still nothing in the run.
+    await waitOutTapLock(page);
+    await page.getByRole('button', { name: 'Keep playing' }).tap();
+    await expect.poll(() => screenNow(page)).toBe('play');
+    await staysAway(page, ['play']);
+    // Pause again, then leave the street for the challenge road: now it shows.
+    await page.getByRole('button', { name: 'Pause', exact: true }).tap();
+    await expect.poll(() => screenNow(page)).toBe('pause');
+    await waitOutTapLock(page);
+    await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Challenge road', exact: true }).tap();
+  }
+  // Out of the street (the challenge road, or a result card if the run ended by itself).
+  await expect.poll(() => screenNow(page)).not.toBe('play');
   await expect(banner(page)).toBeVisible();
   await coversNothing(page);
-  if ((await screenNow(page)) !== 'pause') return;
   await page.setViewportSize({ width: 320, height: 240 });
   await page.waitForTimeout(300);
   await expect(banner(page)).toBeVisible();
   await coversNothing(page);
-  // The pause card's buttons all still show in the screen below it.
-  const card = await page.getByRole('dialog', { name: 'Paused' }).boundingBox();
-  const bar = (await banner(page).boundingBox())!;
-  expect(card!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, 'update-pause-320x240.png') });
-  await page.setViewportSize({ width: 851, height: 393 });
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, 'update-pause-851x393.png') });
-  // Keep playing: the banner goes at once (reduced motion: no close animation).
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, 'update-after-run-320x240.png') });
+});
+
+test('decision 68: the lane run works the same way: none in the run or on its Pause, then it shows in Lagos', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await firstVisit(page, '?level=lagos-lane');
+  await startRun(page);
+  await expect.poll(() => page.evaluate(() => window.__lane?.stage), { timeout: 15_000 }).toMatch(/^(count|play)$/);
+  await newVersionMidRun(page);
+  await staysAway(page, ['play']);
+  await page.getByRole('button', { name: 'Pause', exact: true }).tap();
+  await expect.poll(() => screenNow(page)).toBe('pause');
+  await staysAway(page, ['pause']);
+  expect((await update(page)).ready).toBe(true);
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, 'update-lane-pause-none-851x393.png') });
+  // "Back to Lagos": the run is left, so the banner may show now.
   await waitOutTapLock(page);
-  await page.getByRole('button', { name: 'Keep playing' }).tap();
-  expect(await page.evaluate(() => document.querySelectorAll('.update-btn').length)).toBe(0);
-  expect((await update(page)).shown).toBe(false);
+  await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Back to Lagos' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await expect(banner(page)).toBeVisible();
+  await page.waitForTimeout(1500);
+  await coversNothing(page);
 });
 
 test('the screens that fill the page start below it: intro, builder, city, wheel, at 851 x 393 and 320 x 240', async ({ page }) => {
@@ -228,4 +267,31 @@ test('the screens that fill the page start below it: intro, builder, city, wheel
   await page.getByRole('button', { name: "Nigeria's wheel", exact: true }).tap();
   await expect.poll(() => screenNow(page)).toBe('wheel');
   await shot('wheel');
+});
+
+test('qa decision 68: the lane run\'s own result cards (the bus stop, caught) are result cards: the banner shows there', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await firstVisit(page, '?level=lagos-lane');
+  await startRun(page);
+  await expect.poll(() => page.evaluate(() => window.__lane?.stage), { timeout: 15_000 }).toMatch(/^(count|play)$/);
+  await newVersionMidRun(page);
+  await staysAway(page, ['play']);
+  // The bus stop: the win and the prize are saved at once, so a reload loses nothing.
+  await page.evaluate(() => {
+    window.__lane!.setGap(60);
+    window.__lane!.warp(592);
+  });
+  const goal = page.getByRole('dialog', { name: 'You made it to the bus stop!' });
+  await expect(goal).toBeVisible({ timeout: 10_000 });
+  await expect(banner(page)).toBeVisible({ timeout: 3000 });
+  await coversNothing(page);
+  // Caught after "Keep running": a result card too.
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await goal.getByRole('button', { name: 'Keep running for more' }).tap();
+  await expect.poll(() => page.evaluate(() => window.__lane?.stage), { timeout: 10_000 }).toBe('play');
+  await staysAway(page, ['play']);
+  await page.evaluate(() => window.__lane!.setGap(0.2));
+  await expect(page.getByRole('dialog', { name: /^The Blackout caught up at / })).toBeVisible({ timeout: 10_000 });
+  await expect(banner(page)).toBeVisible({ timeout: 3000 });
+  await coversNothing(page);
 });

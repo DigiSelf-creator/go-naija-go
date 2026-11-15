@@ -32,15 +32,22 @@ import { CornCount, Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
+import type { StopId } from './screens/road';
+import { h } from './screens/dom';
+import { firstStreetOf } from './art/firstLook';
+/** S3e0 part 6: each street's first screen follows its city spot's fix. */
+const FIRST_FIX = { alausa: 'road', computerVillage: 'mast', ikeja: 'lamps' } as const;
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
+import { loadPeople, onPeople } from './game/peopleLoad';
 import { registerServiceWorker } from './sw-register';
-import { bannerShows } from './update';
+import { bannerShows, inAttempt } from './update';
 import { UpdateBanner } from './screens/update-banner';
 import { isNativeApp } from './native/is-native';
 import type { NativeApp } from './native/app';
 import type { LaneSession } from './lane/session';
-import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul } from './lane/rewards';
+import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul, type LaneSave } from './lane/rewards';
+import { TILT_APP_ASKS_AGAIN, TiltAccess } from './game/tilt';
 
 const el = document.getElementById('game');
 if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing #game canvas');
@@ -80,6 +87,32 @@ if (query.get('gallery')?.startsWith('lane')) {
     };
     requestAnimationFrame(frame);
   });
+} else if (query.get('gallery')?.startsWith('folk')) {
+  // Debug only: the people kit (S3g1a): ?gallery=folk, folk2 ... folk5; &t=1.5 holds the time.
+  void import('./art/galleryFolk').then(({ drawFolkGallery }) => {
+    const t0 = performance.now();
+    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawFolkGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+} else if (query.get('gallery')?.startsWith('road')) {
+  // Debug only: the challenge road's pictures (S3e1a): ?gallery=road, road2 ... road8; &t=1.5 holds the time.
+  void import('./art/galleryRoad').then(({ drawRoadGallery }) => {
+    const t0 = performance.now();
+    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawRoadGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
 } else if (query.has('gallery')) {
   // Debug only: every picture at once, for art checks (?gallery, ?gallery=2 for page 2, &t=1.5 to hold the time).
   void import('./art/gallery').then(({ drawGallery }) => {
@@ -106,6 +139,8 @@ function startGame(): void {
   let nativeApp: NativeApp | null = null;
   /** S2.8: streets done, best kobo, the saved parcel and the hall, under gidi-progress. */
   const progress = new Progress(store);
+  /** S3f0 part 25.5: can this phone tilt (a quiet 1.5 s check on Android; iPhones know at once). */
+  const tilt = new TiltAccess();
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
   // `theme`, then Go-Slow Hall (S2.7, lagos-hall.json). ?level=lagos-2, lagos-3 or lagos-hall
   // makes "Play" start there (for testing).
@@ -217,6 +252,8 @@ function startGame(): void {
     });
   }
 
+  /** The street was drawn last on the game canvas (the city and the intro paint it over once). */
+  let streetUnder = true;
   const loop = new FixedLoop({
     update: (dt) => {
       game.update(dt);
@@ -229,7 +266,17 @@ function startGame(): void {
       // The city fills the whole screen and draws itself: the street under it is not drawn
       // (on a slow phone that was a second full-screen picture every frame while walking).
       // The intro story covers the whole screen too (city.md a2.9).
-      if (menus.current !== 'city' && menus.current !== 'intro') game.render(g, view);
+      if (menus.current !== 'city' && menus.current !== 'intro') {
+        game.render(g, view);
+        streetUnder = true;
+      } else if (streetUnder) {
+        // Tp's phone: the street's last frame must not show anywhere round them (the camera
+        // cutout strip, ST0 part 4), so the canvas is painted over once.
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.fillStyle = '#0f1a12';
+        g.fillRect(0, 0, canvas.width, canvas.height);
+        streetUnder = false;
+      }
       if (playing) {
         hud.update(game.run, menus.sound);
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
@@ -238,7 +285,51 @@ function startGame(): void {
       placeThrowButton();
       syncCorn();
       syncHum();
+      syncCrowd();
     },
+  });
+
+  /**
+   * S3g1b (design.md "People everywhere" part 12): the crowd murmur plays, very quietly, while 5
+   * or more people are on screen; never over a warning sound (the drum's roll, the high honk) or
+   * the corn tune, never paused or hidden. The Sound switch silences it inside sound.ts (PE-R6).
+   * Frame times also feed the people's backing off (part 11).
+   */
+  let warnUntil = 0;
+  let lastFrameAt = 0;
+  /** The loop stops (a card, the menus, a pause): the murmur stops with it. */
+  function pauseLoop(): void {
+    loop.pause();
+    murmuring = false;
+    sound.setMurmur(false);
+    lastFrameAt = 0;
+  }
+  const warned = (name: 'drumWake' | 'highHonk'): void => {
+    warnUntil = Math.max(warnUntil, performance.now() + soundLength(name) * 1000 + 150);
+  };
+  const crowdQuiet = (): boolean => performance.now() < warnUntil || game.run.power.corn > 0;
+  function syncCrowd(): void {
+    const now = performance.now();
+    const live = playing && !game.paused && !menus.current && !document.hidden && inPlay();
+    const p = game.people;
+    if (p && live && lastFrameAt > 0) p.frame(now - lastFrameAt);
+    if (p && live) p.endFrame();
+    lastFrameAt = live ? now : 0;
+    const murmur = live && (p?.seen ?? 0) >= 5 && !crowdQuiet();
+    if (murmur !== murmuring) {
+      murmuring = murmur;
+      sound.setMurmur(murmur);
+    }
+  }
+  let murmuring = false;
+  // The people's chunk loads on its own (peopleLoad.ts); until it arrives the streets have none.
+  onPeople((kit) => {
+    const p = new kit.GamePeople();
+    /** A cheer (at most one every 4 s: the people's own rule), never over a warning or the corn tune. */
+    p.onSound = (name) => {
+      if (!crowdQuiet()) sound.play(name);
+    };
+    game.people = p;
   });
 
   /**
@@ -261,11 +352,14 @@ function startGame(): void {
   /** The street, the well and its room, or the hall fight is being played (not a finish, game over or won). */
   const inPlay = (): boolean => game.run.inPlay;
 
-  // U1 (decision 52): "New version ready. Tap to update." on any screen, never in a run: only on
-  // Pause, the result cards and the other screens. One tap reloads into the new version.
+  // U1 (decision 52): "New version ready. Tap to update." One tap reloads into the new version.
+  // Decision 68: never in a run and never on its Pause (a street, the well room, Go-Slow Hall or
+  // a lane run), since the reload would quietly start the attempt again. Only on the result cards
+  // and the other screens.
   const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
-  /** A run is being played with no card over it (the finish bus counts: the result card follows). */
-  const inRun = (): boolean => (playing || lane !== null) && menus.current === null;
+  /** A run is being played or paused (the finish bus counts: the result card follows). */
+  // The lane run's own result cards (bus stop, caught) count as result cards: the win and pickups are saved.
+  const inRun = (): boolean => inAttempt(playing || (lane !== null && lane.stage !== 'card'), menus.current);
   const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
   updateReady = () => {
     syncUpdate();
@@ -285,7 +379,7 @@ function startGame(): void {
       return;
     }
     if (!playing || game.paused || !inPlay()) return;
-    loop.pause();
+    pauseLoop();
     game.paused = true;
     syncHum();
     toast.hide();
@@ -326,9 +420,19 @@ function startGame(): void {
     // The hall's start words come from the run's first step ('hallStart', 'parcelShield').
     // S2.5 gift rules 5 and 6: with a saved parcel every hall try starts with the shield on, and
     // well rooms show 5 kobo instead of a second parcel.
+    void loadPeople().catch(() => undefined); // S3g1b: in case the title's early fetch was missed
     game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: lagos.parcel } : { parcelSaved: lagos.parcel, dash: dashSaved() });
     // S2.8: once Lagos is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(lagos);
+    // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
+    // Scenery only: the level and the run are the same either way.
+    const street = firstStreetOf(game.level.id);
+    const fix = street ? FIRST_FIX[street] : null;
+    game.firstLook = street && fix ? { street, look: isBuilt(cityLife.state, fix) ? 'bright' : 'tired', still: reduceMotion.matches } : null;
+    if (game.firstLook) {
+      runSaid.textContent = '';
+      runSaid.textContent = game.level.name;
+    }
     hud.show(true);
     buttons.show(true, game.level.manual);
     loop.resume();
@@ -342,6 +446,8 @@ function startGame(): void {
    * wheel. Home: the hero stands at the bus park, or Mission complete brings them by bus (5W W5).
    */
   function leave(to: LeaveTo, mission: Mission | null = null): void {
+    // S3e0 part 7: the road opens on the stop just played (the hall's after a win).
+    const at: StopId | null = lane ? 'lane' : where === 'hall' ? 'hall' : where === 0 || where === 1 || where === 2 ? where : null;
     // S3f3 part 2: leaving a lane run early ("Back to Lagos", LR-Q1 a) keeps its pickups and says so.
     if (lane && to === 'city' && mission === null) {
       const h = lane.haul;
@@ -353,20 +459,21 @@ function startGame(): void {
     hud.show(false);
     buttons.show(false);
     toast.hide();
-    loop.pause();
+    pauseLoop();
     controls.releaseAll();
     where = firstStreet;
     game.fixed = false;
     game.reset(startLevel);
     if (to === 'wheel') {
-      menus.showWheel('streets');
+      menus.showWheel('city');
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
       sound.play('cogRatchet');
       window.setTimeout(() => sound.play('cogBell'), 320);
     } else if (to === 'city') {
       if (cityLife.state.at) cityLife.set({ ...cityLife.state, at: { ...HERO_START } });
       menus.showCity(mission);
-    } else menus.show(to);
+    } else if (to === 'road') menus.showRoad({ at });
+    else menus.show(to);
   }
 
   /** S3f2: the lane run showing now (its code loads the first time one opens), or null. */
@@ -375,6 +482,10 @@ function startGame(): void {
   let laneModule: Promise<typeof import('./lane/session')> | null = null;
   /** The fix the lane run was started for (Lights out or Slow internet), or null (part 2). */
   let laneFor: BuildId | null = null;
+  /** The corn count's place in the lane run (part 11); the streets put it back in their hint bar after. */
+  let laneCountAt: HintBarBox | null = null;
+  /** Part 25.4: the phone said no while the lane run's code was still loading. */
+  let tiltNoPending = false;
   /**
    * S3f3 part 2, "Bringing it home": a win for a fix not built yet plays Mission complete at that
    * spot; any other end goes back to Lagos with "You brought ... home." (LR-Q2: and the other pin's hint).
@@ -395,6 +506,7 @@ function startGame(): void {
   /** Starts a lane run from 0 m ("3, 2, 1" first). Loads the lane run's code the first time. */
   function startLane(fix: BuildId | null = laneFor): void {
     if (laneLoading) return;
+    askTiltOnRun();
     laneFor = fix === 'lamps' || fix === 'mast' ? fix : null;
     if (lane) {
       menus.show(null);
@@ -407,7 +519,7 @@ function startGame(): void {
     toast.hide();
     hud.show(false);
     buttons.show(false);
-    loop.pause();
+    pauseLoop();
     controls.releaseAll();
     laneLoading = true;
     menus.laneRun = true;
@@ -426,6 +538,16 @@ function startGame(): void {
           safe: readSafeArea,
           sound: (name) => sound.play(name),
           touch: () => buttons.touch,
+          tiltOn: () => menus.laneTilt,
+          tiltReady: () => tilt.ready,
+          tiltAsks: () => tilt.ios && tilt.answer !== 'granted',
+          askTilt: askTiltOnRun,
+          tiltOffer: () => tilt.canTilt && !menus.tiltSaved && !readLane(progress.raw?.[KEY_LANE]).tiltOffered,
+          tiltOffered: () => saveTiltMarks({ tiltOffered: true }),
+          tryTilt: () => {
+            menus.setTilt(true);
+            if (tilt.ios) void tilt.ask('switch');
+          },
           askPause: () => pause(),
           soundOn: () => sound.enabled,
           toggleSound: () => {
@@ -434,8 +556,11 @@ function startGame(): void {
           },
           laneSave: () => readLane(progress.raw?.[KEY_LANE]),
           saveLane: (part) => {
-            // A broken copy is left alone (the same rule as the city part).
-            if (!(progress.broken && progress.raw === null)) progress.savePart(KEY_LANE, writeLane(part));
+            // A broken copy is left alone (the same rule as the city part). The tilt marks are
+            // main's (saveTiltMarks): the run's copy never writes over them.
+            if (progress.broken && progress.raw === null) return;
+            const now = readLane(progress.raw?.[KEY_LANE]);
+            progress.savePart(KEY_LANE, writeLane({ ...part, tiltOffered: now.tiltOffered, tiltNoes: now.tiltNoes }));
           },
           bank: (d) => cityLife.set({ ...cityLife.state, kobo: cityLife.state.kobo + d.kobo, power: cityLife.state.power + d.power, tech: cityLife.state.tech + d.tech }),
           flush: () => cityLife.flush(),
@@ -466,8 +591,25 @@ function startGame(): void {
             }
           },
           closeHum: (on) => sound.setCloseHum(on && !document.hidden),
+          murmur: (on) => sound.setMurmur(on && !document.hidden),
+          // Part 11: the corn tune and its 5, 4, 3, 2, 1 count in the lane run, as on the streets
+          // (S2.9): the lane tune and the effects turn down under it; the count shows in the hint
+          // bar's place even with Music or Sound off.
+          corn: (c) => {
+            const steps = c ? Math.ceil(c.left * 60) : 0;
+            corn.update({ corn: steps, active: c !== null, audible: sound.enabled && menus.music, held: c !== null && (c.held || document.hidden) });
+            if (c && c.box !== laneCountAt) {
+              laneCountAt = c.box;
+              count.place(c.box, window.innerHeight);
+            }
+            count.set(c ? cornCount(steps) : 0, c !== null);
+          },
         });
         lane.start();
+        if (tiltNoPending) {
+          tiltNoPending = false;
+          lane.tiltDenied();
+        }
         syncMusic();
         syncUpdate();
         if (portrait.matches || document.hidden) pause();
@@ -480,13 +622,30 @@ function startGame(): void {
         menus.showCity();
       });
   }
+  /**
+   * S3f0 part 25.4: a run's start or resume tap. With tilt on and an iPhone not asked this visit,
+   * Apple's box asks now, inside the tap (never on load or a timer).
+   */
+  function askTiltOnRun(): void {
+    if (menus.tiltSaved && tilt.needsAsk) void tilt.ask('run');
+  }
+  /** The `lane` save's tilt marks (25.1, 25.4): only these and the switch are kept, never an angle. */
+  function saveTiltMarks(m: Partial<Pick<LaneSave, 'tiltOffered' | 'tiltNoes'>>): void {
+    if (progress.broken && progress.raw === null) return;
+    progress.savePart(KEY_LANE, writeLane({ ...readLane(progress.raw?.[KEY_LANE]), ...m }));
+  }
   function closeLane(): void {
     menus.laneRun = false;
     if (!lane) return;
     lane.close();
     lane = null;
+    murmuring = false;
+    sound.setMurmur(false);
     // The lane run may have drawn with fewer pixels: back to the game's own canvas size.
     resize();
+    // The corn count goes back to the streets' hint bar.
+    laneCountAt = null;
+    placeBar();
   }
 
   /** The live city (city.md (b), 5W): the `city` part of gidi-progress, kept in memory while the game runs. */
@@ -511,6 +670,9 @@ function startGame(): void {
     brought = kobo;
     if (kobo > 0) cityLife.set(addKobo(cityLife.state, kobo), true);
   }
+  /** S3e0 part 6 rule 4: the street's name, said once as its run starts. */
+  const runSaid = h('div', { class: 'run-said', 'aria-live': 'polite' });
+  document.body.append(runSaid);
   const menus = new Menus(document.body, store, game.look, {
     // city.md (b) flow: "Play" (and the builder's "Start running") opens Lagos from above, the
     // home screen. ?level=lagos-2, lagos-3 or lagos-hall still starts that level (for testing).
@@ -532,18 +694,34 @@ function startGame(): void {
       missionFor = isBuilt(cityLife.state, 'road') ? null : 'road';
     },
     takeHome: () => leave('city', { build: missionFor, kobo: brought }),
-    lane: () => readLane(progress.raw?.[KEY_LANE]),
-    playLane: () => startLane(null),
-    play: (to, at) => {
-      missionFor = null;
-      startRun(at, to);
+    // S3e0: a stop's big button, for the fix its card shows (CR-Q1 a: STOP_PAYS_FIX).
+    playStop: (stop, at) => {
+      if (stop.id === 'lane') startLane(stop.forFix);
+      else if (stop.id !== 'ferry') {
+        startRun(at, stop.id);
+        missionFor = stop.forFix;
+      }
     },
+    roadView: () => {
+      const l = readLane(progress.raw?.[KEY_LANE]);
+      return { lagos: progress.state(LAGOS), names: streets.map((x) => x.name), city: cityLife.state, lane: { best: l.best, goals: l.goals } };
+    },
+    roadHint: () => {
+      if (cityLife.state.hints.includes('road')) return false;
+      cityLife.set(withHint(cityLife.state, 'road'), true);
+      return true;
+    },
+    cardChanged: () => nativeApp?.screenChanged(),
     restart: (at) => (lane ? startLane() : startRun(at)),
     next: (at) => {
       missionFor = null;
       startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
     },
-    resume,
+    resume: () => {
+      // "Keep playing" in a lane run is a resume tap (25.4).
+      if (lane) askTiltOnRun();
+      resume();
+    },
     leave,
     lookChanged: (look) => {
       game.look = look;
@@ -640,6 +818,23 @@ function startGame(): void {
   sound.enabled = menus.sound;
   director.switches(menus.sound, menus.music);
   menus.touchWords = () => buttons.touch;
+  menus.tilt = tilt;
+  menus.tiltAppAsksAgain = TILT_APP_ASKS_AGAIN;
+  tilt.onFound(() => menus.syncTilt());
+  // Part 25.4: every answer from Apple's box. A no from a run's start tap plays with swipes and
+  // says so; two noes in a row turn the switch off. A yes starts the count again.
+  tilt.onAnswer((a, from) => {
+    const noes = a === 'granted' ? 0 : Math.min(2, readLane(progress.raw?.[KEY_LANE]).tiltNoes + 1);
+    saveTiltMarks({ tiltNoes: noes });
+    if (a === 'denied') {
+      if (from === 'switch') menus.setTilt(false);
+      else if (noes >= 2) menus.setTilt(false);
+      if (lane) {
+        if (lane.stage !== 'paused') lane.tiltDenied();
+      } else if (laneLoading) tiltNoPending = true;
+    }
+    menus.syncTilt();
+  });
 
   /** Decision 62: the goats' "meeh" and the birds' "hawk hawk", kept from piling up. */
   const animalCalls = new AnimalCalls((n) => sound.play(n));
@@ -709,7 +904,10 @@ function startGame(): void {
         toast.show(hintWords(e.words, controls.lastKind), HINT_MS);
         break;
       case 'wake':
-        if (e.kind === 'drum') sound.play('drumWake');
+        if (e.kind === 'drum') {
+          sound.play('drumWake');
+          warned('drumWake');
+        }
         break;
       case 'bounce':
         // Decision 62: a goat's "meeh" (at most one each 0.5 s; a plain boing if it just spoke).
@@ -788,7 +986,7 @@ function startGame(): void {
       case 'gameOver':
         sound.play('gameOver');
         controls.releaseAll();
-        loop.pause();
+        pauseLoop();
         toast.hide();
         // (c) Losing keeps it all (Tp, question 2): the coins go home to Lagos.
         payHome(game.run.kobo * KOBO_PER_COIN);
@@ -835,7 +1033,7 @@ function startGame(): void {
       case 'streetCleared':
         // S2.10 Street cleared: "Next street", or after street 3 "Go to Go-Slow Hall".
         controls.releaseAll();
-        loop.pause();
+        pauseLoop();
         toast.hide();
         // S2.8: saved only now, when the bus is boarded (with the parcel, if carried).
         // N1: a coin is 10 kobo; bests and the card's money are whole kobo.
@@ -857,7 +1055,10 @@ function startGame(): void {
         break;
       case 'bossThrow':
         if (e.kind === 'honk') sound.play('honk');
-        else if (e.kind === 'highHonk') sound.play('highHonk');
+        else if (e.kind === 'highHonk') {
+          sound.play('highHonk');
+          warned('highHonk');
+        }
         break;
       case 'bossHit':
         sound.play('greenHit');
@@ -902,7 +1103,7 @@ function startGame(): void {
         break;
       case 'win':
         controls.releaseAll();
-        loop.pause();
+        pauseLoop();
         toast.hide();
         // S2.8: the hall is won, so Lagos is switched on and its cog turns.
         progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
@@ -962,7 +1163,8 @@ function startGame(): void {
         home: () => leave('city'),
         city: () => menus.showCity(),
         save: () => cityLife.flush(),
-        relayout: () => resize(),
+        // Every screen that fits itself (the intro, the city, the wheel) hears it, not only the canvas.
+        relayout: () => window.dispatchEvent(new Event('resize')),
       });
     });
   }
@@ -1037,8 +1239,10 @@ function startGame(): void {
 
   // Menus first; the street stands still behind them.
   loop.start();
-  loop.pause();
+  pauseLoop();
   menus.show('title');
+  // S3g1b: the people's chunk, fetched right after the title shows.
+  window.setTimeout(() => void loadPeople().catch(() => undefined), 200);
 
   // S3f2: the lane run's hooks for end to end tests (null outside a lane run).
   Object.defineProperty(window, '__lane', { configurable: true, get: () => (lane ? lane.testHook() : null) });
@@ -1067,6 +1271,29 @@ function startGame(): void {
         buttons: buttons.shown,
         layout: buttons.layout,
       };
+    },
+    /** S3g1b: the people drawn last frame (world units), the bubble, backing off, the murmur. */
+    get people() {
+      const p = game.people;
+      if (!p) return null;
+      return {
+        on: p.on,
+        drawn: p.drawn.map((d) => ({ x: d.x, y: d.y, frame: d.frame, size: d.size })),
+        seen: p.seen,
+        bubble: p.bubbleBox ? { ...p.bubbleBox } : null,
+        backOff: p.watch.level,
+        ms: { avg: p.costMs, max: p.costMax, bake: p.bakeMs },
+        murmur: sound.murmuring,
+        plan: p.street ? { stands: p.street.plan.stands.length, walkers: p.street.plan.walkers.length, zones: p.street.plan.zones.map((z) => [z.a, z.b]) } : null,
+      };
+    },
+    /** S3g1b qa: force backing off (part 11: 1 drops the walkers, 2 half the standing people too). */
+    forceBackOff(level: number) {
+      game.people?.watch.force(level);
+    },
+    /** S3g1b qa: people on or off (the run is the same either way), to measure what they cost. */
+    setPeople(on: boolean) {
+      if (game.people) game.people.on = on;
     },
     get look() {
       return { ...game.look };
@@ -1396,6 +1623,18 @@ declare global {
     readonly __lane?: import('./lane/session').LaneTestHook | null;
     __game?: {
       readonly paused: boolean;
+      readonly people: null | {
+        on: boolean;
+        drawn: { x: number; y: number; frame: string; size: number }[];
+        seen: number;
+        bubble: { x: number; y: number; w: number; h: number } | null;
+        backOff: number;
+        ms: { avg: number; max: number; bake: number };
+        murmur: boolean;
+        plan: { stands: number; walkers: number; zones: number[][] } | null;
+      };
+      forceBackOff(level: number): void;
+      setPeople(on: boolean): void;
       /** U1: a new version is ready; the banner shows. */
       readonly update: { ready: boolean; shown: boolean };
       readonly steps: number;

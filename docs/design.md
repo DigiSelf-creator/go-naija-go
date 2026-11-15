@@ -1994,6 +1994,7 @@ The challenge road (S3e1) is not built yet, so for now the lane run is started f
 - **A swipe** counts once the finger has moved 24 px in one direction within 0.3 s; it fires at that moment, not when the finger lifts. The bigger of the two directions wins. One swipe, one move: the finger must lift before the next swipe counts. A tap with no swipe does nothing. Swipes work anywhere on the screen except on the top HUD row and on buttons.
 - **Buttons:** each 56 x 56 px, 8 px apart, 8 px inside the safe edges, each with its arrow drawn as a shape and a spoken name ("Left lane", "Right lane", "Jump", "Slide"). A press fires on touch down. Holding does not repeat. When "Swap sides" comes (decision 20), ▲ ▼ go left and ◀ ▶ go right.
 - **The switch** "Buttons instead of swipes: off" / "...: on" sits in Settings and on the lane run Pause card. It counts at once. Swipes still work while buttons show.
+- **Tilt to steer** (decision 70): a second switch, "Tilt to steer: off" / "...: on", changes lanes by tilting the phone. All of it is in part 25.
 - **Keys** work whatever the switch says. Holding a key does not repeat.
 - **Moves queue:** one move pressed during a lane change or a jump waits and runs as soon as it can (at most one waiting; a newer press replaces it).
 - **Gentle mode** uses the same controls. It changes only the Blackout and the speed (part 10).
@@ -2357,3 +2358,720 @@ The lane run makes Power and Tech real, so the packed layout from W15 and W16 is
 17. Sounds and the tune by ear: our own, not like any lane runner's or any known song; the corn tune plays over the lane tune.
 18. city.md 2B "What we must NOT copy" (all 11) and city.md part 6 pass; nothing from Mario or any Nintendo game.
 19. Part 22 at 320 x 240 with all three buckets.
+
+### 25. Tilt to steer (designer, 15 Nov 2026; decision 70)
+
+Tp, 15 Nov, after playing the Android test app (decision 70): the lane run can be steered by tilting the phone. Tilt left or right changes lane; swipes or buttons still jump and slide. Everything in parts 1 to 24 stands; this part adds to parts 3, 14, 18 and 20. The small rulings TS-R1 to TS-R4 are in docs/questions.md ("designer, 15 Nov 2026: tilt to steer"); this part is built on their recommended answers.
+
+**25.1 The controls setting (TS-R1).** Two separate switches, one under the other, each a plain on/off sentence. No 3-way choice: tilt and buttons can be on together (tilt for lanes, ▲ ▼ for jump and slide), and on/off is easier for a 10-year-old than picking one of three.
+
+| Switch | Default | Where |
+|---|---|---|
+| "Buttons instead of swipes: off" / "...: on" | off (as now) | Settings and the lane Pause card (as now) |
+| **"Tilt to steer: off" / "Tilt to steer: on"** (new) | **off** | Settings and the lane Pause card, right under "Buttons instead of swipes". Shown only on a phone that can tilt (25.5) |
+
+So the default is swipes. What each mix does:
+
+| Buttons | Tilt | Lane left and right | Jump and slide |
+|---|---|---|---|
+| off | off | swipe left / right | swipe up / down |
+| on | off | ◀ ▶ buttons, or swipe | ▲ ▼ buttons, or swipe |
+| off | on | **tilt**, or swipe left / right | swipe up / down |
+| on | on | **tilt**, or swipe left / right; the ◀ ▶ buttons hide | ▲ ▼ buttons (bottom right, same place), or swipe |
+
+- Keys always work, whatever the switches say (part 3).
+- Swipes left and right still work while tilt is on (TS-R4), just as swipes still work while buttons show. Tilt moves and swipes share the one move queue (part 3: at most one waiting, a newer one replaces it).
+- A switch change counts at once. Turning tilt on from the Pause card calibrates on the "3, 2, 1" after "Keep playing".
+- Not on the streets' Pause card: the streets have no lanes.
+
+**Offering tilt once (TS-R2).** The first lane run does **not** offer tilt: it teaches swipes, one thing at a time. At the start of the player's second lane run (save `lane.runs` is 1 or more), on a phone that can tilt, with tilt off and the offer never shown, one small card shows before "3, 2, 1":
+
+- "New: tilt your phone to change lane." / "You can still swipe to jump and slide." / big **"Try tilt"**, small "No thanks".
+- iPhone only, under the words: "Your phone will ask first. Tap Allow."
+- "Try tilt" turns the switch on (and on iPhone asks, 25.4). "No thanks" leaves it off. Either way the card never shows again (`lane.tiltOffered: true`). Android back counts as "No thanks".
+
+**25.2 How tilt feels**
+
+The run is played sideways (part 15). The player steers like a steering wheel: lower the right side of the phone to go right, the left side to go left.
+
+| Value | Number |
+|---|---|
+| What is measured | the steering angle: `beta` from `deviceorientation`, in degrees, flipped by which way the phone is turned (below) |
+| Smoothing | the angle is eased over 0.08 s (a simple low-pass), so a shaky hand does not twitch |
+| Centre | the angle the player holds the phone at, taken at "3, 2, 1" (below), never "flat" |
+| Dead zone | within **5°** of centre nothing happens, and the centre slowly follows the hand (25 percent of the way to the reading each second), so a slow slump in the seat never steers |
+| Move one lane | the angle goes **15°** or more past centre, left or right: one lane change, at that moment |
+| Holding | holding the tilt does **not** keep moving. One tilt, one lane |
+| Re-arm | the angle comes back within **8°** of centre; then the next tilt counts. The 7° gap between 15° out and 8° back is the hysteresis, so a wobble near 15° never fires twice |
+| Two lanes | tilt, back to centre, tilt again. The fastest two moves are about 0.25 s apart; both go through the move queue |
+| Tilt held for 2 s | if the angle stays 15° or more past centre for 2 s, that angle becomes the new centre (the player has changed how they sit). This makes no move |
+| Very big tilt | still one lane. Angles past 60° from centre count as 60° |
+| From the edge lane | tilting further toward the kerb does nothing (the same as a swipe into the kerb) |
+
+**Sensitivity (TS-R3): one fixed value, no Low / Normal / High.** One fewer choice for a 10-year-old. 15° out and 8° back is a small, clear turn of the wrists. If qa's first-timers find it too stiff or too jumpy (25.10 check 2), designer changes the numbers here, not the rules; a choice comes only if no one number suits them.
+
+**Calibrating on "3, 2, 1".** Every start and every resume already counts "3, 2, 1" (parts 14 and 18). With tilt on:
+- Under the count, one line: **"Hold your phone the way you like."**
+- The centre is the average smoothed angle over the last 0.5 s before "Go!". Tilt makes no move until "Go!".
+- This happens at the start of every run, "Start again", "Run again", "Keep running for more", and every resume (from Pause, the background, a call, the sideways card).
+- "3, 2, 1" is not made longer for tilt.
+
+**Landscape left and landscape right.** The phone can be turned either way (the sideways card shows only when it is upright).
+- Read the turn from `screen.orientation.angle` (or `window.orientation` on older iPhones: 90 is 90, −90 is 270).
+- Turned to **90**: steering angle = `beta`; bigger means right (the left end of the phone goes up).
+- Turned to **270**: steering angle = −`beta`.
+- 0 or 180 (upright): the sideways card shows and the run is paused, as now; tilt is ignored.
+- If the phone flips from 90 to 270 during a run, tilt is ignored for 0.3 s and the centre is taken again the new way round. The flip makes no move.
+- gamedev checks the sign on a real Android phone and a real iPhone, both ways round; qa checks 1f and 2 prove it.
+
+**25.3 Jump and slide.** Jump and slide never use tilt. They stay on swipe up and swipe down, on ▲ and ▼ when buttons are on, and on the keys. Tipping the phone forward or back does nothing.
+
+**25.4 Permission to use motion**
+
+| Where | Asks? | When |
+|---|---|---|
+| iPhone, Safari (the web test link) | yes, Apple's own box | only straight after one of the taps below |
+| iPhone, the store app (decision 57) | yes, the same box from the app's web view | the same taps. gamedev makes the web view ask (the default "prompt"), never grant by itself |
+| Android, Chrome (the web test link) | no | tilt works as soon as the switch is on |
+| Android, the store app | no | the same |
+
+**iPhone: the taps that ask.** `DeviceOrientationEvent.requestPermission()` is called inside the tap handler, never on load or on a timer:
+1. Turning "Tilt to steer" on, in Settings or on the lane Pause card.
+2. "Try tilt" on the offer card (25.1).
+3. When tilt is already on but this visit has not asked yet (Safari forgets when it is closed): the tap that starts or resumes a lane run ("Lane run" on any card or stop, "Run again", "Start again", "Keep playing"). If the phone already said yes this visit, nothing shows.
+
+Our words, under the switch and on the offer card, iPhones only, before the box: **"Your phone will ask first. Tap Allow."** Apple's box has its own words (about "Motion and Orientation", with "Cancel" and "Allow"); we cannot change them, so our line says which to tap.
+
+**If the phone says no** (Cancel, or motion is turned off for the app):
+- The switch goes back to **"Tilt to steer: off"**, and under it: **"Your phone said no to tilt, so swipes are on."** then **"To try again, close the game and open it again."** (Safari asks only once per visit.)
+- In the store app, only if iOS will not ask again: **"To try again, allow Motion for Gbese! in your phone's Settings."** (gamedev checks which one iOS does.)
+- If the no came from a run's start tap (3. above): the run plays with swipes, and the hint bar shows "Your phone said no to tilt, so swipes are on." for 3 s. The save keeps tilt on, so the next visit asks again from a tap; after two noes in a row (`lane.tiltNoes` is 2), the save turns tilt off.
+
+**If the sensor stops** (tilt is on, but no reading comes for 1 s during play): swipes carry on as always, and the hint bar shows once per run **"Tilt is not working. Swipe to change lane."** Tilt comes back by itself if readings come back, with a fresh centre at the next "3, 2, 1".
+
+**Privacy (CLAUDE.md rule 5).** Motion readings are used on the phone, only to steer, only while a lane run is playing. They are never saved, sent, logged or shared. The centre angle lives in memory for that run only. The only things saved are the switch and the offer marks (Saves, below). No network call. Under the switch in Settings, one small line: **"Tilt is only used to steer. Nothing is saved or sent."**
+
+**25.5 Computers and phones with no sensor.** The "Tilt to steer" switch and the offer card show only on a phone that can tilt:
+- iPhone: a touch screen (`pointer: coarse`) and `DeviceOrientationEvent.requestPermission` exists.
+- Android and the rest: a touch screen, and a `deviceorientation` event with a number for `beta` arrives within 1.5 s of opening the game (a quiet listener, removed after that). A computer that sends one event with no numbers does not count.
+- Otherwise the switch is hidden, not greyed out. A saved "on" is kept but treated as off, and the run plays with swipes, buttons and keys as now.
+
+**25.6 Pause, background and the sideways card.** Tilt is read only while the run is playing, between "Go!" and a pause, a card or the end.
+- Paused, on any card (goal, caught, Pause, "Leave the game?", the offer), in the background, on a call, or on the sideways card: readings are ignored and the listener is taken off, so the phone does no extra work.
+- Back to playing: the normal "3, 2, 1" with "Hold your phone the way you like." and a fresh centre.
+- A tilt during "3, 2, 1" never makes a move, even past 15°.
+
+**25.7 Access**
+- **Reduced motion is not changed by tilt.** Tilt is a way to steer, not something moving on the screen; all of part 18 stays.
+- Tilt is never needed: swipes, buttons and keys all still steer. A player who cannot hold a phone steady keeps tilt off (the default).
+- **Screen readers:** the switch is a switch named "Tilt to steer", on or off. When a run starts with tilt on, a polite spoken line, once: **"Tilt your phone left or right to change lane. Swipe up to jump, down to slide."** (with buttons on: "Tilt your phone left or right to change lane. Use Jump and Slide to jump and slide."). The line under "3, 2, 1" is spoken too.
+- Never colour alone: the switch says "on" or "off" in words.
+- No shaking and no fast flicks: one gentle tilt makes one move.
+
+**25.8 Hints.** With tilt on, the change-lane hint (part 8) becomes **"Tilt your phone left or right to change lane."** It shows once, on the first run with tilt on, even if the swipe hint was seen before (hint key `tilt`). The other hints stay as now, in the player's own way (swipes, buttons or keys).
+
+**25.9 Exact words (new; in words.ts `lane`)**
+
+| Key | Words |
+|---|---|
+| `tiltOff` / `tiltOn` | "Tilt to steer: off" / "Tilt to steer: on" |
+| `tiltPrivacy` | "Tilt is only used to steer. Nothing is saved or sent." |
+| `tiltAskFirst` (iPhone only) | "Your phone will ask first. Tap Allow." |
+| `tiltDenied` | "Your phone said no to tilt, so swipes are on." |
+| `tiltRetry` (iPhone Safari) | "To try again, close the game and open it again." |
+| `tiltRetryApp` (iPhone app, only if needed) | "To try again, allow Motion for Gbese! in your phone's Settings." |
+| `tiltLost` | "Tilt is not working. Swipe to change lane." |
+| `tiltHold` (under "3, 2, 1") | "Hold your phone the way you like." |
+| `hints.tilt` | "Tilt your phone left or right to change lane." |
+| `tiltOfferHeading` | "New: tilt your phone to change lane." |
+| `tiltOfferLine` | "You can still swipe to jump and slide." |
+| `tiltOfferYes` / `tiltOfferNo` | "Try tilt" / "No thanks" |
+| `tiltSpoken` | "Tilt your phone left or right to change lane. Swipe up to jump, down to slide." |
+| `tiltSpokenButtons` | "Tilt your phone left or right to change lane. Use Jump and Slide to jump and slide." |
+
+Every line fits 320 x 240 on one or two lines. "Gbese!" is the app name (decision 39); if the name changes, this line follows it.
+
+**Layout.** Settings: the switch under "Buttons instead of swipes", 44 px tall, the full width of the column; the privacy line and (iPhone) the ask line under it in 12 px. Lane Pause card: the switch under "Buttons instead of swipes", 44 px tall; the card scrolls if it is taller than the screen, as now, with "Keep playing" first and on screen when the card opens. The offer card follows part 15's card rules (at most 300 x 220, big button at least 56 px tall, small at least 44 x 44).
+
+**Saves (part 20).** Settings gain `tiltToSteer: false`, under its own key like `buttonsInsteadOfSwipes`. The `lane` part gains `tiltOffered: false` and `tiltNoes: 0`. Merged in; a missing or broken value starts at its default. No angle is ever saved.
+
+**Build notes for gamedev.** A pure `TiltReader` in src/lane/input.ts beside `SwipeReader`, so the rules can be unit tested: `calibrate()`, `read(angleDeg, tMs): LaneMove | null`, `pause()`, with the numbers above as named constants (`TILT_FIRE_DEG = 15`, `TILT_REARM_DEG = 8`, `TILT_DEAD_DEG = 5`, `TILT_FOLLOW_PER_S = 0.25`, `TILT_SMOOTH_S = 0.08`, `TILT_RECENTRE_S = 2`, `TILT_MAX_DEG = 60`, `TILT_LOST_S = 1`). One `deviceorientation` listener, added at "3, 2, 1" and removed at a pause; nothing made new per event. Under 2 KB of code.
+
+**25.10 Done checks for qa**
+1. **Simulated tilt (Playwright, every build).** Send readings from the test with `window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { alpha: 0, beta, gamma: 0 }))` every 16 ms, with `screen.orientation.angle` stubbed to 90 and, for the iPhone path, `DeviceOrientationEvent.requestPermission` stubbed to resolve "granted" or "denied". Each reading is held 0.2 s unless said:
+   a. beta 20 during "3, 2, 1" makes the centre 20; no move during the count, even at beta 40.
+   b. After "Go!": 24 does nothing; 33 does nothing; 36 moves one lane right; holding 36 for 1.9 s makes no second move.
+   c. Back to 27 re-arms, and 36 moves right again. Back to 29 does not re-arm, and 36 then does nothing.
+   d. Back to 20, then 4 moves one lane left.
+   e. Back to 20, then 36 moves right; holding it for 2 s makes 36 the new centre with no move; then 52 moves right.
+   (The numbers leave about 1° for the slow centre follow in the dead zone.)
+   f. With the angle stubbed to 270, the same readings move the other way.
+   g. A flip from 90 to 270 during play makes no move.
+   h. Paused, on any card and on the sideways card, readings make no move; resuming takes a fresh centre.
+   i. No readings for 1 s during play: "Tilt is not working. Swipe to change lane." shows once, and swipes still steer.
+   j. Stubbed "denied": the switch shows "Tilt to steer: off" with the two denied lines; the run plays with swipes.
+   k. The `TiltReader` unit test covers a to g with no browser.
+2. **On real phones:** a cheap Android phone (web link and app) and an iPhone (Safari and app), both ways round: lowering the right side goes right. Three first-timers (one aged 9 to 12) call the tilt "easy" or "OK", not "too hard" or "too jumpy", and reach the bus stop within 3 tries with tilt on.
+3. **Permission on iPhone:** the box only ever shows straight after a tap on the switch, "Try tilt", or a run's start or resume button; never on load, on a timer or mid-run. Cancel turns the switch off with the denied lines, and the run plays with swipes. Allow works at once.
+4. **Android (web and app):** no box ever; tilt works as soon as the switch is on.
+5. **Computers and phones with no sensor:** no "Tilt to steer" switch in Settings or on Pause and no offer card (desktop Chrome, Firefox and Safari; a phone emulator with no sensor). A saved `tiltToSteer: true` plays with swipes.
+6. **The offer:** not on the first lane run; on the second, once, before "3, 2, 1", only on a phone that can tilt; "Try tilt", "No thanks" and Android back all stop it coming back.
+7. **Mixes:** all four rows of the 25.1 table. With buttons and tilt on, ◀ ▶ hide and ▲ ▼ work; swipes left and right still work with tilt on; keys always work; tilt never jumps or slides.
+8. **Privacy:** no network call during a run with tilt on; the save holds only `tiltToSteer`, `tiltOffered` and `tiltNoes`, never an angle.
+9. **Access:** reduced motion behaves exactly as part 18 with tilt on or off; the switch is read as "Tilt to steer", switch, on or off; the spoken start line plays once per run with tilt on; the switch is at least 44 px tall at 320 x 240; every word matches 25.9 and fits 320 x 240 and 640 x 200.
+10. **Light:** with tilt on, the frame rate stays within part 21 on the slow phone profile; at most 2 KB more code; no tilt events handled while paused or in the background.
+
+## S3e0. The challenge road, with W17 C (designer, 15 Nov 2026)
+
+Task S3e0, city.md step (e) with W17 C ("same street, city and run"). This is the full note that city.md (e) asks for before S3e1 starts. It is the source for S3e1a (art) and S3e1b (gamedev). Where it gives a number or a word that city.md part 1, (e) or W17 gives as a draft, this note wins.
+
+Sources: city.md part 1 "The challenge road", (e) and W17 C; decisions 36, 38, 45, 46, 47, 48, 63, 66 and 67; the Streets screen it replaces (src/screens/menus.ts `streets()` and `laneCard()`, src/screens/streets.ts `streetCards()`, S2.8, S2.10); ST0 part 3 (the back button); S3f0 part 2 (the Lane run card moves here).
+
+Open for Tp (docs/questions.md, "designer, 15 Nov 2026: the challenge road"): **CR-Q1**, whether a win from a stop pays for that stop's fix. This note is built on the recommended answer (a); a different answer changes only the lines marked CR-Q1. Three small rulings (CR-R1 to CR-R3) follow the team's recommendation under decision 64 and are reported to Tp in one line each.
+
+### 1. The idea, in one line
+
+The Streets screen becomes a road of Lagos bus stops. Each stop is one challenge. Tap a stop and a small card shows that part of Lagos from above, as it looks right now, tired or bright; then the run starts on the same street, and its first screen looks tired or bright to match.
+
+- **Who sees it:** every player, from the city's "Challenge road" button, from the city's problem cards ("See the stop"), and after a run (Pause, Out of lives, Street cleared, Win).
+- **The one job:** pick a challenge, and see which part of Lagos it is for.
+- **New thing it teaches:** each challenge is a real place in your Lagos, and fixing that place changes the run too.
+- **No level gets harder or easier.** Only the picture changes (part 6, rule 1).
+
+### 2. The stops
+
+Slice 3 has five stops you can play and one you cannot yet. Their order on the road follows the streets' unlock order (S2.8), which does not change.
+
+| # | Stop | Where on the road | Opens when | Its city spot (card picture and first screen) | A win from the stop is "for" (CR-Q1 a) |
+|---|---|---|---|---|---|
+| 1 | **Alausa** (street 1) | main road, first | always | the New road spot (pin 1, `CITY_SPOTS.potholes`) | the New road, while it is not built; after that, nothing |
+| 2 | **Computer Village** (street 2) | main road, second | Alausa done | block r1c3 (the Slow internet spot) | nothing (street runs earn Naira; the Mast takes Tech) |
+| 3 | **Ikeja** (street 3) | main road, third | Computer Village done | block r2c1 (the Lights out spot) | nothing (the Lamps take Power) |
+| 4 | **Go-Slow Hall** | main road, fourth | Ikeja done | none: the card shows the hall picture (the Streets screen's hall card art) | the hall, as today: ₦15, and the first win switches Lagos on |
+| side | **Lane run** | a side road that leaves the main road between stops 1 and 2 (CR-R1) | always (decision 63: built and live) | the spot it is for: r2c1 while the Lamps are not built, then r1c3 while the Mast is not built, then r2c1 bright | the Lamps while not built, then the Mast while not built, then nothing (the same as the problem cards, S3f0 part 2) |
+| end | **Ferry** | the end of the main road, at the lagoon | never in slice 3: "Coming soon" | the shore by the jetty | cannot be played |
+
+- **The well room has no stop (CR-R3).** It is a secret inside street 2 and street 3 (S2.5, S2.6). A stop would give it away, and it is not a challenge of its own. The Go-Slow Hall card still says "You have a garri parcel." when one is saved.
+- **The Lane run stop takes over from the Streets card** (S3f0 part 2). The Lights out and Slow internet cards and the Not enough cards still start a lane run as they do now.
+- **"For" means** what decisions 38 and 45 already say for the city cards: a win pays for that fix at once, brings home at least its price (the first Alausa win, from the stop or the Potholes card, brings ₦14, W5), and "Mission complete!" plays at that spot. A win "for nothing" goes home to the bus park with "You brought ₦12 home." (W5 "From elsewhere"). If CR-Q1 is answered b, every stop's win is "for nothing", as W5 wrote it.
+- **A stop opened from a city card plays for that card's fix.** The Slow internet card's "See the stop" opens the Lane run stop for the Mast, even if the Lamps are not built yet.
+- **Later states** get their own road with their own real, proud places (decision 19's rule), the same stop kinds and the same rules (decisions 15, 30). The ferry leads to the next Lagos area (city.md (b)).
+
+### 3. How a stop shows its state (never colour alone)
+
+Each stop is one button: a bus stop shelter drawn on the road behind it, and in front a plate with the name and two short lines. Each state has its own **icon shape and word**, so it reads in greyscale.
+
+| State | Plate | Icon (16 px, left of the status) | Status line | Line 3 | Moves |
+|---|---|---|---|---|---|
+| **Locked** | sand `#e6d4ae`, 2 px dark outline `#1d1a14` | padlock | "Locked" | none | none |
+| **Open** | danfo yellow `#f2b300`, 2 px dark outline | a bus from the side | "Ready to play" | none | none |
+| **Next** (the first open stop on the main road that is not done) | as Open, plus a small pennant with an arrow on the plate's top right holding the word "Next"; a small danfo parked at the shelter | a bus | "Ready to play" | none | the plate bobs 2 px once a second (none with reduced motion) |
+| **Done** | danfo yellow, plus a round tick badge on the top right | a tick | "Done ✓" | "Best: ₦8.70" (streets), "Best: 840 m" (Lane run); none for the hall | none |
+| **Ferry, before the first boom** | sand, outline | a small ferry | "Coming soon" | "Fixes to go: 3" | none |
+| **Ferry, after the first boom** | sand, outline, with the tick badge | a small ferry | "Built ✓" | "More soon" | none |
+
+- **Best** is the street's `best` in `gidi-progress` (whole kobo, money words N1 to N4) and the lane part's `best` (whole metres, "1,240 m"). It shows only once the stop is done (the Lane run: once `goals` is 1 or more).
+- **"Fixes to go"** is `ceil((20 - boom) / 4)`, at least 1, until the meter reaches 20 (d1). Full collects count too, so the number can drop without a fix; that is fine: it says how far off the ferry is, not a promise.
+- **Only one "Next".** If every main-road stop is done, nothing is marked Next. The Lane run stop is never marked Next: it sits apart, on its side road, always open.
+- **The hall with a parcel:** the hall's plate shows a small parcel icon after its name (shape), and its spoken words add "You have a garri parcel."
+- **Tapping a locked stop** opens its card with the locked words (part 5) and plays `lockedTuk`. It never starts anything.
+
+### 4. The road screen: layout
+
+**The picture.** The road is one still picture of **680 x 168 road units**, our own drawing (part 9): a grey main road with lane dashes and kerbs that bends gently twice, low Lagos blocks, a palm and a mango tree along the edges, and the lagoon shore with the jetty at the right end. The side road leaves the main road at x 132 and climbs to the Lane run stop, with three stuck danfos in a short queue on it (the go-slow you pass on foot). It is a road with bus stops, not a path of dots on a map (city.md part 6 rule 4): no dots or footprints between stops, no circles for levels, no islands in a sea.
+
+**Where the stops sit** (road units; each button is 112 x 64; the shelter is drawn behind it):
+
+| Stop | Button box (x, y, w, h) |
+|---|---|
+| Alausa | 8, 92, 112, 64 |
+| Lane run (side road) | 76, 4, 112, 64 |
+| Computer Village | 144, 92, 112, 64 |
+| Ikeja | 280, 92, 112, 64 |
+| Go-Slow Hall | 416, 92, 112, 64 |
+| Ferry | 552, 92, 112, 64 |
+
+The main road runs along y 156 to 168 under the main stops. The side road runs up the 24-unit gap between Alausa and Computer Village.
+
+**Inside a button** (at scale 1): the plate fills the top 24 px with the name, bold 12 px, centred, never cut ("Computer Village" fits 112 px with 6 px padding); under it the icon and the status, bold 11 px; under that line 3, 11 px. Tap area: the whole 112 x 64 button.
+
+**The top row** (inside the safe edges plus 8 px, ST0 part 4): 44 px tall (48 from 360 px high). Left: **"Home"** with a small house shape. Middle: the heading **"Challenge road"** (bold 1.1 rem; 0.95 rem on small screens, as the city's heading). Right: **Sound** ("Sound: on" / "Sound: off"; at 360 px wide or less, the speaker icon alone, with waves for on and a cross for off, and the same spoken name). Each button at least 44 x 44.
+
+**Scale.** `s` = 1 when the whole road does not fit across at scale 1; otherwise `s` = the smallest of 2, (open width ÷ 680) and (open height ÷ 168). Open width = screen width minus the safe edges and 16 px; open height = screen height minus the top row, the safe edges and 16 px. Everything in the road scales by `s`, words included. The road sits in the middle of the open height.
+
+| Screen | s | What shows | Scroll |
+|---|---|---|---|
+| **320 x 240** | 1 | open height 172 (the road is 168); open width 304: Alausa, the Lane run and Computer Village whole, and 24 px of Ikeja peeking in at the right | yes, 376 px of road off screen; the ▶ arrow shows |
+| **568 x 320** | 1 | open width 536: every stop up to Go-Slow Hall whole; the Ferry off the right | yes, 144 px; the ▶ arrow shows |
+| **851 x 393** | 1.2 (1.1 on a phone with a notch, about 44 px safe edges) | the whole road | no |
+| **1920 x 1080** | 2 | the whole road at 1360 x 336, centred both ways | no |
+| Upright on the web (393 x 851) | 1 | as 320 x 240, with more sky above and below | yes |
+
+**Scrolling** (only when the road does not fit):
+1. The road is a box that scrolls sideways the phone's own way (native momentum; the scroll bar hidden). Nothing scrolls up and down.
+2. A finger that moves more than 8 px is a scroll and does not open a stop. A mouse wheel or trackpad scrolls it sideways.
+3. **Edge arrows:** ◀ at the left edge and ▶ at the right edge, at the road's middle height, 44 x 44, a dark round button with the arrow as a shape. Each shows only when there is more road that way, and scrolls one stop (136 px x `s`). They are hidden from screen readers and from Tab (those reach every stop directly, part 9).
+4. **Where it opens:** on the stop it was opened for (from a city card, or after that stop's run); else on the Next stop; else at the start. That stop sits in the middle where it can, else as near the middle as the ends allow. Opening never animates.
+5. Focusing a stop (Tab, or the ← and → keys) scrolls it fully into view with 16 px to spare: a 0.25 s ease, or a jump with reduced motion.
+
+**First visit hint** (once, saved as `road` in the city's `hints`): "Tap a stop to see it." in the hint bar under the top row, 3 s.
+
+### 5. The stop card
+
+Tapping a stop (or Enter or Space on it) opens a small card over the road. The road stays behind it, dimmed.
+
+**Layout.** At 320 x 240: at most 300 x 220, centred. A heading row (24 px); under it the **picture** (112 x 84) on the left and the lines on the right (up to 172 px wide, line 1 bold 13 px, the others 12 px); at the bottom the big button (at least 56 px tall) and the small "Back" (at least 44 x 44) side by side. Height in all: about 196 px. From 568 x 320: up to 420 x 300, picture 160 x 120, words 14 and 13 px. From 1920 x 1080: up to 560 wide, picture 240 x 180.
+
+**The picture: the spot seen from above** (decision 48, W17 C).
+- A cut from the still city picture, so it is tired or bright exactly as the city is now (d2, d3). The cut is a 4 by 3 box in map units:
+
+  | Stop | Cut (map x, y, w, h) |
+  |---|---|
+  | Alausa | 0, 335, 240, 180 (the Alausa road, pin 1) |
+  | Computer Village | 1163, 301, 320, 240 (r1c3) |
+  | Ikeja | 536, 579, 320, 240 (r2c1 and the bus stop) |
+  | Lane run | Ikeja's cut while it is for the Lamps; Computer Village's cut while it is for the Mast; then Ikeja's cut, bright |
+  | Ferry | 290, 760, 320, 240 (the shore and the jetty; before the first boom, the shore without the jetty) |
+  | Go-Slow Hall | not a cut: the hall picture from the Streets screen's hall card |
+
+- **Drawn on top, at card size:** a danfo-yellow bus stop sign with the stop's name (bold 11 px at 112 px wide, never cut), a yellow danfo with its door open, and **the hero you built** stepping in (about 30 px tall at 112 px wide; every body, skin, hair and outfit). The pin is not drawn in the cut: the card's words say it.
+- **The place name is only on that sign** (and in the big button, which is a challenge name, city.md part 1 "Words"). No line that says something is wrong names the place.
+- If the still city picture is not ready (the city was not opened this session), draw only that cut of the city with a clip. If that takes more than 50 ms on the slow phone profile, show a plain sand box with the sign, the danfo and the hero, and swap the cut in when it is ready.
+
+**Exact words** (money as N1 to N4; "left" uses what is still to pay on that board, so "₦6 left" after a part pay):
+
+| Stop and state | Heading | Line 1 | Line 2 | Line 3 | Big button | Small |
+|---|---|---|---|---|---|---|
+| Alausa, road not built | "Stop 1" | "Potholes on this road." | CR-Q1: "A win pays for the New road (₦10)." (part paid: "(₦6 left)") | after a done run: "Your best: ₦8.70" | "Run Alausa" | "Back" |
+| Alausa, road built | "Stop 1" | "New road here. Buses are moving again." | "Earns Naira for Lagos." | "Your best: ₦8.70" | "Run Alausa" | "Back" |
+| Computer Village, Mast not built | "Stop 2" | "The internet is slow here." | "Earns Naira. Tech comes from the Lane run." | best, as above | "Run Computer Village" | "Back" |
+| Computer Village, Mast built | "Stop 2" | "Fast internet here. Shops are busy." | "Earns Naira for Lagos." | best | "Run Computer Village" | "Back" |
+| Ikeja, Lamps not built | "Stop 3" | "Lamps are out here." | "Earns Naira. Power comes from the Lane run." | best | "Run Ikeja" | "Back" |
+| Ikeja, Lamps built | "Stop 3" | "The lamps are on. The street is awake." | "Earns Naira for Lagos." | best | "Run Ikeja" | "Back" |
+| Go-Slow Hall, not done | "Stop 4" | "General Go-Slow is jamming the hall." | "A win brings ₦15 and switches Lagos on." (not "turns the cog": the first boom may have turned it already, d4) | with a parcel: "You have a garri parcel." | "Go to Go-Slow Hall" | "Back" |
+| Go-Slow Hall, done | "Stop 4" | "The hall is moving. Lagos is switched on." | "A win brings ₦15 for Lagos." | with a parcel: "You have a garri parcel." | "Go to Go-Slow Hall" | "Back" |
+| Lane run, for the Lamps | "Side road" | "Lamps are out here." | CR-Q1: "A win pays for the Lamps (Power 10)." (part paid: "(Power 4 left)") | after a goal: "Your best: 840 m" | "Lane run" | "Back" |
+| Lane run, for the Mast | "Side road" | "The internet is slow here." | CR-Q1: "A win pays for the Mast (Tech 6)." | best | "Lane run" | "Back" |
+| Lane run, both built | "Side road" | "Lamps on and fast internet here." | "Earns Naira, Power and Tech." | best | "Lane run" | "Back" |
+| Any locked stop | as above | that stop's line 1 for its state | "Finish Alausa first." / "Finish Computer Village first." / "Finish Ikeja first." | none | none | "Back" |
+| Ferry, before the first boom | "The ferry" | "A ferry jetty is coming to this shore." | "It is built when Lagos booms: 9 of 20." | none | none | "Back" |
+| Ferry, after the first boom | "The ferry" | "The jetty is built. The ferry is here!" | "New stops over the water are coming soon." | none | none | "Back" |
+
+If CR-Q1 is answered b, the three lines marked CR-Q1 become "Earns Naira for Lagos." (Alausa) and "Earns Naira, Power and Tech." (Lane run), and part 2's "for" column reads "nothing" for every stop but the hall.
+
+Every line is 44 characters or fewer and fits its column at 320 x 240 in at most two lines. No line that says something is wrong names a real place (city.md part 1 "Words", W17 C).
+
+**What the big button does:** the danfo `horn` sound (d7), and the run starts exactly as from the old Streets card or the city card: same lives, same Gentle mode, same parcel rules. The card and the road close.
+
+**Spoken** (the card is a dialog; the big button is focused first; Escape is "Back"):
+- Dialog name: "Stop 1: Alausa" (the Lane run: "Side road: Lane run"; the hall: "Stop 4: Go-Slow Hall"; the ferry: "The ferry").
+- The picture's text: "Seen from above. A stop sign says Alausa. Your hero is getting on a danfo." Then the lines, as written.
+
+### 6. The first screen of a run (W17 C)
+
+Decision 48: the run looks like the same street as its city spot, before and after the fix.
+
+**Which fix each street follows** (plan S3e1b): street 1 **Alausa follows the New road** (`isBuilt(city, 'road')`); street 2 **Computer Village follows block r1c3** (bright only once the Mast is built, d3); street 3 **Ikeja follows block r2c1** (bright only once the Lamps are built). The look is read when the run starts (and again on "Start again" and "Play again"), however the run was started: a stop, a city card, "Next street", or a restart.
+
+**The first screen** is a fixed stretch of the street, in world units, before the first thing that can cost a life:
+
+| Street | Stretch | The street sign stands at | Why that stretch |
+|---|---|---|---|
+| Alausa | 20 to 760 | x 260 | the warm-up; the first roof is at 1150 and the first pothole at 2450 |
+| Computer Village | 20 to 1000 | x 260 | the warm-up; the first roof crate is at 1100 |
+| Ikeja | 20 to 1000 | x 600 | the hero starts at 420; the secret well at 160 stays as it is, and the sign stands ahead of the hero so it never points at the well |
+
+The look eases back to the street's own look over the last 120 units of the stretch (a soft blend, no seam). On a 560-unit screen this is the whole first screen; on wide screens it is the left part of it.
+
+**Tired (the spot is not fixed yet)**, warm and proud, never run-down (decision 47, d2's rule):
+- Walls mixed 50% toward warm sand `#c9b48c`, roofs a further 22% toward dusty brown `#9a8262`; 2 of every 3 windows warm brown `#5a4a3a` with no glint (the same rule as d2).
+- **2 of the first 4 shop fronts** with a roll-down shutter (brown-grey, 4 flat lines across).
+- **One neat tied sack and a box** at the kerb, waiting for collection, never within 100 units of a food stall.
+- **1 person** doing something proud, in the back layer, standing still: Alausa, a woman sweeping in front of her shop; Computer Village, a repairer at a small table with a phone; Ikeja, a man reading by the bus stop sign.
+- **The spot's own mark:**
+  - Alausa: 5 thin cracks on the road's front face (dark `#3a332a`, 1.5 units wide, 10 to 24 units long, three zig-zag strokes each), all between y 306 and 330, so they never touch the walking line at y 300 and never look like a gap. **Two cones** at 70% size, standing against a shop wall in the back layer, never on the road band, so they never read as the cones that mark a pit's lip.
+  - Computer Village: our own phone mast behind the shop row with **1 of 4 bars** filled (4 rising boxes, 1 filled, 3 outlined), and 2 of 3 shop screens dark.
+  - Ikeja: the **2 street lamps** in the stretch with their heads off (no glow ring, dark glass).
+- The street's `fixedLook` (S2.8, after the hall) is not drawn inside the stretch while it is tired: no bunting or lit lamps over a tired street. Past the stretch it draws as usual.
+
+**Bright (the spot is fixed):**
+- The street's own colours, shutters rolled up with goods out front (a crate of tomatoes, a rack of cloth, plain boxes, no brand and no writing), no sack, **4 people** standing still (traders and buyers, a child with a school bag).
+- Alausa: fresh tarmac and lane paint (the existing `drawRoad(..., fresh = true)`), no cracks, no cones. Computer Village: the mast with **4 of 4 bars** and a small light that blinks once every 2 s (steady with reduced motion), shop screens lit with a 1 px glint. Ikeja: both lamps on with their glow.
+- If the hall is done, `fixedLook` draws over the bright stretch as usual.
+
+**The plain street sign** (both looks): a dark grey pole and a cream plate `#fffaf0` with a 2-unit dark outline `#1d1a14` and the name in bold dark letters: **"Alausa"**, **"Computer Village"**, **"Ikeja"**. Nothing else on it: no "Road" or "Street", no number, no crest, no colours of any real sign or any party. The plate's words are drawn in screen pixels, at least 12 px bold, so they read at 320 x 240. It is scenery: the hero walks in front of it, it is not solid, and it sits behind every crate, coin and hazard.
+
+**Rules for the first screen:**
+1. **No level gets harder or easier.** Every tired and bright piece is scenery in the back layers. No solid piece, coin, crate, food, hazard, hint, checkpoint, speed or camera moves or changes. The level files do not change.
+2. **Never a hazard you cannot see coming, and never a false one.** No crack is a hole, no cone stands on the road, nothing dark lies on the walking line.
+3. **Painted once:** both looks go into the street's still row pictures when the run starts (`blitLayer`), never drawn piece by piece each frame.
+4. **Spoken:** when the run starts, the live line says the street's name once ("Alausa"). The look itself is not spoken; it does not change play.
+5. **The hall and the lane run** keep their own looks. The hall is not a city spot yet; the lane run is already the dusk main road to a bus stop where the lamps come on.
+
+### 7. Links
+
+| From | Words | Goes to |
+|---|---|---|
+| City, bottom row | **"Challenge road"** (was "Streets"). At 400 px wide or less it may wrap to two lines ("Challenge / road"), and so may "Nigeria's wheel", each at most 88 px wide and 44 px tall, so the row and the zoom column still fit 320 x 240 | the road, on the Next stop |
+| City problem cards (Potholes, Lights out, Slow internet) | a new small button **"See the stop"** beside "Back". The big button stays: "Run Alausa" or "Lane run" still starts the run at once, so a first-timer's path is no longer | the road, scrolled to that stop with its card open, "for" that card's fix (part 2) |
+| Pause (streets, well room, hall) | "Challenge road" (was "Streets") | leaves the run as "Streets" did, then the road on that stop |
+| Out of lives | "Challenge road" (was "Streets") | the road on that stop |
+| Street cleared | small "Challenge road" (was "Streets"); "Take it home" stays the big button | everything won goes home first (as now), then the road on that stop |
+| Win (after the hall) | "Challenge road" (was "Streets") | the road on the hall stop |
+| Road, "Home" | | Lagos city |
+| Stop card, "Back" | | the road, where it was |
+
+The Streets screen and its words (`WORDS.streets`, "Fix 3 streets, then clear Go-Slow Hall.") go. Its "Nigeria's wheel" button is not carried over: the city's bottom row already has one (CR-R2). The wheel's Back goes to where it was opened from (the city or the title).
+
+### 8. Rules
+
+1. **No level gets harder or easier** (part 6). The stops change where you start a run, not the run.
+2. **Saves carry over.** The road reads the same records the Streets screen read: streets done and best in `gidi-progress`, the hall, the parcel, and the lane part's `best` and `goals`. Unlocks follow S2.8 unchanged. Nothing new is saved but the hint id `road`. An old save opens the road with its stops done, open and locked as its Streets screen showed them. A broken save shows every stop as a new player sees it and writes nothing (S2.8).
+3. **Losing keeps everything collected; a win pays for the fix it was for** (decisions 38, 45, 66, 67). LR-Q2's rule stays: a lane run for the Lamps that also brings Tech 6 makes the Mast "Ready" in the city.
+4. **The Android back button** (ST0 part 3; its "Streets" entry now means the road):
+
+   | Where | Back does |
+   |---|---|
+   | The road | The same as "Home": Lagos city |
+   | A stop card | The same as "Back": the card closes and the road stays where it was |
+   | A stop card opened from a city card's "See the stop" | The same as "Back": the card closes onto the road (one step at a time); back again goes to the city |
+
+   Back never starts a run and never loses anything won. Presses in the first 0.4 s of the road or a card are ignored (ST0 rule 2). Keys: Escape does what back does.
+5. **One tap, one thing.** Taps in the first 0.4 s after the road or a card opens are ignored (`EVENT_SCREEN_GUARD_MS`). A scroll is never a tap.
+
+### 9. Look, sound and reach
+
+- **Our own look.** A Lagos road at midday in the city's bright code-drawn style: danfo-yellow stop plates, our own shelters, yellow danfos, low blocks, palms, the lagoon and our own jetty and ferry. No real building, bus company, brand or sign, and no writing but the stop names. Not a board-game path, not a world map with dots on a path like any famous platform game (city.md part 6 rule 4), nothing from Mario or any Nintendo game.
+- **Mock no one.** Every stop is a real, proud place. Tired is warm and proud (d2): every tired first screen has someone doing something proud; nobody is the problem; no place is drawn worse than another; problem words never sit by a place name.
+- **Sound.** No new sound or tune. The menu tune carries on; a tap on an open stop gives the usual button sound; a locked stop `lockedTuk`; the big button the `horn` (d7). All follow the Sound and Music switches.
+- **Reduced motion.** No bob on the Next stop, no ease when focusing a stop (it jumps), the card opens with no slide, the danfo at the Next stop stays still, the mast light in the Computer Village run stays steady.
+- **Screen readers.** The road is a region called "Challenge road" holding an ordered list "Challenge road stops", in road order: Alausa, Lane run, Computer Village, Ikeja, Go-Slow Hall, Ferry. Each stop is a button that says:
+  - "Stop 1, Alausa. Done. Best 8 naira 70 kobo."
+  - "Side road, Lane run. Ready to play. Best 840 metres."
+  - "Stop 2, Computer Village. Next. Ready to play."
+  - "Stop 3, Ikeja. Locked. Finish Computer Village first."
+  - "Stop 4, Go-Slow Hall. Locked. Finish Ikeja first." (with a parcel: "... You have a garri parcel.")
+  - "Ferry. Coming soon. Fixes to go: 3." (after the boom: "Ferry. Built. More stops coming soon.")
+
+  A locked stop is a button with `aria-disabled="true"` that still opens its card. The road picture and the edge arrows are hidden from screen readers.
+- **Keys.** Tab and Shift+Tab move along the stops in road order; ← and → do the same; Enter or Space opens a card; Escape is Back on a card and Home on the road.
+- **Tap targets.** Stops 112 x 64 (times `s`), Home, Sound, the arrows and Back at least 44 x 44, the card's big button at least 56 tall.
+- **Gentle mode** changes nothing here; it still counts from the next run.
+- **Size budget (gzipped), about 18 KB in all, S3e1:** city.md (e) 12 KB (art 6: road picture 4, plates, icons and shelters 1, jetty looks and the card's sign, danfo and hero overlay 1; code 6: the road screen, scale, scroll and arrows 3, stop states and the list 1, the stop card and its cut 2) plus W17 C about 6 KB (art 4: the tired and bright pieces of part 6 for the three streets 3.5, the street sign 0.5; code 2: the look hookup, the stretch and the blend 1.5, the city card links 0.5). That is plan rows S3e1a (~10 KB) and S3e1b (~8 KB). The first load stays far under 3 MB.
+- **Light on a cheap phone.** The road is one still picture and plain buttons: idle, it draws nothing. Scrolling is the phone's own scroll, at least 55 fps at 4x CPU slowdown. The bob is one CSS transform. The card's cut is one image draw (about 1 ms). The first-screen looks are painted once into the row pictures when the run starts: no extra work per frame, and the run's first frame comes no more than 30 ms later on the slow phone profile than it does today.
+
+### 10. Who does what
+
+**art (S3e1a), from this note; gamedev uses plain shapes until it lands:**
+1. The road picture, 680 x 168 road units (part 4): the main road with two gentle bends, kerbs and lane dashes; the side road from x 132 up to the Lane run stop with three stuck danfos queued on it; low blocks, a palm, a mango tree, a kiosk and a market umbrella on the edges; the lagoon shore at the right end.
+2. The jetty end in two looks: before the first boom (posts and a stack of planks, no words) and after (the jetty and ferry, matching the city's `drawJetty`).
+3. A bus stop shelter (a small roof on two posts and a bench) for each main stop.
+4. The stop plate in its looks: danfo yellow and sand with a 2 px dark outline; the Next pennant with an arrow; the round tick badge; the 16 px icons: padlock, bus, tick, ferry, parcel, house (Home), speaker on and off (small Sound).
+5. The small danfo parked at the Next stop.
+6. The card overlay at card size: the danfo-yellow stop sign with a name, a danfo with its door open, the hero you built stepping in (every body; reuse the city hero and `drawCityBus` where they fit).
+7. W17 C, for each of the three streets, the tired and bright pieces of part 6: faded walls and dark windows, shutters (2 of the first 4 fronts), goods out front, the kerb sack and box, the people (1 tired, 4 bright, and what each does), Alausa's cracks and two cones, Computer Village's mast with 1 and 4 bars and its screens, Ikeja's lamps off and on.
+8. The plain street sign: pole and cream plate, words drawn in screen pixels.
+9. A gallery page for qa (like galleryBright.ts): the road at 320 x 240, 568 x 320, 851 x 393 and 1920 x 1080 with every stop state; each street's first screen tired and bright side by side; the card pictures tired and bright.
+10. docs/assets.md lines for each piece, with its size. Under 10 KB in all.
+
+**gamedev (S3e1b), can start the screen now with plain shapes:**
+1. The road screen (parts 3, 4): scale, the top row, native sideways scroll, the edge arrows, where it opens, focus scrolling, the hint once.
+2. A pure, tested `stopCards()` (like `streetCards()`) giving each stop's state, Next, best, what it is "for", its card words and its spoken words.
+3. The stop card (part 5): layout, the cut from the still city picture with the overlay, the fallback, the words, the big button starting the run "for" its fix (CR-Q1 a), "Back".
+4. The links (part 7): "Challenge road" in the city row (and the two-line rule), "See the stop" on the three problem cards, every "Streets" button renamed and pointed at the road on the right stop; remove the Streets screen; the wheel's Back.
+5. The first screen (part 6): read the look when a street run starts; the stretch, the blend, the street sign, `fixedLook` held back inside a tired stretch; the spoken name at the start.
+6. Back button and keys (part 8), reduced motion and the screen reader list (part 9), all words in src/screens/words.ts.
+7. Tests: the level files unchanged; a scripted street 1 run gives the same hero path, kobo and lives tired and bright; `stopCards()` for a new save, an old Streets-screen save, each fix order and a broken save.
+
+### 11. Done checks for qa
+
+1. **Layout:** at 320 x 240 (also with "Sound: off"), 568 x 320, 640 x 360, 851 x 393, 1920 x 1080 and upright 393 x 851, the top row fits, every stop's name and lines are whole, every stop is at least 44 px tall and every button at least 44 x 44; the road scrolls only where part 4 says, and an arrow shows only when there is more road that way.
+2. **States:** a new save shows Alausa Next, the Lane run open, Computer Village, Ikeja and the hall locked, and the Ferry "Coming soon" with "Fixes to go: 5"; each state reads in greyscale by its icon and word; only one Next; best shows on done stops only, in money words or metres.
+3. **Saves:** a save made on the Streets screen (streets 1 and 2 done, bests, a parcel, a lane best) opens the road with the same stops done, open and locked, the same bests and the parcel on the hall; a broken save writes nothing; the hint shows once.
+4. **Cards:** every row of the part 5 table appears with exactly those words for its state; the picture is the right cut, tired or bright as the city is, with the sign, the danfo and the hero you built; no problem line names a place; the hall card shows the hall picture.
+5. **For (CR-Q1 a):** a first Alausa win from the stop brings ₦14 and plays "Mission complete!" at the road; a Lane run win from the stop pays the Lamps first, then the Mast; a Computer Village or Ikeja win goes to the bus park with "You brought ... home."; "See the stop" from the Slow internet card plays for the Mast.
+6. **First screen:** each street, before and after its fix, matches part 6 (qa puts the pictures side by side at 851 x 393 and 320 x 240); the street sign reads at 320 x 240; the secret well in Ikeja is as before; nothing tired is on the walking line; with the hall done, no bunting over a tired stretch.
+7. **No level gets harder or easier:** the level files are byte for byte the same; the scripted-run test gives the same path, kobo and lives in both looks; a first-timer still finishes Alausa in 3 tries or fewer, and nobody jumps at the scenery cones.
+8. **Links and back:** every link in part 7 goes where it says; Android back and Escape follow part 8; back pressed 10 times fast from a card never starts a run or closes the game; a scroll never opens a stop.
+9. **Reach:** a screen reader hears the road as a list in road order with part 9's words, and each card as a dialog with the big button first; Tab, ←, →, Enter, Space and Escape work; reduced motion as part 9.
+10. **Speed and size:** the road idle draws nothing; scrolling at least 55 fps at 4x CPU; a street's first frame no more than 30 ms later than before on the slow phone profile; S3e1 adds no more than about 18 KB gzipped.
+11. **Original and kind:** not a path-and-dots world map (city.md part 6 rule 4), nothing from Mario or any Nintendo game, no brand, crest or real sign; d2's tired rule and W11 pass; every place is shown with pride.
+
+## People everywhere (designer, 15 Nov 2026: Tp "no persons in the game? It's boring")
+
+Task S3g0. Tp and a tester, 15 Nov: "no persons in the game? It's boring, it's just one person, even on the lane run." Today the streets, the hall, the lane run and the city have only a few people, mostly standing still, and only the hero moves. This note brings Lagos to life with ordinary people going about their day. It is the source for S3g1a (art) and S3g1b (gamedev). Where an older note gives a smaller number of people for a place, this note wins, except the first screen of each street, which keeps S3e0 part 6 exactly (1 person tired, 4 bright).
+
+Sources: rules 2, 3, 4, 6 and 7 in CLAUDE.md; decisions 2, 21, 22, 29, 30, 37, 42, 43, 47, 48 and 64; S2.1 (layers), S2.5 (the well), S2.6 (streets), S2.7 (the hall), S3e0 part 6 (tired and bright first screens), S3f0 parts 15, 16 and 17 (lane layout, look, sound); city.md W2, W4, W5, W17 and the moment's walk-in (`MOVING_PEOPLE` = 8). The code that already draws people: `person()` and the `waving` and `trader` scenery in src/art/lane.ts; `drawCityFolk`, `drawProudFolk` and `drawChildrenWithBall` in src/art/bright.ts; the city walkers in src/screens/city.ts and src/game/moment.ts.
+
+Open: nothing for Tp. Six small rulings (PE-R1 to PE-R6) follow the team's recommendation under decision 64; they are in docs/questions.md for the lead to report in one line each. This note is built on them.
+
+### 1. The idea, in one line
+
+Lagos is full of ordinary, friendly people doing their day: walking to work, selling, waiting for the bus, playing, riding past. They live in the background and on the pavement. Some notice the hero: they wave, step aside, and cheer when a problem is cleared and when the hero reaches the bus.
+
+- **Who sees it:** every player, in every challenge and in the city.
+- **The one job:** make Lagos feel alive and on the hero's side.
+- **New thing it teaches:** nothing. People are scenery. The game never asks the player to do anything with a person.
+
+### 2. The five rules (every place, every person)
+
+1. **Never in the way.** People are never in the hero's path, never in a lane, never solid, never something to dodge, jump on, hit, throw at or collect. They have no hitbox. The hero, every throw (fufu, corn) and every hazard pass them without touching. No level file changes, and no level gets harder or easier.
+2. **Never hurt, never scared.** Nothing ever hits, knocks, chases, splashes or frightens a person. A rolling tyre or drum never rolls toward one. When the dark comes, people go inside and light their own lamps (part 7). Nobody falls, cries or runs in fear.
+3. **Never the problem.** No person drops rubbish, honks, blocks the road, causes the jam, cuts the power or slows the internet. Bosses and hazards stay problems, never people (rule 2, decision 2). No faces in the boss's cars and buses.
+4. **Never laughing at the hero.** When the hero loses a life, nobody reacts at all: no laugh, no bubble, no pointing. People only cheer good things (PE-R3).
+5. **Never a joke.** All skin tones, ages, bodies and dress from every part of Nigeria, shown with pride (part 8). No group singled out. No real people (rule 3), no uniforms (decision 37).
+
+### 3. Where people stand in a street (side view)
+
+The street is drawn in layers (S2.1). People live in **one new layer, the back pavement**: drawn after the shop row and the backs of the stalls, before the road and before every crate, coin, food, hazard, sign and the hero (PE-R1).
+
+- **Feet line:** y = groundY − 8 (y 292), so their feet sit visibly above the hero's feet at y 300: they read as "further back, on the pavement by the shops".
+- **Size:** 0.85 of the hero's height (adults about 37 u tall, teens 33, children 26, elders 36, standing tall). The hero is always the biggest person on the screen and the only one in front.
+- **Outline:** 1.5 u, thinner than the hero's 2 u. Full colour, never faded or greyed (decision 47: warm and proud). No person ever wears the player's own hero look (the same skin, hair and outfit together): the cast skips that look.
+- **Never on the front pavement strip** (y 360 to 420, under the see-through buttons, S2.1). It stays plain so the buttons read.
+- **Clear zones** (no person stands or walks here; x in level units, from the level file):
+  - every pothole and gap, from 40 before its left lip to 40 past its right lip;
+  - every well, ± 120 (nobody stands at, looks at or points at a well: it stays a secret to find);
+  - every pothole warning sign, ± 30;
+  - every stall roof platform, from 20 before it to 20 past it;
+  - every crate pole, ± 30;
+  - every hazard's start point (goat, tyre, drum) and every rubbish pile with birds (decision 43), ± 80;
+  - every coin or food lower than 40 u above the road, ± 20;
+  - the start fence, the checkpoint bus stop and the bus park, which have their own people (part 5).
+- **Spots:** gamedev works out the free stretches from the level file when the street loads, the same every try (a fixed seed per street). A free stretch of 60 u or more can hold standing people; 200 u or more can also hold one walker.
+- **How many** (a screen is about 568 u wide):
+
+| Street look | Standing | Walking | At most on one screen |
+|---|---|---|---|
+| Tired (its spot not fixed yet, S3e0) | 1 per 320 u of free back pavement | 1 per 900 u | 4 |
+| Bright (its spot fixed) | 1 per 160 u | 1 per 450 u | 8 |
+| Fixed look (after the hall, S2.8) | as bright, plus 1 pair of children per street | as bright | 9 |
+
+The first screen keeps S3e0 part 6 exactly (1 person tired, 4 bright, the same proud jobs). The counts above start after it.
+
+### 4. Who is in each street
+
+Each street has its own cast of about 16 looks (part 8), baked once (part 11). Everyone has something to do.
+
+**Alausa (street 1, morning, home):**
+- Walkers going to work: a woman in iro and buba with a gele and a handbag, a man in a shirt and trousers with a small bag, a teen with a school bag (plain uniform, no crest).
+- Standing: a woman sweeping her own front (S3e0's proud one), a man reading a paper by a door, a mother with a baby tied on her back in a wrapper, an elder in a kaftan and cap sitting on a bench outside a door.
+- Traders: an akara seller at a small pot and table (a steam puff), a bread seller with a tray on her head.
+- Children playing: two children with a small ball that bounces between them in place, never toward the road (never gold or yellow, so it never looks like a kobo); or two girls clapping and stepping a game of ten-ten.
+- Bus stop (checkpoint): 2 people waiting under the shelter.
+
+**Computer Village (street 2, midday, market):**
+- Walkers: buyers with a phone in hand, a porter with goods in a basin on the head, a woman in a hijab and long dress with a shopping bag, a student with a backpack.
+- Traders at stalls: the phone accessories trader holding up a case, the fabric trader with a roll of ankara over one arm, the pepper trader at her basket, the tailor at a sewing machine.
+- Standing: two friends chatting, a buyer checking a phone, a man in an isiagu-style top (our own pattern) at a stall.
+- Children: a child carrying a small bag, walking with a parent.
+- Bus stop: 3 people waiting.
+
+**Ikeja (street 3, evening, bus park):**
+- Walkers: travellers with a bag on a shoulder or a box on the head, a man in babban riga with a cap, a woman in a long wrapper and blouse with a basket.
+- Traders: the suya man at his grill (the smoke is already drawn), the ticket seller at the kiosk window, a buka cook at her pots.
+- Sitting: two people eating on the buka bench, an elder couple on a bench.
+- The vulcanizer at work, standing at the compressor (never rolling a tyre).
+- Children: a child holding a parent's hand.
+- Everyone keeps away from the rubbish piles and the birds (clear zone): people are never shown as the ones who made the rubbish.
+- Bus stop: 3 people waiting.
+
+**Moving past in the far background** (every street, in the layer of the passing bus, `drawPassingBus`):
+- **Danfo passengers:** the passing yellow bus and the parked buses at the start fence and the bus park show 3 to 5 heads in their windows (simple heads and shoulders, every skin tone), one arm waving when the hero is near. Streets only, never in the lane run (PE-R5).
+- **An okada passing:** a motorcycle with a rider and one passenger crosses the far road, left to right or right to left, about once every 25 s of play, at about 300 u/s (about 2 s across a screen). The rider wears a plain helmet (one flat colour, no writing, no badge); the passenger holds a market bag. It is never on the hero's road and never comes toward the hero.
+- **The keke** (Computer Village) passes the same way as today, now with a driver and two passengers.
+
+### 5. What people do when the hero is near (streets, well room, hall)
+
+| Moment | Who | What they do | How long |
+|---|---|---|---|
+| The hero comes within 140 u | a standing person | waves once (2 frames, arm up and down) | 1 s, then not again for 10 s |
+| The hero comes within 60 u, the two walking toward each other | a walker | stops, turns side-on and steps 4 u back toward the shop wall, waits, then walks on | until the hero is 60 u past |
+| A trader is on screen | the trader | calls out once (a bubble, part 6) | 1.6 s, then not again for 12 s |
+| A problem is cleared: a goat eats fufu and wanders off, a drum is smashed, thorny weeds dry up, a signed wide pothole is jumped | the 3 nearest people on screen | cheer: both arms up, a small hop (2 frames), one bubble from one of them | 1 s; at most one cheer every 4 s |
+| The checkpoint bus stop lights | the people at the stop | cheer, then wave | 1.5 s |
+| The hero reaches the bus park | the crowd at the bus park (5) and the passengers in the bus windows | cheer from the hero's hop on (`BUS_END.hopEnd`) to the pull away, then wave the bus off | about 1.4 s |
+| A life is lost | everyone | nothing at all (rule 4) | |
+
+- Only people drawn on screen react. Nobody walks toward the hero, follows the hero or crowds round.
+- Walkers walk at 30 to 45 u/s (slower than the hero's walk), each in its own free stretch, turning round at its ends or stepping into a shop door and coming back out 3 s later.
+- **The street end:** the bus park gets 5 people waiting by the shelter (one elder sitting, one child, one with a box on the head). When the bus pulls away, 2 of them step up to the kerb for the next bus.
+
+**The well room (S2.5):** a store room under a compound, so it gets one kind person and a sign of life above (PE-R4).
+- **The store keeper:** an elder woman in a wrapper and headscarf, sitting on a low stool by the back wall between the baskets and the pots, well away from the rope (room x 60 to 100, at the back, never on the walking line, no hitbox). When the hero comes down she waves; when the hero picks up the garri parcel she claps and her bubble says "For the boss. Go well!"; when the hero goes up she waves.
+- **Life above:** every 6 s a soft shadow of feet crosses one of the ceiling light holes (a moving dark oval inside the light shaft, never covering a coin). None with reduced motion.
+
+**Go-Slow Hall (S2.7):**
+- **In the fight:** 3 people stand at the open roller-shutter door on the left, outside, behind the hero's start (beyond the left wall at hero limit 30, never on the hall floor). On wide screens, 2 to 4 more stand on the pavement outside the cut walls. They are travellers waiting for the jam to clear: a woman with a basket, a teen, an elder in agbada.
+- **On each hit:** the door people cheer and one bubble shows ("Ehen!" on hit 1, "Well done!" on hit 2). Not while a throw is in the air within 120 u of them on screen, so a bubble never covers a tyre or a honk.
+- **They never boo, point at or laugh at General Go-Slow.** The boss is a problem; they cheer the road opening, not the boss losing.
+- **The funny, kind finish:** at 2.5 s (the last cars drive out), the door people walk in and 4 more follow (7 at most), stopping along the back wall, well clear of the floor arrows. From 3.0 to 4.2 s, as the roof lamps come on one by one, they clap. At 4.5 s ("Lagos is switched on!") they all cheer, arms up. The danfos driving out through the right doors show passengers waving from the windows (these are the freed buses going home, not the boss's heap).
+
+### 6. Bubbles: what people say
+
+A small cream bubble (`#fffaf0`, a 1.5 u dark outline `#1d1a14`, a short tail to the speaker), with bold dark words of at least 12 screen px. Only one bubble on screen at a time. A bubble never covers the hero, a hazard, a coin, a food, a button, the HUD or a toast: if it would, it is not shown. Bubbles carry no meaning: the game never needs one (PE-R2).
+
+Every language gets an equal share (decision 30). The words go in src/screens/words.ts:
+
+| Kind | Words |
+|---|---|
+| Greetings (Alausa, morning) | "Good morning!", "Ẹ káàárọ̀!" (Yoruba, good morning), "Ina kwana!" (Hausa, good morning), "Ụtụtụ ọma!" (Igbo, good morning) |
+| Greetings (any time) | "Hello!", "Sannu!" (Hausa), "Ndewo!" (Igbo), "Ẹ n lẹ́ o!" (Yoruba), "How far?" (Pidgin) |
+| Traders | Alausa: "Hot akara!", "Fresh bread!" · Computer Village: "Phone case here!", "Charger, charger!", "Fine cloth!", "Fresh pepper!" · Ikeja: "Suya dey!", "Tickets here!", "Hot food!" |
+| Cheers | "Well done!", "Nice one!", "Ehen!", "You do well!" (Pidgin), "Ẹ kú iṣẹ́!" (Yoruba, well done), "Madalla!" (Hausa, well done), "I meela!" (Igbo, well done), "Oya, go!" |
+| Bus | "Bus don come!" (Pidgin), "Safe trip!" |
+| The store keeper | "For the boss. Go well!" |
+
+- **Tone marks:** gamedev bakes each bubble once with the phone's own font. qa checks every bubble on the slow Android profile; if any letter shows as a box, that bubble uses the plain spelling instead: "E kaaro!", "Ututu oma!", "E n le o!", "E ku ise!".
+- A trader calls only their own street's lines; a greeting may be in any language on any street, picked by the same seed every try.
+- Later states add their own languages' greetings and cheers with the same care (decision 30). Every new line is checked by a speaker of that language before it ships.
+
+### 7. The lane run (seen from behind)
+
+Rule 1 is strongest here: **people are never in a lane, never cross a kerb and never stand on the divider.** Everyone is on the two pavements, at the windows or up on the footbridge. Danfos in the lanes keep their dark back windows with no one shown (PE-R5, S3f0 part 16).
+
+- **Busier pavements:** every scenery piece in `LANE_SCENERY` gets 1 to 3 people with it: buyers at the corn seller and the fruit table, someone holding up cloth at the fabric stall, a child at the kiosk, two people at the charging stand looking at their phones, someone sitting under the market umbrella. Between pieces, walkers on the pavement walk with or against the run (they move slowly in the world; the run carries them past). About 2 people per 10 m of pavement on each side, so 8 to 14 people show at once.
+- **Windows:** a low row of two-storey fronts stands behind each pavement (baked as tiles, part 11). One window in four has a person leaning out, who waves as the hero comes near (2 frames).
+- **The footbridge** (every 200 m): 3 to 6 people on the deck, heads and shoulders above the railing, cheer and wave as the hero runs under. Scenery only, high above, never something to duck (S3f0 part 16).
+- **Running alongside:** now and then a friendly jogger, or two children, run on the pavement beside the hero for a short stretch:
+  - at most one at a time, about once every 150 m, never in the first 100 m of a run, and never while the Blackout is under 30 m behind (the bottom of the screen is darkening then);
+  - on the pavement only, 6 to 10 m ahead of the hero, so they draw above the bottom of the screen, where the ◀ ▶ ▲ ▼ buttons and thumbs are (part 15);
+  - they keep pace for 3 to 4 s, then slow down, wave and drop back. They are never a racer, a pacer or a target, and carry no meaning;
+  - a jogger is an adult in a T-shirt and shorts or a tracksuit (plain, no writing); the children are two school-age children with school bags.
+- **The dark behind you means people go inside, never harmed.** Where a lamp is off or switching off (`lampLookAt` 'off', and the near lamps that go out as the Blackout closes in), the people under it step into a doorway, the door shuts, and a soft warm lantern glow comes on in a window above (a rechargeable lamp, a real Lagos sight in a power cut). Under an off lamp the pavement is empty and the windows glow. Nobody is shown in the Blackout's dark edge, nobody is caught, nobody looks scared. When a lamp comes back on, people come back out.
+- **The bus stop (goal):** the people under the roof (S3f0 part 16) become a crowd of 5, who cheer as the hero arrives and wave as the danfo pulls in.
+- **Far and small:** a person whose drawn height would be under 6 screen px is not drawn.
+
+### 8. Variety and respect
+
+**Every cast mixes all of these** (no street's cast is all one kind):
+- **Skin:** the five skin tones of the hero builder, plus a lighter brown and a deeper brown, so seven in all. Across a street's 16 looks, every tone shows at least twice.
+- **Age:** children (about 7 to 10), teens, adults and elders. Elders stand tall with no walking stick; elder men may have a short, neat grey beard (decision 21).
+- **Bodies:** slim, medium and round; short and tall. One person per street uses a wheelchair, on the pavement, doing the same things as everyone (waiting at the bus stop, selling, cheering), never shown as sad or in need. One person per street wears glasses.
+- **Dress from every part of Nigeria:** iro and buba with a gele; buba and sokoto with a fila; agbada; a kaftan with a cap; babban riga with a cap; a long dress with a hijab; a wrapper and blouse with a headscarf; an isiagu-style top (our own pattern); an etibo shirt; a striped wrapper in the A'nger style (our own pattern); jeans and a T-shirt; a shirt and trousers; a plain school uniform with no crest. All patterns are our own drawings.
+- **Jobs:** traders, a tailor, a cook, a vulcanizer, a porter, office workers, students, a parent with a child. Every job is shown with pride; nobody's job is the joke.
+
+**Never:**
+- No real people: no politician, official, celebrity, footballer or musician, and none of their faces, names, famous clothes or poses (rule 3).
+- No uniforms: no police, soldiers, traffic wardens, road officers or guards; no badges, high-visibility vests or caps with a crest (decision 37). A plain school uniform and a plain okada helmet are allowed.
+- No party colours, logos, sashes or campaign clothes; no clothes or umbrellas with printing or a face on them (rule 3).
+- No brands or writing on any clothes or bags (rule 2, S2.6).
+- No red caps on anyone (rule 2: never like Mario), and no chief's cap or title regalia.
+- No herder or herder's staff (decision 29); no beggars, touts, "area boys" or pickpockets: no role that points at a group.
+- No faith singled out: a hijab or a cap is everyday dress, shown like any other. No robes of office and no holy places.
+- Nobody shown as lazy, dirty, angry, poor or to blame. Tired streets have people doing proud things (S3e0 part 6).
+
+### 9. The city from above
+
+The city already has standing people per block (`BLOCK_LIFE`) and walkers in the "watch it change" moment (`MOVING_PEOPLE` = 8). Now it also has **people walking about all the time**, more as Lagos brightens (decision 47).
+
+- **Ambient walkers on screen:** 3, plus 1 for each fix or build done, plus 2 for each Booming step reached, with at most 12 moving at once in the view. They walk the pavements between places along the walk grid (src/game/walkGrid.ts), at the hero's speed or slower, and go into doors or off the edge of the map, with new ones coming in.
+- **More where it is bright:** a walker's route picks bright blocks 3 times as often as tired ones. Tired blocks still have people passing (warm, never empty).
+- **The Mama Put** (once built): a queue of 3 at the counter. Every 6 s of play, the first one leaves with a wrapped plate or a takeaway pack and a new one joins the back. The cook behind the counter waves when the hero collects the tray.
+- **The Market** (once built): 5 shoppers among the stalls: one with a basket on her head, two looking at goods, a trader showing cloth. They move a little between stalls every few seconds.
+- **The bus park:** 2 to 4 people waiting, more after the first boom.
+- **Pay spots and trays:** no walker ever stands on, or stops within 16 u of, a pay spot, a tray or a pin's tap area (W2, W4, S3f0 part 22). They walk across and keep going.
+- **The hero:** walkers are not solid. If the hero comes within 14 u, a walker stops, steps to the edge of the pavement, waves, then walks on.
+- **During "watch it change":** the moment's own walkers come first (the cap of 8 moving stays, city.md). Ambient walkers in the view stop where they are and turn to watch; at the sting they cheer (arms up, 1 s); then they walk on.
+- **Zoomed far out:** a walker whose drawn height would be under 6 screen px is not drawn.
+
+### 10. Win moments
+
+- **Mission complete!** (W5): as the hero steps off the bus, 4 to 6 city people by the stop cheer, arms up, for 2 s; then 2 of them walk off and the rest join the still picture. Several skin tones among them.
+- **Street cleared:** the bus park crowd and the bus passengers cheer (part 5), then the card shows.
+- **Go-Slow Hall:** the crowd comes in and cheers at "Lagos is switched on!" (part 5).
+- **Lane run goal:** the crowd of 5 at the bus stop cheers (part 7).
+- The cards themselves (Street cleared, Win, Mission complete) do not change: their words and buttons stay as they are (S2.10, W8).
+
+### 11. Speed and size
+
+**Cheap sprite people, baked once per look:**
+- A person is built from a small kit (body shape, head, hair or headwear, top, bottom or wrapper, skin) in one code file. When a street, the hall, the well room, the lane run or the city opens, gamedev bakes only that place's cast (about 16 looks) into one offscreen sprite sheet at the screen's pixel scale (as `blitLayer` does). Frames per look: stand, walk (4), wave (2), cheer (2), and call or sit where that look needs it: at most 10.
+- The sheet is at most 1024 x 1024 px (about 4 MB of memory). It is baked again only when the screen size or pixel scale changes.
+- The bake happens before the first frame, inside the fade, in at most 40 ms on the slow phone profile; a street's first frame comes no more than 30 ms later than today (S3e0's limit, with both changes together).
+- Each frame, a person is one `drawImage`. Bubbles are baked once per line too. Faces in windows and on the footbridge are drawn into the baked window tiles and the footbridge picture in two looks (still and waving), not one by one.
+- **Limits per frame:** at most 12 people drawn in a street, 9 in the hall, 2 in the well room, 24 in the lane run (window faces count as part of their tile), and in the city 12 moving plus the still picture.
+- **Time:** people (update and draw) take at most 1.5 ms a frame at 4x CPU slowdown. Every challenge keeps at least 45 fps at 4x CPU and 60 fps on a mid phone (city.md part 3).
+- **Backing off:** if the frame time over the last 2 s is above 22 ms (under 45 fps), drop walkers and joggers first, then half the standing people, until it recovers; never the first screen's S3e0 people. They come back only at the next run.
+- **No change to the game:** people have no effect on the game's state. With people on or off, a scripted run gives the same hero path, kobo, lives and result.
+- **Reduced motion:** walkers stand still where they are, joggers and the okada do not run, the shadows over the light holes do not move; a wave or a cheer shows as one still pose (arm up) for the same time, with no hop; bubbles still show.
+
+**Size budget (gzipped), aim under 20 KB in all:**
+
+| Part | Owner | KB |
+|---|---|---|
+| The people kit: bodies, heads, hair and headwear, 13 dress kinds, 7 skins, frames | art (src/art/folk.ts) | 8 |
+| Okada and rider, keke riders, heads in bus windows, lane window tiles, footbridge crowd, store keeper | art | 3 |
+| The bubble look | art | 0.5 |
+| Casts, spot finding with the clear zones, walkers, reactions, the bake | gamedev (src/game/crowd.ts) | 4.5 |
+| Lane run and city hookup (lamps, joggers, queues, ambient walkers) | gamedev | 2 |
+| Crowd sounds | art (src/engine/sound.ts) | 1 |
+| Words | gamedev (src/screens/words.ts) | 0.5 |
+| **In all** | | **19.5** |
+
+### 12. Sound (our own, made in code; follows the Sound switch)
+
+- **A light crowd murmur:** a soft, low, filtered noise bed with a slow rise and fall, like many people far away. It plays only while 5 or more people are on screen (streets 2 and 3, the bus park, the hall's finish, the city near the Market), very quiet, under every game sound, fading in and out over 1 s.
+- **A cheer:** 0.8 s, a swell of breathy noise and a few quick claps. A bigger one (1.2 s) for the bus park, the hall's finish and Mission complete. At most one cheer every 4 s.
+- **No voices say words.** Bubbles are silent.
+- **Never over a warning:** no murmur or cheer while a warning sound plays (the drum's roll, the high honk, the Blackout's "tunk"), and none while the corn tune plays (decision 42).
+- Sound off, or the iPhone silent switch, means none (decision 22). No new switch (PE-R6).
+
+### 13. Accessibility
+
+- People carry no meaning, so nothing depends on seeing them, on colour or on reading a bubble.
+- Screen readers hear nothing new during play (people are not announced); the canvas stays hidden from them as today.
+- No flashing: a cheer is a pose, never a flash.
+- Reduced motion as in part 11.
+- Buttons, the HUD and toasts are never covered (parts 3, 6 and 7).
+
+### 14. Who does what
+
+**art (S3g1a), from this note:**
+1. **The people kit** (src/art/folk.ts), our own look, matching the decision 60 shading at small size: bodies (slim, medium, round; child, teen, adult, elder; male and female), 7 skin tones, hair (low cut, afro, braids, cornrows, grey for elders) and headwear (gele, headscarf, hijab, fila, kaftan cap, babban riga cap), the 13 dress kinds of part 8 with our own patterns, a baby tied on a back, glasses, a wheelchair. Frames: stand, walk (4), wave (2), cheer (2), call, sit.
+2. **What they hold:** a handbag, a school bag, a backpack, a tray on the head (bread), a basin on the head (goods), a box on the head, a basket, a phone, a broom, a paper, a market bag, a wrapped plate and a takeaway pack, a small ball (never gold or yellow).
+3. **Traders' small stations:** the akara pot and table with steam, a phone case held up, an ankara roll over an arm, the tailor's machine (reuse the market art), the buka cook's pots (reuse buspark.ts).
+4. **The okada** (side on): a plain motorcycle, a rider in a plain one-colour helmet, a passenger with a bag; 2 wheel frames. **Keke riders:** a driver and two passengers for the existing keke.
+5. **Heads in bus windows:** heads and shoulders for the passing bus, the start fence bus and the bus park bus, still and with one arm waving.
+6. **The store keeper** for the well room: an elder woman in a wrapper and headscarf on a low stool; sit, wave, clap.
+7. **The hall crowd:** the door people (3) and the walk-in (4 more), several skin tones, standing, cheering, clapping; passengers waving from the danfos driving out.
+8. **Lane run:** people from behind and three-quarter, at lane scale (or the kit drawn through the perspective scale); the two-storey fronts tile with windows (empty, a person waving in 2 frames, a warm lantern glow); the footbridge crowd above the railing (still and waving); a jogger and two children running (4 frames); a doorway with its door open and shut.
+9. **City:** ambient walkers made from the kit at city size (or `drawCityFolk` with every skin and dress colour), the Mama Put queue and its cook, Market shoppers, the cheer pose at city size.
+10. **The bubble** look (part 6), with its tail.
+11. **Sounds** in src/engine/sound.ts: the murmur bed and the two cheers (part 12).
+12. **A gallery page for qa** (like galleryBright.ts): the whole kit in every dress and skin; each street's cast; a street, tired and bright, at 851 x 393 and 320 x 240 with people placed; the hall in the fight and at the finish; the well room; a lane run frame with a footbridge, windows and a jogger; the city at the first look and after the first boom.
+13. **docs/assets.md** lines for every piece, with its size. Art total under 12.5 KB.
+
+**gamedev (S3g1b), can start with plain shapes before the art lands:**
+1. **The back pavement layer** in the street draw order (src/game/game.ts): after the backdrop and the backs of the stalls, before the road and everything that can touch the hero; feet at groundY − 8, 0.85 size.
+2. **A pure, tested `crowdSpots(level, look)`** (src/game/crowd.ts) giving each street's standing spots and walker stretches from the level file, with every clear zone of part 3, the counts for tired, bright and fixed, and a fixed seed per street; the first screen left to S3e0.
+3. **Casts** per street, the hall, the well room, the lane run and the city (parts 4, 5, 7 and 9), skipping the player's own hero look.
+4. **The bake** (part 11): one sprite sheet per place at the screen's pixel scale, rebuilt only on resize; bubbles baked once.
+5. **Walkers and reactions** (part 5): wave, step aside, trader calls, cheers on a cleared problem (goat fed, drum smashed, weeds dried, signed pothole jumped), the checkpoint, the bus park; nothing on a lost life; the rate limits.
+6. **The far background movers:** the okada every 25 s, the keke riders, heads in bus windows.
+7. **The well room** store keeper and the feet shadows; **the hall** door crowd, the cheer on each hit (kept clear of throws) and the walk-in on the finish timeline.
+8. **The lane run** (part 7): people with each scenery piece, pavement walkers, window tiles, the footbridge crowd, joggers and children alongside with their rules, people going in under dark lamps and coming out when a lamp comes back on, the goal crowd. Never in a lane.
+9. **The city** (part 9): ambient walkers on the walk grid with the count rule, bright blocks picked 3 times as often, the Mama Put queue, Market shoppers, the bus park, the clear rule round pay spots, trays and pins, stop-and-watch during a moment, Mission complete's cheering crowd.
+10. **Sound hookup** (part 12): the murmur when 5 or more people show, cheers, never over a warning or the corn tune.
+11. **Backing off** under 45 fps, and **reduced motion** (part 11). All words in src/screens/words.ts.
+12. **Tests:** the level files byte for byte the same; a scripted street 1, hall and lane run with people on and off give the same path, kobo, lives and result; `crowdSpots()` keeps every clear zone on all three streets, tired, bright and fixed; nobody is drawn after the hero or in a lane; the cast never holds the player's own look; nothing reacts on a lost life.
+
+### 15. Done checks for qa
+
+1. **Alive:** each street, the hall, the well room, the lane run and the city show people at every moment, at least as many as parts 3, 5, 7 and 9 say, with someone walking on every bright street screen past the first, and the okada passing at least once in a 60 s street.
+2. **Never in the way:** in every street, tired and bright, no person stands or walks in a clear zone of part 3; nobody is drawn on the front pavement strip; the hero, throws and hazards pass people without touching; in the lane run nobody is ever in a lane, on a kerb or on the divider, and the lane danfos show no one; in the hall nobody is on the floor during the fight.
+3. **No change to the game:** the level files are byte for byte the same; the scripted runs give the same path, kobo, lives and result with people on and off; a first-timer still finishes Alausa in 3 tries or fewer, and in a people test nobody jumps over, waits for or tries to touch a person.
+4. **Reactions:** people wave, step aside, call out and cheer as part 5 says, within the rate limits; the bus stop and the bus park cheer; the hall cheers on each hit and comes in at the finish; nothing at all happens on a lost life; nobody boos, points at or laughs at General Go-Slow or the hero.
+5. **The dark:** in the lane run, people go inside under dark lamps and the windows glow; nobody is shown in the Blackout's edge; when a lamp comes back on, people come back out.
+6. **Bubbles:** one at a time; never over the hero, a hazard, a coin, a food, a button, the HUD or a toast; every line comes from part 6's list and reads at 320 x 240; tone marks show as letters, never boxes, on the slow Android profile (or the plain spelling shows).
+7. **Variety:** in each street's cast, every skin tone shows at least twice, every age shows, at least three dress kinds from different parts of Nigeria show, and one person uses a wheelchair; no cast is all one kind; nobody wears the player's own look.
+8. **Respect (by eye, with po):** no real person, uniform, badge, crest, party colour, printed clothes, red cap, herder, beggar, tout or robe of office; nobody shown as the problem, lazy, dirty or to blame; tired streets have proud people; nothing like Mario or any other game.
+9. **City:** ambient walkers number 3, plus 1 per fix, plus 2 per Booming step, with at most 12 moving; the Mama Put queue and the Market shoppers show once built; nobody stands on or near a pay spot, tray or pin; during a moment the cap of 8 moving holds and the others stop to watch; Mission complete shows the cheering crowd.
+10. **Sound:** the murmur plays only with 5 or more people on screen, very quietly; cheers keep the rate limit; none over a warning sound or the corn tune; nothing with Sound off or the iPhone silent switch.
+11. **Speed:** at least 45 fps at 4x CPU and 60 on a mid phone in a bright street 2, the hall's finish, a lane run at a footbridge with a jogger, and the city after the first boom; people take at most 1.5 ms a frame at 4x CPU; a street's first frame comes no more than 30 ms later than before; backing off works when forced.
+12. **Reduced motion:** walkers, joggers, the okada and the feet shadows hold still; waves and cheers are still poses; bubbles show.
+13. **Size:** S3g1 adds no more than 20 KB gzipped; the first load stays under 3 MB.
+
+## Ogun
+
+The Ogun note (decisions 72 and 73: the Gateway State, three streets, King Pothole in Pothole Hall, the Ogun city, people, tasks) is docs/ogun.md.

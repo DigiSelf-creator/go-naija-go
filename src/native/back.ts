@@ -48,10 +48,14 @@ export interface BackLabels {
   introSkip: string;
   settingsBack: string;
   creditsBack: string;
-  streetsHome: string;
+  /** S3e0 part 8: the road's "Home", and its stop card's "Back" (pressed first while a card shows). */
+  roadHome: string;
+  roadBack: string;
   wheelClose: string;
   wheelBack: string;
   takeHome: string;
+  /** S3f0 part 25.1: the tilt offer card's "No thanks" (Android back counts as it). */
+  tiltNo?: string;
 }
 
 export function backStep(s: BackState, labels: BackLabels): BackStep {
@@ -62,7 +66,7 @@ export function backStep(s: BackState, labels: BackLabels): BackStep {
       // Between a run's end and its card, back waits for the card. A lane run's own cards
       // (the bus stop, caught) take it home, the same as their "Take it home".
       if (s.running) return { kind: 'pause' };
-      return s.lane ? { kind: 'press', labels: [labels.takeHome] } : { kind: 'ignore' };
+      return s.lane ? { kind: 'press', labels: labels.tiltNo ? [labels.takeHome, labels.tiltNo] : [labels.takeHome] } : { kind: 'ignore' };
     case 'pause':
       return { kind: 'ask', fromRun: s.lane ? 'lane' : s.hall ? 'hall' : 'street' };
     case 'title':
@@ -74,8 +78,8 @@ export function backStep(s: BackState, labels: BackLabels): BackStep {
       return { kind: 'press', labels: [labels.settingsBack] };
     case 'credits':
       return { kind: 'press', labels: [labels.creditsBack] };
-    case 'streets':
-      return { kind: 'press', labels: [labels.streetsHome] };
+    case 'road':
+      return { kind: 'press', labels: [labels.roadBack, labels.roadHome] };
     case 'wheel':
       // The "All names" list first (Close), else the wheel's own Back.
       return { kind: 'press', labels: [labels.wheelClose, labels.wheelBack] };

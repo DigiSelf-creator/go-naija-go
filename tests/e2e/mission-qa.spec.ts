@@ -7,7 +7,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { hands, playStreetByHand } from './hands';
-import { PAST_DOUBLE_TAP_MS, screenNow, startRun, waitOutTapLock } from './helpers';
+import { PAST_DOUBLE_TAP_MS, screenNow, startRun, waitOutTapLock, playStop } from './helpers';
 import { formatMoney } from '../../src/game/money';
 
 const city = (page: Page) => page.evaluate(() => window.__game!.city!);
@@ -144,9 +144,9 @@ test('po ruling: once the road is built, a street 1 win pays the plain ₦5 priz
   await page.getByRole('button', { name: 'Play' }).tap();
   await expect.poll(() => screenNow(page)).toBe('city');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await page.getByRole('dialog', { name: 'Lagos' }).getByRole('button', { name: 'Streets' }).tap();
-  await expect.poll(() => screenNow(page)).toBe('streets');
-  await page.locator('[data-where="0"]').tap();
+  await page.getByRole('dialog', { name: 'Lagos' }).getByRole('button', { name: 'Challenge road' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('road');
+  await playStop(page, '0');
   await expect.poll(() => screenNow(page)).toBe('play');
   const c = await playToCleared(page);
   const cleared = page.getByRole('dialog', { name: 'Street cleared!' });

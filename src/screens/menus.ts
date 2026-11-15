@@ -1,11 +1,11 @@
 /**
- * Menu screens (docs/design.md S2.10): title, hero builder, credits, Streets, Nigeria's wheel,
+ * Menu screens (docs/design.md S2.10): title, hero builder, credits, the challenge road (S3e0), Nigeria's wheel,
  * and in a run: pause, game over, Street cleared and Win. Slice 3 (docs/city.md part 5 (a), (b)):
  * the intro story, Settings, and Lagos from above (the home screen). An HTML layer over the
  * canvas; one screen shows at a time.
  */
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
-import { cardBadgeSvg, cardSceneSvg, MUSIC_SVG } from '../art/cards';
+import { MUSIC_SVG } from '../art/cards';
 import { WHEEL_STATES, wheelSvg } from '../art/wheel';
 import { readSafeArea } from '../engine/view';
 import {
@@ -25,17 +25,20 @@ import type { SpotId } from '../art/city';
 import type { CityLife } from '../game/cityLife';
 import { introDue, introSeen, markIntroSeen, type IntroFrom } from '../game/intro';
 import type { Store } from '../storage';
+import type { TiltAccess } from '../game/tilt';
 import type { SoundName } from '../engine/sound';
 import { CityScreen, type CitySound, type Mission } from './city';
 import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
 import { button, h } from './dom';
-import { streetCards, wheelFit, type Where } from './streets';
+import { wheelFit } from './streets';
+import { roadScreen, type RoadOpen, type RoadView, type StopInfo } from './road';
 import { GAME_NAME, WORDS } from './words';
+import { isNativeApp } from '../native/is-native';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | 'streets' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | null;
 
 /** Screens that fill the whole screen (no cream card in the middle). */
-const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city'];
+const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city', 'road'];
 
 /** Screens that open during play (design.md: Pause, Game over, Street cleared, Win): their buttons ignore taps for 0.4 s. */
 const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'cleared', 'win'];
@@ -71,16 +74,19 @@ export interface ProgressView {
 }
 
 /** Where a screen in a run sends the player when the run ends ("Home" is the city, slice 3). */
-export type LeaveTo = 'title' | 'streets' | 'wheel' | 'city';
+export type LeaveTo = 'title' | 'road' | 'wheel' | 'city';
 
 export interface MenuHooks {
   /** "Play" on the title, or "Start running" in the builder. */
   start(at: TapPoint | null): void;
-  /** A Streets card: that street, or the hall. */
-  play(where: Where, at: TapPoint | null): void;
-  /** S3f3: the Streets screen's "Lane run" card (best whole metres, goals reached), and starting it. */
-  lane?(): { best: number; goals: number };
-  playLane?(): void;
+  /** S3e0: a stop card's big button: that stop's run, for the fix it shows (CR-Q1). */
+  playStop(stop: StopInfo, at: TapPoint | null): void;
+  /** What the challenge road reads (part 8 rule 2: the same records the Streets screen read). */
+  roadView(): RoadView;
+  /** The road's first-visit hint is due: true once (it is saved as seen). */
+  roadHint(): boolean;
+  /** A road card opened or closed (the back button's guard). */
+  cardChanged?(): void;
   /** The look changed in the builder (already saved). */
   lookChanged(look: HeroLook): void;
   /** Pause: "Keep playing". */
@@ -89,7 +95,7 @@ export interface MenuHooks {
   restart(at: TapPoint | null): void;
   /** Street cleared: "Next street", or "Go to Go-Slow Hall" after the last street. */
   next(at: TapPoint | null): void;
-  /** Leave the run (saving nothing from it) for the title, Streets, or the wheel. */
+  /** Leave the run (saving nothing from it) for the title, the challenge road, or the wheel. */
   leave(to: LeaveTo): void;
   /** The Sound switch changed (title or pause). */
   soundChanged(on: boolean): void;
@@ -150,7 +156,9 @@ export class Menus {
   /** Builder and the wheel's list: watches a scrolling box, to show the fade while more is below. */
   private sideWatch: ResizeObserver | null = null;
   /** Where the wheel's "Back" goes: where it opened from (S2.10 flow). */
-  private wheelBack: 'title' | 'streets' | 'city' = 'streets';
+  private wheelBack: 'title' | 'city' = 'city';
+  /** Where the challenge road opens (part 4 rule 4). */
+  private roadOpen: RoadOpen = {};
   /** Where Settings' "Back" goes: where it opened from. */
   private settingsBack: 'title' | 'city' = 'title';
   /** What follows the intro story (the builder, Play, or back to Settings). */
@@ -169,6 +177,10 @@ export class Menus {
   laneRun = false;
   /** S3f3: the lane Pause card's "So far: ..." line. */
   laneSoFar = '';
+  /** S3f0 part 25: can this phone tilt, and what it said (main sets it). Null: no tilt at all. */
+  tilt: TiltAccess | null = null;
+  /** Part 25.4: does iOS in the store app ask again after a no? (gamedev checks on a real iPhone.) */
+  tiltAppAsksAgain = true;
 
   constructor(
     parent: HTMLElement,
@@ -234,6 +246,29 @@ export class Menus {
     return this.settings.buttonsInsteadOfSwipes;
   }
 
+  /** S3f0 part 25: "Tilt to steer" is saved on (kept even on a phone with no sensor). */
+  get tiltSaved(): boolean {
+    return this.settings.tiltToSteer;
+  }
+
+  /** Tilt steers now: saved on, a phone that can tilt, and not refused this visit (25.4, 25.5). */
+  get laneTilt(): boolean {
+    const t = this.tilt;
+    return this.settings.tiltToSteer && t !== null && t.canTilt && t.answer !== 'denied';
+  }
+
+  /** Turns "Tilt to steer" on or off (saved); any switch on screen follows. */
+  setTilt(on: boolean): void {
+    this.settings.tiltToSteer = on;
+    saveSettings(this.store, this.settings);
+    this.syncTilt();
+  }
+
+  /** The tilt switches on screen show the phone's state now (found, refused, asked). */
+  syncTilt(): void {
+    for (const row of this.layer.querySelectorAll<HTMLElement>('.tilt-row')) this.fillTiltRow(row);
+  }
+
   /** The HUD sound button. Remembered on the phone. */
   toggleSound(): boolean {
     this.settings.sound = !this.settings.sound;
@@ -257,9 +292,15 @@ export class Menus {
   }
 
   /** Opens Nigeria's wheel; its "Back" goes to `back`. */
-  showWheel(back: 'title' | 'streets' | 'city'): void {
+  showWheel(back: 'title' | 'city'): void {
     this.wheelBack = back;
     this.show('wheel');
+  }
+
+  /** S3e0: the challenge road, on a stop (with its card open from a city card's "See the stop"). */
+  showRoad(open: RoadOpen = {}): void {
+    this.roadOpen = open;
+    this.show('road');
   }
 
   /** Opens Lagos from above; with a mission, Mission complete plays there first (5W W5). */
@@ -319,7 +360,7 @@ export class Menus {
     if (screen === 'title') card = this.title();
     if (screen === 'builder') card = this.builder();
     if (screen === 'credits') card = this.credits();
-    if (screen === 'streets') card = this.streets();
+    if (screen === 'road') card = this.road();
     if (screen === 'wheel') card = this.wheel();
     if (screen === 'pause') card = this.pause();
     if (screen === 'gameover') card = this.gameOver();
@@ -378,6 +419,65 @@ export class Menus {
     return sw;
   }
 
+  /**
+   * S3f0 part 25.1: "Tilt to steer: off" / "...: on", under "Buttons instead of swipes" in Settings
+   * and on the lane Pause card, only on a phone that can tilt. On an iPhone, turning it on asks
+   * Apple's box from this tap (25.4); a no turns it back off with the two lines under it.
+   */
+  private tiltRow(where: 'settings' | 'pause'): HTMLElement {
+    // Empty and hidden until the phone is found to tilt: a computer gets no switch at all.
+    const row = h('div', { class: `tilt-row ${where}`, hidden: true });
+    this.fillTiltRow(row);
+    return row;
+  }
+
+  /** The switch and its lines, made the first time the row can show. */
+  private tiltParts(row: HTMLElement): void {
+    const w = WORDS.lane;
+    const sw = this.guarded(w.tiltOff, 'minor tilt-switch', () => {
+      const t = this.tilt;
+      if (!t) return;
+      if (this.laneTilt) {
+        this.setTilt(false);
+        return;
+      }
+      this.setTilt(true);
+      if (!t.ios) return;
+      // Inside the tap: Safari shows its box only then. "Allow" works at once.
+      void t.ask('switch').then((a) => {
+        if (a === 'denied') this.setTilt(false);
+        else this.syncTilt();
+      });
+      this.syncTilt();
+    }, { role: 'switch', 'aria-label': w.tiltName, 'aria-checked': 'false' });
+    row.append(sw, h('p', { class: 'small tilt-lines' }));
+  }
+
+  private fillTiltRow(row: HTMLElement): void {
+    const w = WORDS.lane;
+    const t = this.tilt;
+    row.hidden = !t || !t.canTilt;
+    if (row.hidden) return;
+    if (!row.querySelector('.tilt-switch')) this.tiltParts(row);
+    const on = this.laneTilt;
+    const sw = row.querySelector('.tilt-switch');
+    if (sw) {
+      sw.textContent = on ? w.tiltOn : w.tiltOff;
+      sw.setAttribute('aria-checked', String(on));
+    }
+    const lines: string[] = [];
+    if (t?.ios && t.answer === 'denied') lines.push(w.tiltDenied, this.tiltAppAsksAgain || !isNativeApp() ? w.tiltRetry : w.tiltRetryApp);
+    else {
+      if (row.classList.contains('settings')) lines.push(w.tiltPrivacy);
+      if (t?.ios && t.answer !== 'granted') lines.push(w.tiltAskFirst);
+    }
+    const p = row.querySelector('.tilt-lines');
+    if (p instanceof HTMLElement) {
+      p.replaceChildren(...lines.flatMap((l, i) => (i === 0 ? [l] : [h('br'), l])));
+      p.hidden = lines.length === 0;
+    }
+  }
+
   /** "Sound: on" / "Sound: off" (title and pause). */
   private soundSwitch(): HTMLButtonElement {
     const w = WORDS.title;
@@ -419,6 +519,7 @@ export class Menus {
           this.guarded(WORDS.lane.pauseHome, 'minor', () => this.hooks.leave('city')),
         ),
         h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch(), this.laneButtonsSwitch()),
+        this.tiltRow('pause'),
       );
     }
     return h(
@@ -430,7 +531,7 @@ export class Menus {
         { class: 'pause-grid' },
         this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
         this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
@@ -453,7 +554,7 @@ export class Menus {
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
     );
@@ -474,7 +575,7 @@ export class Menus {
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome()),
         this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),
         this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
       ),
     );
   }
@@ -493,61 +594,47 @@ export class Menus {
       this.actions(
         this.guarded(w.wheel, 'go', () => this.hooks.leave('wheel')),
         this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.streets, 'minor', () => this.hooks.leave('streets')),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
       ),
     );
   }
 
-  /** S2.10 Streets: a card for each street and the hall, in a 2 x 2 grid on small screens. */
-  private streets(): HTMLElement {
-    const w = WORDS.streets;
-    const p = this.hooks.progress();
-    const cards = streetCards(p.lagos, p.names, p.themes).map((c) => {
-      const badge = cardBadgeSvg(c.state);
-      const el = button('', `street-card ${c.state}`, (e) => {
-        if (this.ignoreTap(e)) return;
-        if (c.state === 'locked') this.hooks.playSound('lockedTuk');
-        else this.hooks.play(c.where, tapPoint(e));
-      }, { 'aria-disabled': c.state === 'locked' ? 'true' : undefined, 'data-where': String(c.where) });
-      el.innerHTML = `<span class="art">${cardSceneSvg(c.picture, c.state)}</span>${badge ? `<span class="badge">${badge}</span>` : ''}`;
-      // No small line on the hall card: an empty one keeps the names in a row lined up. With the
-      // parcel line the hall card drops it instead, so the card stays three lines tall and the
-      // 2 x 2 grid still fits 320 x 240.
-      if (c.num || c.extra === null) el.append(h('span', { class: 'num', 'aria-hidden': c.num ? undefined : 'true' }, c.num));
-      el.append(h('span', { class: 'name' }, c.name), h('span', { class: 'status' }, c.status));
-      if (c.extra !== null) {
-        el.classList.add('with-extra');
-        el.append(h('span', { class: 'status extra' }, c.extra));
-      }
-      return el;
+  /** S3e0: the challenge road (src/screens/road.ts). */
+  private road(): HTMLElement {
+    const w = WORDS.city;
+    const sound = this.guarded('', 'minor road-sound', () => {
+      this.settings.sound = !this.settings.sound;
+      saveSettings(this.store, this.settings);
+      label();
+      this.hooks.soundChanged(this.settings.sound);
     });
-    return h(
-      'div',
-      { class: 'card narrow streets-card', role: 'dialog', 'aria-label': w.heading },
-      h('h2', {}, w.heading),
-      h('p', { class: 'small' }, w.line),
-      h('div', { class: 'streets-grid' }, ...cards, this.laneCard()),
-      h(
-        'div',
-        { class: 'minor-row' },
-        button(w.wheel, 'minor', () => this.showWheel('streets')),
-        button(w.home, 'minor', () => this.show('city')),
-      ),
+    const label = (): void => {
+      const t = this.settings.sound ? w.soundOn : w.soundOff;
+      sound.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M1 6h3l4-4v12l-4-4H1z"/><path d="${this.settings.sound ? 'M10 5q2 3 0 6M12 3q4 5 0 10' : 'M10 5l5 6M15 5l-5 6'}" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>${t}</span>`;
+      sound.setAttribute('aria-label', t);
+    };
+    label();
+    const screen = roadScreen(
+      {
+        view: () => this.hooks.roadView(),
+        look: () => this.look,
+        still: () => this.hooks.stillWanted(),
+        soundButton: sound,
+        home: () => this.show('city'),
+        play: (stop, e) => {
+          this.hooks.playSound('horn');
+          this.hooks.playStop(stop, tapPoint(e));
+        },
+        locked: () => this.hooks.playSound('lockedTuk'),
+        hintDue: () => this.hooks.roadHint(),
+        cardChanged: () => this.hooks.cardChanged?.(),
+      },
+      this.roadOpen,
     );
-  }
-
-  /** S3f3 part 2: the last Streets card starts a lane run ("Done ✓ Best: 840 m" after a goal). */
-  private laneCard(): HTMLElement | null {
-    const info = this.hooks.lane?.();
-    if (!info) return null;
-    const w = WORDS.lane;
-    const done = info.goals > 0;
-    const el = button('', `street-card lane-street${done ? ' done' : ''}`, (e) => {
-      if (this.ignoreTap(e)) return;
-      this.hooks.playLane?.();
-    }, { 'data-where': 'lane' });
-    el.append(h('span', { class: 'name' }, w.card), h('span', { class: 'status' }, w.cardLine), h('span', { class: 'status' }, done ? w.cardDone(info.best) : w.cardOpen));
-    return el;
+    this.roadOpen = {};
+    this.refit = screen.refit;
+    this.cleanup = screen.close;
+    return screen.el;
   }
 
   /**
@@ -695,6 +782,7 @@ export class Menus {
         this.musicSwitch(),
         this.gentleSwitch(),
         this.laneButtonsSwitch(),
+        this.tiltRow('settings'),
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
         button(w.back, 'go', () => this.show(this.settingsBack)),
       ),
@@ -741,11 +829,13 @@ export class Menus {
       mission,
       topRight: [sound, button(w.settings, 'minor', () => this.showSettings('city'))],
       bottom: [
-        button(w.streets, 'minor', () => this.show('streets')),
+        button(w.road, 'minor two-line', () => this.showRoad()),
         button(w.hero, 'minor', (e) => this.show('builder', e)),
-        button(w.wheel, 'minor', () => this.showWheel('city')),
+        button(w.wheel, 'minor two-line', () => this.showWheel('city')),
       ],
       run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
+      // S3e0 part 7: the road, scrolled to that stop with its card open, "for" that card's fix.
+      seeStop: (spot) => this.showRoad({ at: spot === 'potholes' ? 0 : 'lane', card: true, laneFor: spot === 'lightsOut' ? 'lamps' : spot === 'slowInternet' ? 'mast' : null }),
       cogOn: () => this.hooks.progress().lagos.hall.done,
       ignoreTap: (e) => this.ignoreTap(e),
     });

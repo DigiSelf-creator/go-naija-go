@@ -57,10 +57,12 @@ const LABELS: BackLabels = {
   introSkip: WORDS.intro.skip,
   settingsBack: WORDS.settings.back,
   creditsBack: WORDS.credits.back,
-  streetsHome: WORDS.streets.home,
+  roadHome: WORDS.road.home,
+  roadBack: WORDS.road.back,
   wheelClose: WORDS.wheel.close,
   wheelBack: WORDS.wheel.back,
   takeHome: WORDS.cleared.takeHome,
+  tiltNo: WORDS.lane.tiltOfferNo,
 };
 
 /** Presses the first showing menu button with one of these labels. */

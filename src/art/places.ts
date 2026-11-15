@@ -197,6 +197,12 @@ export interface MamaPutState {
   build?: number;
   /** Reduced motion. */
   still?: boolean;
+  /**
+   * S3g1b (people everywhere part 9): draws the cook instead of the older small figure, at her
+   * feet (x, y) in the stall's own units; resting: on the stool by the side. Pass `queue: 0` and
+   * draw the kit queue yourself to replace the older queue too.
+   */
+  cook?: (g: CanvasRenderingContext2D, x: number, y: number, resting: boolean) => void;
 }
 
 /** The cook: a proud, busy woman in a headscarf and a clean white apron. */
@@ -247,8 +253,11 @@ export function drawMamaPut(g: CanvasRenderingContext2D, x: number, y: number, s
     // The cook behind the counter, ladle up and down; resting: on a stool by the side, fanning
     if (!full) {
       const arm = still ? 0 : Math.sin(t * 5) * 1.5;
-      drawFolk(g, COOK, -3, -9, {});
-      box(g, -6, -15, 6, 4, WHITE, 0.5); // apron
+      if (st.cook) st.cook(g, -3, -9, false);
+      else {
+        drawFolk(g, COOK, -3, -9, {});
+        box(g, -6, -15, 6, 4, WHITE, 0.5); // apron
+      }
       line(g, '#8a8f96', 1, [0, -19 + arm, 7, -16 + arm]);
     }
     // Pots on the stove, with steam
@@ -278,8 +287,11 @@ export function drawMamaPut(g: CanvasRenderingContext2D, x: number, y: number, s
     if (full) {
       // Resting: a stool at the side, the cook fanning herself with a woven hand fan
       box(g, -48, -4, 9, 4, '#8a5d36');
-      drawFolk(g, COOK, -43.5, -2, {});
-      box(g, -48, -8, 9, 4, WHITE, 0.5);
+      if (st.cook) st.cook(g, -43.5, -2, true);
+      else {
+        drawFolk(g, COOK, -43.5, -2, {});
+        box(g, -48, -8, 9, 4, WHITE, 0.5);
+      }
       const fa = still ? 0 : Math.sin(t * 6) * 0.5;
       g.save();
       g.translate(-39, -11);

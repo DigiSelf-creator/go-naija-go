@@ -18,7 +18,8 @@
     "app-icons": "node scripts/make-app-icons.mjs",
     "app:build": "tsc --noEmit && vite build --mode app",
     "app:sync": "npm run app:build && cap sync android && node scripts/copy-app-res.mjs",
-    "app:android:debug": "npm run app:sync && cd android && ./gradlew assembleDebug"
+    "app:android:debug": "npm run app:sync && cd android && ./gradlew assembleDebug",
+    "app:sync:ios": "npm run app:build && cap sync ios && node scripts/copy-app-res.mjs ios"
   },
   "devDependencies": {
     "@capacitor/cli": "8.6.2",
@@ -32,6 +33,7 @@
     "@capacitor/android": "8.6.2",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
     "@capacitor/splash-screen": "8.0.2"
   }
 }

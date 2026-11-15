@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SKIP_WAITING, TAKE_OVER_MS, UpdateState, UpdateWatch, bannerShows, type ContainerLike, type RegistrationLike } from '../../src/update';
+import { SKIP_WAITING, TAKE_OVER_MS, UpdateState, UpdateWatch, bannerShows, inAttempt, type ContainerLike, type RegistrationLike } from '../../src/update';
 import { WORDS } from '../../src/screens/words';
 
 /** A fake navigator.serviceWorker and registration. */
@@ -83,11 +83,24 @@ describe('U1 UpdateState', () => {
   });
 });
 
-describe('U1 bannerShows', () => {
-  it('never in a run; on pause, result cards and other screens', () => {
+describe('U1 bannerShows (decision 68)', () => {
+  it('never in a run or on its Pause; on the result cards and other screens', () => {
     expect(bannerShows(false, false)).toBe(false);
     expect(bannerShows(true, true)).toBe(false);
     expect(bannerShows(true, false)).toBe(true);
+  });
+
+  it('a run being played, or paused, is an attempt: a reload would restart it', () => {
+    // A street, the well room, Go-Slow Hall or a lane run, with no card over it.
+    expect(inAttempt(true, null)).toBe(true);
+    // Its Pause card: one tap would reload and quietly start the attempt again.
+    expect(inAttempt(true, 'pause')).toBe(true);
+    expect(bannerShows(true, inAttempt(true, 'pause'))).toBe(false);
+  });
+
+  it('the result cards and the menus are not an attempt', () => {
+    for (const card of ['gameover', 'cleared', 'win']) expect(bannerShows(true, inAttempt(true, card))).toBe(true);
+    for (const screen of ['title', 'road', 'city', 'wheel', 'settings', 'builder', 'intro', null]) expect(bannerShows(true, inAttempt(false, screen))).toBe(true);
   });
 });
 

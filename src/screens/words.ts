@@ -74,7 +74,7 @@ export const WORDS = {
     heading: 'Paused',
     keepPlaying: 'Keep playing',
     restart: 'Start again',
-    streets: 'Streets',
+    road: 'Challenge road',
     home: 'Home',
   },
   gameOver: {
@@ -88,7 +88,7 @@ export const WORDS = {
     /** S2.13 part 5: a street's offer; the hall's stays the short one. */
     gentleOffer: 'Want more tries? Gentle mode gives you 5 lives, and you climb out of holes.',
     hallGentleOffer: 'Want more tries? Gentle mode gives you 5 lives.',
-    streets: 'Streets',
+    road: 'Challenge road',
     home: 'Home',
   },
   /** S2.10 Street cleared, with Tp's line (8 Nov 2026, "Cleared words for real places"). A card line, never a toast. */
@@ -103,7 +103,7 @@ export const WORDS = {
     next: 'Next street',
     toHall: 'Go to Go-Slow Hall',
     playAgain: 'Play again',
-    streets: 'Streets',
+    road: 'Challenge road',
   },
   /** S2.10 Win, after Go-Slow Hall. No kobo here (po M4 note). */
   win: {
@@ -113,25 +113,57 @@ export const WORDS = {
     more: 'More of Nigeria is coming soon.',
     wheel: "See Nigeria's wheel",
     playAgain: 'Play again',
-    streets: 'Streets',
+    road: 'Challenge road',
   },
-  /** S2.10 Streets: one state's streets and its hall, as cards. */
-  streets: {
-    heading: 'Lagos',
-    line: 'Fix 3 streets, then clear Go-Slow Hall.',
-    /** The small first line of a street card. */
-    num: (n: number) => `Street ${n}`,
-    /** The whole name on one line, for screen readers and wide cards. */
-    full: (n: number, name: string) => `Street ${n}: ${name}`,
-    /** N2: "Done \u2713 Best: \u20a68.70" (`best` is whole kobo). */
-    done: (best: number) => `Done \u2713 Best: ${formatMoney(best)}`,
-    /** The hall has no kobo to collect (po M4 note), so its done line has no "Best". */
-    hallDone: 'Done \u2713',
-    open: 'Ready to play',
-    locked: (n: number) => `Finish street ${n} first`,
-    parcel: 'You have a garri parcel.',
-    wheel: "Nigeria's wheel",
+  /** S3e0: the challenge road, its stops and the stop card (docs/design.md S3e0 parts 3 to 5, 9). */
+  road: {
+    heading: 'Challenge road',
+    list: 'Challenge road stops',
     home: 'Home',
+    back: 'Back',
+    hint: 'Tap a stop to see it.',
+    next: 'Next',
+    locked: 'Locked',
+    open: 'Ready to play',
+    done: 'Done \u2713',
+    soon: 'Coming soon',
+    built: 'Built \u2713',
+    moreSoon: 'More soon',
+    best: (b: string) => `Best: ${b}`,
+    yourBest: (b: string) => `Your best: ${b}`,
+    metres: (m: number) => `${m.toLocaleString('en-GB')} m`,
+    toGo: (n: number) => `Fixes to go: ${n}`,
+    stop: (n: number) => `Stop ${n}`,
+    side: 'Side road',
+    lane: 'Lane run',
+    hall: 'Go-Slow Hall',
+    ferry: 'Ferry',
+    theFerry: 'The ferry',
+    finish: (name: string) => `Finish ${name} first.`,
+    run: (name: string) => `Run ${name}`,
+    toHall: 'Go to Go-Slow Hall',
+    parcel: 'You have a garri parcel.',
+    earns: 'Earns Naira for Lagos.',
+    earnsAll: 'Earns Naira, Power and Tech.',
+    /** CR-Q1 a: "A win pays for the New road (\u20a610)." or "(\u20a66 left)". */
+    pays: (fix: string, price: string, part: boolean) => `A win pays for the ${fix} (${price}${part ? ' left' : ''}).`,
+    road: ['Potholes on this road.', 'New road here. Buses are moving again.'],
+    cv: ['The internet is slow here.', 'Fast internet here. Shops are busy.', 'Earns Naira. Tech comes from the Lane run.'],
+    ikeja: ['Lamps are out here.', 'The lamps are on. The street is awake.', 'Earns Naira. Power comes from the Lane run.'],
+    hallLines: ['General Go-Slow is jamming the hall.', 'The hall is moving. Lagos is switched on.', 'A win brings \u20a615 and switches Lagos on.', 'A win brings \u20a615 for Lagos.'],
+    bothOn: 'Lamps on and fast internet here.',
+    ferryLines: ['A ferry jetty is coming to this shore.', 'The jetty is built. The ferry is here!', 'New stops over the water are coming soon.'],
+    ferryBoom: (n: number) => `It is built when Lagos booms: ${n} of 20.`,
+    /** Spoken (part 9). */
+    sayBest: (b: string) => `Best ${b}.`,
+    sayMetres: (m: number) => `${m} metres`,
+    saySoon: (n: number) => `Coming soon. Fixes to go: ${n}.`,
+    sayBuilt: 'Built. More stops coming soon.',
+    pic: (name: string) => `Seen from above. A stop sign says ${name}. Your hero is getting on a danfo.`,
+    picHall: 'Go-Slow Hall, with its traffic lights.',
+    sound: 'Sound',
+    left: 'More road to the left',
+    right: 'More road to the right',
   },
   /** city.md (a) Settings: one column of buttons (Sound, Music and Gentle mode use the title's words). */
   settings: {
@@ -173,7 +205,9 @@ export const WORDS = {
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
     settings: 'Settings',
-    streets: 'Streets',
+    road: 'Challenge road',
+    /** S3e0 part 7: the problem cards' small button. */
+    seeStop: 'See the stop',
     hero: 'Hero',
     wheel: "Nigeria's wheel",
     zoomIn: '+',
@@ -191,7 +225,9 @@ export const WORDS = {
     hintWalk: 'Tap where you want to go.',
     hintWalkKeys: 'Use the arrow keys to walk.',
     hintBuka: () => `Walk onto the ${formatMoney(400)} board to build a Mama Put.`,
-    hintCollect: 'Mama Put made money! Walk over to collect it.',
+    hintCollect: 'Mama Put pays a small tax! Walk over to collect it.',
+    /** W18 (decision 71): once, in the hint bar, right after the first collect (hint id `tax`). */
+    hintTax: 'Busy shops pay a small tax. Lagos uses it to fix more.',
     /** 5W W2: the problem card's button that walks the hero to the board. */
     walkThere: 'Walk there',
     /** 5W W8 Not enough card. */
@@ -209,10 +245,14 @@ export const WORDS = {
       lamps: 'Lamps on! The street is awake.',
       mast: 'Fast internet! Shops are busy.',
     },
-    /** 5W W8 Collect line (1.5 s): "+₦1.20 from Mama Put". */
-    collectLine: (money: string, name: string) => `+${money} from ${name}`,
-    /** Spoken: "Mama Put has 1 naira 20 kobo for you. Full." */
-    traySpoken: (name: string, money: string, full: boolean) => `${name.charAt(0).toUpperCase()}${name.slice(1)} has ${money} for you.${full ? ' Full.' : ''}`,
+    /** W18 (decision 71): the tray bubble's label for a Naira place: "Tax 80 kobo", "Tax ₦1.20". */
+    trayLabel: (money: string) => `Tax ${money}`,
+    /** W18 Collect line (1.5 s): "Mama Put paid ₦1.20 tax!", "The market paid ₦2.40 tax!". */
+    collectLine: (money: string, name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)} paid ${money} tax!`,
+    /** W18 Collect, spoken, with spoken money: "Mama Put paid 1 naira 20 kobo tax." */
+    collectSpoken: (money: string, name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)} paid ${money} tax.`,
+    /** W18 Spoken: "Tax from Mama Put: 1 naira 20 kobo. Full." ("the market" stays lower case mid-line). */
+    traySpoken: (name: string, money: string, full: boolean) => `Tax from ${name}: ${money}.${full ? ' Full.' : ''}`,
     /** Spoken: "New road. Costs 10 naira. You have 6 naira. Walk there." */
     boardSpoken: (name: string, price: string, have: string, part: boolean) => `${name}. ${part ? `${price} left` : `Costs ${price}`}. You have ${have}. Walk there.`,
     /** 5W W5 Mission complete in the walkable city. */
@@ -349,6 +389,28 @@ export const WORDS = {
     /** Settings and the lane Pause card. */
     buttonsOn: 'Buttons instead of swipes: on',
     buttonsOff: 'Buttons instead of swipes: off',
+    /** Part 25.9 (decision 70): tilt to steer. The switch's spoken name is `tiltName`, with on or off. */
+    tiltName: 'Tilt to steer',
+    tiltOff: 'Tilt to steer: off',
+    tiltOn: 'Tilt to steer: on',
+    tiltPrivacy: 'Tilt is only used to steer. Nothing is saved or sent.',
+    /** iPhone only, under the switch and on the offer card. */
+    tiltAskFirst: 'Your phone will ask first. Tap Allow.',
+    tiltDenied: 'Your phone said no to tilt, so swipes are on.',
+    /** iPhone Safari. */
+    tiltRetry: 'To try again, close the game and open it again.',
+    /** iPhone store app, only if iOS will not ask again. "Gbese!" is the app name (decision 39). */
+    tiltRetryApp: "To try again, allow Motion for Gbese! in your phone's Settings.",
+    tiltLost: 'Tilt is not working. Swipe to change lane.',
+    /** Under "3, 2, 1" with tilt on. */
+    tiltHold: 'Hold your phone the way you like.',
+    tiltOfferHeading: 'New: tilt your phone to change lane.',
+    tiltOfferLine: 'You can still swipe to jump and slide.',
+    tiltOfferYes: 'Try tilt',
+    tiltOfferNo: 'No thanks',
+    /** The polite spoken line when a run starts with tilt on (part 25.7). */
+    tiltSpoken: 'Tilt your phone left or right to change lane. Swipe up to jump, down to slide.',
+    tiltSpokenButtons: 'Tilt your phone left or right to change lane. Use Jump and Slide to jump and slide.',
     toGo: (m: number) => `To the bus stop: ${m} m`,
     toGoShort: (m: number) => `Bus stop: ${m} m`,
     /** After the goal: the distance run and the best (whole metres, with a thousands comma). */
@@ -365,6 +427,11 @@ export const WORDS = {
     blackoutNear: (m: number) => `Blackout: ${m} m behind!`,
     pushed: (m: number) => `+${m} m`,
     gained: (m: number) => `−${m} m`,
+    /** Reduced motion: a chip counts up with a short "+1" (part 18); Naira says the money ("+₦0.10"). */
+    plus: (n: string) => `+${n}`,
+    /** The first lane run's start, the look back (part 14). */
+    lookBack: 'The Blackout is switching off the lamps.',
+    runToStop: 'Run to the bus stop!',
     /** The polite live line (part 14). */
     nearSpoken: (m: number) => `Blackout ${m} metres behind`,
     stopSpoken: 'Bus stop in 100 metres',
@@ -389,11 +456,6 @@ export const WORDS = {
     broughtHome: (got: string) => `You brought ${got} home.`,
     alsoMast: 'The mast is ready to fix too. Walk onto its board.',
     alsoLamps: 'The lamps are ready to fix too. Walk onto their board.',
-    /** The Streets card (part 2). */
-    card: 'Lane run',
-    cardLine: 'Run to the bus stop for Naira, Power and Tech.',
-    cardOpen: 'Ready to play',
-    cardDone: (m: number) => `Done ✓ Best: ${m.toLocaleString('en-GB')} m`,
     /** Hints (part 8 and 14), once each until passed. Swipes, buttons, keys. */
     hints: {
       lane: ['Swipe left or right to change lane.', 'Tap ◀ or ▶ to change lane.', 'Press ← or → to change lane.'],
@@ -405,6 +467,8 @@ export const WORDS = {
       goat: 'Goats move out of your way. Meeh!',
       food: 'Run into the garri to eat it.',
       tech: 'Tech chips fix slow internet.',
+      /** Part 25.8: the change-lane hint with tilt on (its own key, shown once). */
+      tilt: 'Tilt your phone left or right to change lane.',
     } as Readonly<Record<string, string | readonly string[]>>,
   },
   /** S2.10 Well button: the words on it (touch, and a computer with keys), and its spoken name. */
@@ -413,6 +477,33 @@ export const WORDS = {
     downKeys: 'Go down (\u2193)',
     up: 'Go up',
     upKeys: 'Go up (Enter)',
+  },
+  /**
+   * S3g1b, design.md "People everywhere" part 6: what people say in their bubbles (never read
+   * out, no meaning). Each kind is split by language, and a line is picked language first, so
+   * English, Pidgin, Yoruba, Hausa and Igbo get an equal share (decision 30, PE-R2).
+   */
+  folk: {
+    /** Morning greetings (Alausa). */
+    greetMorning: { en: ['Good morning!'], yo: ['Ẹ káàárọ̀!'], ha: ['Ina kwana!'], ig: ['Ụtụtụ ọma!'] },
+    /** Greetings at any time. */
+    greet: { en: ['Hello!'], pcm: ['How far?'], yo: ['Ẹ n lẹ́ o!'], ha: ['Sannu!'], ig: ['Ndewo!'] },
+    /** Each street's traders call only their own lines. */
+    traders: {
+      alausa: ['Hot akara!', 'Fresh bread!'],
+      village: ['Phone case here!', 'Charger, charger!', 'Fine cloth!', 'Fresh pepper!'],
+      ikeja: ['Suya dey!', 'Tickets here!', 'Hot food!'],
+    },
+    /** A problem cleared, the bus stop. */
+    cheers: { en: ['Well done!', 'Nice one!'], pcm: ['You do well!', 'Oya, go!', 'Ehen!'], yo: ['Ẹ kú iṣẹ́!'], ha: ['Madalla!'], ig: ['I meela!'] },
+    /** The bus park. */
+    bus: { pcm: ['Bus don come!'], en: ['Safe trip!'] },
+    /** The well room's store keeper as the hero takes the garri parcel (PE-R4). */
+    storeKeeper: 'For the boss. Go well!',
+    /** The hall's door people on hit 1 and hit 2. */
+    hallHit: ['Ehen!', 'Well done!'],
+    /** The plain spelling, if a phone shows a tone mark as a box. */
+    plain: { 'Ẹ káàárọ̀!': 'E kaaro!', 'Ụtụtụ ọma!': 'Ututu oma!', 'Ẹ n lẹ́ o!': 'E n le o!', 'Ẹ kú iṣẹ́!': 'E ku ise!' } as Readonly<Record<string, string>>,
   },
 } as const;
 

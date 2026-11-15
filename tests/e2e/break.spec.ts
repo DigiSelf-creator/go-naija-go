@@ -245,31 +245,27 @@ for (const size of [
     // screens, so the hook says where), standing on the road.
     // B3: the drawn hero (default look: green jersey) replaced the capsule, and arms swing
     // across the body, so look for jersey green anywhere in a short column through the chest.
-    const px = await page.evaluate(() => {
-      const el = document.querySelector('canvas')!;
-      const g = el.getContext('2d')!;
-      const x = Math.round(el.width * window.__game!.heroScreenX);
-      const out: number[][] = [];
-      for (let wy = 266; wy <= 290; wy++) {
-        out.push(Array.from(g.getImageData(x, Math.round(el.height * (wy / 420)), 1, 1).data.slice(0, 3)));
-      }
-      return out;
-    });
-    expect(px).toContainEqual([0x0e, 0x7a, 0x3e]);
-    // qa B4: and the green is the hero's, not the street's: the same column 60 and 90
-    // percent across has none of it.
-    const elsewhere = await page.evaluate(() => {
-      const el = document.querySelector('canvas')!;
-      const g = el.getContext('2d')!;
-      const out: number[][] = [];
-      for (const fx of [0.6, 0.9]) {
-        for (let wy = 266; wy <= 290; wy++) {
-          out.push(Array.from(g.getImageData(Math.round(el.width * fx), Math.round(el.height * (wy / 420)), 1, 1).data.slice(0, 3)));
-        }
-      }
-      return out;
-    });
-    expect(elsewhere).not.toContainEqual([0x0e, 0x7a, 0x3e]);
+    // Decision 60: the lit hero shades the jersey, so its plain green is a narrow band of the
+    // chest, and the standing hero breathes and sways. On a 320 x 240 screen one pixel column
+    // through the chest misses that band for seconds at a time (qa: CI round 3 found
+    // [13, 121, 61], one shade off), so read a strip 2 percent of the width each side of the
+    // column. The same strip at 60 and 90 percent across must have none of the green.
+    const jerseyPixels = (fx: number | null) =>
+      page.evaluate((fx) => {
+        const el = document.querySelector('canvas')!;
+        const g = el.getContext('2d')!;
+        const half = Math.round(el.width * 0.02);
+        const x = Math.round(el.width * (fx ?? window.__game!.heroScreenX)) - half;
+        const y = Math.round(el.height * (266 / 420));
+        const d = g.getImageData(x, y, half * 2 + 1, Math.round(el.height * (290 / 420)) - y + 1).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) if (d[i] === 0x0e && d[i + 1] === 0x7a && d[i + 2] === 0x3e) n++;
+        return n;
+      }, fx);
+    expect(await jerseyPixels(null), 'jersey green at the hero').toBeGreaterThan(0);
+    // qa B4: and the green is the hero's, not the street's.
+    expect(await jerseyPixels(0.6), 'jersey green at 60 percent across').toBe(0);
+    expect(await jerseyPixels(0.9), 'jersey green at 90 percent across').toBe(0);
     await page.touchscreen.tap(Math.round(size.width * 0.7), Math.round(size.height / 3));
     await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { intervals: [16] }).toBe(false);
     await expect.poll(() => page.evaluate(() => window.__game!.hero.grounded), { timeout: 3000 }).toBe(true);

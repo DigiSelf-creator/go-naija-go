@@ -145,13 +145,18 @@ describe('decision 60: sprites at the screen scale', () => {
       }
     }
     expect(keys.size).toBeLessThanOrEqual(24 + 24 + 6 * 8 * 2 + 33);
+    // S3g1b perf: the garri suit fully on is kept as sprites of its own (it can stay on for a whole street).
+    expect(spriteKey({ phase: 0.2, inAir: false, facing: 1, glow: false, suit: {} })).toMatch(/^s/);
+    expect(spriteKey({ phase: 0.2, inAir: true, facing: 1, glow: false, suit: { on: 1 }, vy: 100 })).toMatch(/^sa/);
     // Effects, standing and set moods draw live
     const base: HeroPose = { phase: 0.2, inAir: false, facing: 1, glow: false };
     for (const p of [
       { ...base, glow: true },
       { ...base, fast: true },
       { ...base, dash: true },
-      { ...base, suit: {} },
+      // The suit clicking on or cracking moves by itself: live (a steady suit is cached, below).
+      { ...base, suit: { on: 0.5 } },
+      { ...base, suit: { crack: true } },
       { ...base, standing: true },
       { ...base, skid: 0.5 },
       { ...base, dust: 0.2 },

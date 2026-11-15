@@ -153,7 +153,7 @@ const scene = (s: Partial<MusicScene>): MusicScene => ({ screen: 'play', where: 
 
 describe('O2 which tune plays where (S2.9 table)', () => {
   it('menus play the menu loop', () => {
-    for (const screen of ['title', 'builder', 'credits', 'streets', 'wheel'] as const) expect(musicCue(scene({ screen }))).toEqual({ place: 'menu', tempo: 0 });
+    for (const screen of ['title', 'builder', 'credits', 'road', 'wheel'] as const) expect(musicCue(scene({ screen }))).toEqual({ place: 'menu', tempo: 0 });
   });
 
   it('streets 1 to 3 play the street loop at tempo steps 0, 1, 2; the well room plays the well loop', () => {
@@ -200,7 +200,7 @@ describe('O2 the director', () => {
     const d = new MusicDirector(p);
     d.update(scene({ screen: 'title' }));
     d.update(scene({ screen: 'title' }));
-    d.update(scene({ screen: 'streets' }));
+    d.update(scene({ screen: 'road' }));
     expect(calls).toEqual(['play menu 0']);
   });
 
@@ -352,7 +352,7 @@ describe('O2 the gidi-music save', () => {
     const { storage, data } = fakeStorage();
     const store = createStore(() => storage);
     expect(loadSettings(store).music).toBe(true);
-    saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false });
+    saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false, tiltToSteer: false });
     expect(data.get('gidi-music')).toBe('false');
     expect(data.get('gidi-sound')).toBe('true');
     // After a reload (a new store on the same phone storage) Music is still off.
@@ -374,7 +374,7 @@ describe('O2 the gidi-music save', () => {
     };
     const store = createStore(blocked);
     expect(store.persistent).toBe(false);
-    expect(() => saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false })).not.toThrow();
+    expect(() => saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false, tiltToSteer: false })).not.toThrow();
     expect(loadSettings(store).music).toBe(false);
   });
 });

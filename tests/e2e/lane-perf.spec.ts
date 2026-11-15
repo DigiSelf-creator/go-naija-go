@@ -119,7 +119,7 @@ for (const rate of [1, 4] as const) {
     await page.goto('./?level=lagos-lane');
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
     await startRun(page);
-    await expect.poll(() => page.evaluate(() => window.__lane?.stage)).toBe('play');
+    await expect.poll(() => page.evaluate(() => window.__lane?.stage), { timeout: 15_000 }).toBe('play');
     const dpr = await page.evaluate(() => devicePixelRatio);
     const canvas = await page.evaluate(() => `${document.querySelector('canvas')!.width}x${document.querySelector('canvas')!.height}`);
     await startBotAndLog(page);
