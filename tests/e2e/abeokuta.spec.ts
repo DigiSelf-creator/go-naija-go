@@ -183,6 +183,6 @@ test('Abeokuta by hand from Ogun\'s place: rocks, water, the well room and its p
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('Abeokuta is moving again. Sagamu is coming next.')).toBeVisible();
+  await expect(ogunPlace(page).getByText('Abeokuta is moving again. Sagamu is coming soon.')).toBeVisible();
   expect(errors).toEqual([]);
 });

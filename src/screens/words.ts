@@ -605,11 +605,11 @@ export const OGUN_WORDS = {
   place: {
     heading: 'Ogun',
     line: 'The Gateway State',
-    soon: 'Ota, the first street on the road from Lagos, is open.',
+    soon: 'Ota is open. It is the first street on the road from Lagos.',
     /** Once Ota is cleared: O3b, Abeokuta plays. */
     otaDone: 'Ota is moving again. Abeokuta is open.',
     /** Once Abeokuta is cleared (Sagamu comes with O4b). */
-    abeokutaDone: 'Abeokuta is moving again. Sagamu is coming next.',
+    abeokutaDone: 'Abeokuta is moving again. Sagamu is coming soon.',
     play: 'Play Ota',
     playAbeokuta: 'Play Abeokuta',
   },

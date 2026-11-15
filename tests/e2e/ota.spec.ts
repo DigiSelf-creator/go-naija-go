@@ -57,7 +57,7 @@ async function playOta(page: Page): Promise<void> {
 test('Ota by hand from Ogun\'s place: the arch, mud, ikokore, the bus stop, the bus, the cleared card and the save under states.ogun', async ({ page }) => {
   test.setTimeout(240_000);
   const errors = await openOgun(page);
-  await expect(ogunPlace(page).getByText('Ota, the first street on the road from Lagos, is open.')).toBeVisible();
+  await expect(ogunPlace(page).getByText('Ota is open. It is the first street on the road from Lagos.')).toBeVisible();
   await playOta(page);
   expect(await page.evaluate(() => window.__game!.skin)).toBe(true);
   expect(await page.evaluate(() => window.__game!.run.lives)).toBe(3);
