@@ -2415,7 +2415,7 @@ body.lane {
 
 /* S3f0 part 25 (decision 70): tilt to steer. The switch sits under "Buttons instead of swipes",
    44 px tall, the full width of the column; the privacy and (iPhone) ask lines under it in 12 px. */
-.tilt-row {
+.tilt-row:not([hidden]) {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2444,8 +2444,8 @@ body.lane {
 }
 /* Short screens: in Settings' two columns the row spans both, the lines beside the switch. */
 @media (max-height: 300px) {
-  .settings-list .tilt-row,
-  .pause-card .tilt-row {
+  .settings-list .tilt-row:not([hidden]),
+  .pause-card .tilt-row:not([hidden]) {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 1fr 1fr;

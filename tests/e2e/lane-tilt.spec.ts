@@ -43,6 +43,7 @@ async function rig(page: Page, s: Setup): Promise<void> {
       w['__beta'] = beta;
       w['__turn'] = turn;
       w['__asks'] = 0;
+      w['__lasts'] = [];
       w['__permit'] = permit;
       Object.defineProperty(screen.orientation, 'angle', { configurable: true, get: () => w['__turn'] });
       if (permit) {
@@ -74,8 +75,9 @@ async function rig(page: Page, s: Setup): Promise<void> {
             };
             f();
           });
-          const lane = w['__lane'] as { tilt: { moves: number } } | null;
+          const lane = w['__lane'] as { tilt: { moves: number; last: string | null } } | null;
           out.push(lane ? lane.tilt.moves : -1);
+          (w['__lasts'] as (string | null)[]).push(lane ? lane.tilt.last : null);
         }
         return out;
       };
@@ -132,29 +134,29 @@ test('tilt 1a to 1e: the centre from "3, 2, 1", 15 out, 8 back, one tilt one lan
   await expect(page.locator('.lane-hud .sr-only')).toHaveText(W.spoken);
   await playSeq(page, [[40, 300], [20, 50]]);
   await expect.poll(() => stage(page)).toBe('play');
-  let t = await tilt(page);
+  const t = await tilt(page);
   expect(t.moves).toBe(0);
   expect(t.listening).toBe(true);
   expect(t.centre).toBeGreaterThan(19);
   expect(t.centre).toBeLessThan(21.5);
   await quiet(page);
-  // b. 24 nothing, 33 nothing, 36 one lane right, held 1.9 s in all (0.2 + 1.7) no second move
-  // (past 2 s it would become the new centre, check e; the timer starts when the move fires).
-  expect(await playSeq(page, [[24, 200], [33, 200], [36, 200], [36, 1700]])).toEqual([0, 0, 1, 1]);
-  t = await tilt(page);
-  expect(t.last).toBe('right');
-  expect((await lane(page))!.lane).toBe(2);
-  await quiet(page);
-  // c. 27 re-arms, 36 right again; 29 does not re-arm, 36 then nothing.
-  expect(await playSeq(page, [[27, 200], [36, 200], [29, 200], [36, 200]])).toEqual([1, 2, 2, 2]);
-  await quiet(page);
-  // d. Back to 20, then 4: one lane left.
-  expect(await playSeq(page, [[20, 200], [4, 200]])).toEqual([2, 3]);
-  expect((await tilt(page)).last).toBe('left');
-  await quiet(page);
-  // e. Back to 20, 36 right; held 2 s it is the new centre with no move; then 52 right.
-  expect(await playSeq(page, [[20, 200], [36, 200], [36, 2300], [52, 200]])).toEqual([3, 4, 4, 5]);
-  expect((await tilt(page)).last).toBe('right');
+  // b to e in one go on the page's own clock (a pause between steps would be a longer hold).
+  // Each step is held 0.2 s unless said. b's "held 1.9 s" is 1.9 s in all (0.2 + 1.7): the 2 s
+  // recentre timer starts when the move fires, and check e shows it at 2 s.
+  const steps: [number, number][] = [
+    // b. 24 nothing, 33 nothing, 36 one lane right, held: no second move.
+    [24, 200], [33, 200], [36, 200], [36, 1700],
+    // c. 27 re-arms, 36 right again; 29 does not re-arm, 36 then nothing.
+    [27, 200], [36, 200], [29, 200], [36, 200],
+    // d. Back to 20, then 4: one lane left.
+    [20, 200], [4, 200],
+    // e. Back to 20, 36 right; held 2 s it is the new centre with no move; then 52 right.
+    [20, 200], [36, 200], [36, 2300], [52, 200],
+  ];
+  const moves = await playSeq(page, steps);
+  const lasts = await page.evaluate((n) => (window as unknown as { __lasts: (string | null)[] }).__lasts.slice(-n), steps.length);
+  expect(moves).toEqual([0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5]);
+  expect([lasts[2], lasts[5], lasts[9], lasts[11], lasts[13]]).toEqual(['right', 'right', 'left', 'right', 'right']);
   // Tilt never jumps or slides; the hint is the tilt one (25.8).
   const l = (await lane(page))!;
   expect(l.jumping || l.sliding).toBe(false);

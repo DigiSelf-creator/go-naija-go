@@ -413,6 +413,14 @@ export class Menus {
    * Apple's box from this tap (25.4); a no turns it back off with the two lines under it.
    */
   private tiltRow(where: 'settings' | 'pause'): HTMLElement {
+    // Empty and hidden until the phone is found to tilt: a computer gets no switch at all.
+    const row = h('div', { class: `tilt-row ${where}`, hidden: true });
+    this.fillTiltRow(row);
+    return row;
+  }
+
+  /** The switch and its lines, made the first time the row can show. */
+  private tiltParts(row: HTMLElement): void {
     const w = WORDS.lane;
     const sw = this.guarded(w.tiltOff, 'minor tilt-switch', () => {
       const t = this.tilt;
@@ -430,15 +438,15 @@ export class Menus {
       });
       this.syncTilt();
     }, { role: 'switch', 'aria-label': w.tiltName, 'aria-checked': 'false' });
-    const row = h('div', { class: `tilt-row ${where}` }, sw, h('p', { class: 'small tilt-lines' }));
-    this.fillTiltRow(row);
-    return row;
+    row.append(sw, h('p', { class: 'small tilt-lines' }));
   }
 
   private fillTiltRow(row: HTMLElement): void {
     const w = WORDS.lane;
     const t = this.tilt;
     row.hidden = !t || !t.canTilt;
+    if (row.hidden) return;
+    if (!row.querySelector('.tilt-switch')) this.tiltParts(row);
     const on = this.laneTilt;
     const sw = row.querySelector('.tilt-switch');
     if (sw) {
