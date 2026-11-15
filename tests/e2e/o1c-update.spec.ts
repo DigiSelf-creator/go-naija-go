@@ -122,7 +122,6 @@ test('o1c: an update keeps the Ogun part: after it, Ogun opens with no internet'
 test('o1c: the update banner does not show during the bus ride', async ({ page }) => {
   // Game bug O1c-4: inAttempt() (src/update.ts) counts only runs, so the banner shows over the
   // ride, and a tap there reloads before the ride sets `where` (the ride and arrival play again).
-  test.fail(true, 'O1c-4: the update banner shows mid-ride');
   test.setTimeout(120_000);
   await toOgun(page);
   root = builds.b;
