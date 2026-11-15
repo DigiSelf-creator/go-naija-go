@@ -949,6 +949,8 @@ All lines are 40 characters or fewer except the boom card's body, which wraps. N
 
 #### (e) The challenge road
 
+**The full note is written: docs/design.md "S3e0. The challenge road, with W17 C" (15 Nov 2026).** It covers the road screen, every stop, the stop cards, the run's first screen, links, rules, reach, sizes, the art list and qa's checks. Where it differs from the short lines below, the note wins (for example: the Lane run stop is open and sits on a side road; the stop card's heading is "Stop 1", with the place name only on the sign in its picture).
+
 Words and rules: part 1 "The challenge road" (Tp said yes). Stops in slice 3: "Alausa", "Computer Village", "Ikeja", "Go-Slow Hall", then "Lane run" (locked until (f)). It replaces the Streets screen; the city's "Streets" button becomes "Challenge road".
 Owners and budgets: art draws the road, the danfo-yellow stop signs and the ferry jetty (under 6 KB). gamedev builds the screen and the list for screen readers (under 6 KB).
 Done when: it fits 320 x 240 with stops at least 44 px; screen readers hear it as a list; it is not a path-and-dots world map (part 6 rule 4).

@@ -2357,3 +2357,279 @@ The lane run makes Power and Tech real, so the packed layout from W15 and W16 is
 17. Sounds and the tune by ear: our own, not like any lane runner's or any known song; the corn tune plays over the lane tune.
 18. city.md 2B "What we must NOT copy" (all 11) and city.md part 6 pass; nothing from Mario or any Nintendo game.
 19. Part 22 at 320 x 240 with all three buckets.
+
+## S3e0. The challenge road, with W17 C (designer, 15 Nov 2026)
+
+Task S3e0, city.md step (e) with W17 C ("same street, city and run"). This is the full note that city.md (e) asks for before S3e1 starts. It is the source for S3e1a (art) and S3e1b (gamedev). Where it gives a number or a word that city.md part 1, (e) or W17 gives as a draft, this note wins.
+
+Sources: city.md part 1 "The challenge road", (e) and W17 C; decisions 36, 38, 45, 46, 47, 48, 63, 66 and 67; the Streets screen it replaces (src/screens/menus.ts `streets()` and `laneCard()`, src/screens/streets.ts `streetCards()`, S2.8, S2.10); ST0 part 3 (the back button); S3f0 part 2 (the Lane run card moves here).
+
+Open for Tp (docs/questions.md, "designer, 15 Nov 2026: the challenge road"): **CR-Q1**, whether a win from a stop pays for that stop's fix. This note is built on the recommended answer (a); a different answer changes only the lines marked CR-Q1. Three small rulings (CR-R1 to CR-R3) follow the team's recommendation under decision 64 and are reported to Tp in one line each.
+
+### 1. The idea, in one line
+
+The Streets screen becomes a road of Lagos bus stops. Each stop is one challenge. Tap a stop and a small card shows that part of Lagos from above, as it looks right now, tired or bright; then the run starts on the same street, and its first screen looks tired or bright to match.
+
+- **Who sees it:** every player, from the city's "Challenge road" button, from the city's problem cards ("See the stop"), and after a run (Pause, Out of lives, Street cleared, Win).
+- **The one job:** pick a challenge, and see which part of Lagos it is for.
+- **New thing it teaches:** each challenge is a real place in your Lagos, and fixing that place changes the run too.
+- **No level gets harder or easier.** Only the picture changes (part 6, rule 1).
+
+### 2. The stops
+
+Slice 3 has five stops you can play and one you cannot yet. Their order on the road follows the streets' unlock order (S2.8), which does not change.
+
+| # | Stop | Where on the road | Opens when | Its city spot (card picture and first screen) | A win from the stop is "for" (CR-Q1 a) |
+|---|---|---|---|---|---|
+| 1 | **Alausa** (street 1) | main road, first | always | the New road spot (pin 1, `CITY_SPOTS.potholes`) | the New road, while it is not built; after that, nothing |
+| 2 | **Computer Village** (street 2) | main road, second | Alausa done | block r1c3 (the Slow internet spot) | nothing (street runs earn Naira; the Mast takes Tech) |
+| 3 | **Ikeja** (street 3) | main road, third | Computer Village done | block r2c1 (the Lights out spot) | nothing (the Lamps take Power) |
+| 4 | **Go-Slow Hall** | main road, fourth | Ikeja done | none: the card shows the hall picture (the Streets screen's hall card art) | the hall, as today: ₦15, and the first win switches Lagos on |
+| side | **Lane run** | a side road that leaves the main road between stops 1 and 2 (CR-R1) | always (decision 63: built and live) | the spot it is for: r2c1 while the Lamps are not built, then r1c3 while the Mast is not built, then r2c1 bright | the Lamps while not built, then the Mast while not built, then nothing (the same as the problem cards, S3f0 part 2) |
+| end | **Ferry** | the end of the main road, at the lagoon | never in slice 3: "Coming soon" | the shore by the jetty | cannot be played |
+
+- **The well room has no stop (CR-R3).** It is a secret inside street 2 and street 3 (S2.5, S2.6). A stop would give it away, and it is not a challenge of its own. The Go-Slow Hall card still says "You have a garri parcel." when one is saved.
+- **The Lane run stop takes over from the Streets card** (S3f0 part 2). The Lights out and Slow internet cards and the Not enough cards still start a lane run as they do now.
+- **"For" means** what decisions 38 and 45 already say for the city cards: a win pays for that fix at once, brings home at least its price (the first Alausa win, from the stop or the Potholes card, brings ₦14, W5), and "Mission complete!" plays at that spot. A win "for nothing" goes home to the bus park with "You brought ₦12 home." (W5 "From elsewhere"). If CR-Q1 is answered b, every stop's win is "for nothing", as W5 wrote it.
+- **A stop opened from a city card plays for that card's fix.** The Slow internet card's "See the stop" opens the Lane run stop for the Mast, even if the Lamps are not built yet.
+- **Later states** get their own road with their own real, proud places (decision 19's rule), the same stop kinds and the same rules (decisions 15, 30). The ferry leads to the next Lagos area (city.md (b)).
+
+### 3. How a stop shows its state (never colour alone)
+
+Each stop is one button: a bus stop shelter drawn on the road behind it, and in front a plate with the name and two short lines. Each state has its own **icon shape and word**, so it reads in greyscale.
+
+| State | Plate | Icon (16 px, left of the status) | Status line | Line 3 | Moves |
+|---|---|---|---|---|---|
+| **Locked** | sand `#e6d4ae`, 2 px dark outline `#1d1a14` | padlock | "Locked" | none | none |
+| **Open** | danfo yellow `#f2b300`, 2 px dark outline | a bus from the side | "Ready to play" | none | none |
+| **Next** (the first open stop on the main road that is not done) | as Open, plus a small pennant with an arrow on the plate's top right holding the word "Next"; a small danfo parked at the shelter | a bus | "Ready to play" | none | the plate bobs 2 px once a second (none with reduced motion) |
+| **Done** | danfo yellow, plus a round tick badge on the top right | a tick | "Done ✓" | "Best: ₦8.70" (streets), "Best: 840 m" (Lane run); none for the hall | none |
+| **Ferry, before the first boom** | sand, outline | a small ferry | "Coming soon" | "Fixes to go: 3" | none |
+| **Ferry, after the first boom** | sand, outline, with the tick badge | a small ferry | "Built ✓" | "More soon" | none |
+
+- **Best** is the street's `best` in `gidi-progress` (whole kobo, money words N1 to N4) and the lane part's `best` (whole metres, "1,240 m"). It shows only once the stop is done (the Lane run: once `goals` is 1 or more).
+- **"Fixes to go"** is `ceil((20 - boom) / 4)`, at least 1, until the meter reaches 20 (d1). Full collects count too, so the number can drop without a fix; that is fine: it says how far off the ferry is, not a promise.
+- **Only one "Next".** If every main-road stop is done, nothing is marked Next. The Lane run stop is never marked Next: it sits apart, on its side road, always open.
+- **The hall with a parcel:** the hall's plate shows a small parcel icon after its name (shape), and its spoken words add "You have a garri parcel."
+- **Tapping a locked stop** opens its card with the locked words (part 5) and plays `lockedTuk`. It never starts anything.
+
+### 4. The road screen: layout
+
+**The picture.** The road is one still picture of **680 x 168 road units**, our own drawing (part 9): a grey main road with lane dashes and kerbs that bends gently twice, low Lagos blocks, a palm and a mango tree along the edges, and the lagoon shore with the jetty at the right end. The side road leaves the main road at x 132 and climbs to the Lane run stop, with three stuck danfos in a short queue on it (the go-slow you pass on foot). It is a road with bus stops, not a path of dots on a map (city.md part 6 rule 4): no dots or footprints between stops, no circles for levels, no islands in a sea.
+
+**Where the stops sit** (road units; each button is 112 x 64; the shelter is drawn behind it):
+
+| Stop | Button box (x, y, w, h) |
+|---|---|
+| Alausa | 8, 92, 112, 64 |
+| Lane run (side road) | 76, 4, 112, 64 |
+| Computer Village | 144, 92, 112, 64 |
+| Ikeja | 280, 92, 112, 64 |
+| Go-Slow Hall | 416, 92, 112, 64 |
+| Ferry | 552, 92, 112, 64 |
+
+The main road runs along y 156 to 168 under the main stops. The side road runs up the 24-unit gap between Alausa and Computer Village.
+
+**Inside a button** (at scale 1): the plate fills the top 24 px with the name, bold 12 px, centred, never cut ("Computer Village" fits 112 px with 6 px padding); under it the icon and the status, bold 11 px; under that line 3, 11 px. Tap area: the whole 112 x 64 button.
+
+**The top row** (inside the safe edges plus 8 px, ST0 part 4): 44 px tall (48 from 360 px high). Left: **"Home"** with a small house shape. Middle: the heading **"Challenge road"** (bold 1.1 rem; 0.95 rem on small screens, as the city's heading). Right: **Sound** ("Sound: on" / "Sound: off"; at 360 px wide or less, the speaker icon alone, with waves for on and a cross for off, and the same spoken name). Each button at least 44 x 44.
+
+**Scale.** `s` = 1 when the whole road does not fit across at scale 1; otherwise `s` = the smallest of 2, (open width ÷ 680) and (open height ÷ 168). Open width = screen width minus the safe edges and 16 px; open height = screen height minus the top row, the safe edges and 16 px. Everything in the road scales by `s`, words included. The road sits in the middle of the open height.
+
+| Screen | s | What shows | Scroll |
+|---|---|---|---|
+| **320 x 240** | 1 | open height 172 (the road is 168); open width 304: Alausa, the Lane run and Computer Village whole, and 24 px of Ikeja peeking in at the right | yes, 376 px of road off screen; the ▶ arrow shows |
+| **568 x 320** | 1 | open width 536: every stop up to Go-Slow Hall whole; the Ferry off the right | yes, 144 px; the ▶ arrow shows |
+| **851 x 393** | 1.2 (1.1 on a phone with a notch, about 44 px safe edges) | the whole road | no |
+| **1920 x 1080** | 2 | the whole road at 1360 x 336, centred both ways | no |
+| Upright on the web (393 x 851) | 1 | as 320 x 240, with more sky above and below | yes |
+
+**Scrolling** (only when the road does not fit):
+1. The road is a box that scrolls sideways the phone's own way (native momentum; the scroll bar hidden). Nothing scrolls up and down.
+2. A finger that moves more than 8 px is a scroll and does not open a stop. A mouse wheel or trackpad scrolls it sideways.
+3. **Edge arrows:** ◀ at the left edge and ▶ at the right edge, at the road's middle height, 44 x 44, a dark round button with the arrow as a shape. Each shows only when there is more road that way, and scrolls one stop (136 px x `s`). They are hidden from screen readers and from Tab (those reach every stop directly, part 9).
+4. **Where it opens:** on the stop it was opened for (from a city card, or after that stop's run); else on the Next stop; else at the start. That stop sits in the middle where it can, else as near the middle as the ends allow. Opening never animates.
+5. Focusing a stop (Tab, or the ← and → keys) scrolls it fully into view with 16 px to spare: a 0.25 s ease, or a jump with reduced motion.
+
+**First visit hint** (once, saved as `road` in the city's `hints`): "Tap a stop to see it." in the hint bar under the top row, 3 s.
+
+### 5. The stop card
+
+Tapping a stop (or Enter or Space on it) opens a small card over the road. The road stays behind it, dimmed.
+
+**Layout.** At 320 x 240: at most 300 x 220, centred. A heading row (24 px); under it the **picture** (112 x 84) on the left and the lines on the right (up to 172 px wide, line 1 bold 13 px, the others 12 px); at the bottom the big button (at least 56 px tall) and the small "Back" (at least 44 x 44) side by side. Height in all: about 196 px. From 568 x 320: up to 420 x 300, picture 160 x 120, words 14 and 13 px. From 1920 x 1080: up to 560 wide, picture 240 x 180.
+
+**The picture: the spot seen from above** (decision 48, W17 C).
+- A cut from the still city picture, so it is tired or bright exactly as the city is now (d2, d3). The cut is a 4 by 3 box in map units:
+
+  | Stop | Cut (map x, y, w, h) |
+  |---|---|
+  | Alausa | 0, 335, 240, 180 (the Alausa road, pin 1) |
+  | Computer Village | 1163, 301, 320, 240 (r1c3) |
+  | Ikeja | 536, 579, 320, 240 (r2c1 and the bus stop) |
+  | Lane run | Ikeja's cut while it is for the Lamps; Computer Village's cut while it is for the Mast; then Ikeja's cut, bright |
+  | Ferry | 290, 760, 320, 240 (the shore and the jetty; before the first boom, the shore without the jetty) |
+  | Go-Slow Hall | not a cut: the hall picture from the Streets screen's hall card |
+
+- **Drawn on top, at card size:** a danfo-yellow bus stop sign with the stop's name (bold 11 px at 112 px wide, never cut), a yellow danfo with its door open, and **the hero you built** stepping in (about 30 px tall at 112 px wide; every body, skin, hair and outfit). The pin is not drawn in the cut: the card's words say it.
+- **The place name is only on that sign** (and in the big button, which is a challenge name, city.md part 1 "Words"). No line that says something is wrong names the place.
+- If the still city picture is not ready (the city was not opened this session), draw only that cut of the city with a clip. If that takes more than 50 ms on the slow phone profile, show a plain sand box with the sign, the danfo and the hero, and swap the cut in when it is ready.
+
+**Exact words** (money as N1 to N4; "left" uses what is still to pay on that board, so "₦6 left" after a part pay):
+
+| Stop and state | Heading | Line 1 | Line 2 | Line 3 | Big button | Small |
+|---|---|---|---|---|---|---|
+| Alausa, road not built | "Stop 1" | "Potholes on this road." | CR-Q1: "A win pays for the New road (₦10)." (part paid: "(₦6 left)") | after a done run: "Your best: ₦8.70" | "Run Alausa" | "Back" |
+| Alausa, road built | "Stop 1" | "New road here. Buses are moving again." | "Earns Naira for Lagos." | "Your best: ₦8.70" | "Run Alausa" | "Back" |
+| Computer Village, Mast not built | "Stop 2" | "The internet is slow here." | "Earns Naira. Tech comes from the Lane run." | best, as above | "Run Computer Village" | "Back" |
+| Computer Village, Mast built | "Stop 2" | "Fast internet here. Shops are busy." | "Earns Naira for Lagos." | best | "Run Computer Village" | "Back" |
+| Ikeja, Lamps not built | "Stop 3" | "Lamps are out here." | "Earns Naira. Power comes from the Lane run." | best | "Run Ikeja" | "Back" |
+| Ikeja, Lamps built | "Stop 3" | "The lamps are on. The street is awake." | "Earns Naira for Lagos." | best | "Run Ikeja" | "Back" |
+| Go-Slow Hall, not done | "Stop 4" | "General Go-Slow is jamming the hall." | "A win brings ₦15 and switches Lagos on." (not "turns the cog": the first boom may have turned it already, d4) | with a parcel: "You have a garri parcel." | "Go to Go-Slow Hall" | "Back" |
+| Go-Slow Hall, done | "Stop 4" | "The hall is moving. Lagos is switched on." | "A win brings ₦15 for Lagos." | with a parcel: "You have a garri parcel." | "Go to Go-Slow Hall" | "Back" |
+| Lane run, for the Lamps | "Side road" | "Lamps are out here." | CR-Q1: "A win pays for the Lamps (Power 10)." (part paid: "(Power 4 left)") | after a goal: "Your best: 840 m" | "Lane run" | "Back" |
+| Lane run, for the Mast | "Side road" | "The internet is slow here." | CR-Q1: "A win pays for the Mast (Tech 6)." | best | "Lane run" | "Back" |
+| Lane run, both built | "Side road" | "Lamps on and fast internet here." | "Earns Naira, Power and Tech." | best | "Lane run" | "Back" |
+| Any locked stop | as above | that stop's line 1 for its state | "Finish Alausa first." / "Finish Computer Village first." / "Finish Ikeja first." | none | none | "Back" |
+| Ferry, before the first boom | "The ferry" | "A ferry jetty is coming to this shore." | "It is built when Lagos booms: 9 of 20." | none | none | "Back" |
+| Ferry, after the first boom | "The ferry" | "The jetty is built. The ferry is here!" | "New stops over the water are coming soon." | none | none | "Back" |
+
+If CR-Q1 is answered b, the three lines marked CR-Q1 become "Earns Naira for Lagos." (Alausa) and "Earns Naira, Power and Tech." (Lane run), and part 2's "for" column reads "nothing" for every stop but the hall.
+
+Every line is 44 characters or fewer and fits its column at 320 x 240 in at most two lines. No line that says something is wrong names a real place (city.md part 1 "Words", W17 C).
+
+**What the big button does:** the danfo `horn` sound (d7), and the run starts exactly as from the old Streets card or the city card: same lives, same Gentle mode, same parcel rules. The card and the road close.
+
+**Spoken** (the card is a dialog; the big button is focused first; Escape is "Back"):
+- Dialog name: "Stop 1: Alausa" (the Lane run: "Side road: Lane run"; the hall: "Stop 4: Go-Slow Hall"; the ferry: "The ferry").
+- The picture's text: "Seen from above. A stop sign says Alausa. Your hero is getting on a danfo." Then the lines, as written.
+
+### 6. The first screen of a run (W17 C)
+
+Decision 48: the run looks like the same street as its city spot, before and after the fix.
+
+**Which fix each street follows** (plan S3e1b): street 1 **Alausa follows the New road** (`isBuilt(city, 'road')`); street 2 **Computer Village follows block r1c3** (bright only once the Mast is built, d3); street 3 **Ikeja follows block r2c1** (bright only once the Lamps are built). The look is read when the run starts (and again on "Start again" and "Play again"), however the run was started: a stop, a city card, "Next street", or a restart.
+
+**The first screen** is a fixed stretch of the street, in world units, before the first thing that can cost a life:
+
+| Street | Stretch | The street sign stands at | Why that stretch |
+|---|---|---|---|
+| Alausa | 20 to 760 | x 260 | the warm-up; the first roof is at 1150 and the first pothole at 2450 |
+| Computer Village | 20 to 1000 | x 260 | the warm-up; the first roof crate is at 1100 |
+| Ikeja | 20 to 1000 | x 600 | the hero starts at 420; the secret well at 160 stays as it is, and the sign stands ahead of the hero so it never points at the well |
+
+The look eases back to the street's own look over the last 120 units of the stretch (a soft blend, no seam). On a 560-unit screen this is the whole first screen; on wide screens it is the left part of it.
+
+**Tired (the spot is not fixed yet)**, warm and proud, never run-down (decision 47, d2's rule):
+- Walls mixed 50% toward warm sand `#c9b48c`, roofs a further 22% toward dusty brown `#9a8262`; 2 of every 3 windows warm brown `#5a4a3a` with no glint (the same rule as d2).
+- **2 of the first 4 shop fronts** with a roll-down shutter (brown-grey, 4 flat lines across).
+- **One neat tied sack and a box** at the kerb, waiting for collection, never within 100 units of a food stall.
+- **1 person** doing something proud, in the back layer, standing still: Alausa, a woman sweeping in front of her shop; Computer Village, a repairer at a small table with a phone; Ikeja, a man reading by the bus stop sign.
+- **The spot's own mark:**
+  - Alausa: 5 thin cracks on the road's front face (dark `#3a332a`, 1.5 units wide, 10 to 24 units long, three zig-zag strokes each), all between y 306 and 330, so they never touch the walking line at y 300 and never look like a gap. **Two cones** at 70% size, standing against a shop wall in the back layer, never on the road band, so they never read as the cones that mark a pit's lip.
+  - Computer Village: our own phone mast behind the shop row with **1 of 4 bars** filled (4 rising boxes, 1 filled, 3 outlined), and 2 of 3 shop screens dark.
+  - Ikeja: the **2 street lamps** in the stretch with their heads off (no glow ring, dark glass).
+- The street's `fixedLook` (S2.8, after the hall) is not drawn inside the stretch while it is tired: no bunting or lit lamps over a tired street. Past the stretch it draws as usual.
+
+**Bright (the spot is fixed):**
+- The street's own colours, shutters rolled up with goods out front (a crate of tomatoes, a rack of cloth, plain boxes, no brand and no writing), no sack, **4 people** standing still (traders and buyers, a child with a school bag).
+- Alausa: fresh tarmac and lane paint (the existing `drawRoad(..., fresh = true)`), no cracks, no cones. Computer Village: the mast with **4 of 4 bars** and a small light that blinks once every 2 s (steady with reduced motion), shop screens lit with a 1 px glint. Ikeja: both lamps on with their glow.
+- If the hall is done, `fixedLook` draws over the bright stretch as usual.
+
+**The plain street sign** (both looks): a dark grey pole and a cream plate `#fffaf0` with a 2-unit dark outline `#1d1a14` and the name in bold dark letters: **"Alausa"**, **"Computer Village"**, **"Ikeja"**. Nothing else on it: no "Road" or "Street", no number, no crest, no colours of any real sign or any party. The plate's words are drawn in screen pixels, at least 12 px bold, so they read at 320 x 240. It is scenery: the hero walks in front of it, it is not solid, and it sits behind every crate, coin and hazard.
+
+**Rules for the first screen:**
+1. **No level gets harder or easier.** Every tired and bright piece is scenery in the back layers. No solid piece, coin, crate, food, hazard, hint, checkpoint, speed or camera moves or changes. The level files do not change.
+2. **Never a hazard you cannot see coming, and never a false one.** No crack is a hole, no cone stands on the road, nothing dark lies on the walking line.
+3. **Painted once:** both looks go into the street's still row pictures when the run starts (`blitLayer`), never drawn piece by piece each frame.
+4. **Spoken:** when the run starts, the live line says the street's name once ("Alausa"). The look itself is not spoken; it does not change play.
+5. **The hall and the lane run** keep their own looks. The hall is not a city spot yet; the lane run is already the dusk main road to a bus stop where the lamps come on.
+
+### 7. Links
+
+| From | Words | Goes to |
+|---|---|---|
+| City, bottom row | **"Challenge road"** (was "Streets"). At 400 px wide or less it may wrap to two lines ("Challenge / road"), and so may "Nigeria's wheel", each at most 88 px wide and 44 px tall, so the row and the zoom column still fit 320 x 240 | the road, on the Next stop |
+| City problem cards (Potholes, Lights out, Slow internet) | a new small button **"See the stop"** beside "Back". The big button stays: "Run Alausa" or "Lane run" still starts the run at once, so a first-timer's path is no longer | the road, scrolled to that stop with its card open, "for" that card's fix (part 2) |
+| Pause (streets, well room, hall) | "Challenge road" (was "Streets") | leaves the run as "Streets" did, then the road on that stop |
+| Out of lives | "Challenge road" (was "Streets") | the road on that stop |
+| Street cleared | small "Challenge road" (was "Streets"); "Take it home" stays the big button | everything won goes home first (as now), then the road on that stop |
+| Win (after the hall) | "Challenge road" (was "Streets") | the road on the hall stop |
+| Road, "Home" | | Lagos city |
+| Stop card, "Back" | | the road, where it was |
+
+The Streets screen and its words (`WORDS.streets`, "Fix 3 streets, then clear Go-Slow Hall.") go. Its "Nigeria's wheel" button is not carried over: the city's bottom row already has one (CR-R2). The wheel's Back goes to where it was opened from (the city or the title).
+
+### 8. Rules
+
+1. **No level gets harder or easier** (part 6). The stops change where you start a run, not the run.
+2. **Saves carry over.** The road reads the same records the Streets screen read: streets done and best in `gidi-progress`, the hall, the parcel, and the lane part's `best` and `goals`. Unlocks follow S2.8 unchanged. Nothing new is saved but the hint id `road`. An old save opens the road with its stops done, open and locked as its Streets screen showed them. A broken save shows every stop as a new player sees it and writes nothing (S2.8).
+3. **Losing keeps everything collected; a win pays for the fix it was for** (decisions 38, 45, 66, 67). LR-Q2's rule stays: a lane run for the Lamps that also brings Tech 6 makes the Mast "Ready" in the city.
+4. **The Android back button** (ST0 part 3; its "Streets" entry now means the road):
+
+   | Where | Back does |
+   |---|---|
+   | The road | The same as "Home": Lagos city |
+   | A stop card | The same as "Back": the card closes and the road stays where it was |
+   | A stop card opened from a city card's "See the stop" | The same as "Back": the card closes onto the road (one step at a time); back again goes to the city |
+
+   Back never starts a run and never loses anything won. Presses in the first 0.4 s of the road or a card are ignored (ST0 rule 2). Keys: Escape does what back does.
+5. **One tap, one thing.** Taps in the first 0.4 s after the road or a card opens are ignored (`EVENT_SCREEN_GUARD_MS`). A scroll is never a tap.
+
+### 9. Look, sound and reach
+
+- **Our own look.** A Lagos road at midday in the city's bright code-drawn style: danfo-yellow stop plates, our own shelters, yellow danfos, low blocks, palms, the lagoon and our own jetty and ferry. No real building, bus company, brand or sign, and no writing but the stop names. Not a board-game path, not a world map with dots on a path like any famous platform game (city.md part 6 rule 4), nothing from Mario or any Nintendo game.
+- **Mock no one.** Every stop is a real, proud place. Tired is warm and proud (d2): every tired first screen has someone doing something proud; nobody is the problem; no place is drawn worse than another; problem words never sit by a place name.
+- **Sound.** No new sound or tune. The menu tune carries on; a tap on an open stop gives the usual button sound; a locked stop `lockedTuk`; the big button the `horn` (d7). All follow the Sound and Music switches.
+- **Reduced motion.** No bob on the Next stop, no ease when focusing a stop (it jumps), the card opens with no slide, the danfo at the Next stop stays still, the mast light in the Computer Village run stays steady.
+- **Screen readers.** The road is a region called "Challenge road" holding an ordered list "Challenge road stops", in road order: Alausa, Lane run, Computer Village, Ikeja, Go-Slow Hall, Ferry. Each stop is a button that says:
+  - "Stop 1, Alausa. Done. Best 8 naira 70 kobo."
+  - "Side road, Lane run. Ready to play. Best 840 metres."
+  - "Stop 2, Computer Village. Next. Ready to play."
+  - "Stop 3, Ikeja. Locked. Finish Computer Village first."
+  - "Stop 4, Go-Slow Hall. Locked. Finish Ikeja first." (with a parcel: "... You have a garri parcel.")
+  - "Ferry. Coming soon. Fixes to go: 3." (after the boom: "Ferry. Built. More stops coming soon.")
+
+  A locked stop is a button with `aria-disabled="true"` that still opens its card. The road picture and the edge arrows are hidden from screen readers.
+- **Keys.** Tab and Shift+Tab move along the stops in road order; ← and → do the same; Enter or Space opens a card; Escape is Back on a card and Home on the road.
+- **Tap targets.** Stops 112 x 64 (times `s`), Home, Sound, the arrows and Back at least 44 x 44, the card's big button at least 56 tall.
+- **Gentle mode** changes nothing here; it still counts from the next run.
+- **Size budget (gzipped), about 18 KB in all, S3e1:** city.md (e) 12 KB (art 6: road picture 4, plates, icons and shelters 1, jetty looks and the card's sign, danfo and hero overlay 1; code 6: the road screen, scale, scroll and arrows 3, stop states and the list 1, the stop card and its cut 2) plus W17 C about 6 KB (art 4: the tired and bright pieces of part 6 for the three streets 3.5, the street sign 0.5; code 2: the look hookup, the stretch and the blend 1.5, the city card links 0.5). That is plan rows S3e1a (~10 KB) and S3e1b (~8 KB). The first load stays far under 3 MB.
+- **Light on a cheap phone.** The road is one still picture and plain buttons: idle, it draws nothing. Scrolling is the phone's own scroll, at least 55 fps at 4x CPU slowdown. The bob is one CSS transform. The card's cut is one image draw (about 1 ms). The first-screen looks are painted once into the row pictures when the run starts: no extra work per frame, and the run's first frame comes no more than 30 ms later on the slow phone profile than it does today.
+
+### 10. Who does what
+
+**art (S3e1a), from this note; gamedev uses plain shapes until it lands:**
+1. The road picture, 680 x 168 road units (part 4): the main road with two gentle bends, kerbs and lane dashes; the side road from x 132 up to the Lane run stop with three stuck danfos queued on it; low blocks, a palm, a mango tree, a kiosk and a market umbrella on the edges; the lagoon shore at the right end.
+2. The jetty end in two looks: before the first boom (posts and a stack of planks, no words) and after (the jetty and ferry, matching the city's `drawJetty`).
+3. A bus stop shelter (a small roof on two posts and a bench) for each main stop.
+4. The stop plate in its looks: danfo yellow and sand with a 2 px dark outline; the Next pennant with an arrow; the round tick badge; the 16 px icons: padlock, bus, tick, ferry, parcel, house (Home), speaker on and off (small Sound).
+5. The small danfo parked at the Next stop.
+6. The card overlay at card size: the danfo-yellow stop sign with a name, a danfo with its door open, the hero you built stepping in (every body; reuse the city hero and `drawCityBus` where they fit).
+7. W17 C, for each of the three streets, the tired and bright pieces of part 6: faded walls and dark windows, shutters (2 of the first 4 fronts), goods out front, the kerb sack and box, the people (1 tired, 4 bright, and what each does), Alausa's cracks and two cones, Computer Village's mast with 1 and 4 bars and its screens, Ikeja's lamps off and on.
+8. The plain street sign: pole and cream plate, words drawn in screen pixels.
+9. A gallery page for qa (like galleryBright.ts): the road at 320 x 240, 568 x 320, 851 x 393 and 1920 x 1080 with every stop state; each street's first screen tired and bright side by side; the card pictures tired and bright.
+10. docs/assets.md lines for each piece, with its size. Under 10 KB in all.
+
+**gamedev (S3e1b), can start the screen now with plain shapes:**
+1. The road screen (parts 3, 4): scale, the top row, native sideways scroll, the edge arrows, where it opens, focus scrolling, the hint once.
+2. A pure, tested `stopCards()` (like `streetCards()`) giving each stop's state, Next, best, what it is "for", its card words and its spoken words.
+3. The stop card (part 5): layout, the cut from the still city picture with the overlay, the fallback, the words, the big button starting the run "for" its fix (CR-Q1 a), "Back".
+4. The links (part 7): "Challenge road" in the city row (and the two-line rule), "See the stop" on the three problem cards, every "Streets" button renamed and pointed at the road on the right stop; remove the Streets screen; the wheel's Back.
+5. The first screen (part 6): read the look when a street run starts; the stretch, the blend, the street sign, `fixedLook` held back inside a tired stretch; the spoken name at the start.
+6. Back button and keys (part 8), reduced motion and the screen reader list (part 9), all words in src/screens/words.ts.
+7. Tests: the level files unchanged; a scripted street 1 run gives the same hero path, kobo and lives tired and bright; `stopCards()` for a new save, an old Streets-screen save, each fix order and a broken save.
+
+### 11. Done checks for qa
+
+1. **Layout:** at 320 x 240 (also with "Sound: off"), 568 x 320, 640 x 360, 851 x 393, 1920 x 1080 and upright 393 x 851, the top row fits, every stop's name and lines are whole, every stop is at least 44 px tall and every button at least 44 x 44; the road scrolls only where part 4 says, and an arrow shows only when there is more road that way.
+2. **States:** a new save shows Alausa Next, the Lane run open, Computer Village, Ikeja and the hall locked, and the Ferry "Coming soon" with "Fixes to go: 5"; each state reads in greyscale by its icon and word; only one Next; best shows on done stops only, in money words or metres.
+3. **Saves:** a save made on the Streets screen (streets 1 and 2 done, bests, a parcel, a lane best) opens the road with the same stops done, open and locked, the same bests and the parcel on the hall; a broken save writes nothing; the hint shows once.
+4. **Cards:** every row of the part 5 table appears with exactly those words for its state; the picture is the right cut, tired or bright as the city is, with the sign, the danfo and the hero you built; no problem line names a place; the hall card shows the hall picture.
+5. **For (CR-Q1 a):** a first Alausa win from the stop brings ₦14 and plays "Mission complete!" at the road; a Lane run win from the stop pays the Lamps first, then the Mast; a Computer Village or Ikeja win goes to the bus park with "You brought ... home."; "See the stop" from the Slow internet card plays for the Mast.
+6. **First screen:** each street, before and after its fix, matches part 6 (qa puts the pictures side by side at 851 x 393 and 320 x 240); the street sign reads at 320 x 240; the secret well in Ikeja is as before; nothing tired is on the walking line; with the hall done, no bunting over a tired stretch.
+7. **No level gets harder or easier:** the level files are byte for byte the same; the scripted-run test gives the same path, kobo and lives in both looks; a first-timer still finishes Alausa in 3 tries or fewer, and nobody jumps at the scenery cones.
+8. **Links and back:** every link in part 7 goes where it says; Android back and Escape follow part 8; back pressed 10 times fast from a card never starts a run or closes the game; a scroll never opens a stop.
+9. **Reach:** a screen reader hears the road as a list in road order with part 9's words, and each card as a dialog with the big button first; Tab, ←, →, Enter, Space and Escape work; reduced motion as part 9.
+10. **Speed and size:** the road idle draws nothing; scrolling at least 55 fps at 4x CPU; a street's first frame no more than 30 ms later than before on the slow phone profile; S3e1 adds no more than about 18 KB gzipped.
+11. **Original and kind:** not a path-and-dots world map (city.md part 6 rule 4), nothing from Mario or any Nintendo game, no brand, crest or real sign; d2's tired rule and W11 pass; every place is shown with pride.

@@ -10,10 +10,11 @@ const config: CapacitorConfig = {
   appId: 'com.coachnaz.gbese',
   appName: 'Gbese!',
   webDir: 'dist',
-  // SAVES: NEVER CHANGE THESE TWO. The page runs at https://localhost inside the app, and its
-  // localStorage (the hero, Lagos, every save) belongs to exactly that address. A different
-  // scheme or host in a later version would show every player an empty game after the update
-  // (ST0 build note 1). They are written out here so a new Capacitor default cannot move them.
+  // SAVES: NEVER CHANGE THESE THREE. The page runs at https://localhost inside the Android app
+  // and at capacitor://localhost inside the iPhone app, and its localStorage (the hero, Lagos,
+  // every save) belongs to exactly that address. A different scheme or host in a later version
+  // would show every player an empty game after the update (ST0 build note 1). They are written
+  // out here so a new Capacitor default cannot move them.
   server: {
     androidScheme: 'https',
     hostname: 'localhost',
@@ -25,6 +26,16 @@ const config: CapacitorConfig = {
     captureInput: false,
     // webContentsDebuggingEnabled is left at Capacitor's default: debug builds can be inspected
     // from a computer (chrome://inspect), release builds cannot.
+  },
+  // ST1c, the iPhone app (decision 57: iPhone only). Sideways only, the top bar hidden, the home
+  // bar, the silent switch (decision 22) and backup off (decision 59) are set in ios/App/App
+  // (Info.plist, AppDelegate.swift, GbeseViewController.swift).
+  ios: {
+    // The picture fills the screen under the notch; the game keeps buttons inside the safe edges.
+    contentInset: 'never',
+    // One fixed game page: no rubber-band scroll, no long-press link preview.
+    scrollEnabled: false,
+    allowsLinkPreview: false,
   },
   plugins: {
     // ST0 part 6: the splash stays until the first screen has drawn; src/native/app.ts hides it.
