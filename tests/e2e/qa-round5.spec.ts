@@ -120,9 +120,8 @@ test.describe('an error in people code switches people off, never stops the run'
 });
 
 test.describe('city people fault', () => {
-  // GAME BUG (qa round 5): CityPeople has no guard (src/screens/city.ts stepFolk / draw call
-  // this.folk.step, ready, items with no try): a people error stops the city's frame.
-  test.fail();
+  // Was a game bug (qa round 5): CityPeople had no guard in src/screens/city.ts. Fixed: an error
+  // switches the city's people off for the visit (folkFail), as GamePeople does.
   test('city: CityPeople throws; the city keeps drawing and its pins still open', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -153,9 +152,8 @@ test.describe('city people fault', () => {
 });
 
 test.describe('lane people fault', () => {
-  // GAME BUG (qa round 5): LaneFolk has no guard (src/lane/view.ts drawScene calls folk.drawFronts,
-  // drawBridge, drawPeople, drawGoal with no try): a people error stops the lane run.
-  test.fail();
+  // Was a game bug (qa round 5): LaneFolk had no guard in src/lane/view.ts. Fixed: an error
+  // switches the lane's people off for the visit (folkFail), as GamePeople does.
   test('lane run: LaneFolk throws mid-run; the run goes on', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));

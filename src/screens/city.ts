@@ -528,6 +528,8 @@ export class CityScreen {
    * Mama Put queue and cook, the Market's shoppers, the bus park, Mission complete's crowd.
    */
   private folk: CityPeople | null = null;
+  /** People switched off for this visit after an error in their code (they never stop the city). */
+  private folkOff = false;
   private standing: { x: number; y: number; look: number }[] = [];
   private danfo: { r: Route; d: number; speed: number; bus: boolean } | null = null;
   /** The meter's points while its notches fill one by one (null: the saved points). */
@@ -1890,6 +1892,7 @@ export class CityScreen {
    * cheer, once the people's chunk has arrived (the city shows without them until then).
    */
   private stepFolk(dt: number): void {
+    if (this.folkOff) return;
     const kit = peopleKit();
     if (!kit) {
       void loadPeople().catch(() => undefined);
@@ -1901,15 +1904,42 @@ export class CityScreen {
     }
     const st = this.life.state;
     const ms = this.mission;
-    this.folk.step(dt, {
-      state: st,
-      bright: new Set((this.moment?.paint ?? this.boomRun?.paint ?? paintOf(st)).bright),
-      hero: this.hero,
-      // They walk only while the map draws every frame (W10: a still city draws nothing).
-      walking: dt <= 0.1 && !this.hooks.still() && this.active(),
-      watch: this.moment !== null || this.boomRun !== null,
-      missionSince: ms && (ms.phase === 'bus' || ms.phase === 'walk') ? ms.t - BUS_ARRIVAL.time : null,
-    });
+    try {
+      this.folk.step(dt, {
+        state: st,
+        bright: new Set((this.moment?.paint ?? this.boomRun?.paint ?? paintOf(st)).bright),
+        hero: this.hero,
+        // They walk only while the map draws every frame (W10: a still city draws nothing).
+        walking: dt <= 0.1 && !this.hooks.still() && this.active(),
+        watch: this.moment !== null || this.boomRun !== null,
+        missionSince: ms && (ms.phase === 'bus' || ms.phase === 'walk') ? ms.t - BUS_ARRIVAL.time : null,
+      });
+    } catch (err) {
+      this.folkFail(null, err);
+    }
+  }
+
+  /**
+   * People never stop the city (design.md "People everywhere" part 2 rule 1, part 11): an error in
+   * their code switches them off for the rest of the visit, the same guard as GamePeople's. The
+   * city then draws as it does before their chunk arrives.
+   */
+  private folkFail(g: CanvasRenderingContext2D | null, err: unknown): void {
+    this.folkOff = true;
+    this.folk = null;
+    this.needDraw = true;
+    if (g) g.globalAlpha = 1;
+    console.warn('People switched off:', err);
+  }
+
+  /** Runs one people drawing part; an error switches them off (folkFail). */
+  private folkDraw(g: CanvasRenderingContext2D, draw: () => void): void {
+    if (this.folkOff) return;
+    try {
+      draw();
+    } catch (err) {
+      this.folkFail(g, err);
+    }
   }
 
   private stepBuild(dt: number): void {
@@ -2700,8 +2730,11 @@ export class CityScreen {
     type Item = { y: number; draw: () => void };
     const items: Item[] = [];
     // S3g1b: the people's sheet, at the still picture's pixel scale (one bake per zoom step).
+    if (this.folk) {
+      const f = this.folk;
+      this.folkDraw(g, () => f.ready(this.hooks.look(), s * Math.min(window.devicePixelRatio || 1, MAP_DPR)));
+    }
     const folk = this.folk;
-    folk?.ready(this.hooks.look(), s * Math.min(window.devicePixelRatio || 1, MAP_DPR));
     const bukaBuild = this.building?.build === 'mamaPut' ? this.building.t : st.built.includes('buka') ? 1 : 0;
     if (bukaBuild > 0) {
       const full = trayFull(this.life.state, 'buka');
@@ -2716,9 +2749,10 @@ export class CityScreen {
             drawMamaPut(g, d.x, d.y, { time: this.time, plate: still ? 0 : clock, served, queue: 4, full, build: bukaBuild, still });
             return;
           }
-          const cook = folk.cook(s, this.time, still, this.collecting?.place === 'buka');
+          const drawCook = folk.cook(s, this.time, still, this.collecting?.place === 'buka');
+          const cook = (c: CanvasRenderingContext2D, x: number, y: number, resting: boolean): void => this.folkDraw(c, () => drawCook(c, x, y, resting));
           drawMamaPut(g, d.x, d.y, { time: this.time, plate: still ? 0 : clock, served, queue: 0, full, build: bukaBuild, still, cook });
-          if (bukaBuild >= 1) folk.queue(g, d.x, d.y, s, clock, served, still, full);
+          if (bukaBuild >= 1) this.folkDraw(g, () => folk.queue(g, d.x, d.y, s, clock, served, still, full));
         },
       });
     }
@@ -2732,7 +2766,7 @@ export class CityScreen {
         y: d.y,
         draw: () => {
           drawMarketPlace(g, d.x, d.y, { stock: trip.stock, build: marketBuild });
-          if (marketBuild >= 1) folk?.shoppers(g, d.x, d.y, s, this.time, still);
+          if (marketBuild >= 1 && folk) this.folkDraw(g, () => folk.shoppers(g, d.x, d.y, s, this.time, still));
           if (marketBuild >= 1 && earn) {
             if (trip.carry >= 0 && !still) drawPorter(g, d.x - 20, d.y + 4, d.x + 8, d.y + 16, trip.carry);
             if (trip.visible) drawMarketDanfo(g, d.x + 20 + trip.dx, d.y + 26, trip.load, trip.door);
@@ -2745,12 +2779,16 @@ export class CityScreen {
     // S3g1b: ambient walkers (stopping to watch a moment, cheering at its sting), the bus park,
     // Mission complete's crowd.
     const msF = this.mission;
-    folk?.items((y, draw) => items.push({ y, draw }), g, s, {
-      still,
-      sting: this.moment ? this.moment.t - MOMENT.sting : -1,
-      boomed: st.boomSeen >= FIRST_BOOM,
-      mission: msF && msF.phase !== 'end' ? { bus: msF.bus, since: msF.t - BUS_ARRIVAL.time } : null,
-    });
+    if (folk) {
+      this.folkDraw(g, () =>
+        folk.items((y, draw) => items.push({ y, draw: () => this.folkDraw(g, draw) }), g, s, {
+          still,
+          sting: this.moment ? this.moment.t - MOMENT.sting : -1,
+          boomed: st.boomSeen >= FIRST_BOOM,
+          mission: msF && msF.phase !== 'end' ? { bus: msF.bus, since: msF.t - BUS_ARRIVAL.time } : null,
+        }),
+      );
+    }
     for (const w of this.walkers) {
       const at = walkerAt(w);
       const bob = still ? 0 : Math.abs(Math.sin((w.t - w.wait) * 12)) * 1.2;
