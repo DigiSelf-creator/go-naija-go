@@ -10,6 +10,15 @@ export const GAME_NAME = 'Gbese!';
 /** The title line (City choice 10, Tp 9 Nov 2026); the moving intro ends on the same words. */
 const TAGLINE = 'Build up Lagos. Get Nigeria working.';
 
+/**
+ * O1b1: when the Ogun part cannot load (src/worlds/load.ts). `noInternet` is ogun.md part 8's
+ * download card line; `broken` (a missing or damaged file) is gamedev's draft for designer to check.
+ */
+export const WORLD_PART_WORDS = {
+  noInternet: 'Ogun needs the internet once to download. Lagos still works with no internet.',
+  broken: 'Ogun could not open just now. Lagos still works. Try again later.',
+};
+
 export const WORDS = {
   title: {
     /** City choice 10 (Tp, 9 Nov 2026). */

@@ -3,7 +3,28 @@
    Same-origin GET only. It never talks to any other site. */
 const VERSION = '__VERSION__';
 const PRECACHE = __PRECACHE__;
+// O1b1: each later state's files ({ ogun: ["./worlds/ogun/...js"] }). Not fetched on the first
+// visit: only when the player first goes there, then kept.
+const WORLDS = __WORLDS__;
 const CACHE = `gidi-dash-${VERSION}`;
+
+/** The later states an older cache already holds, so an update keeps them playable offline. */
+function worldsHeld() {
+  return caches.keys().then((keys) =>
+    Promise.all(
+      keys
+        .filter((k) => k.startsWith('gidi-dash-') && k !== CACHE)
+        .map((k) => caches.open(k).then((c) => c.keys())),
+    ).then((lists) => {
+      const held = new Set();
+      for (const reqs of lists) for (const r of reqs) {
+        const m = /\/worlds\/([^/]+)\//.exec(new URL(r.url).pathname);
+        if (m) held.add(m[1]);
+      }
+      return [...held];
+    }),
+  );
+}
 // Servers may send "Vary: Origin"; module scripts carry an Origin header, the precache did not.
 const MATCH = { ignoreVary: true };
 
@@ -11,7 +32,15 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
+      .then((cache) =>
+        cache.addAll(PRECACHE).then(() =>
+          // A state the player already has comes along in its new version. Best effort: if this
+          // fails, the state downloads again the next time it is opened.
+          worldsHeld()
+            .then((ids) => Promise.all(ids.flatMap((id) => (WORLDS[id] || []).map((u) => cache.add(u).catch(() => undefined)))))
+            .catch(() => undefined),
+        ),
+      )
       .then(() => self.skipWaiting()),
   );
 });
@@ -50,7 +79,7 @@ self.addEventListener('fetch', (event) => {
         fetch(req).then((res) => {
           if (res.ok && res.type === 'basic') {
             const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
+            event.waitUntil(caches.open(CACHE).then((cache) => cache.put(req, copy)));
           }
           return res;
         }),

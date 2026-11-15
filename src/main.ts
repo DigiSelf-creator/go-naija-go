@@ -24,6 +24,8 @@ import { hasSavedLook, loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
 import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, canFix, isBuilt, leftOf, winPrize, withHint, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
+import { OGUN, arrived, openStates, stateProgress, wallet, whereNow } from './game/states';
+import { WorldParts } from './worlds/load';
 import type { BuildId } from './art/payspot';
 import type { Mission } from './screens/city';
 import { KOBO_PER_COIN } from './game/money';
@@ -139,6 +141,8 @@ function startGame(): void {
   let nativeApp: NativeApp | null = null;
   /** S2.8: streets done, best kobo, the saved parcel and the hall, under gidi-progress. */
   const progress = new Progress(store);
+  /** O1b1: later states' lazy parts (docs/ogun.md 9.2). Ogun's files are fetched only when asked for. */
+  const worlds = new WorldParts({ ogun: () => import('./worlds/ogun') }, () => navigator.onLine !== false);
   /** S3f0 part 25.5: can this phone tilt (a quiet 1.5 s check on Android; iPhones know at once). */
   const tilt = new TiltAccess();
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
@@ -1395,6 +1399,17 @@ function startGame(): void {
     get toast() {
       return toast.text;
     },
+    // O1b1: dev-only until O1b2 brings the Travel card. The saved state list, and a way to load the Ogun part.
+    get states() {
+      const raw = progress.raw;
+      return { where: whereNow(raw), open: openStates(raw), ogun: stateProgress(raw, OGUN), arrived: arrived(raw), wallet: wallet(raw), ogunLoaded: worlds.get(OGUN) !== null };
+    },
+    loadOgun: async () => {
+      const r = await worlds.load(OGUN);
+      if (r.ok) return { ok: true as const, levels: Object.keys(r.part.levels).sort() };
+      toast.show(r.message, 4000);
+      return { ok: false as const, why: r.why, message: r.message };
+    },
     get fixedLook() {
       return game.fixed;
     },
@@ -1750,6 +1765,17 @@ declare global {
       /** The Go down / Go up button on screen now (CSS px), or null. */
       readonly wellButton: { readonly kind: 'down' | 'up'; readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       readonly toast: string;
+      /** O1b1: the saved state list (dev and tests). */
+      readonly states: {
+        where: string;
+        open: string[];
+        ogun: import('./game/progress').StateProgress;
+        arrived: boolean;
+        wallet: { kobo: number; power: number; tech: number };
+        ogunLoaded: boolean;
+      };
+      /** O1b1: loads the Ogun part (dev only until O1b2); a failure shows its plain words on the toast. */
+      loadOgun(): Promise<{ ok: true; levels: string[] } | { ok: false; why: 'missing' | 'broken'; message: string }>;
       /** The street shows its fixed look (Lagos switched on, S2.8). */
       readonly fixedLook: boolean;
       readonly corn: {
