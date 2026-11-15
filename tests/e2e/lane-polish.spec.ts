@@ -100,13 +100,28 @@ test('po note: "+5 m" is its own chip, apart from the Blackout words, for 1 s', 
       window.__lane!.setGap(17);
       window.__lane!.warp(140);
     });
-    await expect.poll(async () => (await hook(page))!.change, { timeout: 5000 }).toBe('+5 m');
-    const words = await page.locator('.lane-dark').textContent();
-    expect(words).toMatch(/^Blackout: \d+ m behind$/);
-    const a = (await page.locator('.lane-dark').boundingBox())!;
-    const b = (await page.locator('.lane-change').boundingBox())!;
-    const apart = b.x >= a.x + a.width + 2 || b.y >= a.y + a.height + 2;
-    expect(apart, `the change chip sits apart from the words at ${w} x ${h}`).toBe(true);
+    // Read in one go while it shows (it lasts 1 s; the float's first frames start a little low).
+    const read = () =>
+      page.evaluate(() => {
+        const c = document.querySelector<HTMLElement>('.lane-change')!;
+        if (c.hidden || c.textContent !== '+5 m') return null;
+        const a = document.querySelector('.lane-dark')!.getBoundingClientRect();
+        const b = c.getBoundingClientRect();
+        return { words: document.querySelector('.lane-dark')!.textContent ?? '', apart: b.left >= a.right + 2 || b.top >= a.bottom + 2 };
+      });
+    let seen: Awaited<ReturnType<typeof read>> = null;
+    await expect
+      .poll(
+        async () => {
+          seen = await read();
+          return seen !== null;
+        },
+        { timeout: 5000, intervals: [50] },
+      )
+      .toBe(true);
+    const got = seen as unknown as { words: string; apart: boolean };
+    expect(got.words).toMatch(/^Blackout: \d+ m behind$/);
+    expect(got.apart, `the change chip sits apart from the words at ${w} x ${h}`).toBe(true);
     // Gone after about 1 s.
     await expect.poll(async () => (await hook(page))!.change, { timeout: 3000 }).toBe('');
   }
