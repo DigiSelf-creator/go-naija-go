@@ -13,7 +13,7 @@ import type { StreetCast } from './crowd';
 import type { CrateState } from './crates';
 import type { FoodKind, Level } from './level';
 import type { GamePeople } from './people';
-import type { Run, RunEvent } from './run';
+import type { HazardState, Run, RunEvent } from './run';
 import type { RoomData } from './well';
 
 type G = CanvasRenderingContext2D;
@@ -59,6 +59,8 @@ export interface StreetSkin {
   crate?(g: G, c: CrateState, look: Omit<CrateLook, 'stamp'>): boolean;
   /** A HUD chip's food icon, centred at (x, y), size 1 about 32 u. False: the game draws its own. */
   icon?(g: G, kind: FoodKind, x: number, y: number, size: number): boolean;
+  /** O4b: world space, a hazard in any mode (Sagamu's gravel). False: the game draws its own. */
+  hazard?(g: G, z: HazardState, s: SkinNow): boolean;
   /** World space, in front of the hero: splashes. */
   front?(g: G, s: SkinNow): void;
   /** What happened this step. */

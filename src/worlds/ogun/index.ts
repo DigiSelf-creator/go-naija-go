@@ -13,6 +13,7 @@ import { addSounds } from '../../engine/sound';
 import type { WorldPart } from '../load';
 import { ABEOKUTA_SOUNDS } from './abeokuta';
 import { OTA_SOUNDS } from './ota';
+import { SAGAMU_SOUNDS } from './sagamu';
 import { ogunStreet } from './otaStreet';
 import { ui } from './ride';
 
@@ -24,10 +25,12 @@ for (const [path, data] of Object.entries(files)) {
   if (name) levels[name] = data;
 }
 
-// O2b: Ota's mud steps ("splosh"); O3b: Abeokuta's crack rumble. Playable once this part has loaded.
+// O2b: Ota's mud steps ("splosh"); O3b: Abeokuta's crack rumble; O4b: Sagamu's gravel "tk" and
+// crumble. Playable once this part has loaded.
 addSounds(OTA_SOUNDS);
 addSounds(ABEOKUTA_SOUNDS);
+addSounds(SAGAMU_SOUNDS);
 
 // O1b2: the bus ride, the place picture and the welcome tune ride along in this part.
-// O2b: each street's own look (Ota, and Abeokuta from O3b; Sagamu with O4b).
+// O2b: each street's own look (Ota; Abeokuta from O3b; Sagamu from O4b).
 export const part: WorldPart = { id: 'ogun', version: 1, levels, ui, street: ogunStreet };

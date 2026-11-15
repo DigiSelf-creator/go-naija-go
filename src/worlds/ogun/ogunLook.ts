@@ -1,12 +1,18 @@
 /**
  * O3b: the street look pieces every Ogun street shares (gamedev's glue, lazy Ogun part): mud with
- * its footprints and splashes, ikokore, and garri as Ijebu garri (ogun.md 3.3, 4.1). Ota's and
- * Abeokuta's skins (otaStreet.ts, abeokutaStreet.ts) are built from these.
+ * its footprints and splashes, ikokore, and garri as Ijebu garri (ogun.md 3.3, 4.1). Ota's,
+ * Abeokuta's and Sagamu's skins (otaStreet.ts, abeokutaStreet.ts, sagamuStreet.ts) are built
+ * from these. O4b: the cracks with their signs and the Ogun well room (the Ijebu garri store, its
+ * parcel and keeper) moved here from Abeokuta's skin, since Sagamu has both too.
  */
 import type { CrateLook } from '../../art/crate';
 import type { CrateState } from '../../game/crates';
+import type { StreetCast } from '../../game/crowd';
 import type { FoodKind } from '../../game/level';
-import type { SkinEvent, SkinNow } from '../../game/skin';
+import type { CrackState } from '../../game/run';
+import type { SkinEvent, SkinNow, StreetSkin } from '../../game/skin';
+import { OGUN_WORDS } from '../../screens/words';
+import { CRACK, OGUN_STORE_KEEPER, OGUN_STORE_KEEPER_SPOT, drawCrack, drawCrackSign, drawIjebuParcel, drawIjebuParcelIcon, drawOgunShelf, drawOgunWellRoom, drawSackStack } from './abeokuta';
 import { drawIjebuGarriCrate, drawIjebuGarriIcon, drawIkokore, drawIkokoreIcon, drawMud, drawMudPrint, drawMudSplash } from './ota';
 
 type G = CanvasRenderingContext2D;
@@ -90,3 +96,52 @@ export function ogunIcon(g: G, kind: FoodKind, x: number, y: number, size: numbe
   else return false;
   return true;
 }
+
+/** Run steps a second (run.ts STEPS_PER_SECOND; not imported, so the first load splits no chunk). */
+export const STEPS = 60;
+/** The crack sign's post stands this far before the left lip (pits.ts SIGN_BEFORE, the pothole sign's). */
+const SIGN_BEFORE = 120;
+
+/** How far open a crack is now: 0 shut, 0 to 1 rumbling open, 1 a pothole. */
+export function crackOpen(c: CrackState, steps: number): number {
+  if (c.state === 'open') return 1;
+  if (c.state !== 'opening') return 0;
+  // Held just short of open while the hero stands over it (it never opens under the feet).
+  return Math.min(0.99, (steps - c.at) / (CRACK.openTime * STEPS));
+}
+
+/** World space: the street's cracks (the run says when each opens) and their signs. */
+export function drawCracks(g: G, s: SkinNow): void {
+  const { run } = s;
+  const gy = s.level.groundY;
+  for (const c of run.cracks) {
+    if (c.x + c.w + 20 < s.L || c.x - SIGN_BEFORE - 30 > s.R) continue;
+    drawCrackSign(g, c.x - SIGN_BEFORE, gy);
+    drawCrack(g, c.x, c.w, gy, s.H, crackOpen(c, run.steps), s.clock, s.still);
+  }
+}
+
+/** The Ogun well room's keeper (3.7): his look, his spot by the back wall and his words. */
+export function ogunKeeper(): NonNullable<StreetCast['keeper']> {
+  return { look: OGUN_STORE_KEEPER, x: OGUN_STORE_KEEPER_SPOT.x, words: OGUN_WORDS.folk.storeKeeper };
+}
+
+/** The Ogun well room, the Ijebu garri store (3.7): its back and shelves, the parcel and its HUD chip. */
+export const ogunRoom: Pick<StreetSkin, 'room' | 'gift' | 'parcelIcon'> = {
+  room(g, room, camX, viewW, time, viewH, still) {
+    drawOgunWellRoom(g, camX, viewW, time, viewH, still);
+    // The shelves in file order: sacks, the plank shelf (the parcel's), sacks (the room floor is OGUN_ROOM.floorY).
+    room.terrain.platforms.forEach((p, i) => {
+      if (i === 1) drawOgunShelf(g, p.x, p.y, p.w);
+      else drawSackStack(g, p.x, p.y, p.w);
+    });
+    return true;
+  },
+  gift(g, x, y, time) {
+    drawIjebuParcel(g, x, y, time);
+    return true;
+  },
+  parcelIcon(g, x, y, size) {
+    drawIjebuParcelIcon(g, x, y, size);
+  },
+};

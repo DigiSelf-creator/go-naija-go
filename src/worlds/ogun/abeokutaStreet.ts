@@ -15,39 +15,25 @@
 import type { FolkLook } from '../../art/folk';
 import type { StreetCast } from '../../game/crowd';
 import type { Level } from '../../game/level';
-import type { CrackState } from '../../game/run';
 import type { StreetSkin } from '../../game/skin';
 import { OGUN_WORDS } from '../../screens/words';
 import {
   ABEOKUTA_CAST,
   ABEOKUTA_TRADERS,
   ABEOKUTA_TRADER_LOOKS,
-  CRACK,
-  OGUN_STORE_KEEPER,
-  OGUN_STORE_KEEPER_SPOT,
   drawAbeokutaBackdrop,
   drawAbeokutaStall,
   drawAbeokutaTraderStall,
-  drawCrack,
-  drawCrackSign,
-  drawIjebuParcel,
-  drawIjebuParcelIcon,
   drawOfada,
   drawOfadaIcon,
-  drawOgunShelf,
-  drawOgunWellRoom,
   drawRock,
-  drawSackStack,
   drawWaterPothole,
   type AbeokutaTrader,
 } from './abeokuta';
-import { mudMarks, ogunCrate, ogunFood, ogunIcon } from './ogunLook';
+import { drawCracks, mudMarks, ogunCrate, ogunFood, ogunIcon, ogunKeeper, ogunRoom } from './ogunLook';
 
-
-/** Run steps a second (run.ts STEPS_PER_SECOND; not imported, so the first load splits no chunk). */
-const STEPS = 60;
-/** The crack sign's post stands this far before the left lip (pits.ts SIGN_BEFORE, the pothole sign's). */
-const SIGN_BEFORE = 120;
+/** O4b: moved to ogunLook.ts (Sagamu has cracks too); still here for older callers. */
+export { crackOpen } from './ogunLook';
 
 /** Each trader's stall stands this far to the right of where they stand (as on Ota). */
 const STALL_RIGHT = 40;
@@ -67,16 +53,8 @@ export function abeokutaCast(): StreetCast {
       const k = TRADER_OF.get(look);
       return k ? calls[ABEOKUTA_TRADERS.indexOf(k)] : undefined;
     },
-    keeper: { look: OGUN_STORE_KEEPER, x: OGUN_STORE_KEEPER_SPOT.x, words: OGUN_WORDS.folk.storeKeeper },
+    keeper: ogunKeeper(),
   };
-}
-
-/** How far open a crack is now: 0 shut, 0 to 1 rumbling open, 1 a pothole. */
-export function crackOpen(c: CrackState, steps: number): number {
-  if (c.state === 'open') return 1;
-  if (c.state !== 'opening') return 0;
-  // Held just short of open while the hero stands over it (it never opens under the feet).
-  return Math.min(0.99, (steps - c.at) / (CRACK.openTime * STEPS));
 }
 
 /** The road gaps under a rock, for drawRock's open body (the ledge over its pothole). */
@@ -109,7 +87,7 @@ export function abeokutaSkin(): StreetSkin {
       }
     },
     ground(g, s) {
-      const { level, run } = s;
+      const { level } = s;
       const gy = level.groundY;
       if (rocksOf !== level) {
         // Worked out once a level: the roofs the platform loop hands to stall() that are rocks.
@@ -124,11 +102,7 @@ export function abeokutaSkin(): StreetSkin {
         const span = level.ground.find(([a]) => a > x);
         if (span) drawWaterPothole(g, x, span[0], gy, s.H, s.clock, s.still);
       }
-      for (const c of run.cracks) {
-        if (c.x + c.w + 20 < s.L || c.x - SIGN_BEFORE - 30 > s.R) continue;
-        drawCrackSign(g, c.x - SIGN_BEFORE, gy);
-        drawCrack(g, c.x, c.w, gy, s.H, crackOpen(c, run.steps), s.clock, s.still);
-      }
+      drawCracks(g, s);
     },
     stall(g, x, topY, w, groundY) {
       const k = rocks.get(`${x}|${topY}`);
@@ -153,21 +127,6 @@ export function abeokutaSkin(): StreetSkin {
     front: mud.front,
     hear: mud.hear,
     restart: mud.restart,
-    room(g, room, camX, viewW, time, viewH, still) {
-      drawOgunWellRoom(g, camX, viewW, time, viewH, still);
-      // The shelves in file order: sacks, the plank shelf (the parcel's), sacks (the room floor is OGUN_ROOM.floorY).
-      room.terrain.platforms.forEach((p, i) => {
-        if (i === 1) drawOgunShelf(g, p.x, p.y, p.w);
-        else drawSackStack(g, p.x, p.y, p.w);
-      });
-      return true;
-    },
-    gift(g, x, y, time) {
-      drawIjebuParcel(g, x, y, time);
-      return true;
-    },
-    parcelIcon(g, x, y, size) {
-      drawIjebuParcelIcon(g, x, y, size);
-    },
+    ...ogunRoom,
   };
 }

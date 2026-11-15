@@ -17,6 +17,7 @@ import type { StreetCast } from '../../game/crowd';
 import type { FolkLook } from '../../art/folk';
 import { OTA_CAST, OTA_TRADERS, OTA_TRADER_LOOKS, OTA_TRAVELLERS, drawOtaBackdrop, drawOtaStall, drawOtaTraderStall, type OtaTrader } from './ota';
 import { abeokutaSkin } from './abeokutaStreet';
+import { sagamuSkin } from './sagamuStreet';
 import { mudMarks, ogunCrate, ogunFood, ogunIcon } from './ogunLook';
 
 export { MUD_LOOK } from './ogunLook';
@@ -83,5 +84,6 @@ export function otaSkin(arch: number): StreetSkin {
 export function ogunStreet(level: { readonly id: string; readonly arch: number | null }): StreetSkin | null {
   if (level.id === 'ogun-1') return otaSkin(level.arch ?? 200);
   if (level.id === 'ogun-2') return abeokutaSkin();
+  if (level.id === 'ogun-3') return sagamuSkin();
   return null;
 }

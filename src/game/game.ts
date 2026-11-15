@@ -673,6 +673,8 @@ export class Game {
       g.globalAlpha = 1 - fade; // the street end: hazards fade out
       for (const z of run.hazards) {
         if (z.mode === 'gone' || z.x < L || z.x > R) continue;
+        // O4b: a later state's own hazard (Sagamu's hopping gravel).
+        if (sn && this.skinDo((k) => k.hazard?.(g, z, sn))) continue;
         if (z.mode === 'eat') drawGoatEating(g, z.x, z.y, z.t / FUFU_RULES.eatSteps, z.face);
         else if (z.mode === 'knocked') {
           const k = z.t / FUFU_RULES.knockSteps;
