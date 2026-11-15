@@ -174,3 +174,69 @@ test('the lane run draws its own picture in the cutout strip; its rows and butto
   expect(lefts.length).toBeGreaterThan(0);
   for (const l of lefts) expect(l).toBeGreaterThanOrEqual(CUT);
 });
+
+/** The colour most of the strip shows (screenshot), and whether every point is near it. */
+const stripIs = async (page: Page, rgb: RGB, tol: number): Promise<boolean> => {
+  const h = await page.evaluate(() => window.innerHeight);
+  return (await shown(page, stripPoints(h))).every((p) => near(p, rgb, tol));
+};
+
+test('qa round 5, Nigeria\'s wheel: the cream fills the cutout strip, its buttons stay inside the safe edges, no stale street', async ({ page }) => {
+  await storySeen(page);
+  await page.goto('./');
+  await expect.poll(() => screenNow(page)).toBe('title');
+  await cutoutLeft(page);
+  await page.getByRole('button', { name: 'Make your hero' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('builder');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Make your hero' }).getByRole('button', { name: 'Start running' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Lagos' }).getByRole('button', { name: "Nigeria's wheel" }).tap();
+  await expect.poll(() => screenNow(page)).toBe('wheel');
+  await page.waitForTimeout(400);
+  // The strip shows the wheel's cream (#fffaf0), never the street or the page colour.
+  await expect.poll(() => stripIs(page, [0xff, 0xfa, 0xf0], 6)).toBe(true);
+  const lefts = await page.evaluate(() =>
+    [...document.querySelectorAll('.wheel-card button, .wheel-card h2, .wheel-card svg')]
+      .map((e) => e.getBoundingClientRect())
+      .filter((b) => b.width > 0)
+      .map((b) => b.left),
+  );
+  expect(lefts.length).toBeGreaterThan(0);
+  for (const l of lefts) expect(l).toBeGreaterThanOrEqual(CUT);
+});
+
+test('qa round 5, the challenge road: its picture fills the cutout strip with no stale street; its buttons and stops stay inside the safe edges', async ({ page }) => {
+  await storySeen(page);
+  await page.goto('./');
+  await expect.poll(() => screenNow(page)).toBe('title');
+  await cutoutLeft(page);
+  await page.getByRole('button', { name: 'Make your hero' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('builder');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Make your hero' }).getByRole('button', { name: 'Start running' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Lagos' }).getByRole('button', { name: 'Challenge road' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('road');
+  await page.waitForTimeout(400);
+  // The strip shows the road screen's own sky-to-sand backdrop: the screen's own colour at x = CUT + 2.
+  const h = await page.evaluate(() => window.innerHeight);
+  const pts = stripPoints(h);
+  const inside = pts.map((p) => ({ x: CUT + 2, y: p.y }));
+  await expect
+    .poll(async () => {
+      const [a, b] = [await shown(page, pts), await shown(page, inside)];
+      return a.every((p, i) => near(p, b[i]!, 24));
+    })
+    .toBe(true);
+  const lefts = await page.evaluate(() =>
+    [...document.querySelectorAll('.road-top button, .road-stop')]
+      .map((e) => e.getBoundingClientRect())
+      .filter((b) => b.width > 0 && b.right > 0)
+      .map((b) => b.left),
+  );
+  expect(lefts.length).toBeGreaterThan(0);
+  for (const l of lefts) expect(l).toBeGreaterThanOrEqual(CUT);
+});
