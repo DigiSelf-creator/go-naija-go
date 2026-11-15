@@ -2153,11 +2153,14 @@ export class CityScreen {
    * The hint bar sits just under the top row (W7). When it would cover the hero, a board or a
    * bubble there, it moves down to just above the bottom row if that spot is clear (W18: never over
    * the hero, a board or a bubble). It stays put while both spots are clear, so it does not jump.
+   * It is placed again every frame the hero walks, so the hero never walks under it (qa round 5);
+   * when no spot is clear of the hero, it hides until one is.
    */
   private placeHint(): void {
     const w = this.hintEl.hidden ? 0 : this.hintEl.offsetWidth;
     const h = this.hintEl.hidden ? 0 : this.hintEl.offsetHeight;
     if (!w || !h) {
+      this.hintEl.style.visibility = '';
       if (this.hintBox) {
         this.hintBox = null;
         this.requestDraw();
@@ -2168,7 +2171,9 @@ export class CityScreen {
     const s = camScale(this.cam.zoom, this.view);
     const hero = toScreen(this.cam, this.view, this.hero);
     const sz = walkerSize(s) * s;
-    const heroBox: ScreenBox = { x: hero.x - sz * 0.55, y: hero.y - sz * 1.3, w: sz * 1.1, h: sz * 1.5 };
+    // A little room round the hero: the hero moves a few px between the bar's frames.
+    const pad = 3;
+    const heroBox: ScreenBox = { x: hero.x - sz * 0.55 - pad, y: hero.y - sz * 1.3 - pad, w: sz * 1.1 + pad * 2, h: sz * 1.5 + pad * 2 };
     const signs = [...(this.signLayout?.spots.values() ?? [])].map((sp) => sp.box);
     const clear = (p: Pt, of: readonly ScreenBox[]): boolean => of.every((q) => q.x + q.w <= p.x || p.x + w <= q.x || q.y + q.h <= p.y || p.y + h <= q.y);
     const mid = (this.view.w - w) / 2;
@@ -2185,12 +2190,21 @@ export class CityScreen {
       if (spots['low']) spots['sideLow'] = { x: away, y: low };
     }
     spots['row'] = { x: mid, y: Math.max(4, high - h - 4) };
+    // On the smallest screens the hero can walk up under the top row: then over the bottom row.
+    spots['foot'] = { x: mid, y: Math.round(Math.max(4, this.view.h - h - 4)) };
     const keep = this.hintSpot && spots[this.hintSpot] ? [this.hintSpot] : [];
     const all = [...keep, 'high', 'low'].filter((k) => spots[k]);
     const pick =
       all.find((k) => clear(spots[k]!, [heroBox, ...signs])) ??
-      [...keep, 'high', 'low', 'side', 'sideLow', 'row'].find((k) => spots[k] && clear(spots[k]!, [heroBox])) ??
-      'row';
+      [...keep, 'high', 'low', 'side', 'sideLow', 'row', 'foot'].find((k) => spots[k] && clear(spots[k]!, [heroBox])) ??
+      null;
+    const hide = pick === null ? 'hidden' : '';
+    if (this.hintEl.style.visibility !== hide) this.hintEl.style.visibility = hide;
+    if (pick === null) {
+      // Nowhere clear of the hero (W18): hidden until the hero walks on.
+      if (this.hintBox) this.hintBox = null;
+      return;
+    }
     this.hintSpot = pick;
     const { x, y } = spots[pick]!;
     const shift = x === mid ? '' : `translateX(calc(-50% + ${Math.round(x - mid)}px))`;

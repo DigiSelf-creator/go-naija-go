@@ -27,9 +27,8 @@ async function heroBox(page: Page): Promise<Box> {
   return { x: x - sz * 0.55, y: y - sz * 1.3, w: sz * 1.1, h: sz * 1.5 };
 }
 
-// GAME BUG (qa round 5): the hint bar's place is chosen when it shows; the hero can then walk
-// under it in the 4 s it stays through a walk (src/screens/city.ts, W18 tiny-screen ruling).
-test.fail();
+// Was a game bug (qa round 5): the hero could walk under the hint bar in the 4 s it stays through a
+// walk. Fixed in src/screens/city.ts placeHint: placed again each frame, hidden when no spot is clear.
 
 for (const [width, height] of [
   [320, 240],
