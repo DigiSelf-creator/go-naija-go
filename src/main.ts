@@ -35,7 +35,7 @@ import type { Where } from './screens/streets';
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
-import { bannerShows } from './update';
+import { bannerShows, inAttempt } from './update';
 import { UpdateBanner } from './screens/update-banner';
 import { isNativeApp } from './native/is-native';
 import type { NativeApp } from './native/app';
@@ -261,11 +261,13 @@ function startGame(): void {
   /** The street, the well and its room, or the hall fight is being played (not a finish, game over or won). */
   const inPlay = (): boolean => game.run.inPlay;
 
-  // U1 (decision 52): "New version ready. Tap to update." on any screen, never in a run: only on
-  // Pause, the result cards and the other screens. One tap reloads into the new version.
+  // U1 (decision 52): "New version ready. Tap to update." One tap reloads into the new version.
+  // Decision 68: never in a run and never on its Pause (a street, the well room, Go-Slow Hall or
+  // a lane run), since the reload would quietly start the attempt again. Only on the result cards
+  // and the other screens.
   const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
-  /** A run is being played with no card over it (the finish bus counts: the result card follows). */
-  const inRun = (): boolean => (playing || lane !== null) && menus.current === null;
+  /** A run is being played or paused (the finish bus counts: the result card follows). */
+  const inRun = (): boolean => inAttempt(playing || lane !== null, menus.current);
   const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
   updateReady = () => {
     syncUpdate();

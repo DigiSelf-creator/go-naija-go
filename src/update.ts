@@ -3,7 +3,8 @@
  *
  * The service worker answers page loads from its cache, so after a deploy the open game is still
  * the old one. When a new worker takes over while the page is open, or waits to, the game offers
- * one tap to load the new version. Never on a first visit (no old worker), never in a run.
+ * one tap to load the new version. Never on a first visit (no old worker), never in a run or on
+ * its Pause (decision 68).
  * Talks only to our own service worker: no other network requests.
  */
 
@@ -55,9 +56,18 @@ export class UpdateState {
   }
 }
 
-/** The banner shows when a new version is ready and no run is being played (paused or a card is fine). */
-export function bannerShows(ready: boolean, inRun: boolean): boolean {
-  return ready && !inRun;
+/**
+ * Decision 68: an attempt is on while a street, the well room, Go-Slow Hall or a lane run is being
+ * played, and also while it is paused: one tap on the banner reloads the page, which would quietly
+ * throw the attempt away. `screen` is the menu card showing (null: none, the run itself).
+ */
+export function inAttempt(running: boolean, screen: string | null): boolean {
+  return running && (screen === null || screen === 'pause');
+}
+
+/** The banner shows when a new version is ready and no attempt is on: on the result cards and the menus only. */
+export function bannerShows(ready: boolean, attempt: boolean): boolean {
+  return ready && !attempt;
 }
 
 export interface UpdateWatchOptions {
