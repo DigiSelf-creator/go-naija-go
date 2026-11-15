@@ -1,5 +1,34 @@
 # Open questions for the product owner
 
+## designer, 15 Nov 2026: people everywhere (docs/design.md "People everywhere", Tp's feedback of 15 Nov)
+
+Tp and a tester said the game feels empty: "no persons in the game? It's boring, it's just one person, even on the lane run." The note is written, so S3g1a (art) and S3g1b (gamedev) can start. Nothing here needs Tp before building: the six rulings below are small and easy to undo (decision 64). The lead reports each to Tp in one line.
+
+- **PE-R1. People live in one back pavement layer, never on the front pavement strip.** Their feet sit 8 u above the hero's feet line, at 0.85 of the hero's size, drawn behind everything the hero can touch. Recommended because the player always sees at a glance that a person is not in the path, and the front strip stays plain so the see-through buttons read (S2.1).
+- **PE-R2. Short speech bubbles, one at a time, with no meaning.** Greetings, trader calls and cheers in English, Pidgin, Yoruba, Hausa and Igbo in equal share (decision 30), with a plain spelling if tone marks do not show on a phone. Bubbles are never read out and never cover the hero, a hazard, a coin, a button or the HUD. Recommended because a few warm words are what make a Lagos street feel alive.
+- **PE-R3. Nobody reacts when the hero loses a life.** People cheer good things only (a problem cleared, the bus stop, the bus). Recommended because even a kind "Sorry o!" can feel like being watched failing; silence is kinder.
+- **PE-R4. The well room gets a store keeper:** an elder woman sitting by the back wall, away from the rope, who waves and says "For the boss. Go well!" when the hero takes the garri parcel. Recommended because the room is under a compound and a kind elder fits the gift; she gives nothing away on the street, where nobody stands near a well.
+- **PE-R5. Danfo passengers show in the streets, not in the lane run.** In the lane run the danfos are in the lanes, and people are never in a lane, so their back windows stay dark as now (S3f0 part 16). Street danfos are in the far background, so their passengers wave.
+- **PE-R6. Crowd sounds follow the Sound switch; no new switch.** The murmur is very quiet and only plays when 5 or more people are on screen; there is never a murmur or cheer over a warning sound or the corn tune. Recommended because one fewer switch is simpler, and Sound off already silences it.
+
+## designer, 15 Nov 2026: tray money is tax (decision 71; docs/city.md W18)
+
+The new words are written in city.md W18, with the old-to-new table and qa's checks, so gamedev can apply them. Nothing waits for Tp: decision 71 settles the idea, and these are word and look choices that are easy to undo (decision 64; the lead reports each to Tp in one line).
+
+- **TX-R1. The bubble carries the word.** The tray bubble reads "Tax ₦1.20" (not only "₦1.20"). Recommended: yes. The bubble is what a player sees most, so it is where the idea sticks; it costs about 25 px of width, and qa re-runs the W15 and d5 sign-room tests at 320 x 240. Other way: keep the bubble as the amount, and say "tax" only in the hint and collect line.
+- **TX-R2. The collect line names who paid.** "Mama Put paid ₦1.20 tax!" rather than "Tax collected: ₦1.20". Recommended: the first. It shows a busy shop giving, not someone taking, so it reads warm and never heavy-handed, and it tells a child where the money came from. Both fit at 320 x 240.
+- **TX-R3. Only Naira places pay tax.** Later places that earn Power or Tech (the phone charging kiosk, the repair stall) are not called tax; their words are written when those places are designed. Recommended: yes, "tax" in Power or Tech units would confuse a child.
+- One line for Tp: "The Mama Put and Market trays now say tax: 'Tax ₦1.20', 'Mama Put paid ₦1.20 tax!', and once: 'Busy shops pay a small tax. Lagos uses it to fix more.'"
+
+## designer, 15 Nov 2026: tilt to steer (decision 70; docs/design.md S3f0 part 25)
+
+The note for decision 70 is written, so gamedev can build it. Nothing here needs Tp before building: all four are small rulings, easy to undo (decision 64). The lead reports each to Tp in one line.
+
+- **TS-R1. Two switches, not one 3-way choice.** "Tilt to steer: off/on" sits under "Buttons instead of swipes: off/on" in Settings and on the lane Pause card. Recommended because tilt and buttons can be on together (tilt for lanes, ▲ ▼ for jump and slide), and on/off reads simpler for a 10-year-old. Default: off (swipes).
+- **TS-R2. Offer tilt once, at the start of the second lane run, not the first.** The first run teaches swipes, one thing at a time. A small card: "New: tilt your phone to change lane." / "Try tilt" / "No thanks". Only on phones that can tilt; never again after either answer.
+- **TS-R3. One fixed sensitivity, no Low / Normal / High.** Move at 15° past the held angle, re-arm under 8°, dead zone 5°. One fewer choice; designer retunes the numbers if qa's first-timers find it too stiff or too jumpy.
+- **TS-R4. Swipes left and right still work while tilt is on,** as swipes still work while buttons show. A way out if tilt feels wrong mid-run.
+
 ## designer, 15 Nov 2026: the challenge road (S3e0, docs/design.md "S3e0. The challenge road, with W17 C")
 
 The full note for city.md (e) with W17 C is written, so S3e1a (art) and S3e1b (gamedev) can start. It is built on the recommended answer below; a different answer changes only the lines marked CR-Q1 in the note.

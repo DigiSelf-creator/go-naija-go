@@ -235,6 +235,8 @@ function startGame(): void {
     });
   }
 
+  /** The street was drawn last on the game canvas (the city and the intro paint it over once). */
+  let streetUnder = true;
   const loop = new FixedLoop({
     update: (dt) => {
       game.update(dt);
@@ -247,7 +249,17 @@ function startGame(): void {
       // The city fills the whole screen and draws itself: the street under it is not drawn
       // (on a slow phone that was a second full-screen picture every frame while walking).
       // The intro story covers the whole screen too (city.md a2.9).
-      if (menus.current !== 'city' && menus.current !== 'intro') game.render(g, view);
+      if (menus.current !== 'city' && menus.current !== 'intro') {
+        game.render(g, view);
+        streetUnder = true;
+      } else if (streetUnder) {
+        // Tp's phone: the street's last frame must not show anywhere round them (the camera
+        // cutout strip, ST0 part 4), so the canvas is painted over once.
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.fillStyle = '#0f1a12';
+        g.fillRect(0, 0, canvas.width, canvas.height);
+        streetUnder = false;
+      }
       if (playing) {
         hud.update(game.run, menus.sound);
         buttons.pressed(controls.dir, controls.jumpHeld > 0);
@@ -1027,7 +1039,8 @@ function startGame(): void {
         home: () => leave('city'),
         city: () => menus.showCity(),
         save: () => cityLife.flush(),
-        relayout: () => resize(),
+        // Every screen that fits itself (the intro, the city, the wheel) hears it, not only the canvas.
+        relayout: () => window.dispatchEvent(new Event('resize')),
       });
     });
   }
