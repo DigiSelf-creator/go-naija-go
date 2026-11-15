@@ -289,6 +289,16 @@ function paintShops(g: CanvasRenderingContext2D): void {
   }
 }
 
+/** The shop row tile (as cached below), drawn with the row's base at y = 0 (S3e1a: the first screen's tired look repaints it). */
+export function paintShopTile(g: CanvasRenderingContext2D): void {
+  g.save();
+  g.translate(0, -SHOP_TOP);
+  paintShops(g);
+  g.restore();
+}
+/** How far the shop row tile reaches above its base. */
+export const SHOP_TILE_H = SHOP_TOP;
+
 const shopLayer = { layer: null as PixelLayer | null };
 
 /** Shop row at half camera speed, plus the pavement band down to the road. */

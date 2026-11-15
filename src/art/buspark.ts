@@ -590,6 +590,16 @@ function paintParkRow(g: CanvasRenderingContext2D): void {
   g.restore();
 }
 
+/** The park row tile (as cached below), drawn with the row's base at y = 0 (S3e1a: the first screen's tired look repaints it). */
+export function paintParkTile(g: CanvasRenderingContext2D): void {
+  g.save();
+  g.translate(0, -ROW_H);
+  paintParkRow(g);
+  g.restore();
+}
+/** How far the park row tile reaches above its base. */
+export const PARK_TILE_H = ROW_H;
+
 const rowLayer = { layer: null as PixelLayer | null };
 
 /** Where each copy of the park row starts on screen (x), for the row and the smoke. */

@@ -538,6 +538,16 @@ function paintMarketRow(g: CanvasRenderingContext2D): void {
   g.restore();
 }
 
+/** The stall row tile (as cached below), drawn with the row's base at y = 0 (S3e1a: the first screen's tired look repaints it). */
+export function paintMarketTile(g: CanvasRenderingContext2D): void {
+  g.save();
+  g.translate(0, -ROW_H);
+  paintMarketRow(g);
+  g.restore();
+}
+/** How far the stall row tile reaches above its base. */
+export const MARKET_TILE_H = ROW_H;
+
 const rowLayer = { layer: null as PixelLayer | null };
 
 /** The stalls at half camera speed, and the market floor down to the road. */

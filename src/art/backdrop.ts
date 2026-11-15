@@ -9,7 +9,7 @@
  * (a stall or shed roof whose top is the landing line) in world space, in place of drawStall.
  * An unknown theme draws the morning street.
  */
-import { drawFixedLook } from './fixedLook';
+import { drawFirstBack, drawFirstRow, drawFixedLookPast, type FirstDraw } from './firstLook';
 import { drawEveningSky, drawEveningSkyline, drawParkRow, drawShedRoof } from './buspark';
 import { drawMarketFar, drawMarketRow, drawMarketSky, drawMarketStall, drawPassingKeke } from './market';
 import { GROUND_Y, drawPassingBus, drawShopRow, drawSky, drawSkyline, drawStall } from './street';
@@ -25,28 +25,44 @@ export function asTheme(theme: string): StreetTheme {
  * Screen space (no camera translate). viewH is the world height shown (sky fills it).
  * fixed: the street's fixed look once its state is switched on (S2.8): lamps and signs lit and
  * bunting, on the row (fixedLook.ts). Pair it with drawRoad(..., fresh = true).
+ * first (S3e1, W17 C): the first screen's tired or bright look (firstLook.ts): its back piece
+ * behind the row, its row layer on the row, and the fixed look held back inside a tired stretch.
+ * Pair it with drawFirstGround in world space.
  */
-export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: number, viewW: number, time: number, viewH = 420, groundY = GROUND_Y, fixed = false): void {
+export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: number, viewW: number, time: number, viewH = 420, groundY = GROUND_Y, fixed = false, first: FirstDraw | null = null): void {
+  const row = (): void => {
+    if (!first) return;
+    drawFirstRow(g, first, camX, viewW, groundY);
+  };
+  const fix = (): void => {
+    if (fixed) drawFixedLookPast(g, theme, first, camX, viewW, viewH, groundY);
+  };
   switch (asTheme(theme)) {
     case 'market':
       drawMarketSky(g, camX, viewW, time, viewH);
       drawMarketFar(g, camX, viewW, groundY);
+      if (first) drawFirstBack(g, first, camX, viewW, groundY, time);
       drawMarketRow(g, camX, viewW, groundY);
-      if (fixed) drawFixedLook(g, theme, camX, viewW, groundY);
+      row();
+      fix();
       drawPassingKeke(g, camX, viewW, time, groundY);
       return;
     case 'evening':
       drawEveningSky(g, camX, viewW, time, viewH, groundY);
       drawEveningSkyline(g, camX, viewW, groundY);
+      if (first) drawFirstBack(g, first, camX, viewW, groundY, time);
       drawParkRow(g, camX, viewW, time, groundY);
-      if (fixed) drawFixedLook(g, theme, camX, viewW, groundY);
+      row();
+      fix();
       drawPassingBus(g, camX, viewW, time, groundY);
       return;
     default:
       drawSky(g, camX, viewW, time, viewH);
       drawSkyline(g, camX, viewW, groundY);
+      if (first) drawFirstBack(g, first, camX, viewW, groundY, time);
       drawShopRow(g, camX, viewW, groundY);
-      if (fixed) drawFixedLook(g, theme, camX, viewW, groundY);
+      row();
+      fix();
       drawPassingBus(g, camX, viewW, time, groundY);
   }
 }
