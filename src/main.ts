@@ -495,17 +495,26 @@ function startGame(): void {
    * Its progress saves under states.ogun (decision 80: the one wallet, Ogun's own streets).
    */
   let ogunPlay: { level: Level; n: number } | null = null;
+  /** O3b: the Ogun streets built so far (Ota, Abeokuta); "Next street" stops at the last one. */
+  const OGUN_BUILT = 2;
   /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
   function lagosRun(at: TapPoint | null, to: Where): void {
     ogunPlay = null;
     startRun(at, to);
   }
-  /** O2b: Ogun street n from its start (its part must have loaded; Ota is the one built so far). */
+  /** O2b: Ogun street n from its start (its part must have loaded; Ota and Abeokuta so far). */
   function ogunRun(at: TapPoint | null, n: number): void {
-    const raw = worlds.get(OGUN)?.levels[`ogun-${n}`];
+    const part = worlds.get(OGUN);
+    const raw = part?.levels[`ogun-${n}`];
     let level: Level | null = null;
     try {
       level = raw === undefined ? null : parseLevel(raw);
+      // O3b: Ogun's well room (the Ijebu garri store), from the Ogun part, beside Lagos's.
+      const room = part?.levels['ogun-well'];
+      if (level && room !== undefined && !game.rooms.has('ogun-well')) {
+        const r = parseRoom(room);
+        game.rooms = new Map([...game.rooms, [r.id, r]]);
+      }
     } catch (err) {
       console.warn(err);
     }
@@ -540,7 +549,10 @@ function startGame(): void {
     // O2b: an Ogun street brings its own look from the Ogun part (set before begin: it restarts it).
     game.skin = og ? (worlds.get(OGUN)?.street?.(og.level) ?? null) : null;
     menus.ogunRun = og !== null;
-    if (og) hud.setIcon('ikokore', (g) => game.skinDo((k) => k.icon?.(g, 'ikokore', 16, 16, 0.85)));
+    if (og) for (const f of ['ikokore', 'ofada'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)));
+    // O3b: the parcel chip shows the state's own parcel (Ijebu garri in Ogun).
+    const parcelIcon = game.skin?.parcelIcon;
+    hud.setParcelIcon(parcelIcon ? (g) => game.skinDo((k) => k.parcelIcon?.(g, 16, 16, 26)) : null);
     game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' && !og ? { parcel: lagos.parcel } : { parcelSaved: own.parcel, dash: dashSaved() });
     // S2.8: once Lagos (or Ogun, for its streets) is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(own);
@@ -852,8 +864,11 @@ function startGame(): void {
     restart: (at) => (lane ? startLane() : startRun(at)),
     next: (at) => {
       missionFor = null;
-      // O2b: an Ogun street's card has no "Next street" until Abeokuta is built (O3b).
-      if (ogunPlay) return;
+      // O3b: Ota's card goes on to Abeokuta (the Ogun streets built so far).
+      if (ogunPlay) {
+        if (ogunPlay.n < OGUN_BUILT) ogunRun(at, ogunPlay.n + 1);
+        return;
+      }
       startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
     },
     resume: () => {
@@ -1036,7 +1051,7 @@ function startGame(): void {
         sound.play(e.kind === 'amala' ? 'strongPick' : e.kind === 'garri' ? 'suitOn' : 'food');
         // S2.15: fufu's words say which key or button throws.
         if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
-        else toast.show(e.kind === 'ikokore' ? OGUN_WORDS.toast.ikokore : W[e.kind], 3200);
+        else toast.show(e.kind === 'ikokore' || e.kind === 'ofada' ? OGUN_WORDS.toast[e.kind] : W[e.kind], 3200);
         break;
       case 'fufuToss':
         sound.play('fufuToss');
@@ -1148,6 +1163,11 @@ function startGame(): void {
         // S2.9: corn's ending is the 5, 4, 3, 2, 1 count now; amala keeps its toast.
         if (e.kind === 'amala') toast.show(W.amalaWearingOff);
         else if (e.kind === 'ikokore') toast.show(OGUN_WORDS.toast.ikokoreWearingOff);
+        else if (e.kind === 'ofada') toast.show(OGUN_WORDS.toast.ofadaWearingOff);
+        break;
+      case 'crackOpen':
+        // O3b (ogun.md 3.3): the low "krrk" as a crack rumbles open.
+        sound.play('crackRumble');
         break;
       case 'arch':
         // O2b (ogun.md 1.4): under the gateway arch on Ota.
@@ -1203,7 +1223,7 @@ function startGame(): void {
         break;
       case 'parcel':
         sound.play('parcel');
-        toast.show(W.parcel, HINT_MS);
+        toast.show(ogunPlay ? OGUN_WORDS.toast.parcel : W.parcel, HINT_MS);
         break;
       case 'wellUp':
         sound.play('wellUp');
@@ -1238,6 +1258,7 @@ function startGame(): void {
           last: typeof where === 'number' && where + 1 >= streets.length,
           parcel: game.run.parcel,
           ogun: ogunPlay !== null,
+          ogunNext: ogunPlay !== null && ogunPlay.n < OGUN_BUILT,
         });
         break;
       case 'bossThrow':
@@ -1517,6 +1538,8 @@ function startGame(): void {
         fufu: r.fufu,
         balls: r.balls.map((b) => ({ x: b.x, y: b.y, mode: b.mode, touches: b.touches })),
         plugged: r.plugged.map((p) => [p.a, p.b] as const),
+        /** O3b: each crack's state (shut, opening, open, sealed). */
+        cracks: r.cracks.map((c) => ({ x: c.x, w: c.w, state: c.state })),
         hazards: r.hazards.map((z) => ({ kind: z.kind, x: z.x, y: z.y, mode: z.mode, fufu: z.fufu })),
         /** S2.16 B5: the gutters and their weeds; B4: the dash. */
         gutters: r.gutters.map((q) => ({ x: q.x, w: q.w, state: q.state })),
@@ -1570,6 +1593,9 @@ function startGame(): void {
         gutters: level.gutters.map((q) => ({ ...q })),
         piles: [...level.piles],
         dashFrom: level.dashFrom,
+        /** O3b: cracks [left lip, right lip] (they open into potholes) and water potholes' left lips. */
+        cracks: level.cracks.map((c) => [c.x, c.x + c.w] as const),
+        waterPits: [...level.waterPits],
       };
     },
     get below() {
@@ -1901,12 +1927,13 @@ declare global {
         readonly busTime: number;
         readonly checkpoint: boolean;
         readonly safe: number;
-        readonly power: { readonly corn: number; readonly amala: number; readonly ikokore: number; readonly shield: boolean };
+        readonly power: { readonly corn: number; readonly amala: number; readonly ikokore: number; readonly ofada: number; readonly shield: boolean };
         readonly mud: boolean;
         readonly slowed: boolean;
         readonly fufu: number;
         readonly balls: readonly { readonly x: number; readonly y: number; readonly mode: string; readonly touches: number }[];
         readonly plugged: readonly (readonly [number, number])[];
+        readonly cracks: readonly { readonly x: number; readonly w: number; readonly state: string }[];
         readonly hazards: readonly { readonly kind: string; readonly x: number; readonly y: number; readonly mode: string; readonly fufu: boolean }[];
         readonly gutters: readonly { readonly x: number; readonly w: number; readonly state: string }[];
         readonly dash: { readonly on: boolean; readonly dashing: boolean; readonly resting: boolean; readonly left: number; readonly rest: number };
@@ -1956,6 +1983,8 @@ declare global {
         readonly gutters: readonly { readonly x: number; readonly w: number }[];
         readonly piles: readonly number[];
         readonly dashFrom: number | null;
+        readonly cracks: readonly (readonly [number, number])[];
+        readonly waterPits: readonly number[];
       };
       /** Below the street: the well room shows (cheap, for per-frame logs). */
       readonly below: boolean;

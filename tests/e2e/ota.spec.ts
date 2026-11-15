@@ -106,14 +106,14 @@ test('Ota by hand from Ogun\'s place: the arch, mud, ikokore, the bus stop, the 
   expect(mud.firmTop).toBeGreaterThan(130);
   expect(crates.opened.length).toBeGreaterThanOrEqual(3);
 
-  // The cleared card: Ota's line, Take it home and Play again; no Next street or Challenge road yet.
+  // The cleared card: Ota's line, Take it home, Next street (O3b: on to Abeokuta) and Play again; no Challenge road.
   const kobo = last.r.kobo;
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
   const money = (await page.evaluate(() => window.__game!.run.kobo)) * 10 + 500;
   await expect(dialog.getByText(`Ota is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
-  for (const b of ['Take it home', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
-  for (const b of ['Next street', 'Challenge road', 'Go to Go-Slow Hall']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
+  for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  for (const b of ['Challenge road', 'Go to Go-Slow Hall']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Take it home' })).toBeFocused();
   // Saved under states.ogun; Lagos as it was; the money in the one wallet (decision 80).
   const s = await saved(page);
@@ -126,7 +126,7 @@ test('Ota by hand from Ogun\'s place: the arch, mud, ikokore, the bus stop, the 
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('Ota is moving again. Abeokuta is coming next.')).toBeVisible();
+  await expect(ogunPlace(page).getByText('Ota is moving again. Abeokuta is open.')).toBeVisible();
   expect(await page.evaluate(() => window.__game!.skin)).toBe(false);
   expect(errors).toEqual([]);
 });
