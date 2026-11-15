@@ -197,13 +197,13 @@ test("decision 68: never mid-run and never on a street's Pause; it shows once th
     await page.getByRole('button', { name: 'Keep playing' }).tap();
     await expect.poll(() => screenNow(page)).toBe('play');
     await staysAway(page, ['play']);
-    // Pause again, then leave the street for the Streets screen: now it shows.
+    // Pause again, then leave the street for the challenge road: now it shows.
     await page.getByRole('button', { name: 'Pause', exact: true }).tap();
     await expect.poll(() => screenNow(page)).toBe('pause');
     await waitOutTapLock(page);
-    await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Streets', exact: true }).tap();
+    await page.getByRole('dialog', { name: 'Paused' }).getByRole('button', { name: 'Challenge road', exact: true }).tap();
   }
-  // Out of the street (the Streets screen, or a result card if the run ended by itself).
+  // Out of the street (the challenge road, or a result card if the run ended by itself).
   await expect.poll(() => screenNow(page)).not.toBe('play');
   await expect(banner(page)).toBeVisible();
   await coversNothing(page);

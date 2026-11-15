@@ -32,6 +32,11 @@ import { CornCount, Hud, Toast } from './screens/hud';
 import { WORDS, hintWords } from './screens/words';
 import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
+import type { StopId } from './screens/road';
+import { h } from './screens/dom';
+import { firstStreetOf } from './art/firstLook';
+/** S3e0 part 6: each street's first screen follows its city spot's fix. */
+const FIRST_FIX = { alausa: 'road', computerVillage: 'mast', ikeja: 'lamps' } as const;
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
@@ -77,6 +82,19 @@ if (query.get('gallery')?.startsWith('lane')) {
     const frame = (now: number): void => {
       g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
       drawLaneGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+} else if (query.get('gallery')?.startsWith('folk')) {
+  // Debug only: the people kit (S3g1a): ?gallery=folk, folk2 ... folk5; &t=1.5 holds the time.
+  void import('./art/galleryFolk').then(({ drawFolkGallery }) => {
+    const t0 = performance.now();
+    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawFolkGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -360,6 +378,15 @@ function startGame(): void {
     game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: lagos.parcel } : { parcelSaved: lagos.parcel, dash: dashSaved() });
     // S2.8: once Lagos is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(lagos);
+    // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
+    // Scenery only: the level and the run are the same either way.
+    const street = firstStreetOf(game.level.id);
+    const fix = street ? FIRST_FIX[street] : null;
+    game.firstLook = street && fix ? { street, look: isBuilt(cityLife.state, fix) ? 'bright' : 'tired', still: reduceMotion.matches } : null;
+    if (game.firstLook) {
+      runSaid.textContent = '';
+      runSaid.textContent = game.level.name;
+    }
     hud.show(true);
     buttons.show(true, game.level.manual);
     loop.resume();
@@ -373,6 +400,8 @@ function startGame(): void {
    * wheel. Home: the hero stands at the bus park, or Mission complete brings them by bus (5W W5).
    */
   function leave(to: LeaveTo, mission: Mission | null = null): void {
+    // S3e0 part 7: the road opens on the stop just played (the hall's after a win).
+    const at: StopId | null = lane ? 'lane' : where === 'hall' ? 'hall' : where === 0 || where === 1 || where === 2 ? where : null;
     // S3f3 part 2: leaving a lane run early ("Back to Lagos", LR-Q1 a) keeps its pickups and says so.
     if (lane && to === 'city' && mission === null) {
       const h = lane.haul;
@@ -390,14 +419,15 @@ function startGame(): void {
     game.fixed = false;
     game.reset(startLevel);
     if (to === 'wheel') {
-      menus.showWheel('streets');
+      menus.showWheel('city');
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
       sound.play('cogRatchet');
       window.setTimeout(() => sound.play('cogBell'), 320);
     } else if (to === 'city') {
       if (cityLife.state.at) cityLife.set({ ...cityLife.state, at: { ...HERO_START } });
       menus.showCity(mission);
-    } else menus.show(to);
+    } else if (to === 'road') menus.showRoad({ at });
+    else menus.show(to);
   }
 
   /** S3f2: the lane run showing now (its code loads the first time one opens), or null. */
@@ -591,6 +621,9 @@ function startGame(): void {
     brought = kobo;
     if (kobo > 0) cityLife.set(addKobo(cityLife.state, kobo), true);
   }
+  /** S3e0 part 6 rule 4: the street's name, said once as its run starts. */
+  const runSaid = h('div', { class: 'run-said', 'aria-live': 'polite' });
+  document.body.append(runSaid);
   const menus = new Menus(document.body, store, game.look, {
     // city.md (b) flow: "Play" (and the builder's "Start running") opens Lagos from above, the
     // home screen. ?level=lagos-2, lagos-3 or lagos-hall still starts that level (for testing).
@@ -612,12 +645,24 @@ function startGame(): void {
       missionFor = isBuilt(cityLife.state, 'road') ? null : 'road';
     },
     takeHome: () => leave('city', { build: missionFor, kobo: brought }),
-    lane: () => readLane(progress.raw?.[KEY_LANE]),
-    playLane: () => startLane(null),
-    play: (to, at) => {
-      missionFor = null;
-      startRun(at, to);
+    // S3e0: a stop's big button, for the fix its card shows (CR-Q1 a: STOP_PAYS_FIX).
+    playStop: (stop, at) => {
+      if (stop.id === 'lane') startLane(stop.forFix);
+      else if (stop.id !== 'ferry') {
+        startRun(at, stop.id);
+        missionFor = stop.forFix;
+      }
     },
+    roadView: () => {
+      const l = readLane(progress.raw?.[KEY_LANE]);
+      return { lagos: progress.state(LAGOS), names: streets.map((x) => x.name), city: cityLife.state, lane: { best: l.best, goals: l.goals } };
+    },
+    roadHint: () => {
+      if (cityLife.state.hints.includes('road')) return false;
+      cityLife.set(withHint(cityLife.state, 'road'), true);
+      return true;
+    },
+    cardChanged: () => nativeApp?.screenChanged(),
     restart: (at) => (lane ? startLane() : startRun(at)),
     next: (at) => {
       missionFor = null;

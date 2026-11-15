@@ -47,6 +47,29 @@ export async function cityToStreet1(page: Page): Promise<void> {
   await page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Alausa' }).tap();
 }
 
+/** S3e0: Lagos from above's "Challenge road" button opens the road. */
+export async function cityToRoad(page: Page): Promise<void> {
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Lagos' }).getByRole('button', { name: 'Challenge road' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('road');
+}
+
+/**
+ * S3e0: on the challenge road, tap a stop (its data-where: 0, 1, 2, hall, lane) and then its
+ * card's big button. Each waits out the 0.4 s that a new road or card ignores taps for.
+ */
+export async function playStop(page: Page, where: string): Promise<void> {
+  const road = page.getByRole('region', { name: 'Challenge road' });
+  await expect(road).toBeVisible();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await road.locator(`[data-where="${where}"]`).tap();
+  const card = page.locator('.road-card');
+  await expect(card).toBeVisible();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await card.locator('.go').tap();
+  await expect.poll(() => screenNow(page)).not.toBe('road');
+}
+
 /**
  * From the title screen into a run, by touch: "Make your hero" (then the intro, skipped) and
  * "Start running" on a first visit, or "Play" when a hero is saved. Slice 3: with no ?level

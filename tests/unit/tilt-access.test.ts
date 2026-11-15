@@ -163,7 +163,7 @@ describe('saves (25.9): the switch and two marks, never an angle', () => {
 
 describe('Android back on the offer card counts as "No thanks"', () => {
   it('presses "No thanks" when no "Take it home" shows', () => {
-    const labels = { introSkip: '', settingsBack: '', creditsBack: '', streetsHome: '', wheelClose: '', wheelBack: '', takeHome: WORDS.cleared.takeHome, tiltNo: WORDS.lane.tiltOfferNo };
+    const labels = { introSkip: '', settingsBack: '', creditsBack: '', streetsHome: '', wheelClose: '', wheelBack: '', roadHome: '', roadBack: '', takeHome: WORDS.cleared.takeHome, tiltNo: WORDS.lane.tiltOfferNo };
     const step = backStep({ askOpen: false, sinceScreen: 1000, screen: null, running: false, hall: false, lane: true, heroSaved: true }, labels);
     expect(step).toEqual({ kind: 'press', labels: [WORDS.cleared.takeHome, 'No thanks'] });
   });

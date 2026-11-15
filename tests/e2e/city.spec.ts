@@ -33,7 +33,7 @@ test('the city: heading, the three counters with words, the buttons, three pins'
   const c = lagos(page);
   await expect(c.getByRole('heading', { name: 'Lagos' })).toBeVisible();
   await expect(c.locator('.city-chip')).toHaveText(['₦0Naira: 0 naira', 'Power 0Power: 0', 'Tech 0Tech: 0']);
-  for (const name of ['Sound: on', 'Settings', 'Streets', 'Hero', "Nigeria's wheel", 'Zoom in', 'Zoom out']) await expect(c.getByRole('button', { name, exact: true })).toBeVisible();
+  for (const name of ['Sound: on', 'Settings', 'Challenge road', 'Hero', "Nigeria's wheel", 'Zoom in', 'Zoom out']) await expect(c.getByRole('button', { name, exact: true })).toBeVisible();
   for (const name of ['Potholes, problem', 'Lights out, problem', 'Slow internet, problem']) await expect(c.getByRole('button', { name })).toBeAttached();
   // Still: nothing is drawn while nothing moves.
   const before = (await city(page)).draws;
@@ -86,10 +86,10 @@ test('go to the street from the Potholes card, then back home to the city', asyn
   await expect(lagos(page)).toBeVisible();
 });
 
-test('the city buttons: Streets (Home comes back), Hero, the wheel (Back comes back), Settings', async ({ page }) => {
+test('the city buttons: Challenge road (Home comes back), Hero, the wheel (Back comes back), Settings', async ({ page }) => {
   await openCity(page);
-  await lagos(page).getByRole('button', { name: 'Streets' }).tap();
-  await expect.poll(() => screenNow(page)).toBe('streets');
+  await lagos(page).getByRole('button', { name: 'Challenge road' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('road');
   await page.getByRole('button', { name: 'Home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('city');
   await lagos(page).getByRole('button', { name: "Nigeria's wheel" }).tap();
@@ -159,8 +159,8 @@ test('an old save (version 1) is moved to Naira once: bests times 10, the purse 
     v: 2,
     states: { lagos: { streets: { 1: { done: true, best: 870 } }, parcel: false, hall: { done: false, best: 0 } } },
   });
-  await lagos(page).getByRole('button', { name: 'Streets' }).tap();
-  await expect(page.getByText('Done ✓ Best: ₦8.70')).toBeVisible();
+  await lagos(page).getByRole('button', { name: 'Challenge road' }).tap();
+  await expect(page.locator('[data-where="0"]')).toContainText('Best: ₦8.70');
   await page.reload();
   expect(await page.evaluate(() => (JSON.parse(localStorage.getItem('gidi-progress')!) as { states: { lagos: { streets: { 1: { best: number } } } } }).states.lagos.streets[1].best)).toBe(870);
 });

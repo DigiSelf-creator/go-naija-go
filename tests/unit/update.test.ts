@@ -100,7 +100,7 @@ describe('U1 bannerShows (decision 68)', () => {
 
   it('the result cards and the menus are not an attempt', () => {
     for (const card of ['gameover', 'cleared', 'win']) expect(bannerShows(true, inAttempt(true, card))).toBe(true);
-    for (const screen of ['title', 'streets', 'city', 'wheel', 'settings', 'builder', 'intro', null]) expect(bannerShows(true, inAttempt(false, screen))).toBe(true);
+    for (const screen of ['title', 'road', 'city', 'wheel', 'settings', 'builder', 'intro', null]) expect(bannerShows(true, inAttempt(false, screen))).toBe(true);
   });
 });
 

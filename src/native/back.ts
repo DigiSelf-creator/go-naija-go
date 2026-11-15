@@ -48,7 +48,9 @@ export interface BackLabels {
   introSkip: string;
   settingsBack: string;
   creditsBack: string;
-  streetsHome: string;
+  /** S3e0 part 8: the road's "Home", and its stop card's "Back" (pressed first while a card shows). */
+  roadHome: string;
+  roadBack: string;
   wheelClose: string;
   wheelBack: string;
   takeHome: string;
@@ -76,8 +78,8 @@ export function backStep(s: BackState, labels: BackLabels): BackStep {
       return { kind: 'press', labels: [labels.settingsBack] };
     case 'credits':
       return { kind: 'press', labels: [labels.creditsBack] };
-    case 'streets':
-      return { kind: 'press', labels: [labels.streetsHome] };
+    case 'road':
+      return { kind: 'press', labels: [labels.roadBack, labels.roadHome] };
     case 'wheel':
       // The "All names" list first (Close), else the wheel's own Back.
       return { kind: 'press', labels: [labels.wheelClose, labels.wheelBack] };
