@@ -1901,7 +1901,8 @@ body.has-update .screen:not(.full) {
    each fits itself to its card again (update-banner.ts sends a resize). */
 body.has-update .screen.full .intro-card,
 body.has-update .screen.full .city-card,
-body.has-update .screen.full .wheel-card {
+body.has-update .screen.full .wheel-card,
+body.has-update .screen.full .road-screen {
   top: calc(max(4px, var(--safe-top)) + 52px);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2598,4 +2599,14 @@ body.lane {
     line-height: 1.1;
     white-space: normal;
   }
+}
+
+/* S3e0 part 6 rule 4: the live line that says a street's name as its run starts (read only). */
+.run-said {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

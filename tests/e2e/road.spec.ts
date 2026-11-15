@@ -170,7 +170,7 @@ test('"See the stop" from the Potholes card opens Alausa for the New road; its b
   await card.getByRole('button', { name: 'Run Alausa' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('lagos-1');
-  await expect(page.locator('body > .sr-only[aria-live]').filter({ hasText: 'Alausa' })).toHaveCount(1);
+  await expect(page.locator('body > .run-said[aria-live]').filter({ hasText: 'Alausa' })).toHaveCount(1);
 });
 
 test('the hint shows once; a locked stop opens its card and starts nothing; the ferry has no big button', async ({ page }) => {

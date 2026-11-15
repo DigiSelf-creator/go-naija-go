@@ -562,7 +562,7 @@ function startGame(): void {
     if (kobo > 0) cityLife.set(addKobo(cityLife.state, kobo), true);
   }
   /** S3e0 part 6 rule 4: the street's name, said once as its run starts. */
-  const runSaid = h('div', { class: 'sr-only', 'aria-live': 'polite' });
+  const runSaid = h('div', { class: 'run-said', 'aria-live': 'polite' });
   document.body.append(runSaid);
   const menus = new Menus(document.body, store, game.look, {
     // city.md (b) flow: "Play" (and the builder's "Start running") opens Lagos from above, the
