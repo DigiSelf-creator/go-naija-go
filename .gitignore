@@ -8,6 +8,8 @@ playwright-report/
 # GitHub Actions secrets or the store websites, typed in by Tp.
 *.jks
 *.keystore
+# The public test-only debug key (see android/app/build.gradle); never a store key.
+!android/app/gbese-test-debug.keystore
 *.p12
 *.p8
 *.mobileprovision

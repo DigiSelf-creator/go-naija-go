@@ -280,7 +280,8 @@ function startGame(): void {
   // and the other screens.
   const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
   /** A run is being played or paused (the finish bus counts: the result card follows). */
-  const inRun = (): boolean => inAttempt(playing || lane !== null, menus.current);
+  // The lane run's own result cards (bus stop, caught) count as result cards: the win and pickups are saved.
+  const inRun = (): boolean => inAttempt(playing || (lane !== null && lane.stage !== 'card'), menus.current);
   const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
   updateReady = () => {
     syncUpdate();
