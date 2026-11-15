@@ -2796,3 +2796,278 @@ The Streets screen and its words (`WORDS.streets`, "Fix 3 streets, then clear Go
 9. **Reach:** a screen reader hears the road as a list in road order with part 9's words, and each card as a dialog with the big button first; Tab, ←, →, Enter, Space and Escape work; reduced motion as part 9.
 10. **Speed and size:** the road idle draws nothing; scrolling at least 55 fps at 4x CPU; a street's first frame no more than 30 ms later than before on the slow phone profile; S3e1 adds no more than about 18 KB gzipped.
 11. **Original and kind:** not a path-and-dots world map (city.md part 6 rule 4), nothing from Mario or any Nintendo game, no brand, crest or real sign; d2's tired rule and W11 pass; every place is shown with pride.
+
+## People everywhere (designer, 15 Nov 2026: Tp "no persons in the game? It's boring")
+
+Task S3g0. Tp and a tester, 15 Nov: "no persons in the game? It's boring, it's just one person, even on the lane run." Today the streets, the hall, the lane run and the city have only a few people, mostly standing still, and only the hero moves. This note brings Lagos to life with ordinary people going about their day. It is the source for S3g1a (art) and S3g1b (gamedev). Where an older note gives a smaller number of people for a place, this note wins, except the first screen of each street, which keeps S3e0 part 6 exactly (1 person tired, 4 bright).
+
+Sources: rules 2, 3, 4, 6 and 7 in CLAUDE.md; decisions 2, 21, 22, 29, 30, 37, 42, 43, 47, 48 and 64; S2.1 (layers), S2.5 (the well), S2.6 (streets), S2.7 (the hall), S3e0 part 6 (tired and bright first screens), S3f0 parts 15, 16 and 17 (lane layout, look, sound); city.md W2, W4, W5, W17 and the moment's walk-in (`MOVING_PEOPLE` = 8). The code that already draws people: `person()` and the `waving` and `trader` scenery in src/art/lane.ts; `drawCityFolk`, `drawProudFolk` and `drawChildrenWithBall` in src/art/bright.ts; the city walkers in src/screens/city.ts and src/game/moment.ts.
+
+Open: nothing for Tp. Six small rulings (PE-R1 to PE-R6) follow the team's recommendation under decision 64; they are in docs/questions.md for the lead to report in one line each. This note is built on them.
+
+### 1. The idea, in one line
+
+Lagos is full of ordinary, friendly people doing their day: walking to work, selling, waiting for the bus, playing, riding past. They live in the background and on the pavement. Some notice the hero: they wave, step aside, and cheer when a problem is cleared and when the hero reaches the bus.
+
+- **Who sees it:** every player, in every challenge and in the city.
+- **The one job:** make Lagos feel alive and on the hero's side.
+- **New thing it teaches:** nothing. People are scenery. The game never asks the player to do anything with a person.
+
+### 2. The five rules (every place, every person)
+
+1. **Never in the way.** People are never in the hero's path, never in a lane, never solid, never something to dodge, jump on, hit, throw at or collect. They have no hitbox. The hero, every throw (fufu, corn) and every hazard pass them without touching. No level file changes, and no level gets harder or easier.
+2. **Never hurt, never scared.** Nothing ever hits, knocks, chases, splashes or frightens a person. A rolling tyre or drum never rolls toward one. When the dark comes, people go inside and light their own lamps (part 7). Nobody falls, cries or runs in fear.
+3. **Never the problem.** No person drops rubbish, honks, blocks the road, causes the jam, cuts the power or slows the internet. Bosses and hazards stay problems, never people (rule 2, decision 2). No faces in the boss's cars and buses.
+4. **Never laughing at the hero.** When the hero loses a life, nobody reacts at all: no laugh, no bubble, no pointing. People only cheer good things (PE-R3).
+5. **Never a joke.** All skin tones, ages, bodies and dress from every part of Nigeria, shown with pride (part 8). No group singled out. No real people (rule 3), no uniforms (decision 37).
+
+### 3. Where people stand in a street (side view)
+
+The street is drawn in layers (S2.1). People live in **one new layer, the back pavement**: drawn after the shop row and the backs of the stalls, before the road and before every crate, coin, food, hazard, sign and the hero (PE-R1).
+
+- **Feet line:** y = groundY − 8 (y 292), so their feet sit visibly above the hero's feet at y 300: they read as "further back, on the pavement by the shops".
+- **Size:** 0.85 of the hero's height (adults about 37 u tall, teens 33, children 26, elders 36, standing tall). The hero is always the biggest person on the screen and the only one in front.
+- **Outline:** 1.5 u, thinner than the hero's 2 u. Full colour, never faded or greyed (decision 47: warm and proud). No person ever wears the player's own hero look (the same skin, hair and outfit together): the cast skips that look.
+- **Never on the front pavement strip** (y 360 to 420, under the see-through buttons, S2.1). It stays plain so the buttons read.
+- **Clear zones** (no person stands or walks here; x in level units, from the level file):
+  - every pothole and gap, from 40 before its left lip to 40 past its right lip;
+  - every well, ± 120 (nobody stands at, looks at or points at a well: it stays a secret to find);
+  - every pothole warning sign, ± 30;
+  - every stall roof platform, from 20 before it to 20 past it;
+  - every crate pole, ± 30;
+  - every hazard's start point (goat, tyre, drum) and every rubbish pile with birds (decision 43), ± 80;
+  - every coin or food lower than 40 u above the road, ± 20;
+  - the start fence, the checkpoint bus stop and the bus park, which have their own people (part 5).
+- **Spots:** gamedev works out the free stretches from the level file when the street loads, the same every try (a fixed seed per street). A free stretch of 60 u or more can hold standing people; 200 u or more can also hold one walker.
+- **How many** (a screen is about 568 u wide):
+
+| Street look | Standing | Walking | At most on one screen |
+|---|---|---|---|
+| Tired (its spot not fixed yet, S3e0) | 1 per 320 u of free back pavement | 1 per 900 u | 4 |
+| Bright (its spot fixed) | 1 per 160 u | 1 per 450 u | 8 |
+| Fixed look (after the hall, S2.8) | as bright, plus 1 pair of children per street | as bright | 9 |
+
+The first screen keeps S3e0 part 6 exactly (1 person tired, 4 bright, the same proud jobs). The counts above start after it.
+
+### 4. Who is in each street
+
+Each street has its own cast of about 16 looks (part 8), baked once (part 11). Everyone has something to do.
+
+**Alausa (street 1, morning, home):**
+- Walkers going to work: a woman in iro and buba with a gele and a handbag, a man in a shirt and trousers with a small bag, a teen with a school bag (plain uniform, no crest).
+- Standing: a woman sweeping her own front (S3e0's proud one), a man reading a paper by a door, a mother with a baby tied on her back in a wrapper, an elder in a kaftan and cap sitting on a bench outside a door.
+- Traders: an akara seller at a small pot and table (a steam puff), a bread seller with a tray on her head.
+- Children playing: two children with a small ball that bounces between them in place, never toward the road (never gold or yellow, so it never looks like a kobo); or two girls clapping and stepping a game of ten-ten.
+- Bus stop (checkpoint): 2 people waiting under the shelter.
+
+**Computer Village (street 2, midday, market):**
+- Walkers: buyers with a phone in hand, a porter with goods in a basin on the head, a woman in a hijab and long dress with a shopping bag, a student with a backpack.
+- Traders at stalls: the phone accessories trader holding up a case, the fabric trader with a roll of ankara over one arm, the pepper trader at her basket, the tailor at a sewing machine.
+- Standing: two friends chatting, a buyer checking a phone, a man in an isiagu-style top (our own pattern) at a stall.
+- Children: a child carrying a small bag, walking with a parent.
+- Bus stop: 3 people waiting.
+
+**Ikeja (street 3, evening, bus park):**
+- Walkers: travellers with a bag on a shoulder or a box on the head, a man in babban riga with a cap, a woman in a long wrapper and blouse with a basket.
+- Traders: the suya man at his grill (the smoke is already drawn), the ticket seller at the kiosk window, a buka cook at her pots.
+- Sitting: two people eating on the buka bench, an elder couple on a bench.
+- The vulcanizer at work, standing at the compressor (never rolling a tyre).
+- Children: a child holding a parent's hand.
+- Everyone keeps away from the rubbish piles and the birds (clear zone): people are never shown as the ones who made the rubbish.
+- Bus stop: 3 people waiting.
+
+**Moving past in the far background** (every street, in the layer of the passing bus, `drawPassingBus`):
+- **Danfo passengers:** the passing yellow bus and the parked buses at the start fence and the bus park show 3 to 5 heads in their windows (simple heads and shoulders, every skin tone), one arm waving when the hero is near. Streets only, never in the lane run (PE-R5).
+- **An okada passing:** a motorcycle with a rider and one passenger crosses the far road, left to right or right to left, about once every 25 s of play, at about 300 u/s (about 2 s across a screen). The rider wears a plain helmet (one flat colour, no writing, no badge); the passenger holds a market bag. It is never on the hero's road and never comes toward the hero.
+- **The keke** (Computer Village) passes the same way as today, now with a driver and two passengers.
+
+### 5. What people do when the hero is near (streets, well room, hall)
+
+| Moment | Who | What they do | How long |
+|---|---|---|---|
+| The hero comes within 140 u | a standing person | waves once (2 frames, arm up and down) | 1 s, then not again for 10 s |
+| The hero comes within 60 u, the two walking toward each other | a walker | stops, turns side-on and steps 4 u back toward the shop wall, waits, then walks on | until the hero is 60 u past |
+| A trader is on screen | the trader | calls out once (a bubble, part 6) | 1.6 s, then not again for 12 s |
+| A problem is cleared: a goat eats fufu and wanders off, a drum is smashed, thorny weeds dry up, a signed wide pothole is jumped | the 3 nearest people on screen | cheer: both arms up, a small hop (2 frames), one bubble from one of them | 1 s; at most one cheer every 4 s |
+| The checkpoint bus stop lights | the people at the stop | cheer, then wave | 1.5 s |
+| The hero reaches the bus park | the crowd at the bus park (5) and the passengers in the bus windows | cheer from the hero's hop on (`BUS_END.hopEnd`) to the pull away, then wave the bus off | about 1.4 s |
+| A life is lost | everyone | nothing at all (rule 4) | |
+
+- Only people drawn on screen react. Nobody walks toward the hero, follows the hero or crowds round.
+- Walkers walk at 30 to 45 u/s (slower than the hero's walk), each in its own free stretch, turning round at its ends or stepping into a shop door and coming back out 3 s later.
+- **The street end:** the bus park gets 5 people waiting by the shelter (one elder sitting, one child, one with a box on the head). When the bus pulls away, 2 of them step up to the kerb for the next bus.
+
+**The well room (S2.5):** a store room under a compound, so it gets one kind person and a sign of life above (PE-R4).
+- **The store keeper:** an elder woman in a wrapper and headscarf, sitting on a low stool by the back wall between the baskets and the pots, well away from the rope (room x 60 to 100, at the back, never on the walking line, no hitbox). When the hero comes down she waves; when the hero picks up the garri parcel she claps and her bubble says "For the boss. Go well!"; when the hero goes up she waves.
+- **Life above:** every 6 s a soft shadow of feet crosses one of the ceiling light holes (a moving dark oval inside the light shaft, never covering a coin). None with reduced motion.
+
+**Go-Slow Hall (S2.7):**
+- **In the fight:** 3 people stand at the open roller-shutter door on the left, outside, behind the hero's start (beyond the left wall at hero limit 30, never on the hall floor). On wide screens, 2 to 4 more stand on the pavement outside the cut walls. They are travellers waiting for the jam to clear: a woman with a basket, a teen, an elder in agbada.
+- **On each hit:** the door people cheer and one bubble shows ("Ehen!" on hit 1, "Well done!" on hit 2). Not while a throw is in the air within 120 u of them on screen, so a bubble never covers a tyre or a honk.
+- **They never boo, point at or laugh at General Go-Slow.** The boss is a problem; they cheer the road opening, not the boss losing.
+- **The funny, kind finish:** at 2.5 s (the last cars drive out), the door people walk in and 4 more follow (7 at most), stopping along the back wall, well clear of the floor arrows. From 3.0 to 4.2 s, as the roof lamps come on one by one, they clap. At 4.5 s ("Lagos is switched on!") they all cheer, arms up. The danfos driving out through the right doors show passengers waving from the windows (these are the freed buses going home, not the boss's heap).
+
+### 6. Bubbles: what people say
+
+A small cream bubble (`#fffaf0`, a 1.5 u dark outline `#1d1a14`, a short tail to the speaker), with bold dark words of at least 12 screen px. Only one bubble on screen at a time. A bubble never covers the hero, a hazard, a coin, a food, a button, the HUD or a toast: if it would, it is not shown. Bubbles carry no meaning: the game never needs one (PE-R2).
+
+Every language gets an equal share (decision 30). The words go in src/screens/words.ts:
+
+| Kind | Words |
+|---|---|
+| Greetings (Alausa, morning) | "Good morning!", "Ẹ káàárọ̀!" (Yoruba, good morning), "Ina kwana!" (Hausa, good morning), "Ụtụtụ ọma!" (Igbo, good morning) |
+| Greetings (any time) | "Hello!", "Sannu!" (Hausa), "Ndewo!" (Igbo), "Ẹ n lẹ́ o!" (Yoruba), "How far?" (Pidgin) |
+| Traders | Alausa: "Hot akara!", "Fresh bread!" · Computer Village: "Phone case here!", "Charger, charger!", "Fine cloth!", "Fresh pepper!" · Ikeja: "Suya dey!", "Tickets here!", "Hot food!" |
+| Cheers | "Well done!", "Nice one!", "Ehen!", "You do well!" (Pidgin), "Ẹ kú iṣẹ́!" (Yoruba, well done), "Madalla!" (Hausa, well done), "I meela!" (Igbo, well done), "Oya, go!" |
+| Bus | "Bus don come!" (Pidgin), "Safe trip!" |
+| The store keeper | "For the boss. Go well!" |
+
+- **Tone marks:** gamedev bakes each bubble once with the phone's own font. qa checks every bubble on the slow Android profile; if any letter shows as a box, that bubble uses the plain spelling instead: "E kaaro!", "Ututu oma!", "E n le o!", "E ku ise!".
+- A trader calls only their own street's lines; a greeting may be in any language on any street, picked by the same seed every try.
+- Later states add their own languages' greetings and cheers with the same care (decision 30). Every new line is checked by a speaker of that language before it ships.
+
+### 7. The lane run (seen from behind)
+
+Rule 1 is strongest here: **people are never in a lane, never cross a kerb and never stand on the divider.** Everyone is on the two pavements, at the windows or up on the footbridge. Danfos in the lanes keep their dark back windows with no one shown (PE-R5, S3f0 part 16).
+
+- **Busier pavements:** every scenery piece in `LANE_SCENERY` gets 1 to 3 people with it: buyers at the corn seller and the fruit table, someone holding up cloth at the fabric stall, a child at the kiosk, two people at the charging stand looking at their phones, someone sitting under the market umbrella. Between pieces, walkers on the pavement walk with or against the run (they move slowly in the world; the run carries them past). About 2 people per 10 m of pavement on each side, so 8 to 14 people show at once.
+- **Windows:** a low row of two-storey fronts stands behind each pavement (baked as tiles, part 11). One window in four has a person leaning out, who waves as the hero comes near (2 frames).
+- **The footbridge** (every 200 m): 3 to 6 people on the deck, heads and shoulders above the railing, cheer and wave as the hero runs under. Scenery only, high above, never something to duck (S3f0 part 16).
+- **Running alongside:** now and then a friendly jogger, or two children, run on the pavement beside the hero for a short stretch:
+  - at most one at a time, about once every 150 m, never in the first 100 m of a run, and never while the Blackout is under 30 m behind (the bottom of the screen is darkening then);
+  - on the pavement only, 6 to 10 m ahead of the hero, so they draw above the bottom of the screen, where the ◀ ▶ ▲ ▼ buttons and thumbs are (part 15);
+  - they keep pace for 3 to 4 s, then slow down, wave and drop back. They are never a racer, a pacer or a target, and carry no meaning;
+  - a jogger is an adult in a T-shirt and shorts or a tracksuit (plain, no writing); the children are two school-age children with school bags.
+- **The dark behind you means people go inside, never harmed.** Where a lamp is off or switching off (`lampLookAt` 'off', and the near lamps that go out as the Blackout closes in), the people under it step into a doorway, the door shuts, and a soft warm lantern glow comes on in a window above (a rechargeable lamp, a real Lagos sight in a power cut). Under an off lamp the pavement is empty and the windows glow. Nobody is shown in the Blackout's dark edge, nobody is caught, nobody looks scared. When a lamp comes back on, people come back out.
+- **The bus stop (goal):** the people under the roof (S3f0 part 16) become a crowd of 5, who cheer as the hero arrives and wave as the danfo pulls in.
+- **Far and small:** a person whose drawn height would be under 6 screen px is not drawn.
+
+### 8. Variety and respect
+
+**Every cast mixes all of these** (no street's cast is all one kind):
+- **Skin:** the five skin tones of the hero builder, plus a lighter brown and a deeper brown, so seven in all. Across a street's 16 looks, every tone shows at least twice.
+- **Age:** children (about 7 to 10), teens, adults and elders. Elders stand tall with no walking stick; elder men may have a short, neat grey beard (decision 21).
+- **Bodies:** slim, medium and round; short and tall. One person per street uses a wheelchair, on the pavement, doing the same things as everyone (waiting at the bus stop, selling, cheering), never shown as sad or in need. One person per street wears glasses.
+- **Dress from every part of Nigeria:** iro and buba with a gele; buba and sokoto with a fila; agbada; a kaftan with a cap; babban riga with a cap; a long dress with a hijab; a wrapper and blouse with a headscarf; an isiagu-style top (our own pattern); an etibo shirt; a striped wrapper in the A'nger style (our own pattern); jeans and a T-shirt; a shirt and trousers; a plain school uniform with no crest. All patterns are our own drawings.
+- **Jobs:** traders, a tailor, a cook, a vulcanizer, a porter, office workers, students, a parent with a child. Every job is shown with pride; nobody's job is the joke.
+
+**Never:**
+- No real people: no politician, official, celebrity, footballer or musician, and none of their faces, names, famous clothes or poses (rule 3).
+- No uniforms: no police, soldiers, traffic wardens, road officers or guards; no badges, high-visibility vests or caps with a crest (decision 37). A plain school uniform and a plain okada helmet are allowed.
+- No party colours, logos, sashes or campaign clothes; no clothes or umbrellas with printing or a face on them (rule 3).
+- No brands or writing on any clothes or bags (rule 2, S2.6).
+- No red caps on anyone (rule 2: never like Mario), and no chief's cap or title regalia.
+- No herder or herder's staff (decision 29); no beggars, touts, "area boys" or pickpockets: no role that points at a group.
+- No faith singled out: a hijab or a cap is everyday dress, shown like any other. No robes of office and no holy places.
+- Nobody shown as lazy, dirty, angry, poor or to blame. Tired streets have people doing proud things (S3e0 part 6).
+
+### 9. The city from above
+
+The city already has standing people per block (`BLOCK_LIFE`) and walkers in the "watch it change" moment (`MOVING_PEOPLE` = 8). Now it also has **people walking about all the time**, more as Lagos brightens (decision 47).
+
+- **Ambient walkers on screen:** 3, plus 1 for each fix or build done, plus 2 for each Booming step reached, with at most 12 moving at once in the view. They walk the pavements between places along the walk grid (src/game/walkGrid.ts), at the hero's speed or slower, and go into doors or off the edge of the map, with new ones coming in.
+- **More where it is bright:** a walker's route picks bright blocks 3 times as often as tired ones. Tired blocks still have people passing (warm, never empty).
+- **The Mama Put** (once built): a queue of 3 at the counter. Every 6 s of play, the first one leaves with a wrapped plate or a takeaway pack and a new one joins the back. The cook behind the counter waves when the hero collects the tray.
+- **The Market** (once built): 5 shoppers among the stalls: one with a basket on her head, two looking at goods, a trader showing cloth. They move a little between stalls every few seconds.
+- **The bus park:** 2 to 4 people waiting, more after the first boom.
+- **Pay spots and trays:** no walker ever stands on, or stops within 16 u of, a pay spot, a tray or a pin's tap area (W2, W4, S3f0 part 22). They walk across and keep going.
+- **The hero:** walkers are not solid. If the hero comes within 14 u, a walker stops, steps to the edge of the pavement, waves, then walks on.
+- **During "watch it change":** the moment's own walkers come first (the cap of 8 moving stays, city.md). Ambient walkers in the view stop where they are and turn to watch; at the sting they cheer (arms up, 1 s); then they walk on.
+- **Zoomed far out:** a walker whose drawn height would be under 6 screen px is not drawn.
+
+### 10. Win moments
+
+- **Mission complete!** (W5): as the hero steps off the bus, 4 to 6 city people by the stop cheer, arms up, for 2 s; then 2 of them walk off and the rest join the still picture. Several skin tones among them.
+- **Street cleared:** the bus park crowd and the bus passengers cheer (part 5), then the card shows.
+- **Go-Slow Hall:** the crowd comes in and cheers at "Lagos is switched on!" (part 5).
+- **Lane run goal:** the crowd of 5 at the bus stop cheers (part 7).
+- The cards themselves (Street cleared, Win, Mission complete) do not change: their words and buttons stay as they are (S2.10, W8).
+
+### 11. Speed and size
+
+**Cheap sprite people, baked once per look:**
+- A person is built from a small kit (body shape, head, hair or headwear, top, bottom or wrapper, skin) in one code file. When a street, the hall, the well room, the lane run or the city opens, gamedev bakes only that place's cast (about 16 looks) into one offscreen sprite sheet at the screen's pixel scale (as `blitLayer` does). Frames per look: stand, walk (4), wave (2), cheer (2), and call or sit where that look needs it: at most 10.
+- The sheet is at most 1024 x 1024 px (about 4 MB of memory). It is baked again only when the screen size or pixel scale changes.
+- The bake happens before the first frame, inside the fade, in at most 40 ms on the slow phone profile; a street's first frame comes no more than 30 ms later than today (S3e0's limit, with both changes together).
+- Each frame, a person is one `drawImage`. Bubbles are baked once per line too. Faces in windows and on the footbridge are drawn into the baked window tiles and the footbridge picture in two looks (still and waving), not one by one.
+- **Limits per frame:** at most 12 people drawn in a street, 9 in the hall, 2 in the well room, 24 in the lane run (window faces count as part of their tile), and in the city 12 moving plus the still picture.
+- **Time:** people (update and draw) take at most 1.5 ms a frame at 4x CPU slowdown. Every challenge keeps at least 45 fps at 4x CPU and 60 fps on a mid phone (city.md part 3).
+- **Backing off:** if the frame time over the last 2 s is above 22 ms (under 45 fps), drop walkers and joggers first, then half the standing people, until it recovers; never the first screen's S3e0 people. They come back only at the next run.
+- **No change to the game:** people have no effect on the game's state. With people on or off, a scripted run gives the same hero path, kobo, lives and result.
+- **Reduced motion:** walkers stand still where they are, joggers and the okada do not run, the shadows over the light holes do not move; a wave or a cheer shows as one still pose (arm up) for the same time, with no hop; bubbles still show.
+
+**Size budget (gzipped), aim under 20 KB in all:**
+
+| Part | Owner | KB |
+|---|---|---|
+| The people kit: bodies, heads, hair and headwear, 13 dress kinds, 7 skins, frames | art (src/art/folk.ts) | 8 |
+| Okada and rider, keke riders, heads in bus windows, lane window tiles, footbridge crowd, store keeper | art | 3 |
+| The bubble look | art | 0.5 |
+| Casts, spot finding with the clear zones, walkers, reactions, the bake | gamedev (src/game/crowd.ts) | 4.5 |
+| Lane run and city hookup (lamps, joggers, queues, ambient walkers) | gamedev | 2 |
+| Crowd sounds | art (src/engine/sound.ts) | 1 |
+| Words | gamedev (src/screens/words.ts) | 0.5 |
+| **In all** | | **19.5** |
+
+### 12. Sound (our own, made in code; follows the Sound switch)
+
+- **A light crowd murmur:** a soft, low, filtered noise bed with a slow rise and fall, like many people far away. It plays only while 5 or more people are on screen (streets 2 and 3, the bus park, the hall's finish, the city near the Market), very quiet, under every game sound, fading in and out over 1 s.
+- **A cheer:** 0.8 s, a swell of breathy noise and a few quick claps. A bigger one (1.2 s) for the bus park, the hall's finish and Mission complete. At most one cheer every 4 s.
+- **No voices say words.** Bubbles are silent.
+- **Never over a warning:** no murmur or cheer while a warning sound plays (the drum's roll, the high honk, the Blackout's "tunk"), and none while the corn tune plays (decision 42).
+- Sound off, or the iPhone silent switch, means none (decision 22). No new switch (PE-R6).
+
+### 13. Accessibility
+
+- People carry no meaning, so nothing depends on seeing them, on colour or on reading a bubble.
+- Screen readers hear nothing new during play (people are not announced); the canvas stays hidden from them as today.
+- No flashing: a cheer is a pose, never a flash.
+- Reduced motion as in part 11.
+- Buttons, the HUD and toasts are never covered (parts 3, 6 and 7).
+
+### 14. Who does what
+
+**art (S3g1a), from this note:**
+1. **The people kit** (src/art/folk.ts), our own look, matching the decision 60 shading at small size: bodies (slim, medium, round; child, teen, adult, elder; male and female), 7 skin tones, hair (low cut, afro, braids, cornrows, grey for elders) and headwear (gele, headscarf, hijab, fila, kaftan cap, babban riga cap), the 13 dress kinds of part 8 with our own patterns, a baby tied on a back, glasses, a wheelchair. Frames: stand, walk (4), wave (2), cheer (2), call, sit.
+2. **What they hold:** a handbag, a school bag, a backpack, a tray on the head (bread), a basin on the head (goods), a box on the head, a basket, a phone, a broom, a paper, a market bag, a wrapped plate and a takeaway pack, a small ball (never gold or yellow).
+3. **Traders' small stations:** the akara pot and table with steam, a phone case held up, an ankara roll over an arm, the tailor's machine (reuse the market art), the buka cook's pots (reuse buspark.ts).
+4. **The okada** (side on): a plain motorcycle, a rider in a plain one-colour helmet, a passenger with a bag; 2 wheel frames. **Keke riders:** a driver and two passengers for the existing keke.
+5. **Heads in bus windows:** heads and shoulders for the passing bus, the start fence bus and the bus park bus, still and with one arm waving.
+6. **The store keeper** for the well room: an elder woman in a wrapper and headscarf on a low stool; sit, wave, clap.
+7. **The hall crowd:** the door people (3) and the walk-in (4 more), several skin tones, standing, cheering, clapping; passengers waving from the danfos driving out.
+8. **Lane run:** people from behind and three-quarter, at lane scale (or the kit drawn through the perspective scale); the two-storey fronts tile with windows (empty, a person waving in 2 frames, a warm lantern glow); the footbridge crowd above the railing (still and waving); a jogger and two children running (4 frames); a doorway with its door open and shut.
+9. **City:** ambient walkers made from the kit at city size (or `drawCityFolk` with every skin and dress colour), the Mama Put queue and its cook, Market shoppers, the cheer pose at city size.
+10. **The bubble** look (part 6), with its tail.
+11. **Sounds** in src/engine/sound.ts: the murmur bed and the two cheers (part 12).
+12. **A gallery page for qa** (like galleryBright.ts): the whole kit in every dress and skin; each street's cast; a street, tired and bright, at 851 x 393 and 320 x 240 with people placed; the hall in the fight and at the finish; the well room; a lane run frame with a footbridge, windows and a jogger; the city at the first look and after the first boom.
+13. **docs/assets.md** lines for every piece, with its size. Art total under 12.5 KB.
+
+**gamedev (S3g1b), can start with plain shapes before the art lands:**
+1. **The back pavement layer** in the street draw order (src/game/game.ts): after the backdrop and the backs of the stalls, before the road and everything that can touch the hero; feet at groundY − 8, 0.85 size.
+2. **A pure, tested `crowdSpots(level, look)`** (src/game/crowd.ts) giving each street's standing spots and walker stretches from the level file, with every clear zone of part 3, the counts for tired, bright and fixed, and a fixed seed per street; the first screen left to S3e0.
+3. **Casts** per street, the hall, the well room, the lane run and the city (parts 4, 5, 7 and 9), skipping the player's own hero look.
+4. **The bake** (part 11): one sprite sheet per place at the screen's pixel scale, rebuilt only on resize; bubbles baked once.
+5. **Walkers and reactions** (part 5): wave, step aside, trader calls, cheers on a cleared problem (goat fed, drum smashed, weeds dried, signed pothole jumped), the checkpoint, the bus park; nothing on a lost life; the rate limits.
+6. **The far background movers:** the okada every 25 s, the keke riders, heads in bus windows.
+7. **The well room** store keeper and the feet shadows; **the hall** door crowd, the cheer on each hit (kept clear of throws) and the walk-in on the finish timeline.
+8. **The lane run** (part 7): people with each scenery piece, pavement walkers, window tiles, the footbridge crowd, joggers and children alongside with their rules, people going in under dark lamps and coming out when a lamp comes back on, the goal crowd. Never in a lane.
+9. **The city** (part 9): ambient walkers on the walk grid with the count rule, bright blocks picked 3 times as often, the Mama Put queue, Market shoppers, the bus park, the clear rule round pay spots, trays and pins, stop-and-watch during a moment, Mission complete's cheering crowd.
+10. **Sound hookup** (part 12): the murmur when 5 or more people show, cheers, never over a warning or the corn tune.
+11. **Backing off** under 45 fps, and **reduced motion** (part 11). All words in src/screens/words.ts.
+12. **Tests:** the level files byte for byte the same; a scripted street 1, hall and lane run with people on and off give the same path, kobo, lives and result; `crowdSpots()` keeps every clear zone on all three streets, tired, bright and fixed; nobody is drawn after the hero or in a lane; the cast never holds the player's own look; nothing reacts on a lost life.
+
+### 15. Done checks for qa
+
+1. **Alive:** each street, the hall, the well room, the lane run and the city show people at every moment, at least as many as parts 3, 5, 7 and 9 say, with someone walking on every bright street screen past the first, and the okada passing at least once in a 60 s street.
+2. **Never in the way:** in every street, tired and bright, no person stands or walks in a clear zone of part 3; nobody is drawn on the front pavement strip; the hero, throws and hazards pass people without touching; in the lane run nobody is ever in a lane, on a kerb or on the divider, and the lane danfos show no one; in the hall nobody is on the floor during the fight.
+3. **No change to the game:** the level files are byte for byte the same; the scripted runs give the same path, kobo, lives and result with people on and off; a first-timer still finishes Alausa in 3 tries or fewer, and in a people test nobody jumps over, waits for or tries to touch a person.
+4. **Reactions:** people wave, step aside, call out and cheer as part 5 says, within the rate limits; the bus stop and the bus park cheer; the hall cheers on each hit and comes in at the finish; nothing at all happens on a lost life; nobody boos, points at or laughs at General Go-Slow or the hero.
+5. **The dark:** in the lane run, people go inside under dark lamps and the windows glow; nobody is shown in the Blackout's edge; when a lamp comes back on, people come back out.
+6. **Bubbles:** one at a time; never over the hero, a hazard, a coin, a food, a button, the HUD or a toast; every line comes from part 6's list and reads at 320 x 240; tone marks show as letters, never boxes, on the slow Android profile (or the plain spelling shows).
+7. **Variety:** in each street's cast, every skin tone shows at least twice, every age shows, at least three dress kinds from different parts of Nigeria show, and one person uses a wheelchair; no cast is all one kind; nobody wears the player's own look.
+8. **Respect (by eye, with po):** no real person, uniform, badge, crest, party colour, printed clothes, red cap, herder, beggar, tout or robe of office; nobody shown as the problem, lazy, dirty or to blame; tired streets have proud people; nothing like Mario or any other game.
+9. **City:** ambient walkers number 3, plus 1 per fix, plus 2 per Booming step, with at most 12 moving; the Mama Put queue and the Market shoppers show once built; nobody stands on or near a pay spot, tray or pin; during a moment the cap of 8 moving holds and the others stop to watch; Mission complete shows the cheering crowd.
+10. **Sound:** the murmur plays only with 5 or more people on screen, very quietly; cheers keep the rate limit; none over a warning sound or the corn tune; nothing with Sound off or the iPhone silent switch.
+11. **Speed:** at least 45 fps at 4x CPU and 60 on a mid phone in a bright street 2, the hall's finish, a lane run at a footbridge with a jogger, and the city after the first boom; people take at most 1.5 ms a frame at 4x CPU; a street's first frame comes no more than 30 ms later than before; backing off works when forced.
+12. **Reduced motion:** walkers, joggers, the okada and the feet shadows hold still; waves and cheers are still poses; bubbles show.
+13. **Size:** S3g1 adds no more than 20 KB gzipped; the first load stays under 3 MB.

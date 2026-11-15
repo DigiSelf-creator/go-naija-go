@@ -1137,6 +1137,9 @@
 .screen.full {
   padding: 0;
   overflow: hidden;
+  /* ST0 part 4: nothing from an earlier screen shows round a full screen (Tp's phone showed the
+     street's last frame in the camera cutout strip). */
+  background: #0f1a12;
 }
 .wheel-card {
   position: fixed;
@@ -1149,7 +1152,9 @@
   max-height: none;
   padding: 0;
   border-radius: 0;
-  box-shadow: none;
+  /* ST0 part 4: the cream reaches every edge (under the camera cutout too); the wheel and its
+     words stay inside the safe edges. */
+  box-shadow: 0 0 0 100vmax #fffaf0;
   overflow: hidden;
 }
 .wheel-box {
@@ -1337,11 +1342,10 @@
    caption under it as real text (bold 16 px, 14 px under 280 px tall; long captions wrap, never
    cut), Skip at the top right (at least 44 x 44 px). */
 .intro-card {
+  /* ST0 part 4: the picture goes edge to edge, under the camera cutout and the home bar too;
+     only Skip, the words and "Let's go" keep inside the safe edges. */
   position: fixed;
-  top: var(--safe-top);
-  right: var(--safe-right);
-  bottom: var(--safe-bottom);
-  left: var(--safe-left);
+  inset: 0;
   width: auto;
   max-width: none;
   max-height: none;
@@ -1369,7 +1373,7 @@
 }
 .intro-words {
   flex: 0 0 auto;
-  padding: 6px 14px 4px;
+  padding: 6px max(14px, var(--safe-right)) max(4px, var(--safe-bottom)) max(14px, var(--safe-left));
   text-align: center;
 }
 .screen .intro-caption {
@@ -1394,8 +1398,8 @@
 }
 .intro-skip {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: max(8px, var(--safe-top));
+  right: max(8px, var(--safe-right));
   z-index: 2;
   background: rgba(255, 255, 255, 0.92);
 }
@@ -1404,7 +1408,7 @@
     font-size: 14px;
   }
   .intro-words {
-    padding: 4px 10px 2px;
+    padding: 4px max(10px, var(--safe-right)) max(2px, var(--safe-bottom)) max(10px, var(--safe-left));
   }
   .screen .intro-hint {
     font-size: 12px;
@@ -1443,8 +1447,10 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  height: calc(3.9em + 16px);
-  padding: 8px 16px;
+  /* The dark band spans the whole width and reaches the bottom edge; its words keep inside the
+     safe edges (ST0 part 4). */
+  height: calc(3.9em + 16px + var(--safe-bottom));
+  padding: 8px max(16px, var(--safe-right)) calc(8px + var(--safe-bottom)) max(16px, var(--safe-left));
   background: rgba(20, 17, 15, 0.9);
   color: #fff6e5;
   font-size: 18px;
@@ -1464,15 +1470,15 @@
 }
 /* Beat 6 and the hold: room at the right end for "Let's go", so the line never jumps */
 .intro-card.moving[data-mode='moving'] .intro-strip.with-go {
-  padding-right: calc(16px + var(--intro-go-w) + 10px);
+  padding-right: calc(max(16px, var(--safe-right)) + var(--intro-go-w) + 10px);
 }
 .intro-card {
   --intro-go-w: 104px;
 }
 .intro-card.moving .intro-words {
   position: absolute;
-  right: 16px;
-  bottom: calc((3.9 * 18px + 16px - 48px) / 2);
+  right: max(16px, var(--safe-right));
+  bottom: calc((3.9 * 18px + 16px - 48px) / 2 + var(--safe-bottom));
   z-index: 2;
   padding: 0;
 }
@@ -1493,7 +1499,7 @@
     font-size: 16px;
   }
   .intro-card.moving .intro-words {
-    bottom: calc((3.9 * 16px + 16px - 48px) / 2);
+    bottom: calc((3.9 * 16px + 16px - 48px) / 2 + var(--safe-bottom));
   }
 }
 @keyframes intro-fade-in {
@@ -1552,7 +1558,9 @@
   max-height: none;
   padding: 0;
   border-radius: 0;
-  box-shadow: none;
+  /* ST0 part 4: the sea reaches every edge (under the camera cutout too); the map, its pins,
+     signs and buttons stay inside the safe edges. */
+  box-shadow: 0 0 0 100vmax #5fb3c9;
   overflow: hidden;
   background: #5fb3c9;
   touch-action: none;
