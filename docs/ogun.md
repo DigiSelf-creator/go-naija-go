@@ -445,6 +445,17 @@ Nobody is hurt. The pothole just becomes a good road and has a nap.
 - Money line as Lagos: "You got ₦15."
 - Big button: "Take it home". Small: "Play again", "Challenge road".
 
+### 5.6 The hall file and the gaps it rules (O0a4)
+
+src/data/levels/ogun-hall.json keeps Go-Slow Hall's format (schema 2, `type: "hall"`, the same room numbers: width 560, floor 300, start 50, left wall 30) with right wall 530 and King Pothole's own `boss` block: `pit` (width 100, track 230 to 400, drop zone 40, bump gap 10, slides again 0.3 s after landing), `bag` (pile 60 to 90, bag at 80, a new one 1.0 s later), `phases` (the 5.4 table: every, slide, pattern, bpm), `gravel`, `mud`, `fall` and `gentle`. The game does not read this block yet; gamedev adds the reader in O5b. tests/unit/ogun-hall-lane.test.ts checks it.
+
+Gaps in 5.2 to 5.5, ruled the simplest fair way:
+- **Where he starts:** his middle at 400, the right end of his track, the farthest from the hero, sliding left. The same place he goes back to after a fall.
+- **"120 to 200 u from him"** is measured from his near lip (the one on the hero's side), so a mud patch never lands in his opening.
+- **Walls:** the whole 60 u patch lands inside the walls (its middle 60 to 500). If no spot is 120 to 200 u from his lip, inside the walls and 40 u or more from the hero (the hero at the pile while he is at the far-left end), that throw is a gravel lump instead. Mud never hurts, so this only keeps it fair and simple.
+- **His opening slides over a drying patch:** fine. The patch is floor; where his opening passes, you see the hole, and the patch shows again after him until it dries.
+- **Gravel when the hero is past him on the right landing:** it hops out of his right lip, toward the hero, and crumbles at the right wall.
+
 ---
 
 ## 6. Ogun's city from above
@@ -521,6 +532,12 @@ The first screen of each run matches its spot, tired or bright (decision 48).
 ### 6.6 The Expressway run (the lane run in Ogun; src/data/levels/ogun-lane.json)
 
 The same rules, controls, tilt, Blackout, buckets, prizes and "Keep running" as S3f0. Our own new look: a wide expressway at dusk seen from behind, tipper trucks and tankers in the lanes (dark back windows, no drivers shown), danfos, road cones, palm trees and red-brown verges, far rocks and a quarry against the sky, the footbridge, and the bus stop goal under a small copy of the arch. The fixed first 600 m uses Ogun's own order of rows (designer writes it with the same fairness rules, S3f0 part 7). No new rule in the lane run for now.
+
+**The file (O0a4).** src/data/levels/ogun-lane.json, the same `type: "lane"` format as lagos-lane.json, name "Expressway", theme "expressway". Gaps ruled the simplest fair way:
+- **The same numbers as Lagos:** speeds, moves, Blackout, prize, pops, endless rules and the part 9 totals (Power 14, Tech 9, 86 coins). So S3f0's "three tries" Blackout table still holds, and one win still pays for any one Ogun fix (6.2).
+- **The same teaching:** the same nine hint keys at the same distances, with the same words (WORDS.lane.hints), and each thing still taught alone in the middle lane by 305 m. A hint is seen once per phone, so a player who ran the Lagos lane run sees none of them again; one who never did is taught here. The three warm-up bulbs stay at 152, 282 and 372 m in the only free lane.
+- **Ogun's own rows:** from 240 m on the rows are new, and the road holds more potholes (7, where Lagos has 3), never before the pothole hint at 288 m. 8 endless chunks of Ogun's own (tanker-wall, pothole-row, zigzag, middle-gap, slide-run, goat-crossing, crate-row, long-tipper).
+- **Tippers and tankers** are the `danfo` kind: the same size and rules. Art draws each one as a tipper truck, a tanker or a danfo (O6a), so no new kind and no new rule.
 
 ---
 
