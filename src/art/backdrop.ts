@@ -26,27 +26,38 @@ export function asTheme(theme: string): StreetTheme {
  * fixed: the street's fixed look once its state is switched on (S2.8): lamps and signs lit and
  * bunting, on the row (fixedLook.ts). Pair it with drawRoad(..., fresh = true).
  */
-export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: number, viewW: number, time: number, viewH = 420, groundY = GROUND_Y, fixed = false): void {
+export function drawBackdrop(g: CanvasRenderingContext2D, theme: string, camX: number, viewW: number, time: number, viewH = 420, groundY = GROUND_Y, fixed = false, held = 0): void {
+  const fixedLook = (): void => {
+    // S3e0 part 6: a tired first stretch holds the fixed look back (screen x up to `held`).
+    if (held <= 0) return drawFixedLook(g, theme, camX, viewW, groundY);
+    if (held >= viewW) return;
+    g.save();
+    g.beginPath();
+    g.rect(held, -1e4, 1e5, 2e4);
+    g.clip();
+    drawFixedLook(g, theme, camX, viewW, groundY);
+    g.restore();
+  };
   switch (asTheme(theme)) {
     case 'market':
       drawMarketSky(g, camX, viewW, time, viewH);
       drawMarketFar(g, camX, viewW, groundY);
       drawMarketRow(g, camX, viewW, groundY);
-      if (fixed) drawFixedLook(g, theme, camX, viewW, groundY);
+      if (fixed) fixedLook();
       drawPassingKeke(g, camX, viewW, time, groundY);
       return;
     case 'evening':
       drawEveningSky(g, camX, viewW, time, viewH, groundY);
       drawEveningSkyline(g, camX, viewW, groundY);
       drawParkRow(g, camX, viewW, time, groundY);
-      if (fixed) drawFixedLook(g, theme, camX, viewW, groundY);
+      if (fixed) fixedLook();
       drawPassingBus(g, camX, viewW, time, groundY);
       return;
     default:
       drawSky(g, camX, viewW, time, viewH);
       drawSkyline(g, camX, viewW, groundY);
       drawShopRow(g, camX, viewW, groundY);
-      if (fixed) drawFixedLook(g, theme, camX, viewW, groundY);
+      if (fixed) fixedLook();
       drawPassingBus(g, camX, viewW, time, groundY);
   }
 }

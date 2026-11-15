@@ -892,17 +892,14 @@
 /* po M4 bug 1: short screens (320 x 240, 480 x 200, 640 x 200). Smaller words and gaps so
    every line and every button shows with no scrolling; buttons stay at least 44 px. */
 @media (max-height: 300px) and (orientation: landscape) {
-  .screen:has(.event),
-  .screen:has(.streets-card) {
+  .screen:has(.event) {
     padding: max(6px, var(--safe-top)) max(8px, var(--safe-right)) max(6px, var(--safe-bottom)) max(8px, var(--safe-left));
   }
-  .card.event,
-  .card.streets-card {
+  .card.event {
     padding: 6px 12px;
     border-radius: 12px;
   }
-  .event h2,
-  .streets-card h2 {
+  .event h2 {
     font-size: 1.1rem;
     margin: 0 0 2px;
   }
@@ -911,8 +908,7 @@
     font-size: 0.85rem;
     line-height: 1.25;
   }
-  .event p.small,
-  .streets-card p.small {
+  .event p.small {
     font-size: 0.78rem;
     margin: 0;
   }
@@ -924,14 +920,12 @@
   .event .actions .go {
     margin: 4px 0 0;
   }
-  .event .minor,
-  .streets-card .minor {
+  .event .minor {
     min-height: 44px;
     padding: 4px 10px;
     font-size: 0.85rem;
   }
-  .event .minor-row,
-  .streets-card .minor-row {
+  .event .minor-row {
     margin-top: 6px;
   }
   .pause-grid {
@@ -995,141 +989,6 @@
   }
 }
 
-/* Streets (S2.6 "Fit at 320 px", S2.10): art N1's card look (src/art/galleryN1.ts CARD_CSS). */
-.streets-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 6px 0;
-}
-.street-card {
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-  min-height: 60px;
-  min-width: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-  padding: 5px 8px;
-  border: 2px solid #1d1a14;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 3px 0 #d8cfbd;
-  color: #1d1a14;
-  text-align: left;
-  font-family: 'Trebuchet MS', Verdana, sans-serif;
-  cursor: pointer;
-}
-.street-card.done {
-  background: #fff3d6;
-  border-color: #b07a1e;
-  box-shadow: 0 3px 0 #e6cf9c;
-}
-.street-card.locked {
-  background: #ecebe7;
-  border: 2px dashed #9a948a;
-  box-shadow: none;
-  color: #4f493f;
-  cursor: default;
-}
-.street-card .art {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.street-card .badge {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 20px;
-  height: 20px;
-}
-.street-card .num,
-.street-card .name,
-.street-card .status {
-  position: relative;
-  display: block;
-}
-/* The first line sits beside the badge and is as tall as it, so the bold name below always has
-   the card's full width. */
-.street-card .num {
-  font-size: 0.75rem;
-  color: #4f493f;
-  min-height: 20px;
-  line-height: 20px;
-  padding-right: 24px;
-}
-/* A name is never cut with "..." and never runs off the card: it wraps between words and the
-   card grows taller. */
-.street-card .name {
-  font-weight: bold;
-  font-size: 1.05rem;
-  line-height: 1.15;
-  overflow-wrap: normal;
-  word-break: keep-all;
-}
-.street-card .status {
-  font-size: 0.8rem;
-}
-/* The hall card with "You have a garri parcel.": the name sits beside the badge. */
-.street-card.with-extra .name {
-  padding-right: 24px;
-}
-.street-card:focus-visible {
-  outline: 3px solid #2b59c3;
-  outline-offset: 2px;
-}
-/* Tiny screens (the 2 x 2 grid at 320 x 240): S2.6 "Fit at 320 px". */
-@media (max-width: 480px), (max-height: 300px) {
-  .streets-grid {
-    gap: 6px;
-    margin: 4px 0;
-  }
-  .street-card {
-    min-height: 52px;
-    padding: 3px 6px;
-  }
-  .street-card .badge {
-    width: 18px;
-    height: 18px;
-  }
-  .street-card .num {
-    font-size: 0.7rem;
-    min-height: 16px;
-    line-height: 16px;
-    padding-right: 22px;
-  }
-  .street-card .name {
-    font-size: 0.9rem;
-  }
-  .street-card .status {
-    font-size: 0.7rem;
-    line-height: 1.2;
-  }
-  .street-card.with-extra .name {
-    padding-right: 22px;
-  }
-}
-@media (max-height: 300px) and (orientation: landscape) {
-  .streets-card h2 {
-    margin: 0;
-  }
-  .streets-grid {
-    margin: 3px 0;
-  }
-  .streets-card .minor-row {
-    margin-top: 4px;
-  }
-}
-/* Short and wide (640 x 200): the four cards in one row. */
-@media (max-height: 260px) and (min-width: 560px) and (orientation: landscape) {
-  .streets-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
 
 /* Nigeria's wheel (S2.8 "The wheel screen on every size"): the cream card fills the screen, the
    wheel as tall as it, the words in a rail beside it. Places and sizes are set by Menus.wheel
@@ -2206,10 +2065,6 @@ body.lane {
 .lane-hint[hidden] {
   display: none;
 }
-.street-card.lane-street {
-  grid-column: 1 / -1;
-}
-
 /* qa S3f3 fixes: the HUD's Sound button beside Pause; the lane cards' big button is 56 px tall
    (part 15); on short screens the cards' buttons share rows so every card fits 320 x 240. */
 .lane-buttons-top {
@@ -2403,4 +2258,339 @@ body.lane {
 }
 .lane-hud.change-below .lane-hint {
   margin-top: 24px;
+}
+
+/* S3e0 the challenge road (src/screens/road.ts): a top row, then the road picture with its stops,
+   scaled by `s` (the .road's font-size is s px, so every em below is a road unit). */
+.road-screen {
+  position: fixed;
+  top: var(--safe-top);
+  right: var(--safe-right);
+  bottom: var(--safe-bottom);
+  left: var(--safe-left);
+  width: auto;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  background: #bfe3f5;
+}
+.road-top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.screen .road-top h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  white-space: nowrap;
+}
+.road-top .minor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+}
+.road-top svg,
+.road-arrow svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.road-hint {
+  position: absolute;
+  z-index: 2;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: rgba(10, 8, 30, 0.75);
+  color: #fff;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.road-hint[hidden],
+.road-dim[hidden],
+.road-arrow[hidden] {
+  display: none;
+}
+.road-wrap {
+  position: absolute;
+  top: 60px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+}
+.road-scroll {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+}
+.road-scroll::-webkit-scrollbar {
+  display: none;
+}
+.road {
+  position: relative;
+  flex: none;
+  width: 680em;
+  height: 168em;
+  margin: auto;
+  font-family: 'Trebuchet MS', Verdana, sans-serif;
+}
+.road-pic,
+.road-pic svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.road-stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.road-stop {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1d1a14;
+  font: inherit;
+  cursor: pointer;
+  touch-action: pan-x;
+}
+.road-plate {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 6em;
+  border: 2px solid #1d1a14;
+  border-radius: 6em;
+  background: #f2b300;
+}
+.road-stop.locked .road-plate,
+.road-stop.soon .road-plate,
+.road-stop.built .road-plate {
+  background: #e6d4ae;
+}
+.road-stop.next .road-plate {
+  animation: road-bob 1s ease-in-out infinite alternate;
+}
+@keyframes road-bob {
+  to {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .road-stop.next .road-plate {
+    animation: none;
+  }
+}
+.road-stop:focus-visible {
+  outline: 3px solid #2b59c3;
+  outline-offset: 2px;
+}
+/* Inside a stop, each line's em is its own font size: 12 or 11 road units. */
+.road-name {
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+  height: 2em;
+  font-size: 12em;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.road-name svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+.road-st,
+.road-l3 {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 11em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.road-st {
+  font-weight: bold;
+}
+.road-st svg {
+  width: 1.45em;
+  height: 1.45em;
+}
+.road-next,
+.road-tick {
+  position: absolute;
+  top: -1.25em;
+  right: -0.4em;
+  padding: 0 0.4em;
+  border: 2px solid #1d1a14;
+  border-radius: 0.8em;
+  background: #fffaf0;
+  font-size: 10em;
+  font-weight: bold;
+  line-height: 1.4;
+}
+.road-tick {
+  width: 1.4em;
+  height: 1.4em;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.road-arrow {
+  position: absolute;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(29, 26, 20, 0.85);
+  color: #fff;
+  cursor: pointer;
+}
+.road-arrow.l {
+  left: 0;
+}
+.road-arrow.r {
+  right: 0;
+}
+.road-dim {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  background: rgba(10, 20, 12, 0.5);
+}
+.card.road-card {
+  max-width: 300px;
+  max-height: 100%;
+  padding: 8px 10px;
+}
+.screen .road-card h2 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  line-height: 24px;
+}
+.road-card-body {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.road-card-pic {
+  flex: none;
+  display: block;
+  width: 112px;
+  height: 84px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.road-card-pic svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.screen .road-card p {
+  margin: 0 0 3px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.screen .road-card p:first-child {
+  font-size: 13px;
+}
+.road-card-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 6px;
+}
+.road-card-row .go {
+  flex: 1 1 auto;
+  width: auto;
+  min-height: 56px;
+  margin: 0;
+}
+.road-card-row .minor {
+  margin-left: auto;
+}
+@media (min-width: 568px) and (min-height: 320px) {
+  .card.road-card {
+    max-width: 420px;
+    padding: 12px 16px;
+  }
+  .road-card-pic {
+    width: 160px;
+    height: 120px;
+  }
+  .screen .road-card p {
+    font-size: 13px;
+  }
+  .screen .road-card p:first-child {
+    font-size: 14px;
+  }
+}
+@media (min-width: 1200px) and (min-height: 700px) {
+  .card.road-card {
+    max-width: 560px;
+  }
+  .road-card-pic {
+    width: 240px;
+    height: 180px;
+  }
+}
+@media (min-height: 360px) {
+  .road-top {
+    height: 48px;
+  }
+  .road-hint {
+    top: 60px;
+  }
+  .road-wrap {
+    top: 64px;
+  }
+}
+@media (max-width: 640px), (max-height: 300px) {
+  .screen .road-top h2 {
+    font-size: 0.95rem;
+  }
+}
+@media (max-width: 360px) {
+  .road-sound span {
+    display: none;
+  }
+}
+/* S3e0 part 7: "Challenge road" and "Nigeria's wheel" may take two lines on a small screen. */
+@media (max-width: 400px) {
+  .city-buttons .two-line {
+    max-width: 88px;
+    line-height: 1.1;
+    white-space: normal;
+  }
 }

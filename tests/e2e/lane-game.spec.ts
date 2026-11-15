@@ -1,11 +1,11 @@
 /**
  * S3f3 the lane run game (docs/design.md S3f0 parts 2, 8 to 15, 20): the Blackout words, the
  * buckets going home as you pick them up, the hints, the goal card with the prize, the caught
- * cards, the city links (the Lights out card, the Not enough card, the Streets card) and Mission
+ * cards, the city links (the Lights out card, the Not enough card, the Lane run stop) and Mission
  * complete for the Lamps. Test hooks: warp along the road, set the Blackout's distance.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS, screenNow } from './helpers';
+import { PAST_DOUBLE_TAP_MS, screenNow, playStop } from './helpers';
 
 const LOOK = '{"skin":2,"hair":0,"outfit":0,"body":0,"age":1}';
 const lane = (page: Page) =>
@@ -147,7 +147,7 @@ test('Lights out card: "Lane run" starts it for the Lamps; a win brings Power 10
   await expect.poll(async () => (await saved(page)).city?.fixed ?? [], { timeout: 30_000 }).toContain('lightsOut');
 });
 
-test('the Not enough card for the Mast has "Lane run"; the Streets card starts a lane run', async ({ page: first }) => {
+test('the Not enough card for the Mast has "Lane run"; the Lane run stop starts a lane run', async ({ page: first }) => {
   let page = first;
   await open(page, { ...CITY, paid: { slowInternet: 2 } });
   await expect.poll(() => screenNow(page)).toBe('city');
@@ -163,7 +163,7 @@ test('the Not enough card for the Mast has "Lane run"; the Streets card starts a
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await pause.getByRole('button', { name: 'Back to Lagos' }).tap();
   await expect.poll(() => screenNow(page)).toBe('city');
-  // The Streets screen's last card: "Done ✓ Best: 840 m" after a goal, and it starts a run.
+  // S3e0: the Lane run stop on the challenge road's side road: "Done ✓", "Best: 840 m" after a goal, and it starts a run.
   // (A fresh page: the old one writes its own save as it closes.)
   const ctx = page.context();
   await page.close();
@@ -176,12 +176,12 @@ test('the Not enough card for the Mast has "Lane run"; the Streets card starts a
   await page.getByRole('button', { name: 'Play' }).tap();
   await expect.poll(() => screenNow(page)).toBe('city');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await page.getByRole('button', { name: 'Streets', exact: true }).tap();
+  await page.getByRole('button', { name: 'Challenge road', exact: true }).tap();
   const laneCard = page.locator('[data-where="lane"]');
   await expect(laneCard).toContainText('Lane run');
-  await expect(laneCard).toContainText('Run to the bus stop for Naira, Power and Tech.');
-  await expect(laneCard).toContainText('Done ✓ Best: 840 m');
-  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await laneCard.tap();
+  await expect(laneCard).toContainText('Done ✓');
+  await expect(laneCard).toContainText('Best: 840 m');
+  await expect(laneCard).toHaveAttribute('aria-label', 'Side road, Lane run. Done. Best 840 metres.');
+  await playStop(page, 'lane');
   await playing(page);
 });

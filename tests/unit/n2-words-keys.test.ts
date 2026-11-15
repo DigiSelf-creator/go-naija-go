@@ -19,7 +19,7 @@ describe('S2.10 words', () => {
     expect(WORDS.cleared.text('Computer Village', 1130)).toBe('Computer Village is moving again, thanks to you! You got \u20a611.30.');
     expect(WORDS.cleared.text('Ikeja', 90)).toBe('Ikeja is moving again, thanks to you! You got 90 kobo.');
     expect(WORDS.cleared.parcel).toBe('Your garri parcel is saved for Go-Slow Hall.');
-    expect([WORDS.cleared.playAgain, WORDS.cleared.streets]).toEqual(['Play again', 'Streets']);
+    expect([WORDS.cleared.playAgain, WORDS.cleared.road]).toEqual(['Play again', 'Challenge road']);
     expect('home' in WORDS.cleared).toBe(false);
   });
 
@@ -30,12 +30,12 @@ describe('S2.10 words', () => {
     expect(WORDS.win.text(3)).not.toMatch(/kobo/);
     expect(WORDS.win.cog(1)).toBe("Lagos's cog is turning: 1 of 37.");
     expect(WORDS.win.wheel).toBe("See Nigeria's wheel");
-    expect([WORDS.win.playAgain, WORDS.win.streets]).toEqual(['Play again', 'Streets']);
+    expect([WORDS.win.playAgain, WORDS.win.road]).toEqual(['Play again', 'Challenge road']);
   });
 
   it('Pause and game over words', () => {
     const p = WORDS.pause;
-    expect([p.heading, p.keepPlaying, p.restart, p.streets, p.home]).toEqual(['Paused', 'Keep playing', 'Start again', 'Streets', 'Home']);
+    expect([p.heading, p.keepPlaying, p.restart, p.road, p.home]).toEqual(['Paused', 'Keep playing', 'Start again', 'Challenge road', 'Home']);
     // N2 and (c) "Losing keeps it all": "You keep 90 kobo for Lagos. The street is still here. Try again!"
     expect(WORDS.gameOver.text(90)).toBe('You keep 90 kobo for Lagos. The street is still here. Try again!');
     expect([WORDS.title.musicOn, WORDS.title.musicOff]).toEqual(['Music: on', 'Music: off']);
@@ -58,7 +58,7 @@ describe('P and Escape (S2.2 Keys, po M4 bug 3)', () => {
   it('nothing in the finish or on any other card; key repeat does nothing', () => {
     // The street end and the hall's finish: not playing.
     expect(pauseKeyAction('KeyP', false, null, false)).toBeNull();
-    for (const card of ['title', 'builder', 'credits', 'streets', 'wheel', 'gameover', 'cleared', 'win']) {
+    for (const card of ['title', 'builder', 'credits', 'road', 'wheel', 'gameover', 'cleared', 'win']) {
       expect(pauseKeyAction('KeyP', false, card, false)).toBeNull();
       expect(pauseKeyAction('Escape', false, card, true)).toBeNull();
     }

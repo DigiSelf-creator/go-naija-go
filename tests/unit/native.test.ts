@@ -30,7 +30,8 @@ const L: BackLabels = {
   introSkip: WORDS.intro.skip,
   settingsBack: WORDS.settings.back,
   creditsBack: WORDS.credits.back,
-  streetsHome: WORDS.streets.home,
+  roadHome: WORDS.road.home,
+  roadBack: WORDS.road.back,
   wheelClose: WORDS.wheel.close,
   wheelBack: WORDS.wheel.back,
   takeHome: WORDS.cleared.takeHome,
@@ -86,7 +87,9 @@ describe('Android back button (ST0 part 3)', () => {
     expect(backStep(at({ screen: 'intro' }), L)).toEqual({ kind: 'press', labels: ['Skip'] });
     expect(backStep(at({ screen: 'settings' }), L)).toEqual({ kind: 'press', labels: ['Back'] });
     expect(backStep(at({ screen: 'credits' }), L)).toEqual({ kind: 'press', labels: ['Back'] });
-    expect(backStep(at({ screen: 'streets' }), L)).toEqual({ kind: 'press', labels: ['Home'] });
+    // S3e0 part 8: a stop card's Back first (the card closes), else the road's Home (Lagos city).
+    expect(backStep(at({ screen: 'road' }), L)).toEqual({ kind: 'press', labels: ['Back', 'Home'] });
+    expect(backStep(at({ screen: 'road', sinceScreen: 100 }), L)).toEqual({ kind: 'ignore' });
     expect(backStep(at({ screen: 'wheel' }), L)).toEqual({ kind: 'press', labels: ['Close', 'Back'] });
     expect(backStep(at({ screen: 'builder', heroSaved: true }), L)).toEqual({ kind: 'city' });
     expect(backStep(at({ screen: 'builder', heroSaved: false }), L)).toEqual({ kind: 'ask', fromRun: null });
