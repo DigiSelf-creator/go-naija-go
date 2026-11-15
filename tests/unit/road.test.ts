@@ -15,6 +15,7 @@ import { Game } from '../../src/game/game';
 import { parseLevel } from '../../src/game/level';
 import { readState, type StateProgress } from '../../src/game/progress';
 import * as ART from '../../src/art/road';
+import { OGUN_STOP_BOX } from '../../src/art/gateway';
 import { CUTS, ROAD_ORDER, STOP_BOX, STOP_PAYS_FIX, openingStop, roadScale, stopCards, type RoadView, type StopInfo } from '../../src/screens/road';
 import { recorder } from './recorder';
 
@@ -41,6 +42,7 @@ describe('stopCards (S3e0 parts 2, 3, 5 and 9)', () => {
       ['Computer Village', 'locked', 'Locked', null],
       ['Ikeja', 'locked', 'Locked', null],
       ['Go-Slow Hall', 'locked', 'Locked', null],
+      ['To Ogun', 'locked', 'Locked', 'Win Go-Slow Hall'],
       ['Ferry', 'soon', 'Coming soon', 'Fixes to go: 5'],
     ]);
     expect(s.map((x) => x.spoken)).toEqual([
@@ -49,6 +51,7 @@ describe('stopCards (S3e0 parts 2, 3, 5 and 9)', () => {
       'Stop 2, Computer Village. Locked. Finish Alausa first.',
       'Stop 3, Ikeja. Locked. Finish Computer Village first.',
       'Stop 4, Go-Slow Hall. Locked. Finish Ikeja first.',
+      'To Ogun. Locked. Win Go-Slow Hall to open the road to Ogun.',
       'Ferry. Coming soon. Fixes to go: 5.',
     ]);
     const c = byId(s);
@@ -159,7 +162,11 @@ describe('the road layout (S3e0 part 4)', () => {
   it("the boxes and cuts are art's (src/art/road.ts), in the same road order", () => {
     const ids = ['alausa', 'lane', 'computerVillage', 'ikeja', 'hall', 'ferry'] as const;
     expect(ART.ROAD_STOPS).toEqual(ids);
-    ROAD_ORDER.forEach((id, i) => expect(STOP_BOX[id]).toEqual(Object.values(ART.STOP_BOX[ids[i]!])));
+    // O1b2: the "To Ogun" stop is art O1a's box (src/art/gateway.ts), between the hall and the Ferry.
+    const lagos = ROAD_ORDER.filter((id) => id !== 'ogun');
+    lagos.forEach((id, i) => expect(STOP_BOX[id]).toEqual(Object.values(ART.STOP_BOX[ids[i]!])));
+    expect(STOP_BOX.ogun).toEqual(Object.values(OGUN_STOP_BOX));
+    expect(ROAD_ORDER.indexOf('ogun')).toBe(ROAD_ORDER.indexOf('hall') + 1);
     expect(Object.values(CUTS).map((c) => [...c])).toEqual(Object.values(ART.CARD_CUTS).map((c) => Object.values(c)));
   });
 });
