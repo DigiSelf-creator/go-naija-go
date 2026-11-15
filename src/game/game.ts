@@ -228,7 +228,7 @@ export class Game {
    * try that starts with the garri shield on (S2.7). parcelSaved: the state already has a saved
    * parcel, so well rooms show 5 kobo instead (S2.5 gift rule 6).
    */
-  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash'> = {}): void {
+  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash' | 'arena'> = {}): void {
     this.level = level;
     this.run = new Run(this.level, { gentle, rooms: this.rooms, ...opts });
     this.newCamera();
@@ -295,6 +295,7 @@ export class Game {
     s.fixed = this.fixed;
     s.people = this.people;
     s.stride = this.stridePhase;
+    s.look = this.look;
     return s;
   }
   private readonly skinView = {} as SkinNow;
@@ -729,8 +730,8 @@ export class Game {
    */
   private renderHall(g: CanvasRenderingContext2D, view: View): void {
     const { level, run } = this;
-    const boss = run.boss!;
-    const data = level.boss!;
+    const boss = run.boss;
+    const data = level.boss;
     const W = view.width;
     const lift = this.lift;
     const H = view.height + lift;
@@ -740,6 +741,21 @@ export class Game {
     const still = this.still;
     g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
     g.translate(-camX, 0);
+    const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
+    if (!boss || !data) {
+      // O5b: a later state's hall draws itself from its lazy part (Pothole Hall); hero() draws the
+      // hero (null while it blinks out) and the sparkles. If its look fails, the hero still shows.
+      const hero = (): HeroPose | null => {
+        const p = blinkOff ? null : this.drawHeroNow(g, false);
+        this.drawEffects(g);
+        return p;
+      };
+      if (!this.skinDo((k) => k.hall?.(g, this.skinNow(camX - MARGIN, camX + W + MARGIN, H), hero, view))) {
+        drawHall(g, camX, W, H, {});
+        hero();
+      }
+      return;
+    }
     const finish = boss.defeated ? hallFinishAt(boss.modeTime, still) : null;
     drawHall(g, camX, W, H, finish ? { ...finish, time: t, still } : { doors: hallDoors(boss.mode, boss.modeTime, still), time: t });
     data.lights.forEach((p, i) => {
@@ -768,7 +784,6 @@ export class Game {
       g.globalAlpha = 1;
     }
     drawHallCones(g, finish?.cones ?? 0);
-    const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
     if (!blinkOff) this.drawHeroNow(g, false);
     this.drawBalls(g, run.balls, -Infinity, Infinity);
     this.drawEffects(g);
@@ -780,16 +795,14 @@ export class Game {
     drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
   }
 
-  /** The hero where it is now, in its pose (rope: holding the well rope). World space. */
-  private drawHeroNow(g: CanvasRenderingContext2D, rope: boolean): void {
+  /** The hero where it is now, in its pose (rope: holding the well rope). World space. Returns the pose. */
+  private drawHeroNow(g: CanvasRenderingContext2D, rope: boolean): HeroPose {
     const h = this.run.hero;
     const t = this.clock;
-    const boss = this.run.boss;
+    const beaten = this.run.beaten;
     const skid = rope ? 0 : this.skid;
     const walking = h.manual && h.grounded && this.gait === 'walk';
-    g.save();
-    g.translate(h.x, h.y);
-    this.heroSprites.draw(g, this.look, {
+    const pose: HeroPose = {
       phase: this.stridePhase,
       inAir: !rope && !h.grounded,
       vy: h.vy,
@@ -798,7 +811,7 @@ export class Game {
       glow: this.run.power.amala > 0,
       fast: this.run.power.corn > 0,
       ...this.powerPose(),
-      standing: this.idle || ((boss?.defeated ?? false) && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
+      standing: this.idle || (beaten && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
       gait: walking ? 'walk' : 'run',
       skid,
       ...(rope ? { rope: true } : {}),
@@ -808,10 +821,14 @@ export class Game {
       // S2.15: one 0.15 s arm swing after a throw.
       ...(!rope && this.run.throwAge < THROW_TIME ? { throwing: this.run.throwAge / THROW_TIME } : {}),
       // Decision 60: a short wince just after a knock; a beam once the boss is beaten.
-      ...(t - this.hurtAt < HURT_FACE_TIME ? { face: 'hurt' as const } : (boss?.defeated ?? false) ? { face: 'win' as const } : {}),
+      ...(t - this.hurtAt < HURT_FACE_TIME ? { face: 'hurt' as const } : beaten ? { face: 'win' as const } : {}),
       time: t,
-    });
+    };
+    g.save();
+    g.translate(h.x, h.y);
+    this.heroSprites.draw(g, this.look, pose);
     g.restore();
+    return pose;
   }
 
   /** S2.15: the fufu balls flying, hopping, rolling, settling, and those a goat is eating. World space. */
