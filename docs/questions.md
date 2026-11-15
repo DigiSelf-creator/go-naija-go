@@ -11,6 +11,15 @@ Tp and a tester said the game feels empty: "no persons in the game? It's boring,
 - **PE-R5. Danfo passengers show in the streets, not in the lane run.** In the lane run the danfos are in the lanes, and people are never in a lane, so their back windows stay dark as now (S3f0 part 16). Street danfos are in the far background, so their passengers wave.
 - **PE-R6. Crowd sounds follow the Sound switch; no new switch.** The murmur is very quiet and only plays when 5 or more people are on screen; there is never a murmur or cheer over a warning sound or the corn tune. Recommended because one fewer switch is simpler, and Sound off already silences it.
 
+## designer, 15 Nov 2026: tray money is tax (decision 71; docs/city.md W18)
+
+The new words are written in city.md W18, with the old-to-new table and qa's checks, so gamedev can apply them. Nothing waits for Tp: decision 71 settles the idea, and these are word and look choices that are easy to undo (decision 64; the lead reports each to Tp in one line).
+
+- **TX-R1. The bubble carries the word.** The tray bubble reads "Tax ₦1.20" (not only "₦1.20"). Recommended: yes. The bubble is what a player sees most, so it is where the idea sticks; it costs about 25 px of width, and qa re-runs the W15 and d5 sign-room tests at 320 x 240. Other way: keep the bubble as the amount, and say "tax" only in the hint and collect line.
+- **TX-R2. The collect line names who paid.** "Mama Put paid ₦1.20 tax!" rather than "Tax collected: ₦1.20". Recommended: the first. It shows a busy shop giving, not someone taking, so it reads warm and never heavy-handed, and it tells a child where the money came from. Both fit at 320 x 240.
+- **TX-R3. Only Naira places pay tax.** Later places that earn Power or Tech (the phone charging kiosk, the repair stall) are not called tax; their words are written when those places are designed. Recommended: yes, "tax" in Power or Tech units would confuse a child.
+- One line for Tp: "The Mama Put and Market trays now say tax: 'Tax ₦1.20', 'Mama Put paid ₦1.20 tax!', and once: 'Busy shops pay a small tax. Lagos uses it to fix more.'"
+
 ## designer, 15 Nov 2026: tilt to steer (decision 70; docs/design.md S3f0 part 25)
 
 The note for decision 70 is written, so gamedev can build it. Nothing here needs Tp before building: all four are small rulings, easy to undo (decision 64). The lead reports each to Tp in one line.
