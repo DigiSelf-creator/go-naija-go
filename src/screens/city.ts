@@ -2192,11 +2192,14 @@ export class CityScreen {
     spots['row'] = { x: mid, y: Math.max(4, high - h - 4) };
     // On the smallest screens the hero can walk up under the top row: then over the bottom row.
     spots['foot'] = { x: mid, y: Math.round(Math.max(4, this.view.h - h - 4)) };
+    // The bottom buttons (and zoom) are painted over the bar: it never sits behind one (qa recheck).
+    const below = this.view.h - this.bottomCover - 0.5;
+    const buttons = this.covers.filter((q) => q.y >= below);
     const keep = this.hintSpot && spots[this.hintSpot] ? [this.hintSpot] : [];
     const all = [...keep, 'high', 'low'].filter((k) => spots[k]);
     const pick =
       all.find((k) => clear(spots[k]!, [heroBox, ...signs])) ??
-      [...keep, 'high', 'low', 'side', 'sideLow', 'row', 'foot'].find((k) => spots[k] && clear(spots[k]!, [heroBox])) ??
+      [...keep, 'high', 'low', 'side', 'sideLow', 'row', 'foot'].find((k) => spots[k] && clear(spots[k]!, [heroBox, ...buttons])) ??
       null;
     const hide = pick === null ? 'hidden' : '';
     if (this.hintEl.style.visibility !== hide) this.hintEl.style.visibility = hide;

@@ -55,10 +55,19 @@ for (const [width, height] of [
       await expect(hint(page)).toHaveText(TAX, { timeout: 8000 });
       for (const k of keys) await page.keyboard.down(k);
       const over: string[] = [];
+      const under: string[] = [];
       try {
         for (let i = 0; i < 35; i++) {
-          if (!(await hint(page).isVisible())) break;
+          if (!(await hint(page).isVisible())) {
+            await page.waitForTimeout(100);
+            continue;
+          }
           const r = (await hint(page).boundingBox())!;
+          // qa recheck: nor behind a bottom button (its words would be painted over).
+          for (const b of await lagos(page).locator('.city-bottom button').all()) {
+            const q = await b.boundingBox();
+            if (q && !apart({ x: r.x, y: r.y, w: r.width, h: r.height }, { x: q.x, y: q.y, w: q.width, h: q.height })) under.push(`t${i * 100}ms hint ${JSON.stringify(r)} button ${JSON.stringify(q)}`);
+          }
           const h = await heroBox(page);
           if (!apart({ x: r.x, y: r.y, w: r.width, h: r.height }, h)) {
             if (!over.length) await page.screenshot({ path: test.info().outputPath('hint-over-hero.png') });
@@ -70,6 +79,7 @@ for (const [width, height] of [
         for (const k of keys) await page.keyboard.up(k);
       }
       expect(over, 'the hint over the hero').toEqual([]);
+      expect(under, 'the hint behind a bottom button').toEqual([]);
     });
   }
 }
