@@ -1455,7 +1455,7 @@ function startGame(): void {
     get toast() {
       return toast.text;
     },
-    // O1b1: dev-only until O1b2 brings the Travel card. The saved state list, and a way to load the Ogun part.
+    // O1b1, for tests: the saved state list, and a way to load the Ogun part (players use the Travel card, O1b2).
     get states() {
       const raw = progress.raw;
       return { where: whereNow(raw), open: openStates(raw), ogun: stateProgress(raw, OGUN), arrived: arrived(raw), wallet: wallet(raw), ogunLoaded: worlds.get(OGUN) !== null };
