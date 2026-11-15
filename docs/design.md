@@ -2320,6 +2320,7 @@ All 11 lines of city.md 2B "What we must NOT copy" hold. For this build in parti
 
 - **Size:** art under 50 KB (hero from behind about 10, road, sky, lamps and the Blackout about 8, road things about 12, pickups about 4, pavement scenery about 10, the bus stop about 3, sounds and tune about 3). Code under 45 KB (S3f2 engine 30, S3f3 game 15). The lane run may be its own chunk, loaded the first time it opens and kept for offline. The first load stays under 3 MB.
 - **Speed:** 60 fps on a mid phone; at least 45 fps at 4x CPU slowdown; never under 30 on a cheap phone (city.md part 3).
+- **CO2a ruling (designer, 15 Nov; decision 64, small and easy to undo):** keep the fronts, drop only people. After a lane people fault the two-storey fronts stay for the rest of the run, drawn with empty, unlit windows (no faces, no lantern glow), so the street never changes shape mid-run; only if drawing the fronts is itself what failed do they go too, the same as people never loaded.
 - How (for gamedev): the sky and skyline are drawn once into their own picture; the road is at most 30 filled bands; each thing is a ready-made picture at two sizes, scaled with one draw call; at most 20 road things from a pool, coins from a pool of 30; one ready-made dark gradient for the Blackout; no blur, shadows or filters; nothing made new each frame.
 
 ### 22. The city at 320 x 240 with Power and Tech (S3f4)
