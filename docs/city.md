@@ -253,7 +253,7 @@ Confirmed (city choice 5 a, 10 Nov): throws happen only while a throw food is wo
 
 ### 2D. What each food does, and how long
 
-Every timed food lasts **12 seconds** (city choice 6 a, 10 Nov). The last 3 seconds blink with a soft tick. The HUD shows icon, word and a shrinking bar with the seconds left.
+Every timed food lasts **12 seconds** (city choice 6 a, 10 Nov). The last 2 seconds blink with a soft tick (designer ruling OG-R10). The HUD shows icon, word and a shrinking bar with the seconds left.
 
 | Food | Where from | Does | Lasts | Pickup words (35 characters) |
 |---|---|---|---|---|
