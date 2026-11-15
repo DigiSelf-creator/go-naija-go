@@ -121,8 +121,8 @@ for (const [width, height, room] of SIZES) {
       }
       const b = (await city(page)).bubbles[place]!;
       // The bubble holds the icon, a gap and the words, with room each side (icon 18, gap 5, 8 a
-      // side; on the smallest screens the tighter bubble: icon 15, gap 3, 4 a side).
-      const edge = width <= 360 && height <= 300 ? 15 + 3 + 8 : 18 + 5 + 16;
+      // side; on the smallest screens the tighter bubble: icon 14, gap 3, 3 a side).
+      const edge = width <= 360 && height <= 300 ? 14 + 3 + 6 : 18 + 5 + 16;
       expect(b.w, `${label} bubble width`).toBeGreaterThanOrEqual(edge + ws[0]!.w);
       expect(b.w).toBeLessThanOrEqual(120);
       expect(Math.min(b.w, b.h)).toBeGreaterThanOrEqual(48);

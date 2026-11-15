@@ -394,7 +394,7 @@ export const BUBBLE = { h: 34, tail: 9, fullH: 14, minW: 56, maxW: 120, icon: 18
  * W18: on the smallest screens (360 x 300 or less) the bubble is drawn tighter, so the wider
  * "Tax ₦1.50" label takes about the room the bare amount took: a smaller icon and words, less edge.
  */
-export const BUBBLE_COMPACT = { icon: 15, gap: 3, pad: 4, text: 12 } as const;
+export const BUBBLE_COMPACT = { icon: 14, gap: 3, pad: 3, text: 11 } as const;
 
 function bubbleLook(compact: boolean): { icon: number; gap: number; pad: number; text: number } {
   return compact ? BUBBLE_COMPACT : { icon: BUBBLE.icon, gap: 5, pad: 8, text: BUBBLE.text };

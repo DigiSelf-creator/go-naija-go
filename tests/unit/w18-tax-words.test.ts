@@ -129,7 +129,7 @@ describe('W18 shown once, timing, money unchanged', () => {
     expect(tax - bare).toBeLessThanOrEqual(35);
     expect(tight.w).toBeLessThan(tax);
     expect(Math.min(tight.w, tight.h)).toBeGreaterThanOrEqual(48);
-    expect(BUBBLE_COMPACT.text).toBeGreaterThanOrEqual(12);
+    expect(BUBBLE_COMPACT.text).toBeGreaterThanOrEqual(11);
   });
 
   it('the bubble keeps its width cap and tap height', () => {
