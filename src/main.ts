@@ -80,6 +80,19 @@ if (query.get('gallery')?.startsWith('lane')) {
     };
     requestAnimationFrame(frame);
   });
+} else if (query.get('gallery')?.startsWith('folk')) {
+  // Debug only: the people kit (S3g1a): ?gallery=folk, folk2 ... folk5; &t=1.5 holds the time.
+  void import('./art/galleryFolk').then(({ drawFolkGallery }) => {
+    const t0 = performance.now();
+    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
+    const hold = query.has('t') ? Number(query.get('t')) : NaN;
+    const frame = (now: number): void => {
+      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
+      drawFolkGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
 } else if (query.get('gallery')?.startsWith('road')) {
   // Debug only: the challenge road's pictures (S3e1a): ?gallery=road, road2 ... road8; &t=1.5 holds the time.
   void import('./art/galleryRoad').then(({ drawRoadGallery }) => {
