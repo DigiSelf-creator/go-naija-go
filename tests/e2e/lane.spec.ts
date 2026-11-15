@@ -21,7 +21,8 @@ const lane = (page: Page) =>
 async function openLane(page: Page): Promise<void> {
   await page.goto(LANE_URL);
   await startRun(page);
-  await expect.poll(async () => (await lane(page))?.stage).toBe('play');
+  // The first lane run opens with the 2 s look back (part 14), then "3, 2, 1".
+  await expect.poll(async () => (await lane(page))?.stage, { timeout: 15_000 }).toBe('play');
 }
 
 /** A real finger swipe (touch events, which the page sees as pointer events). */
@@ -43,7 +44,7 @@ test('the lane run loads only when it opens, then counts "3, 2, 1" and runs', as
   expect(scripts.some((u) => /\/session-[^/]*\.js$/.test(u))).toBe(false);
   await startRun(page);
   await expect.poll(() => scripts.some((u) => /\/session-[^/]*\.js$/.test(u))).toBe(true);
-  await expect.poll(async () => (await lane(page))?.count).toBe('3');
+  await expect.poll(async () => (await lane(page))?.count, { timeout: 15_000 }).toBe('3');
   await expect.poll(async () => (await lane(page))?.stage).toBe('play');
   const d0 = (await lane(page))!.dist;
   await expect.poll(async () => (await lane(page))!.dist).toBeGreaterThan(d0 + 5);

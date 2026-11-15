@@ -35,7 +35,7 @@ import type { Where } from './screens/streets';
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
 import { registerServiceWorker } from './sw-register';
-import { bannerShows } from './update';
+import { bannerShows, inAttempt } from './update';
 import { UpdateBanner } from './screens/update-banner';
 import { isNativeApp } from './native/is-native';
 import type { NativeApp } from './native/app';
@@ -261,11 +261,13 @@ function startGame(): void {
   /** The street, the well and its room, or the hall fight is being played (not a finish, game over or won). */
   const inPlay = (): boolean => game.run.inPlay;
 
-  // U1 (decision 52): "New version ready. Tap to update." on any screen, never in a run: only on
-  // Pause, the result cards and the other screens. One tap reloads into the new version.
+  // U1 (decision 52): "New version ready. Tap to update." One tap reloads into the new version.
+  // Decision 68: never in a run and never on its Pause (a street, the well room, Go-Slow Hall or
+  // a lane run), since the reload would quietly start the attempt again. Only on the result cards
+  // and the other screens.
   const updateBanner = new UpdateBanner(document.body, () => updates?.apply());
-  /** A run is being played with no card over it (the finish bus counts: the result card follows). */
-  const inRun = (): boolean => (playing || lane !== null) && menus.current === null;
+  /** A run is being played or paused (the finish bus counts: the result card follows). */
+  const inRun = (): boolean => inAttempt(playing || lane !== null, menus.current);
   const syncUpdate = (): void => updateBanner.set(bannerShows(updates?.state.ready ?? false, inRun()));
   updateReady = () => {
     syncUpdate();
@@ -375,6 +377,8 @@ function startGame(): void {
   let laneModule: Promise<typeof import('./lane/session')> | null = null;
   /** The fix the lane run was started for (Lights out or Slow internet), or null (part 2). */
   let laneFor: BuildId | null = null;
+  /** The corn count's place in the lane run (part 11); the streets put it back in their hint bar after. */
+  let laneCountAt: HintBarBox | null = null;
   /**
    * S3f3 part 2, "Bringing it home": a win for a fix not built yet plays Mission complete at that
    * spot; any other end goes back to Lagos with "You brought ... home." (LR-Q2: and the other pin's hint).
@@ -466,6 +470,18 @@ function startGame(): void {
             }
           },
           closeHum: (on) => sound.setCloseHum(on && !document.hidden),
+          // Part 11: the corn tune and its 5, 4, 3, 2, 1 count in the lane run, as on the streets
+          // (S2.9): the lane tune and the effects turn down under it; the count shows in the hint
+          // bar's place even with Music or Sound off.
+          corn: (c) => {
+            const steps = c ? Math.ceil(c.left * 60) : 0;
+            corn.update({ corn: steps, active: c !== null, audible: sound.enabled && menus.music, held: c !== null && (c.held || document.hidden) });
+            if (c && c.box !== laneCountAt) {
+              laneCountAt = c.box;
+              count.place(c.box, window.innerHeight);
+            }
+            count.set(c ? cornCount(steps) : 0, c !== null);
+          },
         });
         lane.start();
         syncMusic();
@@ -487,6 +503,9 @@ function startGame(): void {
     lane = null;
     // The lane run may have drawn with fewer pixels: back to the game's own canvas size.
     resize();
+    // The corn count goes back to the streets' hint bar.
+    laneCountAt = null;
+    placeBar();
   }
 
   /** The live city (city.md (b), 5W): the `city` part of gidi-progress, kept in memory while the game runs. */

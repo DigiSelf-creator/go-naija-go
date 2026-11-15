@@ -293,12 +293,12 @@ async function fits(page: Page, what: string, sel: string, min = 44): Promise<st
 }
 
 /** The HUD's own parts (the sr-only live line is left out: it is not on screen by design). */
-const HUD = '.lane-chip, .lane-pause, .lane-dark, .lane-line, .lane-best, .lane-hint, .lane-button';
+const HUD = '.lane-chip, .lane-pause, .lane-dark, .lane-dots, .lane-change, .lane-line, .lane-best, .lane-hint, .lane-button';
 
 /** Two boxes overlap (the HUD's own parts must not). */
 async function overlaps(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const els = [...document.querySelectorAll<HTMLElement>('.lane-chip, .lane-pause, .lane-dark, .lane-line, .lane-best, .lane-hint, .lane-button')].filter((e) => !e.closest('[hidden]') && e.offsetParent !== null && e.getBoundingClientRect().width > 0);
+    const els = [...document.querySelectorAll<HTMLElement>('.lane-chip, .lane-pause, .lane-dark, .lane-dots, .lane-change, .lane-line, .lane-best, .lane-hint, .lane-button')].filter((e) => !e.closest('[hidden]') && e.offsetParent !== null && e.getBoundingClientRect().width > 0);
     const out: string[] = [];
     for (let i = 0; i < els.length; i++)
       for (let j = i + 1; j < els.length; j++) {
