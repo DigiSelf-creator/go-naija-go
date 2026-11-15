@@ -1829,6 +1829,9 @@
   pointer-events: none;
 }
 .screen .city-hint {
+  /* As wide as its words up to the screen (not half of it, as left: 50% alone gives): two lines
+     at most at 320 x 240 (W18). */
+  width: max-content;
   margin: 0;
   padding: 4px 12px;
   font: bold 14px 'Trebuchet MS', Verdana, sans-serif;

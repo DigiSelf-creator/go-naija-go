@@ -199,12 +199,12 @@ for (const [build, spot, word, paid, left] of [
 
 test('Mama Put: a full tray shows "Full", the hero walks over and collects ₦1.50, the meter gets 1, saved at once', async ({ page }) => {
   await openCity(page, { kobo: 0, power: 0, tech: 0, fixed: ['potholes'], fixes: 1, built: ['buka'], trays: { buka: 150 }, boom: 8, hints: ['walk', 'buka'] });
-  const bubble = page.getByRole('button', { name: 'Mama Put has 1 naira 50 kobo for you. Full.' });
+  const bubble = page.getByRole('button', { name: 'Tax from Mama Put: 1 naira 50 kobo. Full.' });
   await expect(bubble).toBeAttached();
   await bubble.tap();
   await expect.poll(async () => (await city(page)).saved.kobo, { timeout: 15_000 }).toBe(150);
   expect(await savedCity(page)).toMatchObject({ kobo: 150, trays: { buka: 0 }, boom: 9, boomCollect: 1 });
-  await expect(page.locator('.sr-only[aria-live]').first()).toContainText('+₦1.50 from Mama Put');
+  await expect(page.locator('.sr-only[aria-live]').first()).toContainText('Mama Put paid 1 naira 50 kobo tax. Naira: 1 naira 50 kobo.');
   await expect(bubble).toHaveCount(0);
   // The market board is next (one new board at a time).
   expect(Object.keys((await city(page)).boards)).toEqual(['market']);
@@ -212,8 +212,8 @@ test('Mama Put: a full tray shows "Full", the hero walks over and collects ₦1.
 
 test('a tray fills in steps only while the city is open: 1 plate every 6 s up to the cap', async ({ page }) => {
   await openCity(page, { kobo: 0, power: 0, tech: 0, fixed: ['potholes'], fixes: 1, built: ['buka'], trays: { buka: 140 }, hints: ['walk', 'buka', 'collect'] });
-  await expect(page.getByRole('button', { name: 'Mama Put has 1 naira 40 kobo for you.' })).toBeAttached();
-  await expect(page.getByRole('button', { name: 'Mama Put has 1 naira 50 kobo for you. Full.' })).toBeAttached({ timeout: 9000 });
+  await expect(page.getByRole('button', { name: 'Tax from Mama Put: 1 naira 40 kobo.' })).toBeAttached();
+  await expect(page.getByRole('button', { name: 'Tax from Mama Put: 1 naira 50 kobo. Full.' })).toBeAttached({ timeout: 9000 });
   await page.waitForTimeout(6500);
   expect((await city(page)).saved.trays).toEqual({ buka: 150 }); // capped
 });

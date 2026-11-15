@@ -390,16 +390,26 @@ export function drawFlyingMoney(g: CanvasRenderingContext2D, kind: BucketKind, x
 // ---------- Tray bubbles (screen px) ----------
 
 export const BUBBLE = { h: 34, tail: 9, fullH: 14, minW: 56, maxW: 120, icon: 18, text: 13, ring: '#b4561c' } as const;
+/**
+ * W18: on the smallest screens (360 x 300 or less) the bubble is drawn tighter, so the wider
+ * "Tax ₦1.50" label takes about the room the bare amount took: a smaller icon and words, less edge.
+ */
+export const BUBBLE_COMPACT = { icon: 15, gap: 3, pad: 4, text: 12 } as const;
 
-function bubbleW(g: CanvasRenderingContext2D, text: string): number {
-  g.font = `bold ${BUBBLE.text}px sans-serif`;
-  return Math.min(BUBBLE.maxW, Math.max(BUBBLE.minW, Math.ceil(BUBBLE.icon + 6 + textW(g, text, BUBBLE.text) + 16)));
+function bubbleLook(compact: boolean): { icon: number; gap: number; pad: number; text: number } {
+  return compact ? BUBBLE_COMPACT : { icon: BUBBLE.icon, gap: 5, pad: 8, text: BUBBLE.text };
 }
 
-/** The tap area of a tray bubble whose tail points at (x, y): at least 56 x 48 px. */
-export function trayBubbleBox(g: CanvasRenderingContext2D, x: number, y: number, text: string, full = false): { x: number; y: number; w: number; h: number } {
+function bubbleW(g: CanvasRenderingContext2D, text: string, compact = false): number {
+  const k = bubbleLook(compact);
+  g.font = `bold ${k.text}px sans-serif`;
+  return Math.min(BUBBLE.maxW, Math.max(BUBBLE.minW, Math.ceil(k.icon + k.gap + 1 + textW(g, text, k.text) + 2 * k.pad)));
+}
+
+/** The tap area of a tray bubble whose tail points at (x, y): at least 56 x 48 px. `compact`: see BUBBLE_COMPACT. */
+export function trayBubbleBox(g: CanvasRenderingContext2D, x: number, y: number, text: string, full = false, compact = false): { x: number; y: number; w: number; h: number } {
   g.save();
-  const w = bubbleW(g, text);
+  const w = bubbleW(g, text, compact);
   g.restore();
   const h = Math.max(48, BUBBLE.h + BUBBLE.tail + (full ? BUBBLE.fullH : 0) + 2);
   return { x: x - w / 2, y: y - h, w, h };
@@ -407,12 +417,13 @@ export function trayBubbleBox(g: CanvasRenderingContext2D, x: number, y: number,
 
 /**
  * A tray bubble over a working place, its tail pointing down at (x, y) in screen px: the
- * bucket icon and the amount ("80 kobo", "₦1.20"; trayWords). Full: a thick edge and a band
+ * bucket icon and the label ("Tax 80 kobo", "Tax ₦1.20"; city.trayLabel of trayWords, W18). Full: a thick edge and a band
  * with the word "Full" (never colour alone). `bob` lifts it 0..2 px (0 with reduced motion).
  */
-export function drawTrayBubble(g: CanvasRenderingContext2D, x: number, y: number, bucket: BucketKind, text: string, full = false, bob = 0): void {
+export function drawTrayBubble(g: CanvasRenderingContext2D, x: number, y: number, bucket: BucketKind, text: string, full = false, bob = 0, compact = false): void {
   g.save();
-  const w = bubbleW(g, text);
+  const k = bubbleLook(compact);
+  const w = bubbleW(g, text, compact);
   const b = Number.isFinite(bob) ? Math.max(0, Math.min(3, bob)) : 0;
   const h = BUBBLE.h + (full ? BUBBLE.fullH : 0);
   const top = y - BUBBLE.tail - h - b;
@@ -434,15 +445,15 @@ export function drawTrayBubble(g: CanvasRenderingContext2D, x: number, y: number
   g.fillStyle = CREAM;
   g.fillRect(x - 5, top + h - 3, 10, 3);
   // Icon and amount
-  g.font = `bold ${BUBBLE.text}px sans-serif`;
-  const tw = textW(g, text, BUBBLE.text);
-  const lx = x - (BUBBLE.icon + 5 + tw) / 2;
+  g.font = `bold ${k.text}px sans-serif`;
+  const tw = textW(g, text, k.text);
+  const lx = x - (k.icon + k.gap + tw) / 2;
   const cy = top + BUBBLE.h / 2;
-  drawBucketIcon(g, bucket, lx + BUBBLE.icon / 2, cy, BUBBLE.icon);
+  drawBucketIcon(g, bucket, lx + k.icon / 2, cy, k.icon);
   g.fillStyle = INK;
   g.textAlign = 'left';
   g.textBaseline = 'middle';
-  g.fillText(text, lx + BUBBLE.icon + 5, cy + 0.5, BUBBLE.maxW - BUBBLE.icon - 20);
+  g.fillText(text, lx + k.icon + k.gap, cy + 0.5, BUBBLE.maxW - k.icon - k.gap - 2 * k.pad);
   if (full) {
     g.fillStyle = BUBBLE.ring;
     g.beginPath();
@@ -459,7 +470,7 @@ export function drawTrayBubble(g: CanvasRenderingContext2D, x: number, y: number
 // ---------- The collect line (screen px) ----------
 
 /**
- * "+₦1.20 from Mama Put" rising 24 px over the hero and fading at the end, k 0..1 over
+ * "Mama Put paid ₦1.20 tax!" (W18) rising 24 px over the hero and fading at the end, k 0..1 over
  * PAY.collectLine. Reduced motion: it does not rise. The same look serves the built lines.
  */
 export function drawCollectLine(g: CanvasRenderingContext2D, x: number, y: number, text: string, k: number, still = false): void {

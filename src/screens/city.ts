@@ -216,6 +216,8 @@ const FRONTS: Readonly<Record<BuildId, Pt>> = {
 };
 /** The working places' doors (collect), and where their bubbles point (over the roof). */
 export const DOORS: Readonly<Record<PlaceId, Pt>> = { buka: { x: 905, y: 760 }, market: { x: 1320, y: 800 } };
+/** W18: the tax explanation shows at least `min` s, then goes on the next walk, or at `max` s. */
+export const TAX_HINT = { min: 4, max: 8 } as const;
 const BUBBLE_AT: Readonly<Record<PlaceId, Pt>> = { buka: { x: 905, y: 702 }, market: { x: 1320, y: 742 } };
 /** Where the bus stops for a win (W5): by the board the challenge was for, else by the bus park. */
 const BUS_STOP: Readonly<Record<BuildId, Pt>> = {
@@ -467,6 +469,12 @@ export class CityScreen {
   private time = 0;
   private hintId: string | null = null;
   private hintAt = 0;
+  /** W18: the tax explanation is due (a collect happened and the `tax` hint was never shown). */
+  private taxDue = false;
+  /** The hint bar moved down above the bottom row (it would cover the hero or a sign up top). */
+  private hintLow = false;
+  /** Where the hint bar shows now (map px), while it shows: signs keep off it when they can (W18). */
+  private hintBox: ScreenBox | null = null;
   private chipText = '';
   /** The "Lagos" heading box with the Booming meter (d5). */
   private readonly head: HTMLElement;
@@ -946,7 +954,7 @@ export class CityScreen {
     // Worked out again whenever the camera, the screen, the pins or the words change (so a walk
     // that slides the camera places them again), and once more when the hero stops.
     const settled = !this.hero.moving;
-    const key = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, this.view.top ?? 0, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet, this.hiddenSpot, this.soonPins.length, settled ? 's' : 'm', this.covers.map((c) => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.w)}`).join(';'), ...asks.map((a) => `${a.id}=${a.tag}`)].join('|');
+    const key = [this.cam.zoom, Math.round(this.cam.x), Math.round(this.cam.y), this.view.w, this.view.h, this.view.top ?? 0, this.looks.potholes, this.looks.lightsOut, this.looks.slowInternet, this.hiddenSpot, this.soonPins.length, settled ? 's' : 'm', this.signCovers().map((c) => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.w)}`).join(';'), ...asks.map((a) => `${a.id}=${a.tag}`)].join('|');
     if (this.signLayout && this.signLayout.key === key) return this.signLayout.spots;
     let out = new Map<string, SignSpot>();
     const taken: ScreenBox[] = [];
@@ -992,7 +1000,7 @@ export class CityScreen {
   private fitAllSigns(asks: readonly SignAsk[], pins: readonly Block[], grid = 8): Map<string, SignSpot> | null {
     const vw = this.view.w;
     const vh = this.view.h;
-    const blocks: Block[] = [...pins, ...this.covers];
+    const blocks: Block[] = [...pins, ...this.signCovers()];
     const hard = blocks.filter((o) => !o.soft);
     const soft = blocks.filter((o) => o.soft);
     const clearOf = (bx: ScreenBox, o: ScreenBox, gap: number): boolean => bx.x + bx.w + gap <= o.x || o.x + o.w + gap <= bx.x || bx.y + bx.h + gap <= o.y || o.y + o.h + gap <= bx.y;
@@ -1084,7 +1092,7 @@ export class CityScreen {
       const nb = at(home, false).box;
       if (nb.x + nb.w <= 0 || nb.y + nb.h <= 0 || nb.x >= vw || nb.y >= vh) return at(home, false);
     }
-    const blocks: Block[] = [...pins, ...this.covers, ...taken];
+    const blocks: Block[] = [...pins, ...this.signCovers(), ...taken];
     const hard = blocks.filter((o) => !o.soft);
     const clearOf = (bx: ScreenBox, o: ScreenBox, gap: number): boolean => bx.x + bx.w + gap <= o.x || o.x + o.w + gap <= bx.x || bx.y + bx.h + gap <= o.y || o.y + o.h + gap <= bx.y;
     const fitsIn = (sp: SignSpot, list: readonly Block[], gap: number): boolean => {
@@ -1326,6 +1334,8 @@ export class CityScreen {
       this.life.set(withHint(this.life.state, 'walk'));
       if (this.hintId === 'walk') this.setHint(null);
     }
+    // W18: the tax explanation goes on the next walk once it has shown its 4 s.
+    if (this.hintId === 'tax' && this.time >= this.hintAt + TAX_HINT.min) this.setHint(null);
   }
 
   private stopped(): void {
@@ -1858,9 +1868,11 @@ export class CityScreen {
       this.hooks.sound('collect');
       this.addLine(WORDS.city.collectLine(formatMoney(r.amount), PLACES[p].name), PAY.collectLine);
       if (this.hintId === 'collect') this.setHint(null);
+      // W18: the first collect (or an old save's next one) explains the tax, once.
+      if (!this.life.state.hints.includes('tax')) this.taxDue = true;
       this.makeSigns();
       this.fillChips();
-      this.announce();
+      this.announce(WORDS.city.collectSpoken(spokenMoney(r.amount), PLACES[p].name));
       if (this.hooks.still()) this.collecting = null;
       if (r.full) {
         this.fillMeter();
@@ -1899,11 +1911,11 @@ export class CityScreen {
     }
   }
 
-  /** After a pay or a collect, the new amounts are read out once (W9). */
-  private announce(): void {
+  /** After a pay or a collect, the new amounts are read out once (W9). `spoken`: said instead of the line showing (W18). */
+  private announce(spoken?: string): void {
     const s = this.life.state;
     const w = WORDS.city;
-    const line = this.lines[0]?.text ?? '';
+    const line = spoken ?? this.lines[0]?.text ?? '';
     this.say.textContent = `${line} ${w.spokenNaira(spokenMoney(s.kobo))}.`.trim();
   }
 
@@ -2030,10 +2042,59 @@ export class CityScreen {
   private setHint(id: string | null): void {
     this.hintId = id;
     const w = WORDS.city;
-    const text = id === 'walk' ? (this.hooks.touch() ? w.hintWalk : w.hintWalkKeys) : id === 'buka' ? w.hintBuka() : id === 'collect' ? w.hintCollect : id === 'bright' ? w.hintBright : '';
+    const text = id === 'walk' ? (this.hooks.touch() ? w.hintWalk : w.hintWalkKeys) : id === 'buka' ? w.hintBuka() : id === 'collect' ? w.hintCollect : id === 'tax' ? w.hintTax : id === 'bright' ? w.hintBright : '';
     this.hintEl.textContent = text;
     this.hintEl.hidden = !text;
-    if (id && id !== 'walk') this.life.set(withHint(this.life.state, id));
+    this.hintLow = false;
+    this.placeHint();
+    // W18: the tax explanation is saved at once, so a reload never shows it twice.
+    if (id && id !== 'walk') this.life.set(withHint(this.life.state, id), id === 'tax');
+  }
+
+  /**
+   * The hint bar sits just under the top row (W7). When it would cover the hero, a board or a
+   * bubble there, it moves down to just above the bottom row if that spot is clear (W18: never over
+   * the hero, a board or a bubble). It stays put while both spots are clear, so it does not jump.
+   */
+  private placeHint(): void {
+    const w = this.hintEl.hidden ? 0 : this.hintEl.offsetWidth;
+    const h = this.hintEl.hidden ? 0 : this.hintEl.offsetHeight;
+    if (!w || !h) {
+      if (this.hintBox) {
+        this.hintBox = null;
+        this.requestDraw();
+      }
+      return;
+    }
+    const top = this.view.top ?? 0;
+    const s = camScale(this.cam.zoom, this.view);
+    const hero = toScreen(this.cam, this.view, this.hero);
+    const sz = walkerSize(s) * s;
+    const heroBox: ScreenBox = { x: hero.x - sz * 0.55, y: hero.y - sz * 1.3, w: sz * 1.1, h: sz * 1.5 };
+    const signs = [...(this.signLayout?.spots.values() ?? [])].map((sp) => sp.box);
+    const x = (this.view.w - w) / 2;
+    const clear = (y: number, of: readonly ScreenBox[]): boolean => of.every((b) => b.x + b.w <= x || x + w <= b.x || b.y + b.h <= y || y + h <= b.y);
+    const high = Math.round(top + 4);
+    const low = Math.round(this.view.h - this.bottomCover - h - 4);
+    const lowOk = low > high + h && clear(low, this.covers);
+    // Clear of everything first (staying where it is if both are), else at least clear of the hero:
+    // on the smallest screens with every sign up there may be no room for all (signs keep off it when they can).
+    const fits = (y: number, of: readonly ScreenBox[]) => (y === low ? lowOk : true) && clear(y, of);
+    const order = this.hintLow ? [low, high] : [high, low];
+    const y0 = order.find((y) => fits(y, [heroBox, ...signs])) ?? order.find((y) => fits(y, [heroBox])) ?? high;
+    this.hintLow = y0 === low && y0 !== high;
+    const y = this.hintLow ? low : high;
+    if (this.hintEl.style.top !== `${y}px`) this.hintEl.style.top = `${y}px`;
+    const hb = this.hintBox;
+    if (!hb || hb.x !== x || hb.y !== y || hb.w !== w || hb.h !== h) {
+      this.hintBox = { x, y, w, h };
+      this.requestDraw();
+    }
+  }
+
+  /** What signs keep clear of: the chips, buttons and heading (hard), and the hint bar (soft, W18). */
+  private signCovers(): Block[] {
+    return this.hintBox ? [...this.covers, { ...this.hintBox, soft: true }] : this.covers;
   }
 
   /** The next hint to show, one at a time, once each. */
@@ -2044,6 +2105,16 @@ export class CityScreen {
       this.hintId = 'walk-wait';
       this.hintAt = this.time + 1;
       return;
+    }
+    // W18: right after the first collect, once: the tax explanation, before `bright` if both are due.
+    // It stays at least 4 s, then goes on the next walk, or at 8 s.
+    if (this.taxDue) {
+      this.taxDue = false;
+      if (!st.hints.includes('tax')) {
+        this.setHint('tax');
+        this.hintAt = this.time;
+        return;
+      }
     }
     // d6: after the first moment, once: "Each fix makes Lagos brighter!" for 3 s, and the
     // Booming box gives one short pulse.
@@ -2073,6 +2144,7 @@ export class CityScreen {
     const covered = Math.max(top ? top.getBoundingClientRect().bottom : r.top, this.chips.getBoundingClientRect().bottom) - r.top;
     // The hint bar and the Mission complete heading sit just under the top row (W7, W5).
     this.hintEl.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
+    this.hintLow = false;
     this.banner.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
     // The heading, chips and buttons over the map: boards keep clear of them.
     // All of them are hard: a sign never sits under the heading (it would hide the sign's words
@@ -2296,6 +2368,7 @@ export class CityScreen {
     }
     this.update(dt);
     if (this.needDraw) this.draw();
+    this.placeHint();
     // wake() keeps a single chain (an update may already have asked for the next frame).
     if (this.active()) this.wake();
     else this.idle();
@@ -2315,6 +2388,7 @@ export class CityScreen {
         // The queue and stalls move a little (not with reduced motion).
         if (!this.hooks.still() && this.life.state.built.length > 0) this.needDraw = true;
         if (this.needDraw) this.draw();
+        this.placeHint();
       }
       if (this.active()) this.wake();
       else this.idle();
@@ -2346,6 +2420,7 @@ export class CityScreen {
     this.stepBoom(dt);
     this.stepLife(dt);
     if (this.hintId === 'bright' && this.time >= this.hintAt) this.setHint(null);
+    if (this.hintId === 'tax' && this.time >= this.hintAt + TAX_HINT.max) this.setHint(null);
     // "Tap to skip" (small, bottom middle) while a moment or a boom plays; Mission complete has its own.
     const skip = (!!this.moment?.build || !!this.boomRun) && !(this.mission && this.mission.phase !== 'end');
     if (this.skipEl.hidden === skip) {
@@ -2608,15 +2683,17 @@ export class CityScreen {
     // Signs in screen px.
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const pay = this.pay;
+    // W18: the tighter bubble on the smallest screens.
+    const tiny = this.tiny();
     const bubbleAsks: (SignAsk & { p: PlaceId; text: string; full: boolean })[] = this.trays().map((p) => {
-      const text = trayWords(this.life.state.trays[p] ?? 0);
+      const text = WORDS.city.trayLabel(trayWords(this.life.state.trays[p] ?? 0));
       const full = trayFull(this.life.state, p);
       const at = toScreen(this.cam, this.view, BUBBLE_AT[p]);
-      const box0 = this.signSize(`bubble|${text}|${full}`, () => trayBubbleBox(g, 0, 0, text, full));
+      const box0 = this.signSize(`bubble|${text}|${full}|${tiny}`, () => trayBubbleBox(g, 0, 0, text, full, tiny));
       // Away from its place the bubble drops its tail (it would point at nothing): its body only, at least 48 tall.
       const body = Math.max(48, BUBBLE.h + (full ? BUBBLE.fullH : 0) + 2);
       const boxAway = { x: box0.x, y: -BUBBLE.tail - body, w: box0.w, h: body };
-      return { id: `bubble ${p}`, tag: `${text}|${full}`, anchor: at, prefer: [at], box0, boxAway, hw: 0, hh: 0, mayHide: true, p, text, full };
+      return { id: `bubble ${p}`, tag: `${text}|${full}|${tiny}`, anchor: at, prefer: [at], box0, boxAway, hw: 0, hh: 0, mayHide: true, p, text, full };
     });
     const boardAsks: (SignAsk & { b: BuildId; units: number; done: boolean })[] = boards.map((b) => {
       const bucket = bucketOf(b);
@@ -2650,17 +2727,17 @@ export class CityScreen {
       const at = spots.get(a.id)!;
       const { p, text, full } = a;
       const tail = !at.away;
-      const sp = this.sprite(`bubble|${text}|${full}|${tail}|${dpr}`, at.box.w + 16, at.box.h + 16, at.x - at.box.x + 8, at.y - at.box.y + 8, dpr, (c) => {
+      const sp = this.sprite(`bubble|${text}|${full}|${tail}|${tiny}|${dpr}`, at.box.w + 16, at.box.h + 16, at.x - at.box.x + 8, at.y - at.box.y + 8, dpr, (c) => {
         if (!tail) {
           // Away from its place: no tail (cut just under the body).
           c.beginPath();
           c.rect(-at.box.w, -BUBBLE.tail - 200, at.box.w * 2, 200 + 1);
           c.clip();
         }
-        drawTrayBubble(c, 0, 0, 'naira', text, full, 0);
+        drawTrayBubble(c, 0, 0, 'naira', text, full, 0, tiny);
       });
       if (sp) g.drawImage(sp.img, at.x - sp.ox, at.y - sp.oy, at.box.w + 16, at.box.h + 16);
-      else drawTrayBubble(g, at.x, at.y, 'naira', text, full, 0);
+      else drawTrayBubble(g, at.x, at.y, 'naira', text, full, 0, tiny);
       this.bubbleBox.set(p, at.box);
       this.placeSign(this.bubbleEls.get(p), at.box);
     }
