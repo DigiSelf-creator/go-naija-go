@@ -270,10 +270,6 @@ test('the screens that fill the page start below it: intro, builder, city, wheel
 });
 
 test('qa decision 68: the lane run\'s own result cards (the bus stop, caught) are result cards: the banner shows there', async ({ page }) => {
-  // qa bug (089c488): inAttempt(lane !== null, menus.current) treats the lane's own goal and caught
-  // cards as the run (they are not menu screens, so menus.current stays null). Remove this line
-  // once they count as result cards.
-  test.fail();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await firstVisit(page, '?level=lagos-lane');
   await startRun(page);
