@@ -872,6 +872,8 @@ function startGame(): void {
     musicChanged: (on) => director.switches(menus.sound, on),
     screenChanged: () => {
       syncMusic();
+      // O1c-4: the banner follows a new screen at once (the bus ride hides it), not 250 ms later.
+      syncUpdate();
       nativeApp?.screenChanged();
     },
     progress: () => ({

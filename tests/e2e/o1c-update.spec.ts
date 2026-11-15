@@ -120,8 +120,8 @@ test('o1c: an update keeps the Ogun part: after it, Ogun opens with no internet'
 });
 
 test('o1c: the update banner does not show during the bus ride', async ({ page }) => {
-  // Game bug O1c-4: inAttempt() (src/update.ts) counts only runs, so the banner shows over the
-  // ride, and a tap there reloads before the ride sets `where` (the ride and arrival play again).
+  // Game bug O1c-4 (fixed): inAttempt() (src/update.ts) counted only runs, so the banner showed over
+  // the ride, and a tap there reloaded before the ride set `where` (the ride and arrival played again).
   test.setTimeout(120_000);
   await toOgun(page);
   root = builds.b;
@@ -133,8 +133,12 @@ test('o1c: the update banner does not show during the bus ride', async ({ page }
   await page.getByRole('dialog', { name: 'Where to?' }).locator('[data-state="lagos"]').tap();
   await expect.poll(() => screenNow(page)).toBe('ride');
   const seen: boolean[] = [];
-  while ((await screenNow(page)) === 'ride') {
-    seen.push((await update(page)).shown);
+  // The screen and the banner read in one go: on a busy computer the ride can end between two
+  // reads, and the banner rightly shows on Lagos after it.
+  for (;;) {
+    const now = await page.evaluate(() => ({ screen: window.__game!.screen, shown: window.__game!.update.shown }));
+    if (now.screen !== 'ride') break;
+    seen.push(now.shown);
     await page.waitForTimeout(150);
   }
   test.info().annotations.push({ type: 'banner during ride', description: `${seen.filter(Boolean).length} of ${seen.length} looks` });
