@@ -73,7 +73,8 @@ const hintLines = (page: Page) =>
 
 /**
  * The hint bar is clear of the hero, every board and every bubble. `room`: false where the screen
- * has no clear place for it (see the note at SIZES); what it covers there is noted, not failed.
+ * has no clear place for it (the ruling at SIZES): covering a sign there is noted, not failed;
+ * the hero is always checked.
  */
 async function hintClear(page: Page, what: string, room = { signs: true, hero: true }): Promise<void> {
   const r = (await hint(page).boundingBox())!;
@@ -91,16 +92,14 @@ async function hintClear(page: Page, what: string, room = { signs: true, hero: t
 }
 
 /**
- * Where there is no clear place for the hint bar (reported to the designer, W18 qa 2):
- * - 320 x 240 with both trays full: the two full bubbles and the two-line first hint fill the strip
- *   between the chips and the bottom row; the hint keeps clear of the hero, signs cannot all move.
- * - 640 x 200: the strip between the rows (about 60 px) is shorter than the hero at the Mama Put's
- *   door plus the hint; the explanation keeps clear of every sign but not the hero.
+ * Lead's ruling on W18 qa 2 (decision 64): on tiny screens with no clear place for the hint bar
+ * (320 x 240 with both trays full; 640 x 200, where the strip between the rows is about 60 px),
+ * the hint may briefly cover a sign or a bubble, but never the hero.
  */
 const SIZES = [
-  [320, 240, { first: { signs: false, hero: true }, tax: { signs: true, hero: true } }],
+  [320, 240, { first: { signs: false, hero: true }, tax: { signs: false, hero: true } }],
   [568, 320, { first: { signs: true, hero: true }, tax: { signs: true, hero: true } }],
-  [640, 200, { first: { signs: true, hero: true }, tax: { signs: true, hero: false } }],
+  [640, 200, { first: { signs: false, hero: true }, tax: { signs: false, hero: true } }],
   [851, 393, { first: { signs: true, hero: true }, tax: { signs: true, hero: true } }],
 ] as const;
 

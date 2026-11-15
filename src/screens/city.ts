@@ -500,8 +500,8 @@ export class CityScreen {
   private hintAt = 0;
   /** W18: the tax explanation is due (a collect happened and the `tax` hint was never shown). */
   private taxDue = false;
-  /** The hint bar moved down above the bottom row (it would cover the hero or a sign up top). */
-  private hintLow = false;
+  /** Where the hint bar sits now ('high' under the top row, 'low', 'side', 'sideLow', 'row'; W18). */
+  private hintSpot: string | null = null;
   /** Where the hint bar shows now (map px), while it shows: signs keep off it when they can (W18). */
   private hintBox: ScreenBox | null = null;
   private chipText = '';
@@ -2078,7 +2078,7 @@ export class CityScreen {
     const text = id === 'walk' ? (this.hooks.touch() ? w.hintWalk : w.hintWalkKeys) : id === 'buka' ? w.hintBuka() : id === 'collect' ? w.hintCollect : id === 'tax' ? w.hintTax : id === 'bright' ? w.hintBright : '';
     this.hintEl.textContent = text;
     this.hintEl.hidden = !text;
-    this.hintLow = false;
+    this.hintSpot = null;
     this.placeHint();
     // W18: the tax explanation is saved at once, so a reload never shows it twice.
     if (id && id !== 'walk') this.life.set(withHint(this.life.state, id), id === 'tax');
@@ -2105,18 +2105,31 @@ export class CityScreen {
     const sz = walkerSize(s) * s;
     const heroBox: ScreenBox = { x: hero.x - sz * 0.55, y: hero.y - sz * 1.3, w: sz * 1.1, h: sz * 1.5 };
     const signs = [...(this.signLayout?.spots.values() ?? [])].map((sp) => sp.box);
-    const x = (this.view.w - w) / 2;
-    const clear = (y: number, of: readonly ScreenBox[]): boolean => of.every((b) => b.x + b.w <= x || x + w <= b.x || b.y + b.h <= y || y + h <= b.y);
+    const clear = (p: Pt, of: readonly ScreenBox[]): boolean => of.every((q) => q.x + q.w <= p.x || p.x + w <= q.x || q.y + q.h <= p.y || p.y + h <= q.y);
+    const mid = (this.view.w - w) / 2;
     const high = Math.round(top + 4);
     const low = Math.round(this.view.h - this.bottomCover - h - 4);
-    const lowOk = low > high + h && clear(low, this.covers);
-    // Clear of everything first (staying where it is if both are), else at least clear of the hero:
-    // on the smallest screens with every sign up there may be no room for all (signs keep off it when they can).
-    const fits = (y: number, of: readonly ScreenBox[]) => (y === low ? lowOk : true) && clear(y, of);
-    const order = this.hintLow ? [low, high] : [high, low];
-    const y0 = order.find((y) => fits(y, [heroBox, ...signs])) ?? order.find((y) => fits(y, [heroBox])) ?? high;
-    this.hintLow = y0 === low && y0 !== high;
-    const y = this.hintLow ? low : high;
+    const spots: Record<string, Pt> = { high: { x: mid, y: high } };
+    if (low > high + h && clear({ x: mid, y: low }, this.covers)) spots['low'] = { x: mid, y: low };
+    // Lead's ruling on W18 qa 2 (tiny screens): when no spot is clear of everything, the hint may
+    // briefly cover a sign or a bubble but never the hero: beside the hero on the side away from it,
+    // else over the top row.
+    const away = hero.x < this.view.w / 2 ? heroBox.x + heroBox.w + 4 : heroBox.x - w - 4;
+    if (away >= 8 && away + w <= this.view.w - 8) {
+      spots['side'] = { x: away, y: high };
+      if (spots['low']) spots['sideLow'] = { x: away, y: low };
+    }
+    spots['row'] = { x: mid, y: Math.max(4, high - h - 4) };
+    const keep = this.hintSpot && spots[this.hintSpot] ? [this.hintSpot] : [];
+    const all = [...keep, 'high', 'low'].filter((k) => spots[k]);
+    const pick =
+      all.find((k) => clear(spots[k]!, [heroBox, ...signs])) ??
+      [...keep, 'high', 'low', 'side', 'sideLow', 'row'].find((k) => spots[k] && clear(spots[k]!, [heroBox])) ??
+      'row';
+    this.hintSpot = pick;
+    const { x, y } = spots[pick]!;
+    const shift = x === mid ? '' : `translateX(calc(-50% + ${Math.round(x - mid)}px))`;
+    if (this.hintEl.style.transform !== shift) this.hintEl.style.transform = shift;
     if (this.hintEl.style.top !== `${y}px`) this.hintEl.style.top = `${y}px`;
     const hb = this.hintBox;
     if (!hb || hb.x !== x || hb.y !== y || hb.w !== w || hb.h !== h) {
@@ -2177,7 +2190,7 @@ export class CityScreen {
     const covered = Math.max(top ? top.getBoundingClientRect().bottom : r.top, this.chips.getBoundingClientRect().bottom) - r.top;
     // The hint bar and the Mission complete heading sit just under the top row (W7, W5).
     this.hintEl.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
-    this.hintLow = false;
+    this.hintSpot = null;
     this.banner.style.top = `${Math.round(Math.max(0, covered) + 4)}px`;
     // The heading, chips and buttons over the map: boards keep clear of them.
     // All of them are hard: a sign never sits under the heading (it would hide the sign's words
