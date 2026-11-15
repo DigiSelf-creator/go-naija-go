@@ -230,6 +230,7 @@ export class LaneFolk {
 
   /** The two-storey fronts behind both pavements, far to near (draw after the road). */
   drawFronts(g: G, p: LaneProject, n: LaneFolkNow, near: number, far: number): void {
+    if (typeof document === 'undefined') return;
     const E = LANE_FOLK.frontEvery;
     const k0 = (this.frontPpm * LANE_FOLK_M) / 37;
     for (let j = Math.floor(far / E); j * E >= near + 2; j--) {
@@ -257,6 +258,7 @@ export class LaneFolk {
 
   /** The footbridge crowd above the rail (draw before drawFootbridge so its rail crosses in front). */
   drawBridge(g: G, p: LaneProject, n: LaneFolkNow, d: number): void {
+    if (typeof document === 'undefined') return;
     if (d <= n.offTo + 2) return;
     const x0m = PAVE_EDGE.left - 1.4;
     const x1m = PAVE_EDGE.right + 2.4;

@@ -121,10 +121,15 @@ import { camScale, centreOn, clampCam, pinTapBox, pinchStep, startCam, toMap, to
 import { formatMoney, spokenMoney } from '../game/money';
 import { findPath, lineClear, nearestOpen, setJetty, tapTarget, walkable, type Pt } from '../game/walkGrid';
 import { button, h } from './dom';
+import { CastSheet } from '../game/crowdDraw';
+import { folkFramesFor } from '../art/folkBake';
+import { CITY_CAST, CITY_FOLK_SCALE, MAMA_PUT_COOK, MAMA_PUT_QUEUE, MARKET_SHOPPERS, isHeroLook } from '../art/folkCasts';
+import type { FolkLook } from '../art/folk';
+import { CITY_FOLK, CityWalkers, ambientCount, busParkWaiting, cityWalkerAt, mamaPutQueue, marketShoppers, missionCrowd, type CityPerson } from '../game/cityFolk';
 import { WORDS } from './words';
 
 /** The sounds this screen plays (src/engine/sound.ts). */
-export type CitySound = 'payChink' | 'payBulb' | 'payChip' | 'built' | 'collect' | 'notEnough' | 'sting' | 'step' | 'boom' | 'horn' | 'cogRatchet' | 'cogBell';
+export type CitySound = 'payChink' | 'payBulb' | 'payChip' | 'built' | 'collect' | 'notEnough' | 'sting' | 'step' | 'boom' | 'horn' | 'cogRatchet' | 'cogBell' | 'crowdCheerBig';
 
 /**
  * Mission complete after a won challenge (W5): `build` is the board the challenge was for (the
@@ -181,6 +186,10 @@ const painted = new Map<string, { img: HTMLCanvasElement; scale: number }>();
  * the bus pulls in (a slow phone keeps 45 fps or more at 4x CPU; it sharpens again on the stop).
  */
 const MAP_DPR = 1.5;
+/** S3g1b: where the cook, the Mama Put queue and the Market shoppers start in the city's people sheet. */
+const CITY_COOK = CITY_CAST.length;
+const CITY_QUEUE = CITY_COOK + 1;
+const CITY_SHOP = CITY_QUEUE + MAMA_PUT_QUEUE.length;
 const MAP_DPR_MOVING = 1;
 /** A finger that moves this far, or stays down this long, is a hold (W1). */
 const HOLD_PX = 8;
@@ -512,6 +521,16 @@ export class CityScreen {
   private boomRun: BoomRun | null = null;
   /** People walking in (at most 8 moving, W10), and those who have arrived and stand. */
   private walkers: Walker[] = [];
+  /**
+   * S3g1b (design.md "People everywhere" part 9): people walking about all the time (they hold
+   * still while the map is not drawing every frame, so a still city still draws nothing), the
+   * Mama Put queue and cook, the Market's shoppers, the bus park, Mission complete's crowd.
+   */
+  private readonly folk = new CityWalkers([...Object.values(MATS), ...Object.values(DOORS), ...Object.values(SOON_PINS)]);
+  private readonly folkSheet = new CastSheet((l, i) => (i === CITY_COOK ? ['stand', 'sit', 'wave0', 'wave1'] : [...folkFramesFor(l).filter((f) => f !== 'call' || i >= CITY_SHOP), 'call']));
+  private folkLooks: FolkLook[] = [];
+  private folkLookKey = '';
+  private missionCheered = false;
   private standing: { x: number; y: number; look: number }[] = [];
   private danfo: { r: Route; d: number; speed: number; bus: boolean } | null = null;
   /** The meter's points while its notches fill one by one (null: the saved points). */
@@ -1867,6 +1886,43 @@ export class CityScreen {
     }
   }
 
+  /** S3g1b part 9: the ambient walkers (count rule, bright blocks first) and Mission complete's cheer. */
+  private stepFolk(dt: number): void {
+    const st = this.life.state;
+    const bright = new Set((this.moment?.paint ?? this.boomRun?.paint ?? paintOf(st)).bright);
+    this.folk.fill(ambientCount(st), bright, CITY_CAST.length);
+    // They walk only while the map draws every frame (W10: a still city draws nothing).
+    const walking = dt <= 0.1 && !this.hooks.still() && this.active();
+    this.folk.step(dt, this.hero, bright, walking, this.moment !== null || this.boomRun !== null);
+    const ms = this.mission;
+    if (ms && (ms.phase === 'bus' || ms.phase === 'walk') && ms.t >= BUS_ARRIVAL.time && !this.missionCheered) {
+      this.missionCheered = true;
+      this.hooks.sound('crowdCheerBig');
+    }
+    if (!ms) this.missionCheered = false;
+  }
+
+  /** The city's cast (never the player's own look: a matching one wears another skin). */
+  private cityLooks(): FolkLook[] {
+    const hero = this.hooks.look();
+    const key = `${hero.skin},${hero.hair},${hero.outfit}`;
+    if (key !== this.folkLookKey) {
+      this.folkLookKey = key;
+      this.folkLooks = [...CITY_CAST, MAMA_PUT_COOK, ...MAMA_PUT_QUEUE, ...MARKET_SHOPPERS].map((l) => (isHeroLook(l, hero) ? { ...l, skin: (l.skin + 1) % 7 } : l));
+    }
+    return this.folkLooks;
+  }
+
+  /** One city person (map units), unless under 6 px tall on screen. */
+  private drawPerson(g: CanvasRenderingContext2D, p: CityPerson, s: number, dx = 0, dy = 0): void {
+    if (37 * CITY_FOLK_SCALE * s < CITY_FOLK.minPx) return;
+    const a = p.alpha ?? 1;
+    if (a <= 0) return;
+    if (a < 1) g.globalAlpha = a;
+    this.folkSheet.draw(g, { look: p.look, frame: p.frame, x: p.x + dx, y: p.y + dy, flip: p.flip, size: CITY_FOLK_SCALE });
+    if (a < 1) g.globalAlpha = 1;
+  }
+
   private stepBuild(dt: number): void {
     const b = this.building;
     if (!b) return;
@@ -2378,6 +2434,7 @@ export class CityScreen {
     this.stepMoment(dt);
     this.stepBoom(dt);
     this.stepLife(dt);
+    this.stepFolk(dt);
     if (this.hintId === 'bright' && this.time >= this.hintAt) this.setHint(null);
     // "Tap to skip" (small, bottom middle) while a moment or a boom plays; Mission complete has its own.
     const skip = (!!this.moment?.build || !!this.boomRun) && !(this.mission && this.mission.phase !== 'end');
@@ -2572,13 +2629,27 @@ export class CityScreen {
     // Standing things, back to front: the places, the hero (or the bus bringing them).
     type Item = { y: number; draw: () => void };
     const items: Item[] = [];
+    // S3g1b: the people's sheet, at the still picture's pixel scale (one bake per zoom step).
+    this.folkSheet.ready(this.cityLooks(), s * Math.min(window.devicePixelRatio || 1, MAP_DPR) * CITY_FOLK_SCALE, `city|${this.folkLookKey}`);
     const bukaBuild = this.building?.build === 'mamaPut' ? this.building.t : st.built.includes('buka') ? 1 : 0;
     if (bukaBuild > 0) {
       const full = trayFull(this.life.state, 'buka');
       const clock = this.life.clock.buka / MAMA_PUT.plateTime;
       const served = Math.floor(((this.life.state.trays.buka ?? 0) / PLACES.buka.each) % 97);
       const d = DOORS.buka;
-      items.push({ y: d.y, draw: () => drawMamaPut(g, d.x, d.y, { time: this.time, plate: still ? 0 : clock, served, queue: 4, full, build: bukaBuild, still }) });
+      // S3g1b: the kit's cook (she waves as the hero collects the tray) and a queue of 3.
+      const waving = this.collecting?.place === 'buka';
+      const cook = (c: CanvasRenderingContext2D, x: number, y: number, resting: boolean): void => {
+        const frame = waving ? (still ? 'wave0' : Math.floor(this.time / 0.25) % 2 ? 'wave1' : 'wave0') : resting ? 'sit' : 'stand';
+        this.drawPerson(c, { look: CITY_COOK, frame, x, y: y + 2, flip: false }, s);
+      };
+      items.push({
+        y: d.y,
+        draw: () => {
+          drawMamaPut(g, d.x, d.y, { time: this.time, plate: still ? 0 : clock, served, queue: 0, full, build: bukaBuild, still, cook });
+          if (bukaBuild >= 1) for (const p of mamaPutQueue(clock, served, still, full)) this.drawPerson(g, { ...p, look: CITY_QUEUE + p.look }, s, d.x, d.y);
+        },
+      });
     }
     const marketBuild = this.building?.build === 'market' ? this.building.t : st.built.includes('market') ? 1 : 0;
     if (marketBuild > 0) {
@@ -2590,6 +2661,7 @@ export class CityScreen {
         y: d.y,
         draw: () => {
           drawMarketPlace(g, d.x, d.y, { stock: trip.stock, build: marketBuild });
+          if (marketBuild >= 1) for (const p of marketShoppers(this.time, still)) this.drawPerson(g, { ...p, look: CITY_SHOP + p.look }, s, d.x, d.y);
           if (marketBuild >= 1 && earn) {
             if (trip.carry >= 0 && !still) drawPorter(g, d.x - 20, d.y + 4, d.x + 8, d.y + 16, trip.carry);
             if (trip.visible) drawMarketDanfo(g, d.x + 20 + trip.dx, d.y + 26, trip.load, trip.door);
@@ -2599,6 +2671,18 @@ export class CityScreen {
     }
     // People who walked in (moving, then standing) and the moment's danfo.
     for (const p of this.standing) items.push({ y: p.y, draw: () => drawCityFolk(g, p.x, p.y, p.look) });
+    // S3g1b: ambient walkers (stopping to watch a moment, cheering at its sting), the bus park.
+    const sting = this.moment ? this.moment.t - MOMENT.sting : -1;
+    for (const w of this.folk.list) {
+      const at = cityWalkerAt(w);
+      let frame: CityPerson['frame'] = 'stand';
+      if (sting >= 0 && sting < 1) frame = still ? 'cheer0' : Math.floor(sting / 0.25) % 2 ? 'cheer1' : 'cheer0';
+      else if (w.stop > 0) frame = still ? 'wave0' : Math.floor(w.stop / 0.25) % 2 ? 'wave1' : 'wave0';
+      else if (w.idle < 0.15 && !still) frame = `walk${Math.floor(w.d / 9) % 4}` as CityPerson['frame'];
+      const side = w.stop > 0 ? CITY_FOLK.stepAside : 0;
+      items.push({ y: at.y, draw: () => this.drawPerson(g, { look: w.look, frame, x: at.x - at.dy * side, y: at.y + at.dx * side, flip: at.dx < 0 }, s) });
+    }
+    for (const [i, p] of busParkWaiting(st.boomSeen >= FIRST_BOOM).entries()) items.push({ y: p.y, draw: () => this.drawPerson(g, { look: (i * 5 + 4) % CITY_CAST.length, frame: 'stand', x: p.x, y: p.y, flip: i % 2 === 1 }, s) });
     for (const w of this.walkers) {
       const at = walkerAt(w);
       const bob = still ? 0 : Math.abs(Math.sin((w.t - w.wait) * 12)) * 1.2;
@@ -2611,6 +2695,10 @@ export class CityScreen {
     }
     const size = walkerSize(s);
     const ms = this.mission;
+    if (ms && ms.phase !== 'end') {
+      const since = ms.t - BUS_ARRIVAL.time;
+      for (const p of missionCrowd(ms.bus, since, still)) items.push({ y: p.y, draw: () => this.drawPerson(g, p, s) });
+    }
     if (ms && ms.phase === 'bus') {
       const kk = still ? 1 : Math.min(1, ms.t / BUS_ARRIVAL.time);
       items.push({ y: ms.bus.y + 25, draw: () => drawBusArrival(g, this.hooks.look(), ms.bus.x, ms.bus.y, kk, size) });

@@ -28,8 +28,10 @@ export class CastSheet {
   constructor(private frames?: (look: FolkLook, i: number) => readonly FolkFrame[]) {}
 
   /** Makes the sheet if the cast or the pixel scale changed. */
-  ready(looks: readonly FolkLook[], pxPerU: number, castKey: string): FolkSheet {
+  ready(looks: readonly FolkLook[], pxPerU: number, castKey: string): FolkSheet | null {
     const key = `${castKey}|${pxPerU.toFixed(3)}`;
+    // No page (unit tests drawing with a stand-in context): nobody is drawn.
+    if (typeof document === 'undefined') return null;
     if (!this.sheet || key !== this.key) {
       const t0 = performance.now();
       this.sheet = bakeFolk(looks, pxPerU, this.frames);
@@ -126,6 +128,7 @@ const overlaps = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && b.x < a.x + a
  * not shown (part 6). Returns the box drawn, or null.
  */
 export function drawBubbleAt(g: G, b: Bubble, unitPx: number, avoid: readonly Rect[], ratio = screenRatio()): Rect | null {
+  if (typeof document === 'undefined') return null;
   const img = bubbleImage(b.text, ratio);
   const k = 1 / unitPx;
   const box: Rect = { x: b.x - img.ax * k, y: b.y - img.ay * k, w: img.w * k, h: img.h * k };
@@ -145,9 +148,10 @@ interface Layer {
   h: number;
 }
 const LAYERS = new Map<string, Layer>();
-function layer(key: string, box: { x: number; y: number; w: number; h: number }, pxPerU: number, draw: (g: G) => void): Layer {
+function layer(key: string, box: { x: number; y: number; w: number; h: number }, pxPerU: number, draw: (g: G) => void): Layer | null {
   const k = `${key}|${pxPerU.toFixed(3)}`;
   let l = LAYERS.get(k);
+  if (!l && typeof document === 'undefined') return null;
   if (!l) {
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.ceil(box.w * pxPerU));
@@ -163,7 +167,8 @@ function layer(key: string, box: { x: number; y: number; w: number; h: number },
   }
   return l;
 }
-function blit(g: G, l: Layer, dx = 0, dy = 0): void {
+function blit(g: G, l: Layer | null, dx = 0, dy = 0): void {
+  if (!l) return;
   g.drawImage(l.c, l.x + dx, l.y + dy, l.w, l.h);
 }
 
