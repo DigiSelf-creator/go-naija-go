@@ -168,14 +168,14 @@ describe('trays, collect line and edge arrows', () => {
 
   it('bubbles draw the amount and the word "Full", with a 48 px tap area', () => {
     for (const full of [false, true]) {
-      const r = clean((g) => drawTrayBubble(g, 100, 100, 'naira', '₦1.50', full, 1));
-      expect(r.texts).toEqual(full ? ['₦1.50', 'Full'] : ['₦1.50']);
-      const b = trayBubbleBox(recorder().g, 100, 100, '80 kobo', full);
+      const r = clean((g) => drawTrayBubble(g, 100, 100, 'naira', 'Tax ₦1.50', full, 1));
+      expect(r.texts).toEqual(full ? ['Tax ₦1.50', 'Full'] : ['Tax ₦1.50']);
+      const b = trayBubbleBox(recorder().g, 100, 100, 'Tax 80 kobo', full);
       expect(b.w).toBeGreaterThanOrEqual(48);
       expect(b.h).toBeGreaterThanOrEqual(48);
     }
-    const r = clean((g) => drawCollectLine(g, 50, 50, '+₦1.20 from Mama Put', 0.5));
-    expect(r.texts).toEqual(['+₦1.20 from Mama Put']);
+    const r = clean((g) => drawCollectLine(g, 50, 50, 'Mama Put paid ₦1.20 tax!', 0.5));
+    expect(r.texts).toEqual(['Mama Put paid ₦1.20 tax!']);
     clean((g) => drawCollectLine(g, 50, 50, 'x', 0.2, true));
   });
 

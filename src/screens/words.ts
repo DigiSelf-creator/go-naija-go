@@ -225,7 +225,9 @@ export const WORDS = {
     hintWalk: 'Tap where you want to go.',
     hintWalkKeys: 'Use the arrow keys to walk.',
     hintBuka: () => `Walk onto the ${formatMoney(400)} board to build a Mama Put.`,
-    hintCollect: 'Mama Put made money! Walk over to collect it.',
+    hintCollect: 'Mama Put pays a small tax! Walk over to collect it.',
+    /** W18 (decision 71): once, in the hint bar, right after the first collect (hint id `tax`). */
+    hintTax: 'Busy shops pay a small tax. Lagos uses it to fix more.',
     /** 5W W2: the problem card's button that walks the hero to the board. */
     walkThere: 'Walk there',
     /** 5W W8 Not enough card. */
@@ -243,10 +245,14 @@ export const WORDS = {
       lamps: 'Lamps on! The street is awake.',
       mast: 'Fast internet! Shops are busy.',
     },
-    /** 5W W8 Collect line (1.5 s): "+₦1.20 from Mama Put". */
-    collectLine: (money: string, name: string) => `+${money} from ${name}`,
-    /** Spoken: "Mama Put has 1 naira 20 kobo for you. Full." */
-    traySpoken: (name: string, money: string, full: boolean) => `${name.charAt(0).toUpperCase()}${name.slice(1)} has ${money} for you.${full ? ' Full.' : ''}`,
+    /** W18 (decision 71): the tray bubble's label for a Naira place: "Tax 80 kobo", "Tax ₦1.20". */
+    trayLabel: (money: string) => `Tax ${money}`,
+    /** W18 Collect line (1.5 s): "Mama Put paid ₦1.20 tax!", "The market paid ₦2.40 tax!". */
+    collectLine: (money: string, name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)} paid ${money} tax!`,
+    /** W18 Collect, spoken, with spoken money: "Mama Put paid 1 naira 20 kobo tax." */
+    collectSpoken: (money: string, name: string) => `${name.charAt(0).toUpperCase()}${name.slice(1)} paid ${money} tax.`,
+    /** W18 Spoken: "Tax from Mama Put: 1 naira 20 kobo. Full." ("the market" stays lower case mid-line). */
+    traySpoken: (name: string, money: string, full: boolean) => `Tax from ${name}: ${money}.${full ? ' Full.' : ''}`,
     /** Spoken: "New road. Costs 10 naira. You have 6 naira. Walk there." */
     boardSpoken: (name: string, price: string, have: string, part: boolean) => `${name}. ${part ? `${price} left` : `Costs ${price}`}. You have ${have}. Walk there.`,
     /** 5W W5 Mission complete in the walkable city. */
