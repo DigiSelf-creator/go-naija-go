@@ -423,7 +423,11 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     });
     const go = st.go
       ? button(st.go, 'go', (e) => {
-          if (!soon(e)) hooks.play(st, e);
+          if (soon(e)) return;
+          // O1c-2: "To Ogun" may open the download card over the road; this card closes first,
+          // so Android back finds the download card's "Not now", not this card's hidden "Back".
+          if (st.id === 'ogun') closeCard();
+          hooks.play(st, e);
         })
       : null;
     let picEl: HTMLElement;
