@@ -97,6 +97,9 @@ export class LaneView {
   /** Drawn boxes this frame, for the e2e checks (only when asked). */
   boxes: { kind: string; x: number; y: number; w: number; h: number }[] | null = null;
   private camD = 0;
+  /** Part 14's look back: the picture is drawn turned round (mirrored) and/or slid sideways (the turn), CSS px. */
+  private mirror = false;
+  private ox = 0;
 
   resize(w: number, h: number, ratio: number): void {
     if (w === this.w && h === this.h && ratio === this.ratio && this.sky) return;
@@ -141,6 +144,36 @@ export class LaneView {
     this.camX += (target - this.camX) * (1 - Math.exp(-dt / CAM_EASE));
   }
 
+  /** Drawing in CSS px (the screen's own transform, turned round and slid for the look back). */
+  private css(g: CanvasRenderingContext2D): void {
+    const r = this.ratio;
+    if (this.mirror) g.setTransform(-r, 0, 0, r, (this.w + this.ox) * r, 0);
+    else g.setTransform(r, 0, 0, r, this.ox * r, 0);
+  }
+
+  /** Drawing in device pixels, with the same turn and slide. */
+  private dev(g: CanvasRenderingContext2D): void {
+    const r = this.ratio;
+    if (this.mirror) g.setTransform(-1, 0, 0, 1, (this.w + this.ox) * r, 0);
+    else g.setTransform(1, 0, 0, 1, this.ox * r, 0);
+  }
+
+  /**
+   * Part 14, the first lane run's start: the camera looks back down the road as the far lamps
+   * switch off (`lamps` 0 to 1), the dark rolling up from the far end. `slide` (CSS px) moves the
+   * picture sideways for the turn. No road things and no hero: you look back from where you stand.
+   */
+  drawBack(g: CanvasRenderingContext2D, sim: LaneSim, look: HeroLook, lamps: number, t: number, slide = 0): void {
+    this.mirror = true;
+    this.ox = slide;
+    try {
+      this.drawScene(g, sim, look, sim.dist, t, null, 0, lamps);
+    } finally {
+      this.mirror = false;
+      this.ox = 0;
+    }
+  }
+
   /** Copies a ready-made picture at a screen point, `ppm` CSS px per metre there; nearer size first. */
   private blit(g: CanvasRenderingContext2D, key: string, x: number, y: number, ppm: number, alpha: number): boolean {
     const dev = ppm * this.ratio;
@@ -148,9 +181,9 @@ export class LaneView {
     const b = set?.get(key) ?? this.near?.get(key);
     if (!b) return false;
     // Baked in device pixels: draw in device pixels.
-    g.setTransform(1, 0, 0, 1, 0, 0);
+    this.dev(g);
     blitBaked(g, b, x * this.ratio, y * this.ratio, dev, alpha);
-    g.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+    this.css(g);
     return true;
   }
 
@@ -159,10 +192,20 @@ export class LaneView {
    * Blackout's distance (sim.gap) darkens the bottom of the screen under 30 m and switches the
    * nearest lamps off (part 10); under 15 m the last lit ones flicker.
    */
-  draw(g: CanvasRenderingContext2D, sim: LaneSim, look: HeroLook, dist: number, t: number, pose: HeroPose, night = 0): void {
+  draw(g: CanvasRenderingContext2D, sim: LaneSim, look: HeroLook, dist: number, t: number, pose: HeroPose, night = 0, slide = 0): void {
+    this.ox = slide;
+    try {
+      this.drawScene(g, sim, look, dist, t, pose, night, -1);
+    } finally {
+      this.ox = 0;
+    }
+  }
+
+  /** The scene; `pose` null and `back` 0 to 1 for the look back (part 14), else `back` is -1. */
+  private drawScene(g: CanvasRenderingContext2D, sim: LaneSim, look: HeroLook, dist: number, t: number, pose: HeroPose | null, night: number, back: number): void {
     const { w, h, hz } = this;
     this.bake(look);
-    g.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+    this.css(g);
     this.camD = dist - CAM_BACK;
     const v = this.art;
     v.w = w;
@@ -193,14 +236,28 @@ export class LaneView {
     }
     const gap = sim.gap;
     const offTo = dist + Math.max(0, DARK_FROM - gap) * 0.6 - CAM_BACK + night * 40;
+    // The look back: the switching off comes from the far end towards you.
+    const backFrom = back >= 0 ? far - back * (far - dist - 6) : Infinity;
     const l1 = Math.floor(far / LAMP_EVERY) * LAMP_EVERY;
     for (let d = l1; d >= near + 0.5; d -= LAMP_EVERY) {
-      const look: LampLook = d < offTo ? 'off' : d < offTo + LAMP_EVERY * 1.5 && gap < WARN_UNDER ? 'flicker' : 'on';
+      const look: LampLook = back >= 0 ? (d > backFrom ? 'off' : 'on') : d < offTo ? 'off' : d < offTo + LAMP_EVERY * 1.5 && gap < WARN_UNDER ? 'flicker' : 'on';
       g.globalAlpha = fade(d);
       drawLaneLamp(g, v, d - dist, -1, look, t, this.still);
       drawLaneLamp(g, v, d - dist, 1, look, t, this.still);
     }
     g.globalAlpha = 1;
+    if (back >= 0) {
+      // The dark rolling up the road from the far end (deep blue, never black).
+      if (back > 0) {
+        const dark = g.createLinearGradient(0, hz - 30, 0, hz + (h - hz) * (0.25 + 0.45 * back));
+        dark.addColorStop(0, `rgba(16,26,74,${(0.7 * back).toFixed(3)})`);
+        dark.addColorStop(1, 'rgba(16,26,74,0)');
+        g.fillStyle = dark;
+        g.fillRect(0, 0, w, h);
+      }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      return;
+    }
     const goal = sim.level.goal;
     if (goal > near && goal < far) this.blit(g, sim.phase === 'run' ? 'busStop' : 'busStopBright', this.sx(ROAD.half + ROAD.kerb + 2.4, goal), this.sy(0, goal), ppmAt(goal), fade(goal));
 
@@ -215,6 +272,7 @@ export class LaneView {
     let heroDrawn = false;
     const drawHero = (): void => {
       heroDrawn = true;
+      if (!pose) return;
       const ppm = ppmAt(dist);
       const x = this.sx(sim.x, dist);
       const y = this.sy(0, dist);
@@ -224,11 +282,11 @@ export class LaneView {
       const b = this.hero?.get(laneHeroKey(p));
       const yUp = y - pose.up * ppm;
       if (b) {
-        g.setTransform(1, 0, 0, 1, 0, 0);
+        this.dev(g);
         g.translate(x * this.ratio, yUp * this.ratio);
         if (pose.lean) g.rotate(pose.lean * 0.08);
         blitBaked(g, b, 0, 0, ppm * this.ratio);
-        g.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+        this.css(g);
       }
       if (boxes) {
         const hk = ppm * (pose.kind === 'slide' ? 0.8 : HERO_HEIGHT);

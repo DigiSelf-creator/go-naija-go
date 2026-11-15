@@ -76,9 +76,9 @@ export type LaneEvent =
   | { type: 'land' }
   | { type: 'stumble'; kind: ThingKind }
   | { type: 'sideBump' }
-  | { type: 'burst'; kind: ThingKind; lane: number }
-  | { type: 'goat'; lane: number }
-  | { type: 'coin' }
+  | { type: 'burst'; kind: ThingKind; lane: number; d: number }
+  | { type: 'goat'; lane: number; d: number }
+  | { type: 'coin'; lane: number; d: number; h: number }
   | { type: 'pickup'; kind: PickupKind }
   | { type: 'goal' }
   // S3f3: the Blackout, the buckets and the food.
@@ -563,7 +563,7 @@ export class LaneSim {
         if (this.y >= size.h) continue; // jumped clean over it
         s.state = 'burst';
         s.t = 0;
-        this.events.push({ type: 'burst', kind, lane: s.lane });
+        this.events.push({ type: 'burst', kind, lane: s.lane, d: s.d });
         this.pop(kind);
         continue;
       }
@@ -572,7 +572,7 @@ export class LaneSim {
         s.state = 'off';
         s.t = 0;
         this.goatT = 0;
-        this.events.push({ type: 'goat', lane: s.lane });
+        this.events.push({ type: 'goat', lane: s.lane, d: s.d });
         this.pop('goat');
         continue;
       }
@@ -592,7 +592,7 @@ export class LaneSim {
       c.taken = true;
       c.t = 0;
       this.kobo += COIN_KOBO;
-      this.events.push({ type: 'coin' });
+      this.events.push({ type: 'coin', lane: c.lane, d: c.d, h: c.h });
     }
   }
 
@@ -630,11 +630,11 @@ export class LaneSim {
     this.events.push({ type: 'toss', kind });
     if (isBurst(kind)) {
       best.state = 'burst';
-      this.events.push({ type: 'burst', kind, lane: best.lane });
+      this.events.push({ type: 'burst', kind, lane: best.lane, d: best.d });
       this.pop(kind);
     } else if (kind === 'goat') {
       best.state = 'off';
-      this.events.push({ type: 'goat', lane: best.lane });
+      this.events.push({ type: 'goat', lane: best.lane, d: best.d });
       this.pop('goat');
     } else best.state = 'done';
   }

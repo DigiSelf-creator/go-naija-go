@@ -377,6 +377,8 @@ function startGame(): void {
   let laneModule: Promise<typeof import('./lane/session')> | null = null;
   /** The fix the lane run was started for (Lights out or Slow internet), or null (part 2). */
   let laneFor: BuildId | null = null;
+  /** The corn count's place in the lane run (part 11); the streets put it back in their hint bar after. */
+  let laneCountAt: HintBarBox | null = null;
   /**
    * S3f3 part 2, "Bringing it home": a win for a fix not built yet plays Mission complete at that
    * spot; any other end goes back to Lagos with "You brought ... home." (LR-Q2: and the other pin's hint).
@@ -468,6 +470,18 @@ function startGame(): void {
             }
           },
           closeHum: (on) => sound.setCloseHum(on && !document.hidden),
+          // Part 11: the corn tune and its 5, 4, 3, 2, 1 count in the lane run, as on the streets
+          // (S2.9): the lane tune and the effects turn down under it; the count shows in the hint
+          // bar's place even with Music or Sound off.
+          corn: (c) => {
+            const steps = c ? Math.ceil(c.left * 60) : 0;
+            corn.update({ corn: steps, active: c !== null, audible: sound.enabled && menus.music, held: c !== null && (c.held || document.hidden) });
+            if (c && c.box !== laneCountAt) {
+              laneCountAt = c.box;
+              count.place(c.box, window.innerHeight);
+            }
+            count.set(c ? cornCount(steps) : 0, c !== null);
+          },
         });
         lane.start();
         syncMusic();
@@ -489,6 +503,9 @@ function startGame(): void {
     lane = null;
     // The lane run may have drawn with fewer pixels: back to the game's own canvas size.
     resize();
+    // The corn count goes back to the streets' hint bar.
+    laneCountAt = null;
+    placeBar();
   }
 
   /** The live city (city.md (b), 5W): the `city` part of gidi-progress, kept in memory while the game runs. */
