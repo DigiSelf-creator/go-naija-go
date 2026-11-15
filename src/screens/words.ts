@@ -448,6 +448,33 @@ export const WORDS = {
     up: 'Go up',
     upKeys: 'Go up (Enter)',
   },
+  /**
+   * S3g1b, design.md "People everywhere" part 6: what people say in their bubbles (never read
+   * out, no meaning). Each kind is split by language, and a line is picked language first, so
+   * English, Pidgin, Yoruba, Hausa and Igbo get an equal share (decision 30, PE-R2).
+   */
+  folk: {
+    /** Morning greetings (Alausa). */
+    greetMorning: { en: ['Good morning!'], yo: ['Ẹ káàárọ̀!'], ha: ['Ina kwana!'], ig: ['Ụtụtụ ọma!'] },
+    /** Greetings at any time. */
+    greet: { en: ['Hello!'], pcm: ['How far?'], yo: ['Ẹ n lẹ́ o!'], ha: ['Sannu!'], ig: ['Ndewo!'] },
+    /** Each street's traders call only their own lines. */
+    traders: {
+      alausa: ['Hot akara!', 'Fresh bread!'],
+      village: ['Phone case here!', 'Charger, charger!', 'Fine cloth!', 'Fresh pepper!'],
+      ikeja: ['Suya dey!', 'Tickets here!', 'Hot food!'],
+    },
+    /** A problem cleared, the bus stop. */
+    cheers: { en: ['Well done!', 'Nice one!'], pcm: ['You do well!', 'Oya, go!', 'Ehen!'], yo: ['Ẹ kú iṣẹ́!'], ha: ['Madalla!'], ig: ['I meela!'] },
+    /** The bus park. */
+    bus: { pcm: ['Bus don come!'], en: ['Safe trip!'] },
+    /** The well room's store keeper as the hero takes the garri parcel (PE-R4). */
+    storeKeeper: 'For the boss. Go well!',
+    /** The hall's door people on hit 1 and hit 2. */
+    hallHit: ['Ehen!', 'Well done!'],
+    /** The plain spelling, if a phone shows a tone mark as a box. */
+    plain: { 'Ẹ káàárọ̀!': 'E kaaro!', 'Ụtụtụ ọma!': 'Ututu oma!', 'Ẹ n lẹ́ o!': 'E n le o!', 'Ẹ kú iṣẹ́!': 'E ku ise!' } as Readonly<Record<string, string>>,
+  },
 } as const;
 
 /**

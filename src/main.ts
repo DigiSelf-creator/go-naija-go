@@ -281,8 +281,39 @@ function startGame(): void {
       placeThrowButton();
       syncCorn();
       syncHum();
+      syncCrowd();
     },
   });
+
+  /**
+   * S3g1b (design.md "People everywhere" part 12): the crowd murmur plays, very quietly, while 5
+   * or more people are on screen; never over a warning sound (the drum's roll, the high honk) or
+   * the corn tune, never paused or hidden. The Sound switch silences it inside sound.ts (PE-R6).
+   * Frame times also feed the people's backing off (part 11).
+   */
+  let warnUntil = 0;
+  let lastFrameAt = 0;
+  /** The loop stops (a card, the menus, a pause): the murmur stops with it. */
+  function pauseLoop(): void {
+    loop.pause();
+    sound.setMurmur(false);
+    lastFrameAt = 0;
+  }
+  const warned = (name: 'drumWake' | 'highHonk'): void => {
+    warnUntil = Math.max(warnUntil, performance.now() + soundLength(name) * 1000 + 150);
+  };
+  const crowdQuiet = (): boolean => performance.now() < warnUntil || game.run.power.corn > 0;
+  function syncCrowd(): void {
+    const now = performance.now();
+    const live = playing && !game.paused && !menus.current && !document.hidden && inPlay();
+    if (live && lastFrameAt > 0) game.people.frame(now - lastFrameAt);
+    lastFrameAt = live ? now : 0;
+    sound.setMurmur(live && game.people.seen >= 5 && !crowdQuiet());
+  }
+  /** A cheer (at most one every 4 s: the people's own rule), never over a warning or the corn tune. */
+  game.people.onSound = (name) => {
+    if (!crowdQuiet()) sound.play(name);
+  };
 
   /**
    * S2.16 B3: the tech suit hums while it is worn in play; never while paused, on a card, with
@@ -331,7 +362,7 @@ function startGame(): void {
       return;
     }
     if (!playing || game.paused || !inPlay()) return;
-    loop.pause();
+    pauseLoop();
     game.paused = true;
     syncHum();
     toast.hide();
@@ -410,7 +441,7 @@ function startGame(): void {
     hud.show(false);
     buttons.show(false);
     toast.hide();
-    loop.pause();
+    pauseLoop();
     controls.releaseAll();
     where = firstStreet;
     game.fixed = false;
@@ -467,7 +498,7 @@ function startGame(): void {
     toast.hide();
     hud.show(false);
     buttons.show(false);
-    loop.pause();
+    pauseLoop();
     controls.releaseAll();
     laneLoading = true;
     menus.laneRun = true;
@@ -799,7 +830,10 @@ function startGame(): void {
         toast.show(hintWords(e.words, controls.lastKind), HINT_MS);
         break;
       case 'wake':
-        if (e.kind === 'drum') sound.play('drumWake');
+        if (e.kind === 'drum') {
+          sound.play('drumWake');
+          warned('drumWake');
+        }
         break;
       case 'bounce':
         // Decision 62: a goat's "meeh" (at most one each 0.5 s; a plain boing if it just spoke).
@@ -878,7 +912,7 @@ function startGame(): void {
       case 'gameOver':
         sound.play('gameOver');
         controls.releaseAll();
-        loop.pause();
+        pauseLoop();
         toast.hide();
         // (c) Losing keeps it all (Tp, question 2): the coins go home to Lagos.
         payHome(game.run.kobo * KOBO_PER_COIN);
@@ -925,7 +959,7 @@ function startGame(): void {
       case 'streetCleared':
         // S2.10 Street cleared: "Next street", or after street 3 "Go to Go-Slow Hall".
         controls.releaseAll();
-        loop.pause();
+        pauseLoop();
         toast.hide();
         // S2.8: saved only now, when the bus is boarded (with the parcel, if carried).
         // N1: a coin is 10 kobo; bests and the card's money are whole kobo.
@@ -947,7 +981,10 @@ function startGame(): void {
         break;
       case 'bossThrow':
         if (e.kind === 'honk') sound.play('honk');
-        else if (e.kind === 'highHonk') sound.play('highHonk');
+        else if (e.kind === 'highHonk') {
+          sound.play('highHonk');
+          warned('highHonk');
+        }
         break;
       case 'bossHit':
         sound.play('greenHit');
@@ -992,7 +1029,7 @@ function startGame(): void {
         break;
       case 'win':
         controls.releaseAll();
-        loop.pause();
+        pauseLoop();
         toast.hide();
         // S2.8: the hall is won, so Lagos is switched on and its cog turns.
         progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
@@ -1128,7 +1165,7 @@ function startGame(): void {
 
   // Menus first; the street stands still behind them.
   loop.start();
-  loop.pause();
+  pauseLoop();
   menus.show('title');
 
   // S3f2: the lane run's hooks for end to end tests (null outside a lane run).
@@ -1158,6 +1195,23 @@ function startGame(): void {
         buttons: buttons.shown,
         layout: buttons.layout,
       };
+    },
+    /** S3g1b: the people drawn last frame (world units), the bubble, backing off, the murmur. */
+    get people() {
+      const p = game.people;
+      return {
+        on: p.on,
+        drawn: p.drawn.map((d) => ({ x: d.x, y: d.y, frame: d.frame, size: d.size })),
+        seen: p.seen,
+        bubble: p.bubbleBox ? { ...p.bubbleBox } : null,
+        backOff: p.watch.level,
+        murmur: sound.murmuring,
+        plan: p.street ? { stands: p.street.plan.stands.length, walkers: p.street.plan.walkers.length, zones: p.street.plan.zones.map((z) => [z.a, z.b]) } : null,
+      };
+    },
+    /** S3g1b qa: force backing off (part 11: 1 drops the walkers, 2 half the standing people too). */
+    forceBackOff(level: number) {
+      game.people.watch.level = Math.max(0, Math.min(2, Math.round(level)));
     },
     get look() {
       return { ...game.look };
@@ -1487,6 +1541,16 @@ declare global {
     readonly __lane?: import('./lane/session').LaneTestHook | null;
     __game?: {
       readonly paused: boolean;
+      readonly people: {
+        on: boolean;
+        drawn: { x: number; y: number; frame: string; size: number }[];
+        seen: number;
+        bubble: { x: number; y: number; w: number; h: number } | null;
+        backOff: number;
+        murmur: boolean;
+        plan: { stands: number; walkers: number; zones: number[][] } | null;
+      };
+      forceBackOff(level: number): void;
       /** U1: a new version is ready; the banner shows. */
       readonly update: { ready: boolean; shown: boolean };
       readonly steps: number;
