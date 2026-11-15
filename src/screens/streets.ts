@@ -1,61 +1,10 @@
 /**
- * What the Streets screen and Nigeria's wheel show, worked out with no DOM so it can be unit
- * tested (docs/design.md S2.8, S2.10).
+ * Nigeria's wheel's fit, worked out with no DOM so it can be unit tested (docs/design.md S2.8).
+ * The Streets screen became the challenge road (S3e0, src/screens/road.ts).
  */
-import type { CardPicture, CardState } from '../art/cards';
-import { hallOpen, streetOpen, streetRecord, type StateProgress } from '../game/progress';
-import { WORDS } from './words';
 
+/** A street index (0 is street 1) or the hall. */
 export type Where = number | 'hall';
-
-export interface CardInfo {
-  /** Street index (0 is street 1) or the hall. */
-  where: Where;
-  state: CardState;
-  picture: CardPicture;
-  /** The small first line ("Street 2"); empty on the hall card. */
-  num: string;
-  /** The bold name. */
-  name: string;
-  /** The one status line. */
-  status: string;
-  /** Hall card only, when a parcel is saved: "You have a garri parcel." */
-  extra: string | null;
-}
-
-const PICTURES: readonly CardPicture[] = ['morning', 'market', 'evening'];
-
-/** The four cards for a state: its streets in order, then its hall. */
-export function streetCards(s: StateProgress, names: readonly string[], themes: readonly string[] = []): CardInfo[] {
-  const w = WORDS.streets;
-  const cards: CardInfo[] = names.map((name, i) => {
-    const n = i + 1;
-    const rec = streetRecord(s, n);
-    const state: CardState = rec.done ? 'done' : streetOpen(s, n) ? 'open' : 'locked';
-    const theme = themes[i];
-    const picture = (PICTURES as readonly string[]).includes(theme ?? '') ? (theme as CardPicture) : (PICTURES[i] ?? 'morning');
-    return {
-      where: i,
-      state,
-      picture,
-      num: w.num(n),
-      name,
-      status: state === 'done' ? w.done(rec.best) : state === 'open' ? w.open : w.locked(n - 1),
-      extra: null,
-    };
-  });
-  const hallState: CardState = s.hall.done ? 'done' : hallOpen(s, names.length) ? 'open' : 'locked';
-  cards.push({
-    where: 'hall',
-    state: hallState,
-    picture: 'hall',
-    num: '',
-    name: 'Go-Slow Hall',
-    status: hallState === 'done' ? w.hallDone : hallState === 'open' ? w.open : w.locked(names.length),
-    extra: s.parcel ? w.parcel : null,
-  });
-  return cards;
-}
 
 /** S2.8 "The wheel screen on every size": where the wheel and its rail go (CSS px, inside the safe area). */
 export interface WheelFit {

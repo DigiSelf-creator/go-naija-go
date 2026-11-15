@@ -20,6 +20,7 @@ import { FUFU_RULES, type FufuBall } from './fufu';
 import { drawFood, drawKobo, drawSparkle } from '../art/items';
 import { busEndAt, drawBigPitCones, drawBusPark, drawEndBus, drawEndBusInside, drawPavement, drawStartFence, END_BUS_BACK, END_BUS_FRONT } from '../art/roadside';
 import { drawBusStop, drawRoad } from '../art/street';
+import { drawFirstGround, type FirstDraw } from '../art/firstLook';
 import { clipWellMouth, drawFade, drawWell, drawWellBack, drawWellFront, wellDownAt } from '../art/well';
 import { drawGarriParcel, drawRoomRope, drawShelf, drawWellRoom, ROOM_ROPE_BUCKET_Y } from '../art/wellRoom';
 import { STRIP_Y, type View } from '../engine/view';
@@ -148,6 +149,11 @@ export class Game {
    * and fresh road paint. Same layout, same play. Set by main.
    */
   fixed = false;
+  /**
+   * S3e0 part 6 (W17 C): the street's first stretch, tired or bright to match its city spot, or
+   * null (the hall). Scenery only: set by main as a run starts; play never reads it.
+   */
+  firstLook: FirstDraw | null = null;
   /** Clock time the jam last went "pfft" (S2.15: it shakes for 0.3 s). */
   private jamAt = -Infinity;
   /** Where the HUD kobo counter is on screen, world units from the top left (set by main). */
@@ -525,11 +531,13 @@ export class Game {
 
     g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
     // Screen space, parallax: the street's own look (its `theme`, art K1 backdrop.ts).
-    drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed);
+    const first = this.firstLook;
+    drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed, first);
 
     // World space.
     g.translate(-camX, 0);
     drawRoad(g, camX, W, level.ground, gy, H, this.fixed);
+    if (first) drawFirstGround(g, first, camX, W, gy, H);
     // S2.15: potholes plugged with fufu, a pale patch level with the road.
     for (const p of run.plugged) if (p.b > L && p.a < R) drawFufuPlug(g, p.a, p.b, gy, H);
     // S2.16 B4 Gentle mode: a stack of cement blocks in every dash gap.

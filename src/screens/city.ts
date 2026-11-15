@@ -30,6 +30,7 @@ import {
   drawBoomFlats,
   drawCityBus,
   drawCityFolk,
+  drawCity,
   drawComingSoonPin,
   drawJetty,
   drawProblemPin,
@@ -145,11 +146,13 @@ export interface CityScreenHooks {
   life: CityLife;
   /** The hero's saved look. */
   look(): HeroLook;
-  /** Buttons for the top right (Sound, Settings) and the bottom row (Streets, Hero, Nigeria's wheel). */
+  /** Buttons for the top right (Sound, Settings) and the bottom row (Challenge road, Hero, Nigeria's wheel). */
   topRight: HTMLElement[];
   bottom: HTMLElement[];
   /** A card's "Run Alausa" (or later "Lane run"). */
   run(spot: SpotId, e: MouseEvent): void;
+  /** S3e0 part 7: a problem card's "See the stop" (the road, that stop's card open). */
+  seeStop?(spot: SpotId): void;
   /** A tap that must not count (the second half of the double tap that opened the screen). */
   ignoreTap(e: MouseEvent): boolean;
   sound(name: CitySound): void;
@@ -324,6 +327,32 @@ function paintOf(st: CityState, market = st.built.includes('market')): Paint {
 }
 function paintImg(p: Paint, scale: number): HTMLCanvasElement | null {
   return makeCityCanvas(p.looks, scale, 2048, { market: p.market, bright: p.bright, boom: p.boom, flats: p.flats !== false, jetty: p.boom && p.flats !== false });
+}
+
+/**
+ * S3e0 part 5: a box of the still city (map units) drawn into a w x h picture, tired or bright as
+ * the city is now: a copy of the painted city when there is one; else, with `slow`, that box of
+ * the city drawn with a clip. False when nothing was drawn.
+ */
+export function drawCityCut(g: CanvasRenderingContext2D, st: CityState, box: readonly [number, number, number, number], w: number, h: number, slow: boolean): boolean {
+  const p = paintOf(st);
+  const key = `${paintKey(p)}|`;
+  const [x, y, bw, bh] = box;
+  for (const [k, v] of painted) {
+    if (!k.startsWith(key)) continue;
+    g.drawImage(v.img, x * v.scale, y * v.scale, bw * v.scale, bh * v.scale, 0, 0, w, h);
+    return true;
+  }
+  if (!slow) return false;
+  g.save();
+  g.beginPath();
+  g.rect(0, 0, w, h);
+  g.clip();
+  g.scale(w / bw, h / bh);
+  g.translate(-x, -y);
+  drawCity(g, p.looks, { market: p.market, bright: p.bright, boom: p.boom, jetty: p.boom });
+  g.restore();
+  return true;
 }
 
 /** d6: the "watch it change" moment (a build, or a full collect that crossed a step). */
@@ -1178,6 +1207,10 @@ export class CityScreen {
   openCard(spot: SpotId): void {
     const w = WORDS.city;
     const back = button(w.back, 'minor', () => this.closeCard());
+    const see = (): HTMLButtonElement =>
+      button(w.seeStop, 'minor', (e) => {
+        if (!this.hooks.ignoreTap(e)) this.hooks.seeStop?.(spot);
+      });
     const st = this.life.state;
     let body: HTMLElement[];
     if (this.looks[spot] === 'fixed') {
@@ -1202,7 +1235,7 @@ export class CityScreen {
         const bigWalk = some && shown;
         body = [h('h2', {}, c.line1), h('p', {}, c.line2(formatMoney(priceOf(b)))), bigWalk ? walk(true) : run(true)];
         const small = bigWalk ? run(false) : shown ? walk(false) : null;
-        const card = this.showCard(spot, SPOT_WORDS[spot], body, small ? [small, back] : [back]);
+        const card = this.showCard(spot, SPOT_WORDS[spot], body, small ? [small, see(), back] : [see(), back]);
         (card.querySelector<HTMLElement>('.go') ?? back).focus({ preventScroll: true });
         return;
       }
@@ -1215,7 +1248,7 @@ export class CityScreen {
         });
       const bigWalk = some && shown;
       body = [h('h2', {}, c.line1), h('p', {}, c.line2), bigWalk ? walk(true) : lane(true)];
-      const card = this.showCard(spot, SPOT_WORDS[spot], body, bigWalk ? [lane(false), back] : [back]);
+      const card = this.showCard(spot, SPOT_WORDS[spot], body, bigWalk ? [lane(false), see(), back] : [see(), back]);
       (card.querySelector<HTMLElement>('.go') ?? back).focus({ preventScroll: true });
       return;
     }

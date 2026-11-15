@@ -6,7 +6,7 @@
  * mid-walk, and the hero never stranded where a tap cannot bring them back.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS, screenNow, waitOutTapLock } from './helpers';
+import { PAST_DOUBLE_TAP_MS, screenNow, waitOutTapLock, playStop } from './helpers';
 
 const LOOK = '{"skin":2,"hair":0,"outfit":0,"body":0,"age":1}';
 type Box = { x: number; y: number; w: number; h: number };
@@ -131,10 +131,10 @@ test('trays do not fill while the tab is hidden', async ({ page }) => {
 
 test('trays do not fill while a challenge is paused', async ({ page }) => {
   await openCity(page, { kobo: 0, power: 0, tech: 0, fixed: ['potholes'], fixes: 1, built: ['buka'], trays: {}, hints: ['walk', 'buka', 'collect'] });
-  // The road is fixed: start street 1 from the Streets list.
-  await lagos(page).getByRole('button', { name: 'Streets' }).tap();
-  await expect.poll(() => screenNow(page)).toBe('streets');
-  await page.locator('[data-where="0"]').tap();
+  // The road is fixed: start street 1 from the challenge road (S3e0).
+  await lagos(page).getByRole('button', { name: 'Challenge road' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('road');
+  await playStop(page, '0');
   await expect.poll(() => screenNow(page)).toBe('play');
   await page.getByRole('button', { name: 'Pause' }).tap();
   const pause = page.getByRole('dialog', { name: 'Paused' });
