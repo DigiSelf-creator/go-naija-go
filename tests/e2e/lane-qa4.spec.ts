@@ -127,7 +127,7 @@ test('qa: corn at 320 x 240: the count is readable, fits under row 2 and above t
   // The lane tune ducks under the corn tune.
   expect(c.musicLevel).toBeLessThan(1);
   expect(c.spoken).toBe('Corn ends in 5 seconds');
-  writeFileSync(`${SHOTS || '.'}/corn-320.json`, JSON.stringify(c));
+  if (SHOTS) writeFileSync(`${SHOTS}/corn-320.json`, JSON.stringify(c));
 });
 
 for (const [w, hgt] of [
