@@ -81,68 +81,119 @@ export class GamePeople {
     if (!this.on) return;
     // Timed one step in 8 (and counted 8 times): reading the clock each step costs too.
     if (++this.steps % 8 !== 0) {
-      this.updateNow(n, dt, events);
+      try {
+        this.updateNow(n, dt, events);
+      } catch (err) {
+        this.fail(err);
+      }
       return;
     }
     const t0 = performance.now();
-    this.updateNow(n, dt, events);
+    try {
+      this.updateNow(n, dt, events);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += (performance.now() - t0) * 8;
   }
   private steps = 0;
 
+  /**
+   * People never stop the game (part 2 rule 1, part 11): if anything about them goes wrong,
+   * they are switched off for the rest of the visit and the run goes on as before.
+   */
+  private fail(err: unknown): void {
+    this.on = false;
+    this.drawn = [];
+    this.seen = 0;
+    console.warn('People switched off:', err);
+  }
+
   drawOkada(g: G, view: View, n: PeopleNow): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawOkadaNow(g, view, n);
+    try {
+      this.drawOkadaNow(g, view, n);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
   drawBack(g: G, view: View, n: PeopleNow): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawBackNow(g, view, n);
+    try {
+      this.drawBackNow(g, view, n);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
   drawAt(g: G, which: 'stop' | 'park', n: PeopleNow, view: View): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawAtNow(g, which, n, view);
+    try {
+      this.drawAtNow(g, which, n, view);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
   drawStartBus(g: G, view: View, n: PeopleNow): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawStartBusNow(g, view, n);
+    try {
+      this.drawStartBusNow(g, view, n);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
   drawEndBus(g: G, view: View, n: PeopleNow, dx: number): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawEndBusNow(g, view, n, dx);
+    try {
+      this.drawEndBusNow(g, view, n, dx);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
   drawRoom(g: G, view: View, n: PeopleNow): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawRoomNow(g, view, n);
+    try {
+      this.drawRoomNow(g, view, n);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
   drawHall(g: G, view: View, n: PeopleNow, outside: boolean): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawHallNow(g, view, n, outside);
+    try {
+      this.drawHallNow(g, view, n, outside);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
   drawBubble(g: G, view: View, n: PeopleNow, lift: number): void {
     if (!this.on) return;
     const t0 = performance.now();
-    this.drawBubbleNow(g, view, n, lift);
+    try {
+      this.drawBubbleNow(g, view, n, lift);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   }
 
@@ -273,9 +324,13 @@ export class GamePeople {
   private readonly riderFn = (g: G, x: number, kind: 'bus' | 'keke'): void => {
     const view = this.riderView;
     const n = this.riderNow;
-    if (!view || !n) return;
+    if (!view || !n || !this.on) return;
     const t0 = performance.now();
-    this.ridersAt(g, view, n, x, kind, n.run.hero.x - n.camX, n.clock);
+    try {
+      this.ridersAt(g, view, n, x, kind, n.run.hero.x - n.camX, n.clock);
+    } catch (err) {
+      this.fail(err);
+    }
     this.spent += performance.now() - t0;
   };
 

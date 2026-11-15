@@ -212,6 +212,19 @@ describe('reactions (part 5)', () => {
       for (const d of c.draw(v)) expect(frames.has(d.frame), `frame ${String(d.frame)}`).toBe(true);
     }
   });
+  it('walkers going in and out of doors for a long while always show a real frame', () => {
+    const frames = new Set(['stand', 'walk0', 'walk1', 'walk2', 'walk3']);
+    for (const look of LOOKS) {
+      const { c } = crowdFor(look);
+      for (const w of c.walkers) {
+        const v = view(w.x);
+        for (let i = 0; i < 60 * 40; i++) {
+          c.update(DT, { ...v, camX: w.x - 300 }, []);
+          for (const d of c.draw({ ...v, camX: w.x - 300 })) if (d.mover) expect(frames.has(d.frame), `frame ${String(d.frame)}`).toBe(true);
+        }
+      }
+    }
+  });
   it('one bubble at a time; bus park cheers when the hero boards', () => {
     const { c, level } = crowdFor();
     const v = view(level.end!.x, { atBus: true });

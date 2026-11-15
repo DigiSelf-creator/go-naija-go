@@ -642,7 +642,7 @@ export class StreetCrowd {
       for (const w of this.walkers) {
         if (w.mode === 'door' || w.x < L || w.x > R || street >= cap) continue;
         street++;
-        const frame: FolkFrame = w.mode === 'aside' || this.still ? 'stand' : WALK[Math.floor(w.t / 0.15) % 4]!;
+        const frame: FolkFrame = w.mode === 'aside' || this.still ? 'stand' : WALK[((Math.floor(w.t / 0.15) % 4) + 4) % 4]!;
         // Side-on to the hero while stepping aside.
         const flip = w.mode === 'aside' ? v.hero.x < w.x : w.dir < 0;
         put(w.look, frame, w.x, y0 - w.back, flip, true);

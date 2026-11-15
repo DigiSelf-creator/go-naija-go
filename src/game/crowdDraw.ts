@@ -108,7 +108,8 @@ export class CastSheet {
     const s = this.sheet;
     if (!s || !this.done) return;
     const m = this.byLook[d.look];
-    const c = m?.get(d.frame) ?? m?.get(d.frame.startsWith('back') ? 'backStand' : 'stand');
+    // Never stops the frame: an unknown frame shows the person standing.
+    const c = m?.get(d.frame) ?? m?.get(String(d.frame).startsWith('back') ? 'backStand' : 'stand');
     if (!c) return;
     const L = s.layout;
     let k = (d.size * unitPx) / L.pxPerU;
@@ -132,7 +133,7 @@ export class CastSheet {
   draw(g: G, d: Pick<FolkDraw, 'look' | 'frame' | 'x' | 'y' | 'flip' | 'size'>): void {
     const s = this.sheet;
     if (!s || !this.done) return;
-    if (!drawFolkSprite(g, s, d.look, d.frame, d.x, d.y, d.size, d.flip)) drawFolkSprite(g, s, d.look, d.frame.startsWith('back') ? 'backStand' : 'stand', d.x, d.y, d.size, d.flip);
+    if (!drawFolkSprite(g, s, d.look, d.frame, d.x, d.y, d.size, d.flip)) drawFolkSprite(g, s, d.look, String(d.frame).startsWith('back') ? 'backStand' : 'stand', d.x, d.y, d.size, d.flip);
   }
 }
 
