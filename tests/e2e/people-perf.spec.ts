@@ -22,6 +22,8 @@ test('slowed 4x CPU: street 2 in the fixed look, the people take at most 1.5 ms 
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await startRun(page);
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
+  // The people's chunk has arrived (it loads on its own after the title).
+  await expect.poll(() => page.evaluate(() => window.__game!.people !== null)).toBe(true);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
   let seen = 0;
@@ -31,7 +33,7 @@ test('slowed 4x CPU: street 2 in the fixed look, the people take at most 1.5 ms 
     await page.keyboard.down('ArrowRight');
     for (let i = 0; i < 24; i++) {
       await page.waitForTimeout(500);
-      const p = await page.evaluate(() => window.__game!.people);
+      const p = (await page.evaluate(() => window.__game!.people))!;
       seen = Math.max(seen, p.seen);
       for (const d of p.drawn) if (d.y >= 360) strip.push(d.y);
       if (i % 6 === 5) {
@@ -42,7 +44,7 @@ test('slowed 4x CPU: street 2 in the fixed look, the people take at most 1.5 ms 
   } finally {
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   }
-  const p = await page.evaluate(() => window.__game!.people);
+  const p = (await page.evaluate(() => window.__game!.people))!;
   console.log(`people at 4x CPU, street 2 fixed look: ${p.ms.avg.toFixed(2)} ms a frame on average, longest ${p.ms.max.toFixed(2)} ms, bake ${p.ms.bake.toFixed(1)} ms (at 1x), up to ${seen} people on screen, backing off ${p.backOff}`);
   expect(errors).toEqual([]);
   expect(seen).toBeGreaterThan(0);
@@ -51,5 +53,5 @@ test('slowed 4x CPU: street 2 in the fixed look, the people take at most 1.5 ms 
   // Forced backing off: no walkers (level 1).
   await page.evaluate(() => window.__game!.forceBackOff(1));
   await page.waitForTimeout(300);
-  expect((await page.evaluate(() => window.__game!.people)).backOff).toBe(1);
+  expect((await page.evaluate(() => window.__game!.people))!.backOff).toBe(1);
 });

@@ -29,6 +29,8 @@ export class CastSheet {
   private todo: { look: number; frame: FolkFrame }[] = [];
   private looks: readonly FolkLook[] = [];
   private next = 0;
+  /** The cells by look, then frame (found without building a key each draw). */
+  private byLook: Map<FolkFrame, [number, number]>[] = [];
   /** Milliseconds the bake took in all, over its frames (qa: at most 40 ms on the slow phone profile). */
   bakeMs = 0;
   /** The longest piece of it in one frame. */
@@ -36,7 +38,7 @@ export class CastSheet {
 
   constructor(
     private frames: (look: FolkLook, i: number) => readonly FolkFrame[] = folkFramesFor,
-    private budget = 6,
+    private budget = 4,
   ) {}
 
   /** Makes the sheet if the cast or the pixel scale changed, and bakes a little more of it. */
@@ -56,6 +58,7 @@ export class CastSheet {
       canvas.width = Math.max(1, layout.width);
       canvas.height = Math.max(1, layout.height);
       this.sheet = { canvas, layout, cells: new Map() };
+      this.byLook = [];
       this.next = 0;
       this.bakeMs = 0;
       this.bakeStepMs = 0;
@@ -73,6 +76,7 @@ export class CastSheet {
         c2.setTransform(L.pxPerU, 0, 0, L.pxPerU, sx + 1 - FOLK_BOX.l * L.pxPerU, sy + 1 - FOLK_BOX.t * L.pxPerU);
         drawFolkFrame(c2, this.looks[c.look]!, c.frame);
         sh.cells.set(`${c.look}:${c.frame}`, [sx, sy]);
+        (this.byLook[c.look] ??= new Map()).set(c.frame, [sx, sy]);
         if (performance.now() - t0 > this.budget) break;
       }
       c2.setTransform(1, 0, 0, 1, 0, 0);
@@ -87,10 +91,47 @@ export class CastSheet {
     return this.sheet;
   }
 
+  /**
+   * The whole sheet is baked. Nobody is drawn from it before then: a canvas still being drawn
+   * into would have to be copied again for every frame that uses it (a big cost on a slow phone).
+   */
+  get done(): boolean {
+    return this.sheet !== null && this.next >= this.todo.length;
+  }
+
+  /**
+   * One person in device pixels (the context's transform is the identity): feet at (sx, sy),
+   * unitPx device px a unit. When the sheet was baked at this scale the copy is 1:1 at whole
+   * pixels. Nothing is drawn until the whole sheet is baked.
+   */
+  drawDevice(g: G, d: Pick<FolkDraw, 'look' | 'frame' | 'flip' | 'size'>, sx: number, sy: number, unitPx: number): void {
+    const s = this.sheet;
+    if (!s || !this.done) return;
+    const m = this.byLook[d.look];
+    const c = m?.get(d.frame) ?? m?.get(d.frame.startsWith('back') ? 'backStand' : 'stand');
+    if (!c) return;
+    const L = s.layout;
+    let k = (d.size * unitPx) / L.pxPerU;
+    if (Math.abs(k - 1) < 0.02) k = 1;
+    const w = L.cellW * k;
+    const h = L.cellH * k;
+    const ox = (1 - FOLK_BOX.l * L.pxPerU) * k;
+    const oy = (1 - FOLK_BOX.t * L.pxPerU) * k;
+    const y = Math.round(sy - oy);
+    if (!d.flip) {
+      g.drawImage(s.canvas, c[0], c[1], L.cellW, L.cellH, Math.round(sx - ox), y, w, h);
+      return;
+    }
+    const x = Math.round(sx);
+    g.setTransform(-1, 0, 0, 1, x, 0);
+    g.drawImage(s.canvas, c[0], c[1], L.cellW, L.cellH, -Math.round(ox), y, w, h);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
   /** One person: one drawImage. A frame the look did not bake falls back to standing. */
   draw(g: G, d: Pick<FolkDraw, 'look' | 'frame' | 'x' | 'y' | 'flip' | 'size'>): void {
     const s = this.sheet;
-    if (!s) return;
+    if (!s || !this.done) return;
     if (!drawFolkSprite(g, s, d.look, d.frame, d.x, d.y, d.size, d.flip)) drawFolkSprite(g, s, d.look, d.frame.startsWith('back') ? 'backStand' : 'stand', d.x, d.y, d.size, d.flip);
   }
 }
@@ -189,29 +230,41 @@ interface Layer {
   w: number;
   h: number;
 }
-const LAYERS = new Map<string, Layer>();
-function layer(key: string, box: { x: number; y: number; w: number; h: number }, pxPerU: number, draw: (g: G) => void): Layer | null {
-  const k = `${key}|${pxPerU.toFixed(3)}`;
-  let l = LAYERS.get(k);
-  if (!l && typeof document === 'undefined') return null;
-  if (!l) {
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.ceil(box.w * pxPerU));
-    c.height = Math.max(1, Math.ceil(box.h * pxPerU));
-    const g = c.getContext('2d')!;
-    g.scale(pxPerU, pxPerU);
-    g.translate(-box.x, -box.y);
-    draw(g);
-    l = { c, ...box };
-    // Keep the cache small: a new screen size replaces the old pictures.
-    if (LAYERS.size > 64) LAYERS.clear();
-    LAYERS.set(k, l);
-  }
-  return l;
+/** A small picture baked once, in its own units' box. */
+function bakeLayer(box: { x: number; y: number; w: number; h: number }, pxPerU: number, draw: (g: G) => void): Layer | null {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(box.w * pxPerU));
+  c.height = Math.max(1, Math.ceil(box.h * pxPerU));
+  const g = c.getContext('2d')!;
+  g.scale(pxPerU, pxPerU);
+  g.translate(-box.x, -box.y);
+  draw(g);
+  return { c, ...box };
 }
-function blit(g: G, l: Layer | null, dx = 0, dy = 0): void {
+function blit(g: G, l: Layer | null | undefined, dx = 0, dy = 0): void {
   if (!l) return;
   g.drawImage(l.c, l.x + dx, l.y + dy, l.w, l.h);
+}
+
+/**
+ * One place's baked pictures (a bus's heads, the keke, the okada), one per frame kind, kept
+ * until the pixel scale or the people change. Looked up without building keys each frame.
+ */
+export class LayerSlot {
+  private px = -1;
+  private who: unknown = null;
+  private pics: (Layer | null)[] = [];
+  get(i: number, pxPerU: number, who: unknown, make: () => Layer | null): Layer | null {
+    if (pxPerU !== this.px || who !== this.who) {
+      this.px = pxPerU;
+      this.who = who;
+      this.pics = [];
+    }
+    let l = this.pics[i];
+    if (l === undefined) l = this.pics[i] = make();
+    return l;
+  }
 }
 
 const BUS_BOX = { x: -41, y: -39, w: 74, h: 12 };
@@ -219,33 +272,33 @@ const BUS_BOX = { x: -41, y: -39, w: 74, h: 12 };
  * Heads in drawBusShape's four windows (bus units, the same transform as the bus), still or
  * waving (wave 1 or 2), baked once per look set. `bob` is the bus's own bounce.
  */
-export function drawBusHeads(g: G, key: string, looks: readonly (FolkLook | undefined)[], wave: 0 | 1 | 2, pxPerU: number, bob = 0): void {
-  const l = layer(`bus|${key}|${wave}`, BUS_BOX, pxPerU, (c) => drawWindowHeads(c, BUS_SHAPE_WINDOWS, looks, wave, 0));
-  blit(g, l, 0, bob);
+export function drawBusHeads(g: G, slot: LayerSlot, looks: readonly (FolkLook | undefined)[], wave: 0 | 1 | 2, pxPerU: number, bob = 0): void {
+  blit(g, slot.get(wave, pxPerU, looks, () => bakeLayer(BUS_BOX, pxPerU, (c) => drawWindowHeads(c, BUS_SHAPE_WINDOWS, looks, wave, 0))), 0, bob);
 }
 
-/** The heads in any bus's windows (world units), e.g. endBusWindows, baked once per look set. */
-export function drawWindowRow(g: G, key: string, windows: readonly Rect[], looks: readonly (FolkLook | undefined)[], wave: 0 | 1 | 2, pxPerU: number): void {
+/** The heads in any bus's windows (world units), e.g. endBusWindows, baked once per look set and window row. */
+export function drawWindowRow(g: G, slot: LayerSlot, windows: readonly Rect[], looks: readonly (FolkLook | undefined)[], wave: 0 | 1 | 2, pxPerU: number): void {
   if (!windows.length) return;
-  const x0 = Math.min(...windows.map((w) => w.x));
-  const y0 = Math.min(...windows.map((w) => w.y));
-  const x1 = Math.max(...windows.map((w) => w.x + w.w));
-  const y1 = Math.max(...windows.map((w) => w.y + w.h));
-  const rel = windows.map((w) => ({ x: w.x - x0, y: w.y - y0, w: w.w, h: w.h }));
-  const l = layer(`row|${key}|${wave}|${rel.length}`, { x: 0, y: 0, w: x1 - x0, h: y1 - y0 }, pxPerU, (c) => drawWindowHeads(c, rel, looks, wave, 0));
-  blit(g, l, x0, y0);
+  const l = slot.get(wave, pxPerU, looks, () => {
+    const x0 = Math.min(...windows.map((w) => w.x));
+    const y0 = Math.min(...windows.map((w) => w.y));
+    const rel = windows.map((w) => ({ x: w.x - x0, y: w.y - y0, w: w.w, h: w.h }));
+    const w = Math.max(...windows.map((q) => q.x + q.w)) - x0;
+    const h = Math.max(...windows.map((q) => q.y + q.h)) - y0;
+    const pic = bakeLayer({ x: 0, y: 0, w, h }, pxPerU, (c) => drawWindowHeads(c, rel, looks, wave, 0));
+    return pic && { ...pic, x: x0, y: y0 };
+  });
+  blit(g, l);
 }
 
 const KEKE_BOX = { x: -19, y: -36, w: 44, h: 23 };
 /** The keke's driver and two passengers (keke units, the keke's transform), baked once. */
-export function drawKekeHeads(g: G, looks: readonly [FolkLook, FolkLook, FolkLook], wave: 0 | 1 | 2, pxPerU: number, time: number): void {
-  const l = layer(`keke|${wave}`, KEKE_BOX, pxPerU, (c) => drawKekeRiders(c, 0, 0, 0, looks, wave));
-  blit(g, l, 0, Math.sin((Number.isFinite(time) ? time : 0) * 16) * 0.6);
+export function drawKekeHeads(g: G, slot: LayerSlot, looks: readonly [FolkLook, FolkLook, FolkLook], wave: 0 | 1 | 2, pxPerU: number, time: number): void {
+  blit(g, slot.get(wave, pxPerU, looks, () => bakeLayer(KEKE_BOX, pxPerU, (c) => drawKekeRiders(c, 0, 0, 0, looks, wave))), 0, Math.sin((Number.isFinite(time) ? time : 0) * 16) * 0.6);
 }
 
 const OKADA_LAYER = { x: OKADA_BOX.l, y: OKADA_BOX.t, w: OKADA_BOX.r - OKADA_BOX.l, h: OKADA_BOX.b - OKADA_BOX.t };
 /** The okada and its two riders (okada units, wheels on y = 0, facing right), two baked wheel frames. */
-export function drawOkadaBaked(g: G, rider: FolkLook, passenger: FolkLook, frame: 0 | 1, pxPerU: number): void {
-  const l = layer(`okada|${frame}`, OKADA_LAYER, pxPerU, (c) => drawOkada(c, rider, passenger, frame));
-  blit(g, l);
+export function drawOkadaBaked(g: G, slot: LayerSlot, rider: FolkLook, passenger: FolkLook, frame: 0 | 1, pxPerU: number): void {
+  blit(g, slot.get(frame, pxPerU, rider, () => bakeLayer(OKADA_LAYER, pxPerU, (c) => drawOkada(c, rider, passenger, frame))));
 }

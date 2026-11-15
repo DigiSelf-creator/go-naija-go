@@ -14,6 +14,7 @@ import hallData from '../../src/data/levels/lagos-hall.json';
 import { HALL_CROWD, STREET_CASTS, isHeroLook } from '../../src/art/folkCasts';
 import { CROWD, FrameWatch, HallCrowd, LANGS, RoomKeeper, STREET_FROM, StreetCrowd, clearZones, crowdSpots, hallCast, inZone, pickLine, seeded, streetCast, type CrowdLook, type CrowdView, type StreetName } from '../../src/game/crowd';
 import { Game } from '../../src/game/game';
+import { GamePeople } from '../../src/game/people';
 import { parseLevel, type Level } from '../../src/game/level';
 import { STRIP_Y } from '../../src/engine/view';
 import { WORDS } from '../../src/screens/words';
@@ -115,11 +116,12 @@ describe('casts (parts 3 and 8)', () => {
 /** A scripted street run: walk, run, jump and hold; returns the path and the result. */
 function script(level: Level, people: boolean, steps = 60 * 40): string {
   const g = new Game(level);
-  g.people.on = people;
+  // Off: no people at all (as before their chunk arrives); on: the people's kit attached.
+  if (people) g.people = new GamePeople();
   g.begin(false);
   g.setView({ pixelW: 1454, pixelH: 786, scale: 786 / 420, width: 777, height: 420, safe: { top: 0, right: 0, bottom: 0, left: 0 } });
   const sounds: string[] = [];
-  g.people.onSound = (n) => sounds.push(n);
+  if (g.people) g.people.onSound = (n) => sounds.push(n);
   const path: string[] = [];
   g.steer(1);
   for (let i = 0; i < steps; i++) {
@@ -144,6 +146,7 @@ describe('no change to the game (part 11): people on and off give the same run',
   });
   it('with people on, the street has people to draw', () => {
     const g = new Game(STREETS[1]![0]);
+    g.people = new GamePeople();
     g.begin(false);
     for (let i = 0; i < 10; i++) g.update(DT);
     expect(g.people.street).not.toBeNull();

@@ -11,8 +11,8 @@ import type { FolkFrame, FolkLook } from '../art/folk';
 import type { HeroLook } from '../art/hero';
 import { ROOM } from '../art/wellRoom';
 import type { View } from '../engine/view';
-import { CastSheet, drawBubbleAt, drawBusHeads, drawKekeHeads, drawOkadaBaked, drawWindowRow, screenRatio, type Rect } from './crowdDraw';
-import { CROWD, FrameWatch, HallCrowd, RoomKeeper, STREET_OF, StreetCrowd, crowdSpots, hallCast, streetCast, type Bubble, type CrowdEvent, type CrowdLook, type FolkDraw } from './crowd';
+import { CastSheet, LayerSlot, drawBubbleAt, drawBusHeads, drawKekeHeads, drawOkadaBaked, drawWindowRow, screenRatio, type Rect } from './crowdDraw';
+import { CROWD, FrameWatch, HallCrowd, RoomKeeper, STREET_OF, StreetCrowd, crowdSpots, hallCast, streetCast, type Bubble, type CrowdEvent, type CrowdLook, type CrowdView, type FolkDraw } from './crowd';
 import type { Level } from './level';
 import type { Run } from './run';
 
@@ -33,6 +33,8 @@ export interface PeopleNow {
   crowdLook: CrowdLook;
   still: boolean;
   clock: number;
+  /** World units the picture is raised (Game.lift). */
+  lift: number;
 }
 
 export class GamePeople {
@@ -59,27 +61,89 @@ export class GamePeople {
   bubbleBox: Rect | null = null;
   /** The parked buses' passengers, picked from the street's cast. */
   private busLooks: (FolkLook | undefined)[] = [];
+  private passLooks: (FolkLook | undefined)[] = [];
+  private startLooks: (FolkLook | undefined)[] = [];
+  private endLooks: (FolkLook | undefined)[] = [];
+  private endWin: { x: number; y: number; w: number; h: number }[] | null = null;
+  private readonly slots = { pass: new LayerSlot(), start: new LayerSlot(), end: new LayerSlot(), keke: new LayerSlot(), okada: new LayerSlot() };
+  /** The bus park bus's windows (worked out once per street). */
+  private endWindows(n: PeopleNow): { x: number; y: number; w: number; h: number }[] {
+    return (this.endWin ??= n.level.end ? endBusWindows(n.level.end.x, 0, n.level.groundY) : []);
+  }
   /** Milliseconds the people took this frame so far, and the average over recent frames (part 11: at most 1.5 at 4x CPU). */
   private spent = 0;
   costMs = 0;
   costMax = 0;
   private frames = 0;
 
-  constructor() {
-    // Every part the game calls is timed (update and drawing), for qa's 1.5 ms check.
-    const timed = ['update', 'drawOkada', 'drawBack', 'drawAt', 'drawStartBus', 'drawEndBus', 'drawRoom', 'drawHall', 'drawBubble'] as const;
-    const self = this as unknown as Record<string, (...a: unknown[]) => unknown>;
-    for (const m of timed) {
-      const f = self[m]!.bind(this);
-      self[m] = (...a: unknown[]): unknown => {
-        const t0 = performance.now();
-        try {
-          return f(...a);
-        } finally {
-          this.spent += performance.now() - t0;
-        }
-      };
+  /* Every part the game calls is timed (update and drawing), for qa's 1.5 ms check. */
+  update(n: PeopleNow, dt: number, events: readonly CrowdEvent[]): void {
+    if (!this.on) return;
+    // Timed one step in 8 (and counted 8 times): reading the clock each step costs too.
+    if (++this.steps % 8 !== 0) {
+      this.updateNow(n, dt, events);
+      return;
     }
+    const t0 = performance.now();
+    this.updateNow(n, dt, events);
+    this.spent += (performance.now() - t0) * 8;
+  }
+  private steps = 0;
+
+  drawOkada(g: G, view: View, n: PeopleNow): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawOkadaNow(g, view, n);
+    this.spent += performance.now() - t0;
+  }
+
+  drawBack(g: G, view: View, n: PeopleNow): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawBackNow(g, view, n);
+    this.spent += performance.now() - t0;
+  }
+
+  drawAt(g: G, which: 'stop' | 'park', n: PeopleNow, view: View): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawAtNow(g, which, n, view);
+    this.spent += performance.now() - t0;
+  }
+
+  drawStartBus(g: G, view: View, n: PeopleNow): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawStartBusNow(g, view, n);
+    this.spent += performance.now() - t0;
+  }
+
+  drawEndBus(g: G, view: View, n: PeopleNow, dx: number): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawEndBusNow(g, view, n, dx);
+    this.spent += performance.now() - t0;
+  }
+
+  drawRoom(g: G, view: View, n: PeopleNow): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawRoomNow(g, view, n);
+    this.spent += performance.now() - t0;
+  }
+
+  drawHall(g: G, view: View, n: PeopleNow, outside: boolean): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawHallNow(g, view, n, outside);
+    this.spent += performance.now() - t0;
+  }
+
+  drawBubble(g: G, view: View, n: PeopleNow, lift: number): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    this.drawBubbleNow(g, view, n, lift);
+    this.spent += performance.now() - t0;
   }
 
   /** The frame is drawn: keeps the running average of the people's time a frame. */
@@ -137,9 +201,13 @@ export class GamePeople {
     this.street = new StreetCrowd(plan, name, level.groundY, level);
     // 3 to 5 heads in a bus's windows: every skin tone across the street's cast.
     this.busLooks = [cast.looks[1], cast.looks[4], cast.looks[7], cast.looks[10], cast.looks[13]];
+    this.passLooks = this.busLooks.slice(0, 4);
+    this.startLooks = [this.busLooks[0], this.busLooks[2], this.busLooks[3], undefined];
+    this.endLooks = [this.busLooks[0], undefined, this.busLooks[1], this.busLooks[2], this.busLooks[4]];
+    this.endWin = null;
   }
 
-  update(n: PeopleNow, dt: number, events: readonly CrowdEvent[]): void {
+  private updateNow(n: PeopleNow, dt: number, events: readonly CrowdEvent[]): void {
     if (!this.on) return;
     this.ensure(n);
     const run = n.run;
@@ -161,9 +229,19 @@ export class GamePeople {
     if (say.cheer) this.onSound(say.cheer);
   }
 
-  private streetView(n: PeopleNow): Parameters<StreetCrowd['update']>[1] {
+  /** One view object, filled again each call (no garbage a frame). */
+  private readonly sv: CrowdView = { camX: 0, viewW: 0, hero: { x: 0, vx: 0, grounded: true }, atBus: false, checkpointReached: false };
+  private streetView(n: PeopleNow): CrowdView {
     const h = n.run.hero;
-    return { camX: n.camX, viewW: n.viewW, hero: { x: h.x, vx: h.vx, grounded: h.grounded }, atBus: n.run.phase === 'bus' || n.run.phase === 'cleared', checkpointReached: n.run.checkpointReached };
+    const v = this.sv;
+    v.camX = n.camX;
+    v.viewW = n.viewW;
+    v.hero.x = h.x;
+    v.hero.vx = h.vx;
+    v.hero.grounded = h.grounded;
+    v.atBus = n.run.phase === 'bus' || n.run.phase === 'cleared';
+    v.checkpointReached = n.run.checkpointReached;
+    return v;
   }
 
   private hallView(n: PeopleNow): Parameters<HallCrowd['update']>[1] {
@@ -186,24 +264,30 @@ export class GamePeople {
   /** The passengers of the passing bus or keke (backdrop.ts riders), in its own transform. */
   riders(view: View, n: PeopleNow): ((g: G, x: number, kind: 'bus' | 'keke') => void) | undefined {
     if (!this.on || !this.street) return undefined;
-    const heroSx = n.run.hero.x - n.camX;
-    const t = n.clock;
-    return (g, x, kind) => {
-      const t0 = performance.now();
-      this.ridersAt(g, view, n, x, kind, heroSx, t);
-      this.spent += performance.now() - t0;
-    };
+    this.riderView = view;
+    this.riderNow = n;
+    return this.riderFn;
   }
+  private riderView: View | null = null;
+  private riderNow: PeopleNow | null = null;
+  private readonly riderFn = (g: G, x: number, kind: 'bus' | 'keke'): void => {
+    const view = this.riderView;
+    const n = this.riderNow;
+    if (!view || !n) return;
+    const t0 = performance.now();
+    this.ridersAt(g, view, n, x, kind, n.run.hero.x - n.camX, n.clock);
+    this.spent += performance.now() - t0;
+  };
 
   private ridersAt(g: G, view: View, n: PeopleNow, x: number, kind: 'bus' | 'keke', heroSx: number, t: number): void {
     const near = Math.abs(x - heroSx) < CROWD.waveNear;
     const wave = near && !n.still ? (((Math.floor(t / 0.25) % 2) + 1) as 1 | 2) : near ? 1 : 0;
-    if (kind === 'bus') drawBusHeads(g, 'pass', this.busLooks.slice(0, 4), wave, view.scale * 0.5, Math.sin(t * 14) * 0.6);
-    else drawKekeHeads(g, KEKE_RIDERS, wave, view.scale * 0.55, t);
+    if (kind === 'bus') drawBusHeads(g, this.slots.pass, this.passLooks, wave, view.scale * 0.5, Math.sin(t * 14) * 0.6);
+    else drawKekeHeads(g, this.slots.keke, KEKE_RIDERS, wave, view.scale * 0.55, t);
   }
 
   /** The okada on the far road (screen space, after the backdrop): every 25 s, both ways in turn. */
-  drawOkada(g: G, view: View, n: PeopleNow): void {
+  private drawOkadaNow(g: G, view: View, n: PeopleNow): void {
     if (!this.on || !this.street || n.still || this.watch.level >= 1) return;
     const t = n.clock - OKADA.firstAt;
     if (t < 0) return;
@@ -217,12 +301,12 @@ export class GamePeople {
     g.save();
     g.translate(x, n.level.groundY - 24);
     g.scale(right ? OKADA.scale : -OKADA.scale, OKADA.scale);
-    drawOkadaBaked(g, OKADA_RIDERS[0], OKADA_RIDERS[1], (Math.floor(u / 0.08) % 2) as 0 | 1, view.scale * OKADA.scale);
+    drawOkadaBaked(g, this.slots.okada, OKADA_RIDERS[0], OKADA_RIDERS[1], (Math.floor(u / 0.08) % 2) as 0 | 1, view.scale * OKADA.scale);
     g.restore();
   }
 
   /** The back pavement people (world space, before the road and everything the hero can touch). */
-  drawBack(g: G, view: View, n: PeopleNow): void {
+  private drawBackNow(g: G, view: View, n: PeopleNow): void {
     this.drawn = [];
     this.seen = 0;
     if (!this.on || !this.street) return;
@@ -231,14 +315,33 @@ export class GamePeople {
     this.drawn = list;
     this.seen = list.length;
     this.later = list;
-    for (const d of list) if (!this.isLayer(d, n)) this.streetSheet.draw(g, d);
+    this.batch(g, view, n, null);
+  }
+
+  /**
+   * Draws the street people of one layer in device pixels, each a 1:1 copy from the sheet (baked
+   * at the screen's own scale) at whole pixels: no scaling and no smoothing work per person.
+   */
+  private batch(g: G, view: View, n: PeopleNow, which: 'stop' | 'park' | null): void {
+    let set = false;
+    const k = view.scale;
+    for (const d of this.later) {
+      if (this.layerOf(d, n) !== which) continue;
+      if (!set) {
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        set = true;
+      }
+      this.streetSheet.drawDevice(g, d, (d.x - n.camX) * k, (d.y - n.lift) * k, k);
+    }
+    if (set) g.restore();
   }
   private later: FolkDraw[] = [];
 
   /** The people at the checkpoint bus stop (after its shelter) or the bus park (after its picture). */
-  drawAt(g: G, which: 'stop' | 'park', n: PeopleNow): void {
+  private drawAtNow(g: G, which: 'stop' | 'park', n: PeopleNow, view: View): void {
     if (!this.on || !this.street) return;
-    for (const d of this.later) if (this.layerOf(d, n) === which) this.streetSheet.draw(g, d);
+    this.batch(g, view, n, which);
   }
 
   private layerOf(d: FolkDraw, n: PeopleNow): 'stop' | 'park' | null {
@@ -247,12 +350,9 @@ export class GamePeople {
     if (L.end && d.x > L.end.x - 200) return 'park';
     return null;
   }
-  private isLayer(d: FolkDraw, n: PeopleNow): boolean {
-    return this.layerOf(d, n) !== null;
-  }
 
   /** Heads in the start fence's parked bus (after the fence). */
-  drawStartBus(g: G, view: View, n: PeopleNow): void {
+  private drawStartBusNow(g: G, view: View, n: PeopleNow): void {
     if (!this.on || !this.street) return;
     const fx = n.level.startWall;
     if (fx + 120 < n.camX || fx - 40 > n.camX + n.viewW) return;
@@ -261,22 +361,22 @@ export class GamePeople {
     g.save();
     g.translate(fx + 64, n.level.groundY - 18);
     g.scale(0.72, 0.72);
-    drawBusHeads(g, 'start', [this.busLooks[0], this.busLooks[2], this.busLooks[3], undefined], wave, view.scale * 0.72);
+    drawBusHeads(g, this.slots.start, this.startLooks, wave, view.scale * 0.72);
     g.restore();
   }
 
   /** Heads in the bus at the bus park (after drawEndBus): they cheer, then wave the bus off. */
-  drawEndBus(g: G, view: View, n: PeopleNow, dx: number): void {
+  private drawEndBusNow(g: G, view: View, n: PeopleNow, dx: number): void {
     if (!this.on || !this.street || !n.level.end) return;
     const s = this.street;
     const wave = s.busCheer || n.run.phase === 'bus' ? (n.still ? 1 : (((Math.floor(n.clock / 0.2) % 2) + 1) as 1 | 2)) : 0;
-    drawWindowRow(g, 'end', endBusWindows(n.level.end.x, 0, n.level.groundY), [this.busLooks[0], undefined, this.busLooks[1], this.busLooks[2], this.busLooks[4]], wave, view.scale);
+    drawWindowRow(g, this.slots.end, this.endWindows(n), this.endLooks, wave, view.scale);
     void dx;
   }
 
   /* ------------------------------------------------------------ the well room and the hall */
 
-  drawRoom(g: G, view: View, n: PeopleNow): void {
+  private drawRoomNow(g: G, view: View, n: PeopleNow): void {
     this.drawn = [];
     if (!this.on) return;
     const room = n.run.room?.room;
@@ -303,7 +403,7 @@ export class GamePeople {
   }
 
   /** The hall's people: those at the door and walking in (before the boss and the hero). */
-  drawHall(g: G, view: View, n: PeopleNow, outside: boolean): void {
+  private drawHallNow(g: G, view: View, n: PeopleNow, outside: boolean): void {
     if (!outside) this.drawn = [];
     if (!this.on || !this.hall || !n.run.boss) return;
     this.hallSheet.ready(this.hallLooks, view.scale, `hall|${this.key}`);
@@ -332,7 +432,7 @@ export class GamePeople {
    * Draws the one bubble (world space, last), unless it would cover the hero, a hazard, a coin,
    * a food, a throw, the HUD or the buttons (part 6).
    */
-  drawBubble(g: G, view: View, n: PeopleNow, lift: number): void {
+  private drawBubbleNow(g: G, view: View, n: PeopleNow, lift: number): void {
     this.bubbleBox = null;
     if (!this.on) return;
     const b = this.bubbleNow(n);

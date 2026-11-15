@@ -605,50 +605,75 @@ export class StreetCrowd {
     const y0 = this.groundY - CROWD.feetUp;
     const L = v.camX - 30;
     const R = v.camX + v.viewW + 30;
-    const out: FolkDraw[] = [];
+    // One list and its entries kept from frame to frame (no garbage a frame).
+    const out = this.out;
+    out.length = 0;
+    let used = 0;
+    const put = (look: number, frame: FolkFrame, x: number, y: number, flip: boolean, mover: boolean): void => {
+      let d = this.pool[used];
+      if (!d) d = this.pool[used] = { look: 0, frame: 'stand', x: 0, y: 0, flip: false, size: 1 };
+      used++;
+      d.look = look;
+      d.frame = frame;
+      d.x = x;
+      d.y = y;
+      d.flip = flip;
+      d.mover = mover;
+      out.push(d);
+    };
+    const bw = this.bubble && this.bubble.who >= 0 ? this.people[this.bubble.who] : undefined;
     const pose = (p: Person, base: FolkFrame): FolkFrame => {
-      if (t - p.cheerAt < p.cheerLen) return this.two('cheer', t - p.cheerAt);
-      if (t - p.waveAt < CROWD.waveTime || t < p.waveTill) return this.two('wave', t - Math.max(p.waveAt, p.cheerAt));
-      if (this.bubble && this.bubble.who >= 0 && p.spot.kind === 'trader' && this.people[this.bubble.who] === p) return 'call';
+      if (t - p.cheerAt < p.cheerLen) return this.two(CHEER, t - p.cheerAt);
+      if (t - p.waveAt < CROWD.waveTime || t < p.waveTill) return this.two(WAVE, t - Math.max(p.waveAt, p.cheerAt));
+      if (bw === p && p.spot.kind === 'trader') return 'call';
       return base;
     };
-    const standing = this.backOff >= 2 ? this.people.filter((_, i) => i % 2 === 0) : this.people;
     let street = 0;
     const cap = CROWD.onScreen[this.plan.look];
-    for (const p of standing) {
+    const people = this.people;
+    for (let i = 0; i < people.length; i++) {
+      if (this.backOff >= 2 && i % 2 === 1) continue;
+      const p = people[i]!;
       if (p.spot.x < L || p.spot.x > R || street >= cap) continue;
       street++;
-      const base: FolkFrame = p.spot.kind === 'sit' ? 'sit' : 'stand';
-      out.push({ look: p.spot.look, frame: pose(p, base), x: p.spot.x, y: y0, flip: p.spot.flip, size: 1 });
+      put(p.spot.look, pose(p, p.spot.kind === 'sit' ? 'sit' : 'stand'), p.spot.x, y0, p.spot.flip, false);
     }
     if (this.backOff < 1) {
       for (const w of this.walkers) {
         if (w.mode === 'door' || w.x < L || w.x > R || street >= cap) continue;
         street++;
-        const frame: FolkFrame = w.mode === 'aside' || this.still ? 'stand' : (`walk${Math.floor(w.t / 0.15) % 4}` as FolkFrame);
+        const frame: FolkFrame = w.mode === 'aside' || this.still ? 'stand' : WALK[Math.floor(w.t / 0.15) % 4]!;
         // Side-on to the hero while stepping aside.
         const flip = w.mode === 'aside' ? v.hero.x < w.x : w.dir < 0;
-        out.push({ look: w.look, frame, x: w.x, y: y0 - w.back, flip, size: 1, mover: true });
+        put(w.look, frame, w.x, y0 - w.back, flip, true);
       }
     }
     const ch = this.plan.children;
     if (ch && ch.x + 60 > L && ch.x - 20 < R) {
-      out.push({ look: ch.looks[0], frame: 'stand', x: ch.x, y: y0, flip: false, size: 1 });
-      out.push({ look: ch.looks[1], frame: 'stand', x: ch.x + 40, y: y0, flip: true, size: 1 });
+      put(ch.looks[0], 'stand', ch.x, y0, false, false);
+      put(ch.looks[1], 'stand', ch.x + 40, y0, true, false);
     }
-    for (const p of [...this.stop, ...(v.atBus || this.park.length ? this.park : [])]) {
-      if (p.spot.x < L || p.spot.x > R || out.length >= CROWD.maxDrawn) continue;
-      out.push({ look: p.spot.look, frame: pose(p, p.spot.kind === 'sit' ? 'sit' : 'stand'), x: p.spot.x, y: y0, flip: p.spot.flip, size: 1 });
+    for (const list of [this.stop, this.park]) {
+      for (const p of list) {
+        if (p.spot.x < L || p.spot.x > R || out.length >= CROWD.maxDrawn) continue;
+        put(p.spot.look, pose(p, p.spot.kind === 'sit' ? 'sit' : 'stand'), p.spot.x, y0, p.spot.flip, false);
+      }
     }
+    if (out.length > CROWD.maxDrawn) out.length = CROWD.maxDrawn;
     this.seen = out.length;
-    return out.slice(0, CROWD.maxDrawn);
+    return out;
   }
+  private readonly out: FolkDraw[] = [];
+  private readonly pool: FolkDraw[] = [];
 
-  private two(kind: 'wave' | 'cheer' | 'clap', since: number): FolkFrame {
-    const i = this.still ? 0 : Math.floor(Math.max(0, since) / 0.25) % 2;
-    return `${kind}${i}` as FolkFrame;
+  private two(kind: readonly [FolkFrame, FolkFrame], since: number): FolkFrame {
+    return kind[this.still ? 0 : Math.floor(Math.max(0, since) / 0.25) % 2]!;
   }
 }
+
+const WALK: readonly FolkFrame[] = ['walk0', 'walk1', 'walk2', 'walk3'];
+const WAVE = ['wave0', 'wave1'] as const;
+const CHEER = ['cheer0', 'cheer1'] as const;
 
 /* ------------------------------------------------------------------ the well room (PE-R4) */
 

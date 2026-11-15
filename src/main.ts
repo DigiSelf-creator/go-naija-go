@@ -39,6 +39,7 @@ import { firstStreetOf } from './art/firstLook';
 const FIRST_FIX = { alausa: 'road', computerVillage: 'mast', ikeja: 'lamps' } as const;
 import { IntroScreen } from './screens/intro';
 import { createStore } from './storage';
+import { loadPeople, onPeople } from './game/peopleLoad';
 import { registerServiceWorker } from './sw-register';
 import { bannerShows, inAttempt } from './update';
 import { UpdateBanner } from './screens/update-banner';
@@ -299,6 +300,7 @@ function startGame(): void {
   /** The loop stops (a card, the menus, a pause): the murmur stops with it. */
   function pauseLoop(): void {
     loop.pause();
+    murmuring = false;
     sound.setMurmur(false);
     lastFrameAt = 0;
   }
@@ -309,15 +311,26 @@ function startGame(): void {
   function syncCrowd(): void {
     const now = performance.now();
     const live = playing && !game.paused && !menus.current && !document.hidden && inPlay();
-    if (live && lastFrameAt > 0) game.people.frame(now - lastFrameAt);
-    if (live) game.people.endFrame();
+    const p = game.people;
+    if (p && live && lastFrameAt > 0) p.frame(now - lastFrameAt);
+    if (p && live) p.endFrame();
     lastFrameAt = live ? now : 0;
-    sound.setMurmur(live && game.people.seen >= 5 && !crowdQuiet());
+    const murmur = live && (p?.seen ?? 0) >= 5 && !crowdQuiet();
+    if (murmur !== murmuring) {
+      murmuring = murmur;
+      sound.setMurmur(murmur);
+    }
   }
-  /** A cheer (at most one every 4 s: the people's own rule), never over a warning or the corn tune. */
-  game.people.onSound = (name) => {
-    if (!crowdQuiet()) sound.play(name);
-  };
+  let murmuring = false;
+  // The people's chunk loads on its own (peopleLoad.ts); until it arrives the streets have none.
+  onPeople((kit) => {
+    const p = new kit.GamePeople();
+    /** A cheer (at most one every 4 s: the people's own rule), never over a warning or the corn tune. */
+    p.onSound = (name) => {
+      if (!crowdQuiet()) sound.play(name);
+    };
+    game.people = p;
+  });
 
   /**
    * S2.16 B3: the tech suit hums while it is worn in play; never while paused, on a card, with
@@ -407,6 +420,7 @@ function startGame(): void {
     // The hall's start words come from the run's first step ('hallStart', 'parcelShield').
     // S2.5 gift rules 5 and 6: with a saved parcel every hall try starts with the shield on, and
     // well rooms show 5 kobo instead of a second parcel.
+    void loadPeople().catch(() => undefined); // S3g1b: in case the title's early fetch was missed
     game.begin(menus.gentle, levelOf(where), where === 'hall' ? { parcel: lagos.parcel } : { parcelSaved: lagos.parcel, dash: dashSaved() });
     // S2.8: once Lagos is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(lagos);
@@ -625,6 +639,7 @@ function startGame(): void {
     if (!lane) return;
     lane.close();
     lane = null;
+    murmuring = false;
     sound.setMurmur(false);
     // The lane run may have drawn with fewer pixels: back to the game's own canvas size.
     resize();
@@ -1226,6 +1241,8 @@ function startGame(): void {
   loop.start();
   pauseLoop();
   menus.show('title');
+  // S3g1b: the people's chunk, fetched right after the title shows.
+  window.setTimeout(() => void loadPeople().catch(() => undefined), 200);
 
   // S3f2: the lane run's hooks for end to end tests (null outside a lane run).
   Object.defineProperty(window, '__lane', { configurable: true, get: () => (lane ? lane.testHook() : null) });
@@ -1258,6 +1275,7 @@ function startGame(): void {
     /** S3g1b: the people drawn last frame (world units), the bubble, backing off, the murmur. */
     get people() {
       const p = game.people;
+      if (!p) return null;
       return {
         on: p.on,
         drawn: p.drawn.map((d) => ({ x: d.x, y: d.y, frame: d.frame, size: d.size })),
@@ -1271,7 +1289,11 @@ function startGame(): void {
     },
     /** S3g1b qa: force backing off (part 11: 1 drops the walkers, 2 half the standing people too). */
     forceBackOff(level: number) {
-      game.people.watch.level = Math.max(0, Math.min(2, Math.round(level)));
+      if (game.people) game.people.watch.level = Math.max(0, Math.min(2, Math.round(level)));
+    },
+    /** S3g1b qa: people on or off (the run is the same either way), to measure what they cost. */
+    setPeople(on: boolean) {
+      if (game.people) game.people.on = on;
     },
     get look() {
       return { ...game.look };
@@ -1601,7 +1623,7 @@ declare global {
     readonly __lane?: import('./lane/session').LaneTestHook | null;
     __game?: {
       readonly paused: boolean;
-      readonly people: {
+      readonly people: null | {
         on: boolean;
         drawn: { x: number; y: number; frame: string; size: number }[];
         seen: number;
@@ -1612,6 +1634,7 @@ declare global {
         plan: { stands: number; walkers: number; zones: number[][] } | null;
       };
       forceBackOff(level: number): void;
+      setPeople(on: boolean): void;
       /** U1: a new version is ready; the banner shows. */
       readonly update: { ready: boolean; shown: boolean };
       readonly steps: number;

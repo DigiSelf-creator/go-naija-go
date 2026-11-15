@@ -32,7 +32,7 @@ import { BIG_PIT, gentleBlocks, roadSigns } from './pits';
 import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type HazardState, type RunEvent, type RunOptions } from './run';
 import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
-import { GamePeople, type PeopleNow } from './people';
+import type { GamePeople, PeopleNow } from './people';
 
 export { heroScreenX };
 /** Honk clouds fade over this last stretch before the hall's left wall, u. */
@@ -167,7 +167,7 @@ export class Game {
    * S3g1b (design.md "People everywhere"): the people in the street, the well room and the hall.
    * Scenery only: they read the run and never change it (people.on = false gives the same run).
    */
-  readonly people = new GamePeople();
+  people: GamePeople | null = null;
 
   constructor(public level: Level) {
     this.run = new Run(level);
@@ -230,7 +230,7 @@ export class Game {
     this.stridePhase = 0;
     this.clearMoves();
     this.clearLooks();
-    this.people.restart();
+    this.people?.restart();
     // A hall try with the parcel starts with the suit on: it clicks on at the start.
     if (this.run.power.shield) this.suitOnAt = this.clock;
   }
@@ -252,14 +252,25 @@ export class Game {
     this.stridePhase = 0;
     this.clearMoves();
     this.clearLooks();
-    this.people.restart();
+    this.people?.restart();
   }
 
   /** What the people need to know now (S3g1b). */
   private peopleNow(): PeopleNow {
-    const crowdLook = this.fixed ? 'fixed' : this.firstLook?.look === 'tired' ? 'tired' : 'bright';
-    return { level: this.level, run: this.run, look: this.look, camX: this.camX, viewW: this.viewW, crowdLook, still: this.still, clock: this.clock };
+    const n = this.folkNow;
+    n.level = this.level;
+    n.run = this.run;
+    n.look = this.look;
+    n.camX = this.camX;
+    n.viewW = this.viewW;
+    n.crowdLook = this.fixed ? 'fixed' : this.firstLook?.look === 'tired' ? 'tired' : 'bright';
+    n.still = this.still;
+    n.clock = this.clock;
+    n.lift = this.lift;
+    return n;
   }
+  /** One object, filled again each call (no garbage a step). */
+  private readonly folkNow = {} as PeopleNow;
 
   /** No landing squash, dust or skid (a fresh run, or back after a fall). */
   private clearMoves(): void {
@@ -348,7 +359,7 @@ export class Game {
       this.run.viewRight = this.cam.x + this.viewW;
     }
     // S3g1b: people react to what just happened (they only read; never part of the run).
-    this.people.update(this.peopleNow(), dt, events);
+    if (this.people) this.people.update(this.peopleNow(), dt, events);
     for (const e of events) {
       if ((e.type === 'smash' || e.type === 'bounce') && e.kind === 'drum') {
         // K1: a bounced drum rolls on into a clang sparkle (0.3 s); amala dents it flat and its lid flies.
@@ -549,14 +560,14 @@ export class Game {
     // Screen space, parallax: the street's own look (its `theme`, art K1 backdrop.ts).
     const first = this.firstLook;
     const folk = this.peopleNow();
-    drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed, first, this.people.riders(view, folk));
+    drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed, first, this.people?.riders(view, folk));
     // S3g1b: an okada passing on the far road now and then.
-    this.people.drawOkada(g, view, folk);
+    this.people?.drawOkada(g, view, folk);
 
     // World space.
     g.translate(-camX, 0);
     // S3g1b (PE-R1): the back pavement people, before the road and everything the hero can touch.
-    this.people.drawBack(g, view, folk);
+    this.people?.drawBack(g, view, folk);
     drawRoad(g, camX, W, level.ground, gy, H, this.fixed);
     if (first) drawFirstGround(g, first, camX, W, gy, H);
     // S2.15: potholes plugged with fufu, a pale patch level with the road.
@@ -569,12 +580,12 @@ export class Game {
     if (!this.fixed) for (const x of level.piles) if (x + 40 > L && x - 40 < R) drawRubbishPile(g, x, gy);
     // The well in use is drawn with the hero (going down); no arrow while Go down shows.
     if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still }, this.fixed);
-    if (level.manual) this.people.drawStartBus(g, view, folk);
+    if (level.manual) this.people?.drawStartBus(g, view, folk);
     for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
     if (run.crates.length > 0) this.drawCrates(g, run.crates, camX, L, R, lift, true);
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
-    this.people.drawAt(g, 'stop', folk);
+    this.people?.drawAt(g, 'stop', folk, view);
 
     // S2.6 street end: the bus park behind; the bus where the hero is drawn (below).
     const end = level.end;
@@ -583,7 +594,7 @@ export class Game {
     if (bus && !atBus) bus.time = t;
     const busSeen = end !== null && bus !== null && end.x + END_BUS_BACK - 160 < R && end.x + END_BUS_FRONT + (bus.dx ?? 0) + 200 > L;
     if (end && busSeen) drawBusPark(g, end.x, end.wall, gy);
-    if (end && busSeen) this.people.drawAt(g, 'park', folk);
+    if (end && busSeen) this.people?.drawAt(g, 'park', folk, view);
 
     for (const c of run.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
     for (const f of run.foods) if (!f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, t);
@@ -616,7 +627,7 @@ export class Game {
       if (atBus) drawEndBusInside(g, end.x, bus, gy);
       else {
         drawEndBus(g, end.x, bus, gy);
-        this.people.drawEndBus(g, view, folk, 0);
+        this.people?.drawEndBus(g, view, folk, 0);
       }
     }
     // Blinking while safe after a hit: hidden every other 0.1 s.
@@ -638,7 +649,7 @@ export class Game {
     if (end && bus && busSeen && atBus) drawEndBus(g, end.x, bus, gy);
 
     this.drawEffects(g);
-    this.people.drawBubble(g, view, folk, lift);
+    this.people?.drawBubble(g, view, folk, lift);
   }
 
   /**
@@ -670,7 +681,7 @@ export class Game {
     });
     // S3g1b: the door people (outside, behind the hero's start) and, at the finish, the walk-in.
     const folk = this.peopleNow();
-    this.people.drawHall(g, view, folk, false);
+    this.people?.drawHall(g, view, folk, false);
     // S2.15: the heap shakes for 0.3 s after a fufu ball's "pfft" (not with reduced motion).
     const shake = !still && t - this.jamAt < 0.3 ? Math.sin((t - this.jamAt) * 80) * 2 : 0;
     g.translate(shake, 0);
@@ -694,8 +705,8 @@ export class Game {
     this.drawBalls(g, run.balls, -Infinity, Infinity);
     this.drawEffects(g);
     drawHallFront(g, camX, W, H);
-    this.people.drawHall(g, view, folk, true);
-    this.people.drawBubble(g, view, folk, lift);
+    this.people?.drawHall(g, view, folk, true);
+    this.people?.drawBubble(g, view, folk, lift);
     g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
     // The hit counter, under the HUD row.
     drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
@@ -810,7 +821,7 @@ export class Game {
     for (const p of room.terrain.platforms) drawShelf(g, p.x, p.y, p.w);
     // S3g1b (PE-R4): the store keeper by the back wall, and feet passing over a light hole.
     const folk = this.peopleNow();
-    this.people.drawRoom(g, view, folk);
+    this.people?.drawRoom(g, view, folk);
     for (const c of play.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
     if (play.crates.length > 0) this.drawCrates(g, play.crates, camX, L, R, lift, false);
     const gift = play.gift;
@@ -826,7 +837,7 @@ export class Game {
     const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
     if (!blinkOff || run.phase !== 'room') this.drawHeroNow(g, run.phase !== 'room');
     this.drawEffects(g);
-    this.people.drawBubble(g, view, folk, lift);
+    this.people?.drawBubble(g, view, folk, lift);
   }
   /** Seconds since a step count of this run (crate swings, lids, kobo fans). */
   private since(step: number | null): number | undefined {

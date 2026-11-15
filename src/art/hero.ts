@@ -3333,13 +3333,22 @@ export const SPRITE_STEPS = 24;
  * landing, which follow the stride, the fall speed and the landing alone, are cached.
  */
 export function spriteKey(pose: HeroPose): string | null {
-  if (pose.glow || pose.strong || pose.fast || pose.dash || pose.suit || pose.rope || pose.standing || pose.resting || pose.blink) return null;
+  // The garri suit once fully on (no plates clicking on, no cracks) never moves by itself, so it
+  // is kept as sprites too: it can stay on for the rest of a street or a whole hall fight.
+  const suit = pose.suit ? (steadySuit(pose) ? 's' : null) : '';
+  if (suit === null || pose.glow || pose.strong || pose.fast || pose.dash || pose.rope || pose.standing || pose.resting || pose.blink) return null;
   if (pose.push || pose.front || pose.shakeOut !== undefined || throwOf(pose) !== null || dustOffOf(pose) !== null) return null;
   // A set mood (the wince after a knock, the beam on a win) lasts a moment: drawn live
   if (typeof pose.dust === 'number' || (typeof pose.skid === 'number' && pose.skid > 0) || pose.face) return null;
   const s = snapStep(pose);
-  if (pose.inAir) return `a${s.vy}`;
-  return `${pose.gait === 'walk' ? 'w' : 'r'}${s.step}l${s.land}`;
+  if (pose.inAir) return `${suit}a${s.vy}`;
+  return `${suit}${pose.gait === 'walk' ? 'w' : 'r'}${s.step}l${s.land}`;
+}
+
+/** The suit is on and still: every plate in place (or reduced motion), no crack showing. */
+function steadySuit(pose: HeroPose): boolean {
+  const on = pose.suit?.on;
+  return pose.suit?.crack !== true && (pose.still === true || typeof on !== 'number' || !(on < 1));
 }
 
 /** Landing squash steps; while landing the stride takes only LAND_STRIDE_STEPS steps. */
@@ -3396,10 +3405,15 @@ export class HeroSprites {
       return;
     }
     const lk = JSON.stringify(clampLook(look)) + bodyOf(look) + ageOf(look);
-    if (lk !== this.look || Math.abs(m.a - this.px) > 1e-6 || this.frames.size > 260) {
+    if (lk !== this.look || Math.abs(m.a - this.px) > 1e-6) {
       this.frames.clear();
       this.look = lk;
       this.px = m.a;
+    }
+    // Full: the oldest sprites go first (never the whole set at once, which re-made every pose).
+    for (const k of this.frames.keys()) {
+      if (this.frames.size <= 260) break;
+      this.frames.delete(k);
     }
     const px = m.a;
     const ox = Math.ceil((SPRITE_PAD - HERO_ART_BOX.left) * px);
