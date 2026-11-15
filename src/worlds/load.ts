@@ -11,6 +11,7 @@
  *   try loads afresh. The game never crashes on it.
  */
 import { WORLD_PART_WORDS } from '../screens/words';
+import type { StreetSkin } from '../game/skin';
 import type { WorldUi } from './ui';
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
@@ -23,6 +24,11 @@ export interface WorldPart {
   readonly levels: Readonly<Record<string, unknown>>;
   /** O1b2: the bus ride, the place picture and the welcome tune (optional in the shape check). */
   readonly ui?: WorldUi;
+  /**
+   * O2b: a street's own look (skin.ts) by level id, made fresh for each play, or null when the
+   * part has none for it yet. Optional in the shape check.
+   */
+  readonly street?: (level: { readonly id: string; readonly arch: number | null }) => StreetSkin | null;
 }
 
 export type WorldLoad = { ok: true; part: WorldPart } | { ok: false; why: 'missing' | 'broken'; message: string };
