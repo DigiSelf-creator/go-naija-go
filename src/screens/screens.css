@@ -2433,6 +2433,16 @@ body.lane {
 .road-arrow[hidden] {
   display: none;
 }
+/* CO3: the moment while the road's part opens. */
+.road-opening {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.1rem;
+}
 .road-wrap {
   position: absolute;
   top: calc(var(--safe-top) + 60px);
@@ -2712,4 +2722,168 @@ body.lane {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* O1b2: the way to Ogun (docs/ogun.md part 1). Cards on a dim layer over the screen. */
+.travel-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 8px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 8px);
+  background: rgba(10, 8, 30, 0.55);
+}
+.travel-card {
+  max-height: 100%;
+  overflow: auto;
+}
+.travel-card h2 {
+  margin: 0 0 6px;
+}
+.travel-card p {
+  margin: 4px 0;
+}
+.travel-card .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.arrival-card .go,
+.download-card .go {
+  min-height: 56px;
+}
+.travel-places {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 399px) {
+  .travel-places {
+    flex-direction: column;
+  }
+}
+.travel-place {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 140px;
+  min-height: 72px;
+  padding: 6px 10px;
+  border: 2px solid #d8cfbd;
+  border-radius: 12px;
+  background: #fff;
+  color: #1d1a14;
+  font: 0.9rem 'Trebuchet MS', Verdana, sans-serif;
+  cursor: pointer;
+}
+.travel-place.here {
+  border-color: #0e7a3e;
+}
+.travel-name {
+  font-weight: bold;
+  font-size: 1.15rem;
+}
+.travel-boom,
+.travel-here,
+.travel-cog {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.travel-cog.on svg {
+  color: #0e7a3e;
+}
+.travel-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings-saved {
+  margin: 8px 0 0;
+  text-align: center;
+}
+.names li.next .pennant {
+  visibility: visible;
+}
+.road-card-arch svg {
+  width: 100%;
+  height: 100%;
+}
+/* The bus ride and Ogun's place fill the screen. */
+.ride-screen,
+.ogun-screen {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  outline: none;
+  background: #9fd8f3;
+}
+.ride-pic,
+.ogun-pic {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.ride-skip {
+  position: absolute;
+  top: calc(var(--safe-top) + 8px);
+  right: calc(var(--safe-right) + 8px);
+}
+.ogun-top {
+  position: absolute;
+  top: calc(var(--safe-top) + 6px);
+  left: calc(var(--safe-left) + 6px);
+  right: calc(var(--safe-right) + 6px);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+.screen .ogun-top h2 {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 250, 240, 0.94);
+  font-size: 1.1rem;
+}
+.ogun-top .minor-row {
+  display: flex;
+  gap: 6px;
+}
+.ogun-words {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--safe-top) + 56px);
+  transform: translateX(-50%);
+  width: min(90%, 460px);
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: rgba(255, 250, 240, 0.94);
+  text-align: center;
+}
+.ogun-words p {
+  margin: 4px 0;
+}
+.ogun-bottom {
+  position: absolute;
+  left: calc(var(--safe-left) + 6px);
+  bottom: calc(var(--safe-bottom) + 6px);
+  display: flex;
+  gap: 8px;
+}
+body.has-update .screen.full .ogun-screen {
+  top: calc(max(4px, var(--safe-top)) + 52px);
 }

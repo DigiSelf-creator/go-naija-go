@@ -7,10 +7,18 @@ import { defineConfig, type Plugin } from 'vite';
 /** Files the service worker must NOT fetch on install. Later worlds load only when reached. */
 const PRECACHE_SKIP = [/^sw\.js$/, /\.map$/, /^worlds\//];
 
-/** The later state a source file belongs to (src/worlds/<id>/...), or null. */
+/**
+ * O1b2: art that only a later state shows, though it lives in src/art/ (art's galleries import it
+ * too, which would otherwise make it a shared chunk in the first-visit cache).
+ */
+const WORLD_ART: Readonly<Record<string, RegExp>> = { ogun: /[\\/]src[\\/]art[\\/]ogunGate\.ts$/ };
+
+/** The later state a source file belongs to (src/worlds/<id>/... or its WORLD_ART), or null. */
 function worldOf(file: string | null | undefined): string | null {
   const m = file ? /[\\/]src[\\/]worlds[\\/]([a-z0-9-]+)[\\/]/.exec(file) ?? /^src\/worlds\/([a-z0-9-]+)\//.exec(file) : null;
-  return m ? m[1]! : null;
+  if (m) return m[1]!;
+  for (const [id, re] of Object.entries(WORLD_ART)) if (file && re.test(file)) return id;
+  return null;
 }
 
 function listFiles(dir: string): string[] {

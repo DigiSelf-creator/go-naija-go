@@ -215,6 +215,8 @@ export const WORDS = {
     soundOff: 'Sound: off',
     settings: 'Settings',
     road: 'Challenge road',
+    /** CO3: shown for a moment while the road's part opens (gamedev's words, for designer to check). */
+    roadOpening: 'Opening the road...',
     /** S3e0 part 7: the problem cards' small button. */
     seeStop: 'See the stop',
     hero: 'Hero',
@@ -596,6 +598,15 @@ export const OGUN_WORDS = {
   },
   /** Part 1.8: Settings, under "Saved on this phone". */
   saved: 'Your hero, Lagos and Ogun are saved on this phone.',
+  /**
+   * O1b2: Ogun's place until Ogun's city (O6b) and Ota's street (O2b) are built. Not in the note:
+   * gamedev's words for designer to check (ogun.md part 1 leaves this screen open).
+   */
+  place: {
+    heading: 'Ogun',
+    line: 'The Gateway State',
+    soon: 'Ota, the first street on the road from Lagos, is coming next.',
+  },
   /** Part 3.1 (decision 76): the three streets, in order along the road from Lagos. */
   streets: ['Ota', 'Abeokuta', 'Sagamu'] as readonly string[],
   /** Part 8: Out of lives on an Ogun street (the Lagos card's words, with Ogun). */

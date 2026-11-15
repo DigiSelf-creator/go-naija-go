@@ -5,7 +5,7 @@
  * canvas; one screen shows at a time.
  */
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
-import { MUSIC_SVG } from '../art/cards';
+import { MUSIC_SVG } from '../art/musicIcon';
 import { WHEEL_STATES, wheelSvg } from '../art/wheel';
 import { readSafeArea } from '../engine/view';
 import {
@@ -31,18 +31,43 @@ import { CityScreen, type CitySound, type Mission } from './city';
 import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
 import { button, h } from './dom';
 import { wheelFit } from './streets';
-import { roadScreen, type RoadOpen, type RoadView, type StopInfo } from './road';
-import { GAME_NAME, WORDS } from './words';
+import type { RoadOpen, RoadView, StopInfo } from './road';
+import { GAME_NAME, OGUN_WORDS, WORDS, WORLD_PART_WORDS } from './words';
+import type { StateId } from '../game/states';
+import type { WorldLoad, WorldPart } from '../worlds/load';
+import type { WorldUi } from '../worlds/ui';
+import type { Tune } from '../art/tunes';
+import { gateIconSvg } from '../art/gateway';
+import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelButtonHtml, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
 import { isNativeApp } from '../native/is-native';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ride' | 'ogun' | null;
 
 /** Screens that fill the whole screen (no cream card in the middle). */
-const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city', 'road'];
+const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city', 'road', 'ride', 'ogun'];
 
 /** Screens that open during play (design.md: Pause, Game over, Street cleared, Win): their buttons ignore taps for 0.4 s. */
 const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'cleared', 'win'];
 export const EVENT_SCREEN_GUARD_MS = 400;
+
+/**
+ * CO3: the challenge road screen (./road and the card pictures) is its own chunk, so the first
+ * load is lighter. The service worker keeps it with every other file, so it opens offline. The
+ * city asks for it while idle (preloadRoad), so the road usually builds at once, as before.
+ */
+type RoadModule = typeof import('./road');
+let roadModule: RoadModule | null = null;
+let roadLoading: Promise<RoadModule> | null = null;
+export function preloadRoad(): Promise<RoadModule> {
+  roadLoading ??= import('./road').then(
+    (m) => (roadModule = m),
+    (err: unknown) => {
+      roadLoading = null; // the next try loads afresh
+      throw err;
+    },
+  );
+  return roadLoading;
+}
 
 /**
  * The second tap of a double tap lands about where the first one did, very soon after.
@@ -73,8 +98,20 @@ export interface ProgressView {
   working: readonly string[];
 }
 
+/** O1b2: what the Travel card, the wheel, the Win screen and Ogun's place read (ogun.md part 1). */
+export interface StatesView {
+  /** The last city open (saved as `where`). */
+  where: StateId;
+  /** Ogun's arrival card has been closed once. */
+  arrived: boolean;
+  /** Lagos's Booming points and whether its cog turns. */
+  lagos: { boom: number; turning: boolean };
+  /** Ogun: open (Go-Slow Hall won), its Booming points, its cog, King Pothole beaten. */
+  ogun: OgunView & { boom: number };
+}
+
 /** Where a screen in a run sends the player when the run ends ("Home" is the city, slice 3). */
-export type LeaveTo = 'title' | 'road' | 'wheel' | 'city';
+export type LeaveTo = 'title' | 'road' | 'wheel' | 'city' | 'ogun';
 
 export interface MenuHooks {
   /** "Play" on the title, or "Start running" in the builder. */
@@ -117,6 +154,18 @@ export interface MenuHooks {
   introSound?(name: SoundName): void;
   /** city.md a2.6: the moving intro's music (the menu tune's level, restart and pause). */
   introMusic?(m: IntroMusic): void;
+  /** O1b2: the states as saved now. */
+  states(): StatesView;
+  /** O1b2: a later state's part, if it has loaded this visit. */
+  worldPart(id: StateId): WorldPart | null;
+  /** O1b2: loads a later state's part (never rejects). */
+  loadWorld(id: StateId): Promise<WorldLoad>;
+  /** O1b2: the city now open, saved as `where` (ogun.md 1.6). */
+  setWhere(id: StateId): void;
+  /** O1b2: Ogun's arrival card was closed (saved, so it shows once). */
+  arrived(): void;
+  /** O1b2: the welcome tune as the bus passes under the arch (the Music switch rules). */
+  playTune(tune: Tune): void;
 }
 
 /** What the game over and win screens show. */
@@ -125,6 +174,8 @@ export interface RunSummary {
   lives: number;
   /** Lost in Go-Slow Hall: the hall's game over words (S2.10). */
   hall?: boolean;
+  /** O1b2: the first Go-Slow Hall win: the Win screen's big "On to Ogun" (later wins: a small "Go to Ogun"). */
+  firstHall?: boolean;
 }
 
 /** What the Street cleared screen shows (S2.10). */
@@ -156,11 +207,17 @@ export class Menus {
   /** Builder and the wheel's list: watches a scrolling box, to show the fade while more is below. */
   private sideWatch: ResizeObserver | null = null;
   /** Where the wheel's "Back" goes: where it opened from (S2.10 flow). */
-  private wheelBack: 'title' | 'city' = 'city';
+  private wheelBack: 'title' | 'city' | 'ogun' = 'city';
   /** Where the challenge road opens (part 4 rule 4). */
   private roadOpen: RoadOpen = {};
   /** Where Settings' "Back" goes: where it opened from. */
-  private settingsBack: 'title' | 'city' = 'title';
+  private settingsBack: 'title' | 'city' | 'ogun' = 'title';
+  /** O1b2: a card over the screen (Travel, download, arrival), or null. */
+  private overlay: HTMLElement | null = null;
+  /** O1b2: a card to open over the next screen once it is in the page (the arrival card). */
+  private overlayNext: HTMLElement | null = null;
+  /** O1b2: the bus ride the 'ride' screen plays. */
+  private rideNext: { ui: WorldUi; toLagos: boolean; first: boolean; then: () => void } | null = null;
   /** What follows the intro story (the builder, Play, or back to Settings). */
   private afterIntro: () => void = () => this.show('title');
   /** Stops the screen that is going away (the intro's drawing, the city's listeners). */
@@ -292,7 +349,7 @@ export class Menus {
   }
 
   /** Opens Nigeria's wheel; its "Back" goes to `back`. */
-  showWheel(back: 'title' | 'city'): void {
+  showWheel(back: 'title' | 'city' | 'ogun'): void {
     this.wheelBack = back;
     this.show('wheel');
   }
@@ -310,7 +367,7 @@ export class Menus {
   }
 
   /** Opens Settings; its "Back" goes to `back`. */
-  showSettings(back: 'title' | 'city'): void {
+  showSettings(back: 'title' | 'city' | 'ogun'): void {
     this.settingsBack = back;
     this.show('settings');
   }
@@ -353,6 +410,7 @@ export class Menus {
     this.opener = at ? { ...at, t: performance.now() } : this.lastTap;
     this.lastTap = null;
     this.layer.replaceChildren();
+    this.overlay = null;
     this.layer.hidden = screen === null;
     this.layer.classList.toggle('full', FULL_SCREENS.includes(screen));
     this.hooks.screenChanged?.(screen);
@@ -369,14 +427,213 @@ export class Menus {
     if (screen === 'intro') card = this.intro_();
     if (screen === 'settings') card = this.settingsCard();
     if (screen === 'city') card = this.cityCard();
-    if (!card) return;
+    if (screen === 'ride') card = this.rideCard();
+    if (screen === 'ogun') card = this.ogunCard();
+    if (!card) {
+      // O1b2: Ogun's part is not here after all (never expected): Lagos instead.
+      if (screen === 'ride' || screen === 'ogun') this.show('city');
+      return;
+    }
     this.layer.append(card);
+    const next = this.overlayNext;
+    this.overlayNext = null;
+    if (next) this.openOverlay(next);
     if (screen === 'city') this.cityScreen?.start();
     // Set by wheel() just now (TypeScript still thinks it is the null set above).
     (this.refit as (() => void) | null)?.();
     // po M4 bug 4: a card that opens in a run puts focus on its big button, so Space or Enter
     // presses it (after the 0.4 s guard).
     if (EVENT_SCREENS.includes(screen)) card.querySelector<HTMLElement>('.go')?.focus({ preventScroll: true });
+  }
+
+  // ---------------------------------------------------------------- O1b2: the way to Ogun
+
+  /** A card (Travel, download, arrival) is open over the screen. */
+  get cardOpen(): boolean {
+    return this.overlay !== null;
+  }
+
+  private openOverlay(el: HTMLElement): void {
+    this.overlay?.remove();
+    this.overlay = el;
+    this.layer.append(el);
+    focusCard(el);
+    this.hooks.cardChanged?.();
+  }
+
+  private closeOverlay(): void {
+    if (!this.overlay) return;
+    this.overlay.remove();
+    this.overlay = null;
+    this.layer.querySelector<HTMLElement>('.go, button')?.focus({ preventScroll: true });
+    this.hooks.cardChanged?.();
+  }
+
+  /** "Play": the city last used (ogun.md 1.6). Ogun opens only with its part on the phone; else Lagos. */
+  openHome(): void {
+    const v = this.hooks.states();
+    if (v.where !== 'ogun') {
+      this.show('city');
+      return;
+    }
+    if (this.hooks.worldPart('ogun')?.ui) {
+      this.show('ogun');
+      return;
+    }
+    const from = this.screen;
+    void this.hooks.loadWorld('ogun').then((r) => {
+      if (this.screen !== from) return;
+      this.show(r.ok && r.part.ui ? 'ogun' : 'city');
+    });
+  }
+
+  /**
+   * Go to a state (the Win screen's "On to Ogun", the "To Ogun" stop, the Travel card). Ogun
+   * needs its part first (the download card on the web, when it is not on the phone yet); then
+   * the bus ride (always the first time, after that only with "Show the bus ride" on), then
+   * Ogun's place with the arrival card the first time. Never starts a run.
+   */
+  travelTo(to: StateId): void {
+    const v = this.hooks.states();
+    if (to === 'lagos') {
+      this.closeOverlay();
+      if (this.screen === 'city') return;
+      const ui = this.hooks.worldPart('ogun')?.ui;
+      const home = (): void => {
+        this.hooks.setWhere('lagos');
+        this.show('city');
+      };
+      if (ui && this.settings.busRide && this.screen === 'ogun') {
+        this.rideNext = { ui, toLagos: true, first: false, then: home };
+        this.show('ride');
+      } else home();
+      return;
+    }
+    if (!v.ogun.open) return;
+    if (this.screen === 'ogun') {
+      this.closeOverlay();
+      return;
+    }
+    void this.withOgun((ui) => {
+      const arrive = (): void => {
+        this.hooks.setWhere('ogun');
+        this.show('ogun');
+      };
+      const first = !v.arrived;
+      if (first || this.settings.busRide) {
+        this.rideNext = { ui, toLagos: false, first, then: arrive };
+        this.show('ride');
+      } else arrive();
+    });
+  }
+
+  /** Runs `then` with Ogun's part: at once if loaded; else loads it, asking first on the web (ogun.md 9.2). */
+  private async withOgun(then: (ui: WorldUi) => void): Promise<void> {
+    const have = this.hooks.worldPart('ogun')?.ui;
+    if (have) return then(have);
+    const from = this.screen;
+    const load = async (card: DownloadCard | null): Promise<void> => {
+      const r = await this.hooks.loadWorld('ogun');
+      if (this.screen !== from) return;
+      if (r.ok && r.part.ui) {
+        this.closeOverlay();
+        then(r.part.ui);
+        return;
+      }
+      const message = r.ok ? WORLD_PART_WORDS.broken : r.message;
+      if (card && this.overlay === card.el) card.step(message === OGUN_WORDS.download.noNet ? 'noNet' : 'broken', message);
+      else this.openOverlay(noticeCard(message, () => this.closeOverlay()));
+    };
+    // The store app has the part inside; a web player who already downloaded it is not asked again.
+    if (isNativeApp() || (await partHeld('ogun'))) return load(null);
+    if (this.screen !== from) return;
+    const card = downloadCard(
+      () => {
+        card.step('loading');
+        void load(card);
+      },
+      () => this.closeOverlay(),
+    );
+    this.openOverlay(card.el);
+  }
+
+  /** The Travel card (ogun.md 1.5) over the city or Ogun's place. */
+  private openTravel(): void {
+    const v = this.hooks.states();
+    const here = this.screen === 'ogun' ? 'ogun' : 'lagos';
+    const w = OGUN_WORDS.travel;
+    this.openOverlay(
+      travelCard(
+        [
+          { id: 'lagos', name: w.lagos, boom: v.lagos.boom, turning: v.lagos.turning, here: here === 'lagos' },
+          { id: 'ogun', name: w.ogun, boom: v.ogun.boom, turning: v.ogun.turning, here: here === 'ogun' },
+        ],
+        (id) => (id === here ? this.closeOverlay() : this.travelTo(id)),
+        () => this.closeOverlay(),
+      ),
+    );
+  }
+
+  /** The city's (and Ogun's) "Travel" button, with its small danfo icon. */
+  private travelButton(): HTMLButtonElement {
+    const b = this.guarded('', 'minor travel-button', () => this.openTravel());
+    b.innerHTML = travelButtonHtml();
+    return b;
+  }
+
+  /** ogun.md 1.3: the bus ride through the gateway. */
+  private rideCard(): HTMLElement | null {
+    const r = this.rideNext;
+    this.rideNext = null;
+    if (!r) return null;
+    const w = OGUN_WORDS.busRide;
+    const ride = r.ui.busRide({
+      look: this.look,
+      toLagos: r.toLagos,
+      lit: this.hooks.states().ogun.beaten,
+      still: this.hooks.stillWanted(),
+      first: r.first,
+      spoken: r.toLagos ? w.spokenOut : w.spokenIn,
+      skip: w.skip,
+      tune: () => this.hooks.playTune(r.ui.tune),
+      done: () => r.then(),
+    });
+    this.cleanup = () => ride.close();
+    return ride.el;
+  }
+
+  /**
+   * Ogun's place. Ogun's city comes with O6b and Ota's street play with O2b; until then this is
+   * the gateway picture, the words that Ota is next, and Travel, the wheel and Settings.
+   */
+  private ogunCard(): HTMLElement | null {
+    const ui = this.hooks.worldPart('ogun')?.ui;
+    if (!ui) return null;
+    const v = this.hooks.states();
+    const w = OGUN_WORDS.place;
+    const pic = h('canvas', { class: 'ogun-pic', 'aria-hidden': 'true' });
+    const sound = this.guarded(this.settings.sound ? WORDS.city.soundOn : WORDS.city.soundOff, 'minor', () => {
+      this.settings.sound = !this.settings.sound;
+      saveSettings(this.store, this.settings);
+      sound.textContent = this.settings.sound ? WORDS.city.soundOn : WORDS.city.soundOff;
+      this.hooks.soundChanged(this.settings.sound);
+    });
+    const el = h(
+      'div',
+      { class: 'card ogun-screen', role: 'dialog', 'aria-label': w.heading },
+      pic,
+      h('div', { class: 'ogun-top' }, h('h2', {}, w.heading), h('div', { class: 'minor-row' }, sound, this.guarded(WORDS.city.settings, 'minor', () => this.showSettings('ogun')))),
+      h('div', { class: 'ogun-words' }, h('p', {}, h('b', {}, w.line)), h('p', {}, w.soon)),
+      h('div', { class: 'ogun-bottom' }, this.travelButton(), this.guarded(WORDS.city.wheel, 'minor two-line', () => this.showWheel('ogun'))),
+    );
+    this.refit = () => ui.paintHome(pic, { lit: v.ogun.beaten });
+    if (!v.arrived) {
+      this.overlayNext = arrivalCard(() => {
+        this.hooks.arrived();
+        this.closeOverlay();
+      });
+    }
+    return el;
   }
 
   /** A tap that should not count: the second half of a double tap, or too soon after the game opened a screen. */
@@ -501,6 +758,19 @@ export class Menus {
     return sw;
   }
 
+  /** O1b2 (ogun.md 1.3): "Show the bus ride: on" / "...: off" (default on). */
+  private busRideSwitch(): HTMLButtonElement {
+    const w = OGUN_WORDS.busRide;
+    const label = (): string => (this.settings.busRide ? w.settingOn : w.settingOff);
+    const sw = this.guarded(label(), 'minor', () => {
+      this.settings.busRide = !this.settings.busRide;
+      saveSettings(this.store, this.settings);
+      sw.textContent = label();
+      sw.setAttribute('aria-checked', String(this.settings.busRide));
+    }, { role: 'switch', 'aria-checked': String(this.settings.busRide) });
+    return sw;
+  }
+
   /** S2.10 Pause: four buttons (2 x 2 on small screens), then the two switches in one row. */
   private pause(): HTMLElement {
     const w = WORDS.pause;
@@ -583,24 +853,50 @@ export class Menus {
   /** S2.10 Win: lives left (no kobo), the cog line, "See Nigeria's wheel". */
   private win(): HTMLElement {
     const w = WORDS.win;
+    const o = OGUN_WORDS.lagosWin;
     const n = this.hooks.progress().working.length;
+    // O1b2 (ogun.md 1.2): the road to Ogun is open. The first win's big button is "On to Ogun";
+    // after later wins a small "Go to Ogun" stays.
+    const first = this.summary.firstHall === true;
+    const toOgun = this.guarded(first ? o.onToOgun : o.goToOgun, first ? 'go' : 'minor', () => this.hooks.leave('ogun'));
+    const wheel = this.guarded(w.wheel, first ? 'minor' : 'go', () => this.hooks.leave('wheel'));
+    const small = [this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))), this.guarded(w.road, 'minor', () => this.hooks.leave('road'))];
     return h(
       'div',
       { class: 'card narrow event', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       h('p', {}, w.text(this.summary.lives)),
       h('p', {}, w.cog(n)),
-      h('p', {}, w.more),
-      this.actions(
-        this.guarded(w.wheel, 'go', () => this.hooks.leave('wheel')),
-        this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
-      ),
+      h('p', {}, o.line),
+      first ? this.actions(toOgun, wheel, ...small) : this.actions(wheel, toOgun, ...small),
     );
   }
 
-  /** S3e0: the challenge road (src/screens/road.ts). */
+  /**
+   * S3e0: the challenge road (src/screens/road.ts). CO3: when its chunk is not in yet, a short
+   * "Opening the road..." shows, and the road takes its place as soon as the chunk is in.
+   */
   private road(): HTMLElement {
+    if (roadModule) return this.roadWith(roadModule);
+    const wait = h('section', { class: 'road-opening', role: 'status' });
+    wait.textContent = WORDS.city.roadOpening;
+    let gone = false;
+    this.cleanup = () => (gone = true);
+    void preloadRoad().then(
+      (m) => {
+        if (gone || this.screen !== 'road' || !wait.isConnected) return;
+        const el = this.roadWith(m);
+        wait.replaceWith(el);
+        (this.refit as (() => void) | null)?.();
+      },
+      () => {
+        if (!gone && this.screen === 'road' && wait.isConnected) this.show('city');
+      },
+    );
+    return wait;
+  }
+
+  private roadWith(m: RoadModule): HTMLElement {
     const w = WORDS.city;
     const sound = this.guarded('', 'minor road-sound', () => {
       this.settings.sound = !this.settings.sound;
@@ -614,7 +910,7 @@ export class Menus {
       sound.setAttribute('aria-label', t);
     };
     label();
-    const screen = roadScreen(
+    const screen = m.roadScreen(
       {
         view: () => this.hooks.roadView(),
         look: () => this.look,
@@ -623,7 +919,9 @@ export class Menus {
         home: () => this.show('city'),
         play: (stop, e) => {
           this.hooks.playSound('horn');
-          this.hooks.playStop(stop, tapPoint(e));
+          // O1b2: the "To Ogun" stop goes to Ogun (the bus ride), never a run.
+          if (stop.id === 'ogun') this.travelTo('ogun');
+          else this.hooks.playStop(stop, tapPoint(e));
         },
         locked: () => this.hooks.playSound('lockedTuk'),
         hintDue: () => this.hooks.roadHint(),
@@ -647,16 +945,25 @@ export class Menus {
     const p = this.hooks.progress();
     const working = new Set(p.working);
     const n = WHEEL_STATES.filter((s) => working.has(s.id)).length;
-    const moreLine = n === 0 ? w.none : w.more;
+    // O1b2 (ogun.md 1.7): the rail's line follows the road to Ogun; Ogun open but not turning
+    // carries the pennant (on the cog and before "Ogun, next" in the list), never colour alone.
+    const ogun = this.hooks.states().ogun;
+    const moreLine = wheelLine(n, ogun);
+    const next = ogun.open && !ogun.turning && !working.has('ogun') ? 'ogun' : null;
 
     const pic = h('div', { class: 'wheel-box', 'aria-hidden': 'true' });
-    pic.innerHTML = wheelSvg(working, { turn: !this.hooks.stillWanted() });
+    pic.innerHTML = wheelSvg(working, { turn: !this.hooks.stillWanted(), next: next ? [next] : [] });
 
     const list = h(
       'ul',
       { class: 'names' },
       ...WHEEL_STATES.map((s) => {
         const on = working.has(s.id);
+        if (s.id === next) {
+          const flag = h('span', { class: 'tick pennant', 'aria-hidden': 'true' });
+          flag.innerHTML = gateIconSvg('pennant', 14);
+          return h('li', { class: 'next' }, flag, OGUN_WORDS.wheel.listNext, h('span', { class: 'sr-only' }, w.notWorking));
+        }
         return h(
           'li',
           { class: on ? 'on' : undefined },
@@ -771,6 +1078,7 @@ export class Menus {
   /** city.md (a) Settings: one column of buttons, each at least 44 px tall. */
   private settingsCard(): HTMLElement {
     const w = WORDS.settings;
+    const ogunOpen = this.hooks.states().ogun.open;
     return h(
       'div',
       { class: 'card narrow settings-card', role: 'dialog', 'aria-label': w.heading },
@@ -783,9 +1091,11 @@ export class Menus {
         this.gentleSwitch(),
         this.laneButtonsSwitch(),
         this.tiltRow('settings'),
+        ogunOpen && this.busRideSwitch(),
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
         button(w.back, 'go', () => this.show(this.settingsBack)),
       ),
+      ogunOpen && h('p', { class: 'small settings-saved' }, OGUN_WORDS.saved),
     );
   }
 
@@ -830,6 +1140,8 @@ export class Menus {
       topRight: [sound, button(w.settings, 'minor', () => this.showSettings('city'))],
       bottom: [
         button(w.road, 'minor two-line', () => this.showRoad()),
+        // O1b2 (ogun.md 1.2): "Travel" once Ogun is open.
+        ...(this.hooks.states().ogun.open ? [this.travelButton()] : []),
         button(w.hero, 'minor', (e) => this.show('builder', e)),
         button(w.wheel, 'minor two-line', () => this.showWheel('city')),
       ],
@@ -841,6 +1153,9 @@ export class Menus {
     });
     this.cityScreen = screen;
     this.cleanup = () => screen.close();
+    // CO3: fetch the road's chunk while the city sits idle, so the road opens at once.
+    const idle = (window as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 200));
+    idle(() => void preloadRoad().catch(() => undefined));
     return screen.el;
   }
 

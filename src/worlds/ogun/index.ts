@@ -10,6 +10,7 @@
  *   (scripts/check-size.mjs).
  */
 import type { WorldPart } from '../load';
+import { ui } from './ride';
 
 const files = import.meta.glob<unknown>('../../data/levels/ogun-*.json', { eager: true, import: 'default' });
 
@@ -19,4 +20,5 @@ for (const [path, data] of Object.entries(files)) {
   if (name) levels[name] = data;
 }
 
-export const part: WorldPart = { id: 'ogun', version: 1, levels };
+// O1b2: the bus ride, the place picture and the welcome tune ride along in this part.
+export const part: WorldPart = { id: 'ogun', version: 1, levels, ui };

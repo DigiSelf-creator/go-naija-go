@@ -9,7 +9,7 @@ import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
 import { Sound, soundLength } from './engine/sound';
 import { Music } from './engine/music';
-import { CORN_GAIN, CORN_LOUD, CornDirector, MusicDirector, cornCount } from './game/music-cue';
+import { CORN_GAIN, CORN_LOUD, CornDirector, MusicDirector, cornCount, musicAudible } from './game/music-cue';
 import { listenForAudioGestures } from './engine/audio-unlock';
 import { AnimalCalls } from './game/animal-calls';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
@@ -24,7 +24,7 @@ import { hasSavedLook, loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
 import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, canFix, isBuilt, leftOf, winPrize, withHint, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
-import { OGUN, arrived, openStates, stateProgress, wallet, whereNow } from './game/states';
+import { OGUN, arrived, openStates, readStateCity, stateOpen, stateProgress, wallet, whereNow } from './game/states';
 import { WorldParts } from './worlds/load';
 import type { BuildId } from './art/payspot';
 import type { Mission } from './screens/city';
@@ -274,6 +274,8 @@ function startGame(): void {
   const director = new MusicDirector(music);
   // S2.9 corn tune: its own player and output (0.8) on the same context, over the street tune.
   const cornMusic = new Music({ gain: CORN_GAIN });
+  /** O1b2: Ogun's welcome tune (from its part), once, as the bus passes under the arch. */
+  const gateMusic = new Music();
   const corn = new CornDirector({
     start: () => {
       cornMusic.setLevel(1, 0);
@@ -349,7 +351,7 @@ function startGame(): void {
       // The city fills the whole screen and draws itself: the street under it is not drawn
       // (on a slow phone that was a second full-screen picture every frame while walking).
       // The intro story covers the whole screen too (city.md a2.9).
-      if (menus.current !== 'city' && menus.current !== 'intro') {
+      if (menus.current !== 'city' && menus.current !== 'intro' && menus.current !== 'ride' && menus.current !== 'ogun') {
         game.render(g, view);
         streetUnder = true;
       } else if (streetUnder) {
@@ -556,7 +558,11 @@ function startGame(): void {
       if (cityLife.state.at) cityLife.set({ ...cityLife.state, at: { ...HERO_START } });
       menus.showCity(mission);
     } else if (to === 'road') menus.showRoad({ at });
-    else menus.show(to);
+    else if (to === 'ogun') {
+      // O1b2: the Win screen's "On to Ogun": from Lagos (where "Not now" leaves the player), by bus.
+      menus.showCity();
+      menus.travelTo(OGUN);
+    } else menus.show(to);
   }
 
   /** S3f2: the lane run showing now (its code loads the first time one opens), or null. */
@@ -746,6 +752,8 @@ function startGame(): void {
   let brought = 0;
   /** This run's money is already home (a hall win pays at the third hit, then 'win' follows). */
   let paidHome = false;
+  /** O1b2: this hall win is the first one (set at the third hit, before it is saved). */
+  let firstHallWin = false;
   /** (c) Money from a run goes home to Lagos at once, saved. */
   function payHome(kobo: number): void {
     if (paidHome) return;
@@ -761,7 +769,8 @@ function startGame(): void {
     // home screen. ?level=lagos-2, lagos-3 or lagos-hall still starts that level (for testing).
     start: (at) => {
       if (askedLane) startLane(null);
-      else if (askedAt === null) menus.show('city');
+      // O1b2 (ogun.md 1.6): the game opens on the city last used.
+      else if (askedAt === null) menus.openHome();
       else startRun(at, firstStreet);
     },
     cityLife,
@@ -780,14 +789,14 @@ function startGame(): void {
     // S3e0: a stop's big button, for the fix its card shows (CR-Q1 a: STOP_PAYS_FIX).
     playStop: (stop, at) => {
       if (stop.id === 'lane') startLane(stop.forFix);
-      else if (stop.id !== 'ferry') {
+      else if (stop.id !== 'ferry' && stop.id !== 'ogun') {
         startRun(at, stop.id);
         missionFor = stop.forFix;
       }
     },
     roadView: () => {
       const l = readLane(progress.raw?.[KEY_LANE]);
-      return { lagos: progress.state(LAGOS), names: streets.map((x) => x.name), city: cityLife.state, lane: { best: l.best, goals: l.goals } };
+      return { lagos: progress.state(LAGOS), names: streets.map((x) => x.name), city: cityLife.state, lane: { best: l.best, goals: l.goals }, ogunLit: stateProgress(progress.raw, OGUN).hall.done };
     },
     roadHint: () => {
       if (cityLife.state.hints.includes('road')) return false;
@@ -844,6 +853,33 @@ function startGame(): void {
         music.restart('menu');
       } else if (m.kind === 'hold') music.pause();
       else if (!document.hidden) music.resume();
+    },
+    // O1b2: the way to Ogun (docs/ogun.md part 1).
+    states: () => {
+      const raw = progress.raw;
+      const lagosTurning = progress.working().includes(LAGOS) || cityLife.state.boomSeen >= FIRST_BOOM;
+      const ogunCity = readStateCity(raw, OGUN);
+      const ogunBoom = typeof ogunCity['boom'] === 'number' ? ogunCity['boom'] : 0;
+      const ogunSeen = typeof ogunCity['boomSeen'] === 'number' ? ogunCity['boomSeen'] : 0;
+      const beaten = stateProgress(raw, OGUN).hall.done;
+      return {
+        where: whereNow(raw),
+        arrived: arrived(raw),
+        lagos: { boom: cityLife.state.boom, turning: lagosTurning },
+        ogun: { open: stateOpen(raw, OGUN), boom: ogunBoom, turning: beaten || ogunSeen >= FIRST_BOOM, beaten },
+      };
+    },
+    worldPart: (id) => worlds.get(id),
+    loadWorld: (id) => worlds.load(id),
+    setWhere: (id) => {
+      if (whereNow(progress.raw) !== id) progress.savePart('where', id);
+    },
+    arrived: () => {
+      progress.saveStatePart(OGUN, 'arrived', true);
+    },
+    playTune: (tune) => {
+      if (!musicAudible(menus.sound, menus.music) || document.hidden) return;
+      gateMusic.playTune(tune);
     },
   });
   const hud = new Hud(document.body, {
@@ -1166,6 +1202,8 @@ function startGame(): void {
         // S2.8: the hall is won at the third hit. Saved now, so leaving or reloading during the
         // 6 s kind finish never loses it (qa N3). The same save uses the garri parcel up (po ruling
         // d). 'win' saves the same again (merge, never lower).
+        // O1b2: the first win sends the player on to Ogun with a big button (ogun.md 1.2).
+        firstHallWin = !progress.state(LAGOS).hall.done;
         progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
         // (c) The hall win adds ₦15 to Lagos.
         payHome(game.run.kobo * KOBO_PER_COIN + HALL_PRIZE);
@@ -1190,7 +1228,8 @@ function startGame(): void {
         toast.hide();
         // S2.8: the hall is won, so Lagos is switched on and its cog turns.
         progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
-        menus.showWin({ kobo: game.run.kobo, lives: game.run.lives });
+        menus.showWin({ kobo: game.run.kobo, lives: game.run.lives, firstHall: firstHallWin });
+        firstHallWin = false;
         break;
     }
     // The well room, back up, a hall hit: the tune follows (cheap when nothing changed).
@@ -1242,6 +1281,7 @@ function startGame(): void {
         hall: () => where === 'hall',
         lane: () => lane !== null,
         heroSaved: () => hasSavedLook(store),
+        card: () => menus.cardOpen,
         pause: () => pause(),
         home: () => leave('city'),
         city: () => menus.showCity(),
@@ -1267,11 +1307,13 @@ function startGame(): void {
       if (ac && !musicAttached) {
         music.attach(ac);
         cornMusic.attach(ac);
+        gateMusic.attach(ac);
         musicAttached = true;
       }
       if (musicAttached) {
         music.unlock();
         cornMusic.unlock();
+        gateMusic.unlock();
       }
     },
     () => {
@@ -1279,6 +1321,7 @@ function startGame(): void {
       if (musicAttached) {
         music.unlock();
         cornMusic.unlock();
+        gateMusic.unlock();
       }
     },
   );
@@ -1478,7 +1521,7 @@ function startGame(): void {
     get toast() {
       return toast.text;
     },
-    // O1b1: dev-only until O1b2 brings the Travel card. The saved state list, and a way to load the Ogun part.
+    // O1b1, for tests: the saved state list, and a way to load the Ogun part (players use the Travel card, O1b2).
     get states() {
       const raw = progress.raw;
       return { where: whereNow(raw), open: openStates(raw), ogun: stateProgress(raw, OGUN), arrived: arrived(raw), wallet: wallet(raw), ogunLoaded: worlds.get(OGUN) !== null };

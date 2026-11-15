@@ -41,6 +41,8 @@ export interface BackState {
   lane?: boolean;
   /** A hero is saved on this phone (the builder is not the first-time one). */
   heroSaved: boolean;
+  /** O1b2: a card shows over the screen (Travel, the Ogun download card, the arrival card). */
+  card?: boolean;
 }
 
 /** The labels a screen's own button uses (from src/screens/words.ts, so they stay in step). */
@@ -56,11 +58,16 @@ export interface BackLabels {
   takeHome: string;
   /** S3f0 part 25.1: the tilt offer card's "No thanks" (Android back counts as it). */
   tiltNo?: string;
+  /** O1b2: a card's own way out, first one showing: Travel's "Back", "Not now", "OK", "Let's go". */
+  cardOut?: readonly string[];
+  /** O1b2: the bus ride's "Skip". */
+  rideSkip?: string;
 }
 
 export function backStep(s: BackState, labels: BackLabels): BackStep {
   if (s.sinceScreen < BACK_GUARD_MS) return { kind: 'ignore' };
   if (s.askOpen) return { kind: 'closeAsk' };
+  if (s.card) return { kind: 'press', labels: labels.cardOut ?? [] };
   switch (s.screen) {
     case null:
       // Between a run's end and its card, back waits for the card. A lane run's own cards
@@ -71,7 +78,10 @@ export function backStep(s: BackState, labels: BackLabels): BackStep {
       return { kind: 'ask', fromRun: s.lane ? 'lane' : s.hall ? 'hall' : 'street' };
     case 'title':
     case 'city':
+    case 'ogun':
       return { kind: 'ask', fromRun: null };
+    case 'ride':
+      return { kind: 'press', labels: labels.rideSkip ? [labels.rideSkip] : [] };
     case 'intro':
       return { kind: 'press', labels: [labels.introSkip] };
     case 'settings':

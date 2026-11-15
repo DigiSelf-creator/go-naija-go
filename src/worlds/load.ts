@@ -11,6 +11,7 @@
  *   try loads afresh. The game never crashes on it.
  */
 import { WORLD_PART_WORDS } from '../screens/words';
+import type { WorldUi } from './ui';
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
 export const WORLD_PART_VERSION = 1;
@@ -20,6 +21,8 @@ export interface WorldPart {
   readonly version: number;
   /** The state's level files as JSON values, by file name without ".json" ("ogun-1", "ogun-hall", ...). */
   readonly levels: Readonly<Record<string, unknown>>;
+  /** O1b2: the bus ride, the place picture and the welcome tune (optional in the shape check). */
+  readonly ui?: WorldUi;
 }
 
 export type WorldLoad = { ok: true; part: WorldPart } | { ok: false; why: 'missing' | 'broken'; message: string };

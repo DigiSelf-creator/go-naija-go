@@ -15,7 +15,8 @@ import { hallOpen, streetOpen, streetRecord, type StateProgress } from '../game/
 import { drawCityCut } from './city';
 import { button, h } from './dom';
 import { EVENT_SCREEN_GUARD_MS } from './menus';
-import { WORDS } from './words';
+import { OGUN_WORDS, WORDS } from './words';
+import { drawOgunBranch, gateIconSvg, OGUN_STOP_BOX } from '../art/gateway';
 
 /**
  * CR-Q1 (open for Tp): a win from a stop pays for that stop's fix (answer a). False is answer b:
@@ -23,11 +24,11 @@ import { WORDS } from './words';
  */
 export const STOP_PAYS_FIX = true;
 
-/** Street index (0 is Alausa), the hall, the side road's lane run, or the ferry. */
-export type StopId = 0 | 1 | 2 | 'hall' | 'lane' | 'ferry';
+/** Street index (0 is Alausa), the hall, the side road's lane run, the ferry, or the side road to Ogun (O1b2). */
+export type StopId = 0 | 1 | 2 | 'hall' | 'lane' | 'ferry' | 'ogun';
 export type StopState = 'locked' | 'open' | 'next' | 'done' | 'soon' | 'built';
 /** Which cut of the still city the card shows (part 5), or the hall picture. */
-export type CutId = 'alausa' | 'cv' | 'ikeja' | 'ferry' | 'hall';
+export type CutId = 'alausa' | 'cv' | 'ikeja' | 'ferry' | 'hall' | 'ogun';
 
 /** The road picture is 680 x 168 road units (part 4). */
 export const ROAD_W = 680;
@@ -40,11 +41,13 @@ export const STOP_BOX: Readonly<Record<StopId, readonly [number, number, number,
   2: [280, 92, 112, 64],
   hall: [416, 92, 112, 64],
   ferry: [552, 92, 112, 64],
+  // O1b2 (ogun.md 1.2): up and off the right, between the hall and the Ferry.
+  ogun: [OGUN_STOP_BOX.x, OGUN_STOP_BOX.y, OGUN_STOP_BOX.w, OGUN_STOP_BOX.h],
 };
 /** Road order (and the screen reader list's order). */
-export const ROAD_ORDER: readonly StopId[] = [0, 'lane', 1, 2, 'hall', 'ferry'];
+export const ROAD_ORDER: readonly StopId[] = [0, 'lane', 1, 2, 'hall', 'ogun', 'ferry'];
 /** The card's cut of the city (map x, y, w, h; 4 by 3). */
-export const CUTS: Readonly<Record<Exclude<CutId, 'hall'>, readonly [number, number, number, number]>> = {
+export const CUTS: Readonly<Record<Exclude<CutId, 'hall' | 'ogun'>, readonly [number, number, number, number]>> = {
   alausa: [0, 335, 240, 180],
   cv: [1163, 301, 320, 240],
   ikeja: [536, 579, 320, 240],
@@ -58,6 +61,8 @@ export interface RoadView {
   city: CityState;
   /** The lane part: best whole metres and goals reached. */
   lane: { best: number; goals: number };
+  /** O1b2: King Pothole is beaten (the "To Ogun" arch is bright). */
+  ogunLit?: boolean;
 }
 
 export interface StopInfo {
@@ -186,6 +191,24 @@ export function stopCards(v: RoadView, laneFor: BuildId | null = null): StopInfo
     forFix: fix,
     cut: showing === 'mast' ? 'cv' : 'ikeja',
   });
+  // O1b2 (ogun.md 1.2): "To Ogun", locked until Go-Slow Hall is won; it goes to Ogun, never a run.
+  const o = OGUN_WORDS.toOgun;
+  const ogunOpen = s.hall.done;
+  out.push({
+    id: 'ogun',
+    state: ogunOpen ? 'open' : 'locked',
+    heading: o.stop,
+    name: o.stop,
+    status: ogunOpen ? o.open : w.locked,
+    line3: ogunOpen ? null : o.lockedShort,
+    parcel: false,
+    spoken: `${o.stop}. ${ogunOpen ? `${o.open}. ${o.line}` : `${w.locked}. ${o.locked}`}`,
+    label: o.stop,
+    lines: ogunOpen ? [o.line] : [o.locked],
+    go: ogunOpen ? o.go : null,
+    forFix: null,
+    cut: 'ogun',
+  });
   // The ferry: "Coming soon" until the first boom, then "Built".
   const boomed = shownBoom(c).boom;
   const toGo = Math.max(1, Math.ceil((FIRST_BOOM - c.boom) / BOOM_BUILD));
@@ -226,7 +249,7 @@ type Art = typeof import('../art/road');
 let artLoad: Promise<Art> | null = null;
 /** Art S3e1a's road pictures (src/art/road.ts): loaded with the road screen, never with the first page. */
 export const roadArt = (): Promise<Art> => (artLoad ??= import('../art/road'));
-/** Our stop ids to art's. */
+/** Our stop ids to art's (the "To Ogun" stop is drawn by src/art/gateway.ts). */
 const ART_ID: Record<string, ArtStop> = { 0: 'alausa', 1: 'computerVillage', 2: 'ikeja', hall: 'hall', lane: 'lane', ferry: 'ferry' };
 /** The icon each state shows (a shape for every state, part 3). */
 const STATE_ICON: Record<StopState, RoadIcon> = { locked: 'padlock', open: 'bus', next: 'bus', done: 'tick', soon: 'ferry', built: 'ferry' };
@@ -287,7 +310,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     }, { 'data-where': String(st.id), 'aria-label': st.spoken, 'aria-disabled': st.state === 'locked' ? 'true' : undefined, style: `left:${x}em;top:${y}em;width:${bw}em;height:${bh}em` });
     // The plate inside the button (the button's own box stays still while the Next plate bobs).
     b.innerHTML =
-      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? ic('parcel') : ''}</span><span class="road-st">${ic(STATE_ICON[st.state])}${st.status}</span>` +
+      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? ic('parcel') : ''}</span><span class="road-st">${ic(st.id === 'ogun' && st.state === 'open' ? 'arch' : STATE_ICON[st.state])}${st.status}</span>` +
       (st.line3 ? `<span class="road-l3">${st.line3}</span>` : '') +
       (st.state === 'next' ? `<span class="road-next" data-ic="next"></span>` : st.state === 'done' || st.state === 'built' ? `<span class="road-tick" data-ic="tick"></span>` : '') +
       '</span>';
@@ -309,7 +332,8 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     pic.width = Math.round(ROAD_W * k);
     pic.height = Math.round(ROAD_H * k);
     g.setTransform(k, 0, 0, k, 0, 0);
-    art.drawRoadPicture(g, { jetty: shownBoom(v.city).boom ? 'after' : 'before', next: next ? ART_ID[next.id]! : null });
+    art.drawRoadPicture(g, { jetty: shownBoom(v.city).boom ? 'after' : 'before', next: next && ART_ID[next.id] ? ART_ID[next.id]! : null });
+    drawOgunBranch(g, v.lagos.hall.done, v.ogunLit === true);
   };
   const scroller = h('div', { class: 'road-scroll' }, road);
   const arrow = (dir: -1 | 1): HTMLButtonElement => {
@@ -331,7 +355,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
       // The icons, the Next pennant, the tick badges and the edge arrows: art's shapes.
       for (const e of el.querySelectorAll<HTMLElement>('[data-ic]')) {
         const k = e.dataset['ic']!;
-        e.innerHTML = k === 'next' ? a.nextPennantSvg() : k === 'tick' ? a.tickBadgeSvg() : k === 'left' || k === 'right' ? a.edgeArrowSvg(k) : a.roadIconSvg(k as RoadIcon);
+        e.innerHTML = k === 'next' ? a.nextPennantSvg() : k === 'tick' ? a.tickBadgeSvg() : k === 'left' || k === 'right' ? a.edgeArrowSvg(k) : k === 'arch' ? gateIconSvg('arch') : a.roadIconSvg(k as RoadIcon);
       }
       paintRoad();
     })
@@ -403,7 +427,11 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
         })
       : null;
     let picEl: HTMLElement;
-    if (st.cut === 'hall') {
+    if (st.cut === 'ogun') {
+      // O1b2: the gateway arch for the "To Ogun" card.
+      picEl = h('span', { class: 'road-card-pic road-card-arch', role: 'img', 'aria-label': st.lines[0]! });
+      picEl.innerHTML = gateIconSvg('arch', 64);
+    } else if (st.cut === 'hall') {
       picEl = h('span', { class: 'road-card-pic', role: 'img', 'aria-label': w.picHall });
       picEl.innerHTML = cardSceneSvg('hall', st.state === 'locked' ? 'locked' : st.state === 'done' ? 'done' : 'open').replace(/opacity="[\d.]+"/, '');
     } else picEl = h('canvas', { class: 'road-card-pic', role: 'img', 'aria-label': w.pic(st.name) });
@@ -436,7 +464,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     c.height = Math.round((c.clientHeight || 84) * dpr);
     const g = c.getContext('2d');
     if (!g) return;
-    const cut = CUTS[st.cut as Exclude<CutId, 'hall'>];
+    const cut = CUTS[st.cut as Exclude<CutId, 'hall' | 'ogun'>];
     void roadArt().then((a) => {
       const over = (): void => a.drawCardOverlay(g, c.width, c.height, { name: st.name, hero: hooks.look(), still: hooks.still(), bus: st.id !== 'ferry' });
       if (!cardEl?.contains(c)) return;
