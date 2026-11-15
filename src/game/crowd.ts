@@ -667,7 +667,8 @@ export class StreetCrowd {
   private readonly pool: FolkDraw[] = [];
 
   private two(kind: readonly [FolkFrame, FolkFrame], since: number): FolkFrame {
-    return kind[this.still ? 0 : Math.floor(Math.max(0, since) / 0.25) % 2]!;
+    // A pose whose start is unknown (a stop's wave after its cheer) shows its first frame.
+    return kind[this.still || !Number.isFinite(since) ? 0 : Math.floor(Math.max(0, since) / 0.25) % 2]!;
   }
 }
 

@@ -202,6 +202,16 @@ describe('reactions (part 5)', () => {
     for (let i = 0; i < 60 * 8; i++) c.update(DT, v, []);
     expect(me()).not.toMatch(/^wave/);
   });
+  it('the bus stop people cheer, then wave: every frame drawn is a real frame', () => {
+    const { c, level } = crowdFor();
+    const v = view(level.checkpoint + 50);
+    const frames = new Set(['stand', 'sit', 'call', 'wave0', 'wave1', 'cheer0', 'cheer1', 'walk0', 'walk1', 'walk2', 'walk3']);
+    c.update(DT, v, [{ type: 'checkpoint' }]);
+    for (let i = 0; i < 120; i++) {
+      c.update(DT, v, []);
+      for (const d of c.draw(v)) expect(frames.has(d.frame), `frame ${String(d.frame)}`).toBe(true);
+    }
+  });
   it('one bubble at a time; bus park cheers when the hero boards', () => {
     const { c, level } = crowdFor();
     const v = view(level.end!.x, { atBus: true });
