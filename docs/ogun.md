@@ -340,7 +340,7 @@ The level test checks every new rule in 3.3 as well as the S2.6 list.
 
 - Garri crates in Ogun are drawn as Ijebu garri (finer, paler grains) with the same shield and the same words.
 - Every Lagos food still works in Ogun: corn, garri, amala, pepper fufu.
-- Both new foods are 12 s with the last 3 s blinking (city.md 2D). The same food again restarts its timer; two different timed foods can work at once.
+- Both new foods are 12 s. The last 2 s warn, as every timed food does (OG-R10): the HUD chip and the hero blink, a soft tick each second (Sound on), and the toast "Ikokore is wearing off!" / "Ofada is wearing off!". The same food again restarts its timer; two different timed foods can work at once.
 - **Never fire.** No food shoots, burns or glows red-hot. Ofada and ikokore have steam only (rule 2, the fireball rule). No new throw food in Ogun.
 - In the lane run, ikokore and ofada do not appear in O1 (the lane run has no mud or cracks yet).
 
@@ -602,6 +602,8 @@ Plain spellings if a phone cannot show the marks: "E kaabo!", "Nnoo!".
 | Download card (web only, 9.2) | a web player opening Ogun the first time without it saved | get Ogun onto the phone | "Ogun is ready to download (about 130 KB)." / "After this it plays with no internet." / "Download" / "Not now". No internet: "Ogun needs the internet once to download. Lagos still works with no internet." / "OK" |
 | Travel card | anyone with Ogun open | pick a state | "Where to?" / "Lagos" / "Ogun" / "You are here" / "Back" |
 | "To Ogun" stop card | Lagos challenge road | go to Ogun | open: "To Ogun" / "The road to Ogun is open." / "Go to Ogun"; locked: "Win Go-Slow Hall to open the road to Ogun." |
+| Ogun place (until Ogun's city, O6b) | anyone in Ogun | start the next open street | "Ogun" / "The Gateway State" / first: "Ota is open. It is the first street on the road from Lagos." / after Ota: "Ota is moving again. Abeokuta is open." / after Abeokuta: "Abeokuta is moving again. Sagamu is coming soon." / "Play Ota" / "Play Abeokuta" |
+| Opening a part | anyone opening the road or Ogun | show it is working, never a blank card | "Opening the road..." / "Downloading Ogun...". It cannot open: "Ogun could not open just now. Lagos still works. Try again later." |
 | Pothole Hall Win | a player who beat King Pothole | celebrate the gateway | "Ogun is switched on!" / "The road through the gateway is smooth. The way to the rest of Nigeria is open." / "You got ₦15." / "Take it home" |
 | Street cleared | each Ogun street | as Lagos | "{Ota / Abeokuta / Sagamu} is moving again, thanks to you! You got {money}." |
 | Out of lives | as Lagos | as Lagos | "Out of lives" / "You keep {money} for Ogun. The street is still here. Try again!" Gentle offer as now |
@@ -680,3 +682,4 @@ Order: O1 and O0a together; then O2, O3, O4 in order (each street teaches what t
 - **OG-R7.** The border market is a happy, busy market road ("BORDER MARKET" board), with no border post, gate, fence, customs or officers; a "Coming soon" stop for now.
 - **OG-R8.** Trays fill while you play anywhere in the game, and stop when full, as now.
 - **OG-R9.** The Win screen after Go-Slow Hall gains "On to Ogun", and the Lagos challenge road gains a "To Ogun" stop on a side road; the Ferry stays a Lagos stop.
+- **OG-R10.** Every timed food (corn, amala, ikokore, ofada and any later one) warns in its last 2 s, as Lagos is built and tested: blink, tick, toast. The blink and tick need no reading, and the problem coming back is never sudden (cracks still rumble 0.4 s, mud only slows). city.md 2D's "last 3 seconds" should read 2.

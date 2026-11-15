@@ -193,8 +193,10 @@ export interface ClearedSummary {
   last: boolean;
   /** Got on the bus with the garri parcel: it is saved for the hall. */
   parcel: boolean;
-  /** O2b: an Ogun street: home is Ogun's place; no "Next street" (until Abeokuta, O3b) and no Challenge road. */
+  /** O2b: an Ogun street: home is Ogun's place; no Challenge road. */
   ogun?: boolean;
+  /** O3b: an Ogun street with the next one built (Ota to Abeokuta): "Next street". */
+  ogunNext?: boolean;
 }
 
 export class Menus {
@@ -640,8 +642,12 @@ export class Menus {
         'div',
         { class: 'ogun-words' },
         h('p', {}, h('b', {}, w.line)),
-        h('p', {}, this.hooks.ogunDone(1) ? w.otaDone : w.soon),
-        this.guarded(w.play, 'go ogun-play', (e) => this.hooks.playOgun(1, tapPoint(e))),
+        h('p', {}, this.hooks.ogunDone(3) ? w.sagamuDone : this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
+        // O3b, O4b: the newest open street is the big button, the ones before it small.
+        ...[3, 2, 1].map((n) => {
+          const top = this.hooks.ogunDone(2) ? 3 : this.hooks.ogunDone(1) ? 2 : 1;
+          return n <= top && this.guarded([w.play, w.playAbeokuta, w.playSagamu][n - 1]!, n === top ? 'go ogun-play' : 'minor ogun-play', (e) => this.hooks.playOgun(n, tapPoint(e)));
+        }),
       ),
       h('div', { class: 'ogun-bottom' }, this.travelButton(), this.guarded(WORDS.city.wheel, 'minor two-line', () => this.showWheel('ogun'))),
     );
@@ -861,11 +867,14 @@ export class Menus {
       h('p', {}, w.text(c.name, c.kobo)),
       c.parcel && h('p', { class: 'parcel-line' }, c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
-      // O2b: from Ogun it goes home to Ogun's place; Abeokuta's "Next street" comes with O3b.
+      // O2b: from Ogun it goes home to Ogun's place; O3b: Ota's card goes on to Abeokuta.
       this.actions(
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome()),
         ...(c.ogun
-          ? [this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)))]
+          ? [
+              ...(c.ogunNext ? [this.guarded(w.next, 'minor', (e) => this.hooks.next(tapPoint(e)))] : []),
+              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
+            ]
           : [
               this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),
               this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),

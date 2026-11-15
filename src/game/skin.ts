@@ -13,7 +13,8 @@ import type { StreetCast } from './crowd';
 import type { CrateState } from './crates';
 import type { FoodKind, Level } from './level';
 import type { GamePeople } from './people';
-import type { Run, RunEvent } from './run';
+import type { HazardState, Run, RunEvent } from './run';
+import type { RoomData } from './well';
 
 type G = CanvasRenderingContext2D;
 
@@ -58,10 +59,18 @@ export interface StreetSkin {
   crate?(g: G, c: CrateState, look: Omit<CrateLook, 'stamp'>): boolean;
   /** A HUD chip's food icon, centred at (x, y), size 1 about 32 u. False: the game draws its own. */
   icon?(g: G, kind: FoodKind, x: number, y: number, size: number): boolean;
+  /** O4b: world space, a hazard in any mode (Sagamu's gravel). False: the game draws its own. */
+  hazard?(g: G, z: HazardState, s: SkinNow): boolean;
   /** World space, in front of the hero: splashes. */
   front?(g: G, s: SkinNow): void;
   /** What happened this step. */
   hear?(events: readonly SkinEvent[], s: SkinNow): void;
+  /** O3b: the well room's back and shelves (room units). False: the Lagos room. */
+  room?(g: G, room: RoomData, camX: number, viewW: number, time: number, viewH: number, still: boolean): boolean;
+  /** O3b: the room's gift on its shelf. False: the game's garri parcel. */
+  gift?(g: G, x: number, y: number, time: number): boolean;
+  /** O3b: the HUD parcel chip's icon, centred at (x, y), about `size` across. */
+  parcelIcon?(g: G, x: number, y: number, size: number): void;
   /** A fresh play of the street (start, Play again). */
   restart?(): void;
   /** The street's own people (design.md "People everywhere"), or none for the Lagos casts. */

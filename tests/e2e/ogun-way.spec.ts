@@ -144,7 +144,7 @@ test.describe('on the web, before the Ogun part is on the phone', () => {
     await expect(arrival).toHaveCount(0);
     expect((await saved(page)).states?.ogun?.arrived).toBe(true);
     // O2b: Ota plays from Ogun's place.
-    await expect(ogunCard(page).getByText('Ota, the first street on the road from Lagos, is open.')).toBeVisible();
+    await expect(ogunCard(page).getByText('Ota is open. It is the first street on the road from Lagos.')).toBeVisible();
     await expect(ogunCard(page).getByRole('button', { name: 'Play Ota' })).toBeVisible();
 
     // Reload: "Play" opens Ogun again, with no ride and no arrival card.

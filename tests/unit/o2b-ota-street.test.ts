@@ -50,8 +50,10 @@ describe("Ota's people (ogun.md part 7)", () => {
 });
 
 describe("Ota's look (skin.ts)", () => {
-  it('only Ota has one so far; it has the cast and every drawing part', () => {
-    expect(ogunStreet({ id: 'ogun-2', arch: null })).toBeNull();
+  it('Ota, Abeokuta (O3b) and Sagamu (O4b) each have one; Ota has its cast and every drawing part', () => {
+    expect(ogunStreet({ id: 'ogun-2', arch: null })?.cast?.name).toBe('abeokuta');
+    expect(ogunStreet({ id: 'ogun-3', arch: null })?.cast?.name).toBe('sagamu');
+    expect(ogunStreet({ id: 'ogun-hall', arch: null })).toBeNull();
     const k = ogunStreet({ id: 'ogun-1', arch: 200 })!;
     expect(k.cast?.name).toBe('ota');
     for (const part of ['backdrop', 'back', 'ground', 'stall', 'food', 'crate', 'icon', 'front', 'hear', 'restart'] as const) expect(typeof k[part]).toBe('function');
