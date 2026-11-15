@@ -104,6 +104,8 @@ export function showSoundBoard(root: HTMLElement): void {
     toggleButton((on) => `Lane tune: ${on ? 'playing' : 'off'}`, (on) => (on ? music.play('lane') : music.stop())),
     toggleButton((on) => `Blackout close (guitar drops out): ${on ? 'yes' : 'no'}`, (on) => music.setLayer('guitar', !on)),
   );
+  // S3g1a: the crowd murmur (5 or more people on screen); the two cheers are in the grid above
+  grid.append(toggleButton((on) => `Crowd murmur: ${on ? 'on' : 'off'}`, (on) => sound.setMurmur(on)));
   toggle.style.cssText = 'min-height:44px;padding:8px 14px;border-radius:10px;border:2px solid #fff;background:none;color:#fff;font:inherit';
   box.append(h, note, toggle, grid, laneHead, lane);
   root.append(box);

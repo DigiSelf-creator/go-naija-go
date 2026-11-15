@@ -352,7 +352,7 @@ describe('O2 the gidi-music save', () => {
     const { storage, data } = fakeStorage();
     const store = createStore(() => storage);
     expect(loadSettings(store).music).toBe(true);
-    saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false });
+    saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false, tiltToSteer: false });
     expect(data.get('gidi-music')).toBe('false');
     expect(data.get('gidi-sound')).toBe('true');
     // After a reload (a new store on the same phone storage) Music is still off.
@@ -374,7 +374,7 @@ describe('O2 the gidi-music save', () => {
     };
     const store = createStore(blocked);
     expect(store.persistent).toBe(false);
-    expect(() => saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false })).not.toThrow();
+    expect(() => saveSettings(store, { sound: true, music: false, gentle: false, buttonsInsteadOfSwipes: false, tiltToSteer: false })).not.toThrow();
     expect(loadSettings(store).music).toBe(false);
   });
 });

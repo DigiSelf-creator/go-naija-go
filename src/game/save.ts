@@ -20,6 +20,8 @@ const KEY_MUSIC = 'music';
 const KEY_GENTLE = 'gentle';
 /** S3f0 part 20: the lane run's "Buttons instead of swipes" switch. */
 const KEY_LANE_BUTTONS = 'laneButtons';
+/** S3f0 part 25: the lane run's "Tilt to steer" switch (decision 70). Only on or off: no angle is ever saved. */
+const KEY_TILT = 'tiltToSteer';
 
 function isLookShape(v: unknown): v is HeroLook {
   if (typeof v !== 'object' || v === null) return false;
@@ -102,6 +104,8 @@ export interface Settings {
   gentle: boolean;
   /** S3f0: "Buttons instead of swipes" in the lane run (default off). */
   buttonsInsteadOfSwipes: boolean;
+  /** S3f0 part 25: "Tilt to steer" in the lane run (default off). */
+  tiltToSteer: boolean;
 }
 
 export function loadSettings(store: Store): Settings {
@@ -109,7 +113,8 @@ export function loadSettings(store: Store): Settings {
   const music = store.load(KEY_MUSIC, (v): v is boolean => typeof v === 'boolean');
   const gentle = store.load(KEY_GENTLE, (v): v is boolean => typeof v === 'boolean');
   const buttons = store.load(KEY_LANE_BUTTONS, (v): v is boolean => typeof v === 'boolean');
-  return { sound: sound ?? true, music: music ?? true, gentle: gentle ?? false, buttonsInsteadOfSwipes: buttons ?? false };
+  const tilt = store.load(KEY_TILT, (v): v is boolean => typeof v === 'boolean');
+  return { sound: sound ?? true, music: music ?? true, gentle: gentle ?? false, buttonsInsteadOfSwipes: buttons ?? false, tiltToSteer: tilt ?? false };
 }
 
 export function saveSettings(store: Store, s: Settings): void {
@@ -117,4 +122,5 @@ export function saveSettings(store: Store, s: Settings): void {
   store.save(KEY_MUSIC, s.music);
   store.save(KEY_GENTLE, s.gentle);
   store.save(KEY_LANE_BUTTONS, s.buttonsInsteadOfSwipes);
+  store.save(KEY_TILT, s.tiltToSteer);
 }

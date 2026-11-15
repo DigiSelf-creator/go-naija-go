@@ -89,7 +89,30 @@ type CoreSoundName =
   | 'sting'
   | 'step'
   | 'boom'
-  | 'horn';
+  | 'horn'
+  // S3g1a: people everywhere (design.md "People everywhere" part 12); the murmur is setMurmur
+  | 'crowdCheer'
+  | 'crowdCheerBig';
+
+/**
+ * A crowd cheer (part 12): a swell of breathy noise, many soft voices far off with no words,
+ * and a few quick claps. `len` 0.8 s (a cleared problem) or 1.2 s (the bus park, the hall's
+ * finish, Mission complete). Each breath is a short band of noise at a voice-like pitch,
+ * rising then falling in loudness; the claps are short bright clicks at uneven times.
+ */
+function cheer(len: number, claps: readonly number[]): Recipe {
+  const hiss: Hiss[] = [];
+  const n = Math.round(len / 0.07);
+  const bands = [620, 980, 1450, 820, 1200];
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1);
+    // Up quickly, a short hold, then away
+    const swell = u < 0.3 ? u / 0.3 : 1 - ((u - 0.3) / 0.7) * 0.9;
+    hiss.push({ len: 0.2, at: i * 0.07, bp: bands[i % bands.length]!, vol: 0.006 + 0.022 * swell });
+  }
+  for (const at of claps) hiss.push({ len: 0.03, at, hp: 2200, vol: 0.05 });
+  return { tones: [], hiss };
+}
 
 /**
  * The lane run's sounds (design.md S3f0 part 17). Their recipes live in src/art/lane-sounds.ts,
@@ -643,6 +666,9 @@ const SOUNDS: Record<CoreSoundName, Recipe> = {
       { f: 294, len: 0.11 + i * 0.03, at, wave: 'triangle', to: 291, vol: 0.016 },
     ]),
   },
+  // S3g1a: people cheer (part 12). At most one every 4 s (gamedev keeps the limit).
+  crowdCheer: cheer(0.8, [0.12, 0.23, 0.31, 0.44, 0.52]),
+  crowdCheerBig: cheer(1.2, [0.1, 0.19, 0.27, 0.38, 0.46, 0.55, 0.66, 0.74, 0.86]),
 };
 
 /** Every built-in sound's name, in recipe order (for the ?sounds test board). Added sounds are not in it. */
@@ -694,6 +720,9 @@ export const ATTACK = 0.003;
 
 /** The suit's hum: 6 percent volume (100 percent is 0.3, as in the S2.16 recipes). */
 export const HUM_VOL = 0.018;
+
+/** The crowd murmur's loudness (S3g1a part 12): very quiet, under every game sound. */
+export const MURMUR_VOL = 0.012;
 
 type HumName = 'suit' | 'close';
 
@@ -757,6 +786,84 @@ export class Sound {
 
   private syncHum(): void {
     for (const name of ['suit', 'close'] as const) this.syncOne(name);
+    this.syncMurmur();
+  }
+
+  /* ---- The crowd murmur (S3g1a, design.md "People everywhere" part 12) ---- */
+
+  private murmurWanted = false;
+  private murmurNodes: { gain: GainNode; stops: AudioScheduledSourceNode[] } | null = null;
+
+  /** True while the crowd murmur is playing. */
+  get murmuring(): boolean {
+    return this.murmurNodes !== null;
+  }
+
+  /**
+   * A light crowd murmur: soft, low, filtered noise with a slow rise and fall, like many people
+   * far away, very quiet under every game sound, fading in and out over 1 s. Call with true while
+   * 5 or more people are on screen; false when fewer, while a warning sound or the corn tune
+   * plays, on pause, a hidden tab and at the end. Never while the Sound switch is off or before
+   * the first tap (PE-R6: no new switch).
+   */
+  setMurmur(on: boolean): void {
+    this.murmurWanted = on;
+    this.syncMurmur();
+  }
+
+  private syncMurmur(): void {
+    const ac = this.ac;
+    const want = this.murmurWanted && this.on && ac !== null && ac.state === 'running';
+    if (want && !this.murmurNodes && ac) {
+      try {
+        const t = ac.currentTime;
+        const len = Math.ceil(ac.sampleRate * 2);
+        const buf = ac.createBuffer(1, len, ac.sampleRate);
+        const data = buf.getChannelData(0);
+        // Soft brown noise (each sample leans on the last): low and smooth, no hiss
+        let last = 0;
+        for (let i = 0; i < len; i++) {
+          last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+          data[i] = last * 3.5;
+        }
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+        const band = ac.createBiquadFilter();
+        band.type = 'bandpass';
+        band.frequency.setValueAtTime(420, t);
+        const gain = ac.createGain();
+        gain.gain.value = 0.0001;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(MURMUR_VOL, t + 1);
+        src.connect(band).connect(gain).connect(this.bus(ac));
+        src.start(t);
+        // The slow rise and fall (a slow sine moving the volume a little)
+        const lfo = ac.createOscillator();
+        lfo.frequency.setValueAtTime(0.23, t);
+        const depth = ac.createGain();
+        depth.gain.setValueAtTime(MURMUR_VOL * 0.3, t);
+        lfo.connect(depth).connect(gain.gain);
+        lfo.start(t);
+        this.murmurNodes = { gain, stops: [src, lfo] };
+      } catch {
+        this.murmurNodes = null;
+      }
+    } else if (!want && this.murmurNodes) {
+      const { gain, stops } = this.murmurNodes;
+      this.murmurNodes = null;
+      try {
+        const t = ac?.currentTime ?? 0;
+        // Sound switched off: stop at once; otherwise fade out over 1 s
+        const fade = this.on ? 1 : 0.08;
+        gain.gain.cancelScheduledValues(t);
+        gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), t);
+        gain.gain.linearRampToValueAtTime(0.0001, t + fade);
+        for (const o of stops) o.stop(t + fade + 0.05);
+      } catch {
+        /* already gone */
+      }
+    }
   }
 
   private syncOne(name: HumName): void {
