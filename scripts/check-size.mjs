@@ -1,8 +1,10 @@
-// Fails if the first load (everything in dist/ except later worlds) is 3 MB or more (P1).
+// Fails if the first load (everything in dist/ except later worlds) is 3 MB or more (P1), or if a
+// later state's lazy part (dist/worlds/<id>/) is over its gzip budget (O1b1: Ogun, 150 KB).
 // Also fails if the offline cache (dist/sw.js) misses a built file, or if a built file points at
 // another site (nothing loads from the network after the first visit; no trackers).
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { gzipSync } from 'node:zlib';
 
 const DIST = 'dist';
 const BUDGET = 3 * 1000 * 1000; // 3 MB
@@ -54,6 +56,27 @@ if (first >= BUDGET) {
   process.exit(1);
 }
 
+// O1b1 (docs/ogun.md 9.1): one line for each later state's part, gzipped as a phone downloads it.
+const WORLD_BUDGETS = { ogun: 150 * 1000 };
+const gz = (r) => gzipSync(readFileSync(join(DIST, r)), { level: 9 }).length;
+let overWorld = false;
+for (const [id, budget] of Object.entries(WORLD_BUDGETS)) {
+  const mine = files.map((f) => relative(DIST, f).split(sep).join('/')).filter((r) => r.startsWith(`worlds/${id}/`) && !r.endsWith('.map'));
+  const name = id[0].toUpperCase() + id.slice(1);
+  if (mine.length === 0) {
+    console.error(`${name} part: missing (no dist/worlds/${id}/).`);
+    overWorld = true;
+    continue;
+  }
+  const size = mine.reduce((n, r) => n + gz(r), 0);
+  console.log(`${name} part: ${kb(size)} gzip of ${kb(budget)} budget (${mine.length} files, dist/worlds/${id}/).`);
+  if (size > budget) {
+    console.error(`The ${name} part is over its ${kb(budget)} gzip budget.`);
+    overWorld = true;
+  }
+}
+if (overWorld) process.exit(1);
+
 // The offline cache lists every first-load file (sw.js itself and later worlds aside).
 const rels = files.map((f) => relative(DIST, f).split(sep).join('/'));
 let sw = '';
@@ -66,6 +89,19 @@ try {
 const missing = rels.filter((r) => r !== 'sw.js' && !LATER.test(r) && !r.endsWith('.map') && !sw.includes(`"./${r}"`));
 if (missing.length > 0) {
   console.error(`The offline cache (sw.js) misses: ${missing.join(', ')}`);
+  process.exit(1);
+}
+// O1b1: a later state's files are never named by the page (so never fetched before asked for),
+// and the service worker knows them (so an update keeps a state the player already has).
+const worldFiles = rels.filter((r) => LATER.test(r) && !r.endsWith('.map'));
+const early = worldFiles.filter((r) => page.includes(r));
+if (early.length > 0) {
+  console.error(`The page loads later-state files at once: ${early.join(', ')}`);
+  process.exit(1);
+}
+const unknown = worldFiles.filter((r) => !sw.includes(`"./${r}"`));
+if (unknown.length > 0) {
+  console.error(`The service worker does not know these later-state files: ${unknown.join(', ')}`);
   process.exit(1);
 }
 
