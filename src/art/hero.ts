@@ -2442,6 +2442,37 @@ export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: Hero
   g.restore();
 }
 
+/** How high each hair or headwear stands over the head's middle (head frame, u): low cut, afro, braids, gele, headscarf. */
+const HEAD_TOPS = [7, 10.8, 7, 12.6, 7.2] as const;
+
+/**
+ * O5a: the carrying pose for every body. Where a load on the head rests (hero space: feet
+ * at 0, 0, facing right; mirror x for facing left): on the hair or headwear over the head's
+ * middle, following the stride, the lean, the landing squash and the jump stretch. `a` is the
+ * head's tilt (radians), so a load can tip with it. The hero carries it hands free, the way
+ * porters do, so every body, age, hair and outfit works.
+ */
+export function heroHeadTop(look: HeroLook, pose: HeroPose): { x: number; y: number; a: number } {
+  const f = frameOf(look, pose);
+  const a = f.r.tilt - f.r.lean * 0.5;
+  const top = (HEAD_TOPS[clampLook(look).hair] ?? 8) * f.b.head;
+  const tx = f.headX + Math.sin(a) * top;
+  const ty = f.headY - Math.cos(a) * top;
+  let x = Math.cos(f.r.lean) * tx - Math.sin(f.r.lean) * ty;
+  let y = f.hipY + Math.sin(f.r.lean) * tx + Math.cos(f.r.lean) * ty;
+  if (f.land > 0) {
+    x *= 1 + f.land * 0.1;
+    y *= 1 - f.land * 0.13;
+  } else if (pose.inAir && !pose.rope && typeof pose.vy === 'number' && Number.isFinite(pose.vy)) {
+    const k = pose.vy < 0 ? clamp01(-pose.vy / 320) * 0.07 : clamp01(pose.vy / 420) * 0.035;
+    if (k > 0.001) {
+      x *= 1 - k * 0.7;
+      y *= 1 + k;
+    }
+  }
+  return { x, y, a: a + f.r.lean };
+}
+
 /**
  * Decision 60 squash and stretch: taller and narrower rising fast off a jump, back to normal at
  * the top, a little stretched again falling fast. Round the feet, so the hitbox never moves.

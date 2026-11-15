@@ -1,0 +1,90 @@
+{
+  "schema": 2,
+  "type": "street",
+  "id": "ogun-3",
+  "state": "ogun",
+  "street": 3,
+  "name": "Sagamu",
+  "theme": "interchange",
+  "schemaNote": "See docs/ogun.md 3.3, 3.6 and 3.8 (and docs/design.md S2.6 for the rest). New: the \"gravel\" hazard (hopping gravel, 70 u/s); the flyover deck and its steps are ordinary one-way platforms (two roads: the deck above, the low road under it with mud, gravel and the secret well); mud and cracks as on Ota and Abeokuta. foods may hold \"ikokore\". The well goes to the ogun-well room.",
+  "groundY": 300,
+  "walkSpeed": 90,
+  "runSpeed": 156,
+  "cornWalkSpeed": 120,
+  "cornSpeed": 228,
+  "spawnX": 80,
+  "startWall": 20,
+  "koboSpacing": 24,
+  "wakeDistance": 520,
+  "hazardSpeeds": { "goat": 36, "tyre": 60, "drum": 84, "gravel": 70 },
+  "ground": [
+    [-400, 3000], [3100, 6200], [6370, 8300], [8470, 9300], [9340, 11800], [11900, 12700]
+  ],
+  "platforms": [
+    [3800, 240, 100],
+    [3900, 180, 100],
+    [4000, 160, 900],
+    [4950, 200, 100],
+    [5050, 250, 100],
+    [8940, 245, 120],
+    [9540, 245, 120]
+  ],
+  "mud": [
+    [3300, 120],
+    [4100, 160],
+    [7900, 100],
+    [9900, 120]
+  ],
+  "cracks": [
+    [2600, 40],
+    [7300, 40]
+  ],
+  "kobo": [
+    [250, 276, 4], [700, 276, 3], [950, 276, 4], [1800, 276, 4], [2200, 276, 3],
+    [2608, 236, 2], [2750, 276, 4],
+    [2990, 220, 2], [3030, 170, 2], [3090, 220, 2], [3200, 276, 3], [3310, 276, 4],
+    [3815, 216, 2], [3915, 156, 2], [4030, 136, 14], [4700, 136, 5], [4965, 176, 2], [5065, 226, 2],
+    [4120, 276, 3], [4800, 276, 3], [5200, 276, 3],
+    [5850, 276, 4], [6240, 170, 2], [6290, 120, 2], [6340, 170, 2],
+    [6500, 276, 3], [7000, 276, 3], [7308, 236, 2], [7500, 276, 4], [7910, 276, 4], [8040, 276, 3],
+    [8340, 170, 2], [8390, 120, 2], [8440, 170, 2],
+    [8955, 221, 4], [9308, 236, 2], [9550, 221, 2], [9640, 221, 1], [9910, 276, 4],
+    [10200, 276, 4], [10550, 276, 3], [11600, 276, 3],
+    [11790, 220, 2], [11830, 170, 2], [11890, 220, 2], [12000, 276, 4]
+  ],
+  "foods": [
+    [4600, 132, "fufu"],
+    [7750, 272, "ikokore"],
+    [11000, 272, "amala"]
+  ],
+  "crates": [
+    [600, 204, "kobo"],
+    [800, 204, "kobo"],
+    [2400, 204, "kobo"],
+    [5700, 204, "garri"],
+    [8800, 204, "corn"],
+    [9600, 149, "kobo"]
+  ],
+  "hazards": [
+    ["gravel", 1500],
+    ["gravel", 2100],
+    ["gravel", 4450],
+    ["gravel", 6600],
+    ["goat", 6850],
+    ["tyre", 7100],
+    ["gravel", 10400],
+    ["tyre", 10700],
+    ["goat", 11300],
+    ["gravel", 11500]
+  ],
+  "wells": [
+    { "x": 4700, "exitX": 5300, "room": "ogun-well" }
+  ],
+  "hints": [
+    [1100, "Hopping gravel! Jump or bounce."],
+    [3650, "Two roads! Climb up, or stay low."],
+    [5500, "Bus stop! Now you start here."]
+  ],
+  "checkpoint": 5500,
+  "end": { "x": 12200, "wall": 12400 }
+}

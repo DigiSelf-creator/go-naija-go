@@ -188,7 +188,7 @@ A player who finished Lagos knows every move. Ogun starts level with Lagos stree
 | New thing | walk, jump, crate, pit | roof crates, the well | the drum, secret well | **mud**, ikokore | **rock steps, cracks**, ofada | **hopping gravel, two roads** |
 | Big pits | 1 | 1 | 2 | 1 (after mud) | 1 | 2 (one after mud) |
 | Moving hazards | 8 | 11 | 14 | 6 | 5 | 10 |
-| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 7 cracks | 5 mud, 2 cracks |
+| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 6 cracks (O0a2: 3.5 places 6) | 4 mud, 2 cracks (O0a3: 3.6 places 4) |
 | Hints | 15 | 4 | 2 | 4 | 5 | 3 |
 | Well | none | yes | yes, secret | none | yes | yes, on the low road |
 
@@ -261,6 +261,17 @@ Length: spawn 80 to bus 11800 = 11720 u. 75 s at full run, about 100 s typical.
 
 Kobo: about 150 loose and 12 in crates, plus 17 in the well room.
 
+**Built (O0a2, 15 Nov):** src/data/levels/ogun-2.json and src/data/levels/ogun-well.json. Pits as ground gaps: wide 100 at 2000 (under the ledge), water tap 40 at 2600, water hold 60 at 2900, big 170 at 6400, tap 40 at 9400, tap 36 at 9950, hold 60 at 11200. Rocks `[x, width, height]`: [1200, 100, 50], [1330, 100, 100], [1460, 100, 150], [1900, 300, 90]. Cracks: 5250 (40), 5700 (60), 6000 (40), 7300 (40), 7900 (60), 8300 (40). Roofs [9040, 245, 120] (kobo crate 9100) and [9640, 245, 120]. Kobo: 151 loose, 4 kobo crates (12), 17 in the room. End: bus door 11800, wall 12000. Checked by tests/unit/street.test.ts (S2.6, with rocks read as roofs) and tests/unit/ogun-levels.test.ts (3.3 mud, rocks, water and crack rules, ofada, the well room). Until gamedev reads `rocks`, `cracks` and the `ofada` food (O3b), the S2.6 test reads a copy that adds each rock as a platform and leaves ofada out; ogun-levels.test.ts treats each crack as a pit for the hazard, food, crate, mud and well distances.
+
+Gaps ruled in O0a2 (simplest fair choice, decision 64):
+- **Tyre and mud before the bus stop.** The table's tyre at 4500 sits 200 u from the exit well at 4700, but S2.6 wants no hazard within 400 u of an exit well. The tyre moves to 4250 and the mud to 4350 (120 wide, ending 230 u before the exit well). The order there is now goat 3900, tyre 4250, mud 4350.
+- **Six cracks, not seven.** 3.2 said 7, but the 3.5 table places 6. The file has the 6 placed; 3.2 now says 6.
+- **Twelve kobo in crates.** The table names two kobo crates (700 and the roof at 9100); two more on the road at 3200 and 10200 make the 12.
+- **The well room.** The table gives no layout, so it follows S2.5 with its own shelves: sacks at [110, 240, 90] (60 high), a plank shelf [240, 200, 90] (100 high) holding the parcel at (285, 176), sacks at [380, 250, 90] (50 high); 14 loose kobo and a kobo crate at 345 (17 in all); `giftIfCarried` 5 kobo centred on 285. The store keeper sits at the back wall at room x 60 to 100, as the Lagos keeper does (look only).
+- **No hint for the well.** Wells were taught in Lagos, so Abeokuta keeps its 5 hints and no well hint.
+- **Rocks are platforms.** A rock is one-way (land on top, pass up from below), its left end stands on the road, and it may reach over a pothole (the ledge at 1900). Steps less than 60 u apart climb from the step before; a lone rock climbs from the road.
+- **Crack spacing.** Each crack keeps at least 200 u of road from any other pit or crack and 60 u from the end of its stretch of road, so there is always firm road to land on before the next one opens.
+
 ### 3.6 Street 3: Sagamu (src/data/levels/ogun-3.json)
 
 Idea: evening at the interchange. A flyover on tall pillars, ramps, a lorry park with trucks of cement and gravel, the kola nut market under big umbrellas with traders from every region, a garri seller, a far quarry edge in the orange sky. Signs (made up): "KOLA NUTS", "GARRI IJEBU", "IKOKORE", "BATTERY CHARGING", "VULCANIZER". Teaches hopping gravel and two roads.
@@ -281,6 +292,15 @@ Length: spawn 80 to bus 12200 = 12120 u. 78 s at full run, about 105 s typical.
 | Amala | 11000-12200 | | Amala on the road at 11000. Goat 11300, gravel 11500, wide pothole 100 at 11800 (sign 11680). Bus door 12200 |
 
 Kobo: about 140 loose and 12 in crates, plus 17 in the well room.
+
+**Built (O0a3, 15 Nov):** src/data/levels/ogun-3.json (the well room is the shared ogun-well). Pits as ground gaps: wide 100 at 3000, big 170 at 6200, big 170 at 8300, tap 40 at 9300, wide 100 at 11800. Cracks: 2600 (40), 7300 (40). Mud: 3300 (120), 4100 (160), 7900 (100), 9900 (120). Gravel: 1500, 2100, 4450, 6600, 10400, 11500; goats 6850, 11300; tyres 7100, 10700. Platforms: steps up [3800, 240, 100] and [3900, 180, 100], deck [4000, 160, 900], steps down [4950, 200, 100] and [5050, 250, 100]; roofs [8940, 245, 120] and [9540, 245, 120] (kobo crate 9600). Pepper fufu on the deck at (4600, 132). Kobo: 141 loose, 4 kobo crates (12). End: bus door 12200, wall 12400. Checked by tests/unit/street.test.ts (S2.6, with gravel read as a tyre, since its placing rules are the tyre's) and tests/unit/ogun-levels.test.ts (3.3 mud, crack, gravel and two-roads rules).
+
+Gaps ruled in O0a3 (simplest fair choice, decision 64):
+- **Four mud patches, not five.** 3.2 said 5, but the 3.6 table places 4 (3300, 4100, 7900, 9900). The file has the 4 placed; 3.2 now says 4.
+- **Twelve kobo in crates.** The table names three kobo crates (600, 800, the roof at 9600); a fourth on the road at 2400, between the second gravel and the first crack, makes the 12.
+- **The deck and its steps are plain platforms**, not rocks: one-way, like the stall roofs, so they need no new field. Each step is 100 wide and touches the next; the deck has no gaps.
+- **The first gravel stands alone** with no other hazard closer than 600 u (the second gravel at 2100 is exactly 600 u on).
+- **No well hint.** The low-road well is a secret, as Ikeja's is.
 
 ### 3.7 The well room: the Ijebu garri store (src/data/levels/ogun-well.json)
 
@@ -425,6 +445,17 @@ Nobody is hurt. The pothole just becomes a good road and has a nap.
 - Money line as Lagos: "You got ₦15."
 - Big button: "Take it home". Small: "Play again", "Challenge road".
 
+### 5.6 The hall file and the gaps it rules (O0a4)
+
+src/data/levels/ogun-hall.json keeps Go-Slow Hall's format (schema 2, `type: "hall"`, the same room numbers: width 560, floor 300, start 50, left wall 30) with right wall 530 and King Pothole's own `boss` block: `pit` (width 100, track 230 to 400, drop zone 40, bump gap 10, slides again 0.3 s after landing), `bag` (pile 60 to 90, bag at 80, a new one 1.0 s later), `phases` (the 5.4 table: every, slide, pattern, bpm), `gravel`, `mud`, `fall` and `gentle`. The game does not read this block yet; gamedev adds the reader in O5b. tests/unit/ogun-hall-lane.test.ts checks it.
+
+Gaps in 5.2 to 5.5, ruled the simplest fair way:
+- **Where he starts:** his middle at 400, the right end of his track, the farthest from the hero, sliding left. The same place he goes back to after a fall.
+- **"120 to 200 u from him"** is measured from his near lip (the one on the hero's side), so a mud patch never lands in his opening.
+- **Walls:** the whole 60 u patch lands inside the walls (its middle 60 to 500). If no spot is 120 to 200 u from his lip, inside the walls and 40 u or more from the hero (the hero at the pile while he is at the far-left end), that throw is a gravel lump instead. Mud never hurts, so this only keeps it fair and simple.
+- **His opening slides over a drying patch:** fine. The patch is floor; where his opening passes, you see the hole, and the patch shows again after him until it dries.
+- **Gravel when the hero is past him on the right landing:** it hops out of his right lip, toward the hero, and crumbles at the right wall.
+
 ---
 
 ## 6. Ogun's city from above
@@ -501,6 +532,12 @@ The first screen of each run matches its spot, tired or bright (decision 48).
 ### 6.6 The Expressway run (the lane run in Ogun; src/data/levels/ogun-lane.json)
 
 The same rules, controls, tilt, Blackout, buckets, prizes and "Keep running" as S3f0. Our own new look: a wide expressway at dusk seen from behind, tipper trucks and tankers in the lanes (dark back windows, no drivers shown), danfos, road cones, palm trees and red-brown verges, far rocks and a quarry against the sky, the footbridge, and the bus stop goal under a small copy of the arch. The fixed first 600 m uses Ogun's own order of rows (designer writes it with the same fairness rules, S3f0 part 7). No new rule in the lane run for now.
+
+**The file (O0a4).** src/data/levels/ogun-lane.json, the same `type: "lane"` format as lagos-lane.json, name "Expressway", theme "expressway". Gaps ruled the simplest fair way:
+- **The same numbers as Lagos:** speeds, moves, Blackout, prize, pops, endless rules and the part 9 totals (Power 14, Tech 9, 86 coins). So S3f0's "three tries" Blackout table still holds, and one win still pays for any one Ogun fix (6.2).
+- **The same teaching:** the same nine hint keys at the same distances, with the same words (WORDS.lane.hints), and each thing still taught alone in the middle lane by 305 m. A hint is seen once per phone, so a player who ran the Lagos lane run sees none of them again; one who never did is taught here. The three warm-up bulbs stay at 152, 282 and 372 m in the only free lane.
+- **Ogun's own rows:** from 240 m on the rows are new, and the road holds more potholes (7, where Lagos has 3), never before the pothole hint at 288 m. 8 endless chunks of Ogun's own (tanker-wall, pothole-row, zigzag, middle-gap, slide-run, goat-crossing, crate-row, long-tipper).
+- **Tippers and tankers** are the `danfo` kind: the same size and rules. Art draws each one as a tipper truck, a tanker or a danfo (O6a), so no new kind and no new rule.
 
 ---
 
