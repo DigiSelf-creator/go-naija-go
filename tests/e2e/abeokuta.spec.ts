@@ -5,7 +5,7 @@
  * into the Ijebu garri store for the parcel and back up, the cracks that rumble open, ofada that
  * keeps the next ones shut, the corn stretch and the bus. The cleared card says Abeokuta's line
  * and the parcel's, the save goes under states.ogun (street 2 and the parcel), and Ogun's place
- * then says Sagamu is next. Before Ota is done, Ogun's place has no "Play Abeokuta".
+ * then says Sagamu is open (O4b). Before Ota is done, Ogun's place has no "Play Abeokuta".
  */
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
@@ -170,8 +170,9 @@ test('Abeokuta by hand from Ogun\'s place: rocks, water, the well room and its p
   const money = kobo * 10 + 500;
   await expect(dialog.getByText(`Abeokuta is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
   await expect(dialog.getByText('Your Ijebu garri parcel is saved for Pothole Hall.')).toBeVisible();
-  for (const b of ['Take it home', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
-  for (const b of ['Next street', 'Challenge road']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
+  // O4b: Abeokuta's card goes on to Sagamu.
+  for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
   // Saved under states.ogun: street 2 and the parcel; Lagos as it was; the money in the one wallet.
   const s = await saved(page);
   expect(s.states?.ogun?.streets?.['2']).toEqual({ done: true, best: kobo * 10 });
@@ -183,6 +184,9 @@ test('Abeokuta by hand from Ogun\'s place: rocks, water, the well room and its p
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('Abeokuta is moving again. Sagamu is coming next.')).toBeVisible();
+  await expect(ogunPlace(page).getByText('Abeokuta is moving again. Sagamu is open.')).toBeVisible();
+  // O4b: Sagamu is the big button now; Abeokuta and Ota are small.
+  await expect(ogunPlace(page).getByRole('button', { name: 'Play Sagamu' })).toHaveClass(/\bgo\b/);
+  await expect(ogunPlace(page).getByRole('button', { name: 'Play Abeokuta' })).toHaveClass(/minor/);
   expect(errors).toEqual([]);
 });
