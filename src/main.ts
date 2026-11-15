@@ -310,6 +310,7 @@ function startGame(): void {
     const now = performance.now();
     const live = playing && !game.paused && !menus.current && !document.hidden && inPlay();
     if (live && lastFrameAt > 0) game.people.frame(now - lastFrameAt);
+    if (live) game.people.endFrame();
     lastFrameAt = live ? now : 0;
     sound.setMurmur(live && game.people.seen >= 5 && !crowdQuiet());
   }
@@ -1263,6 +1264,7 @@ function startGame(): void {
         seen: p.seen,
         bubble: p.bubbleBox ? { ...p.bubbleBox } : null,
         backOff: p.watch.level,
+        ms: { avg: p.costMs, max: p.costMax, bake: p.bakeMs },
         murmur: sound.murmuring,
         plan: p.street ? { stands: p.street.plan.stands.length, walkers: p.street.plan.walkers.length, zones: p.street.plan.zones.map((z) => [z.a, z.b]) } : null,
       };
@@ -1605,6 +1607,7 @@ declare global {
         seen: number;
         bubble: { x: number; y: number; w: number; h: number } | null;
         backOff: number;
+        ms: { avg: number; max: number; bake: number };
         murmur: boolean;
         plan: { stands: number; walkers: number; zones: number[][] } | null;
       };

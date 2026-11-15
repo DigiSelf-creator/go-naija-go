@@ -4,8 +4,8 @@
  * person is one drawImage. Bubbles, the heads in bus windows, the keke's riders and the okada
  * are baked once too. Rebuilt only when the screen's pixel scale or the cast changes.
  */
-import { bakeBubble, bakeFolk, drawFolkSprite, type FolkSheet } from '../art/folkBake';
-import { drawKekeRiders, drawOkada, drawWindowHeads, type FolkFrame, type FolkLook } from '../art/folk';
+import { bakeBubble, drawFolkSprite, folkFramesFor, folkSheetLayout, type FolkSheet } from '../art/folkBake';
+import { FOLK_BOX, drawFolkFrame, drawKekeRiders, drawOkada, drawWindowHeads, type FolkFrame, type FolkLook } from '../art/folk';
 import { OKADA_BOX, BUS_SHAPE_WINDOWS } from '../art/folkCasts';
 import { WORDS } from '../screens/words';
 import type { Bubble, FolkDraw } from './crowd';
@@ -18,25 +18,67 @@ export function screenRatio(): number {
   return Math.min(Math.max(r, 1), 2);
 }
 
-/** One cast baked at one size. */
+/**
+ * One cast baked at one size. The bake is spread over frames (at most `budget` ms each), so a
+ * place's first frame is never held up (part 11: no more than 30 ms later): a person whose
+ * picture is not baked yet is simply not drawn for those first few frames.
+ */
 export class CastSheet {
   private sheet: FolkSheet | null = null;
   private key = '';
-  /** Milliseconds the last bake took (qa: at most 40 ms on the slow phone profile). */
+  private todo: { look: number; frame: FolkFrame }[] = [];
+  private looks: readonly FolkLook[] = [];
+  private next = 0;
+  /** Milliseconds the bake took in all, over its frames (qa: at most 40 ms on the slow phone profile). */
   bakeMs = 0;
+  /** The longest piece of it in one frame. */
+  bakeStepMs = 0;
 
-  constructor(private frames?: (look: FolkLook, i: number) => readonly FolkFrame[]) {}
+  constructor(
+    private frames: (look: FolkLook, i: number) => readonly FolkFrame[] = folkFramesFor,
+    private budget = 6,
+  ) {}
 
-  /** Makes the sheet if the cast or the pixel scale changed. */
+  /** Makes the sheet if the cast or the pixel scale changed, and bakes a little more of it. */
   ready(looks: readonly FolkLook[], pxPerU: number, castKey: string): FolkSheet | null {
     const key = `${castKey}|${pxPerU.toFixed(3)}`;
     // No page (unit tests drawing with a stand-in context): nobody is drawn.
     if (typeof document === 'undefined') return null;
     if (!this.sheet || key !== this.key) {
-      const t0 = performance.now();
-      this.sheet = bakeFolk(looks, pxPerU, this.frames);
-      this.bakeMs = performance.now() - t0;
       this.key = key;
+      this.looks = looks;
+      // Stand first for everyone, then the other frames, so people show as early as possible.
+      const first = (f: FolkFrame): boolean => f === 'stand' || f === 'backStand' || f === 'sit';
+      const all = looks.flatMap((l, i) => this.frames(l, i).map((frame) => ({ look: i, frame })));
+      this.todo = [...all.filter((c) => first(c.frame)), ...all.filter((c) => !first(c.frame))];
+      const layout = folkSheetLayout(this.todo.length, pxPerU);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, layout.width);
+      canvas.height = Math.max(1, layout.height);
+      this.sheet = { canvas, layout, cells: new Map() };
+      this.next = 0;
+      this.bakeMs = 0;
+      this.bakeStepMs = 0;
+    }
+    if (this.next < this.todo.length) {
+      const t0 = performance.now();
+      const sh = this.sheet;
+      const L = sh.layout;
+      const c2 = sh.canvas.getContext('2d')!;
+      while (this.next < this.todo.length) {
+        const c = this.todo[this.next]!;
+        const n = this.next++;
+        const sx = (n % L.cols) * L.cellW;
+        const sy = Math.floor(n / L.cols) * L.cellH;
+        c2.setTransform(L.pxPerU, 0, 0, L.pxPerU, sx + 1 - FOLK_BOX.l * L.pxPerU, sy + 1 - FOLK_BOX.t * L.pxPerU);
+        drawFolkFrame(c2, this.looks[c.look]!, c.frame);
+        sh.cells.set(`${c.look}:${c.frame}`, [sx, sy]);
+        if (performance.now() - t0 > this.budget) break;
+      }
+      c2.setTransform(1, 0, 0, 1, 0, 0);
+      const ms = performance.now() - t0;
+      this.bakeMs += ms;
+      this.bakeStepMs = Math.max(this.bakeStepMs, ms);
     }
     return this.sheet;
   }

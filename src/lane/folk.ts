@@ -197,6 +197,7 @@ export class LaneFolk {
   drawn: { x: number; d: number }[] = [];
   private fronts = new Map<string, HTMLCanvasElement>();
   private frontPpm = 0;
+  private made = 0;
   private bridge = new Map<number, HTMLCanvasElement>();
 
   /** The sheet and the front tiles at this screen's size (CSS px per metre at about 10 m, device px). */
@@ -211,10 +212,13 @@ export class LaneFolk {
   }
 
   /** A front tile, baked once per wall colour and window kind (faces are part of the tile). */
-  private front(wall: number, kind: FrontKind): HTMLCanvasElement {
+  private front(wall: number, kind: FrontKind): HTMLCanvasElement | null {
     const key = `${wall}|${kind}`;
     let c = this.fronts.get(key);
+    // At most two new tiles a frame, so the run's first frames are never held up.
+    if (!c && this.made >= 2) return null;
     if (!c) {
+      this.made++;
       c = document.createElement('canvas');
       const k = (this.frontPpm * LANE_FOLK_M) / 37;
       c.width = Math.ceil((FRONT_TILE.w + 4) * k);
@@ -231,6 +235,7 @@ export class LaneFolk {
   /** The two-storey fronts behind both pavements, far to near (draw after the road). */
   drawFronts(g: G, p: LaneProject, n: LaneFolkNow, near: number, far: number): void {
     if (typeof document === 'undefined') return;
+    this.made = 0;
     const E = LANE_FOLK.frontEvery;
     const k0 = (this.frontPpm * LANE_FOLK_M) / 37;
     for (let j = Math.floor(far / E); j * E >= near + 2; j--) {
@@ -248,6 +253,7 @@ export class LaneFolk {
         if (d < n.offTo + 2) kind = 'glow';
         else if (person) kind = d - n.dist < LANE_FOLK.waveNear * 1.5 && !n.still ? (Math.floor(n.t / 0.3) % 2 ? 'wave1' : 'wave0') : 'lean';
         const img = this.front(wall, kind);
+        if (!img) continue;
         const w = ((img.width / k0) * ppm * LANE_FOLK_M) / 37;
         const sx = p.sx(x, d);
         const sy = p.sy(0, d);

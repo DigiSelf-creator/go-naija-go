@@ -155,9 +155,16 @@ test('the lane run draws its own picture in the cutout strip; its rows and butto
   expect(now.every((p) => !near(p, BG, 4))).toBe(true);
   expect(now.filter((p, i) => !near(p, street[i]!, 4)).length).toBeGreaterThan(now.length / 2);
   // And the screen shows the canvas there (nothing drawn over the strip but the picture).
-  const pts = [0.3, 0.5, 0.7].map((y) => ({ x: 2, y: Math.round(h * y) }));
-  const [cv, sc] = [await gamePixels(page, pts), await shown(page, pts)];
-  cv.forEach((p, i) => expect(near(p, sc[i]!, 40)).toBe(true));
+  // S3g1b: the upper half shows the house fronts and people moving past with the run, so the
+  // canvas read and the screenshot (frames apart) can differ there; the road and pavement below
+  // change slowly and show the same picture.
+  const pts = [0.7, 0.8, 0.9].map((y) => ({ x: 2, y: Math.round(h * y) }));
+  await expect
+    .poll(async () => {
+      const [cv, sc] = [await gamePixels(page, pts), await shown(page, pts)];
+      return cv.every((p, i) => near(p, sc[i]!, 40));
+    })
+    .toBe(true);
   const lefts = await page.evaluate(() =>
     [...document.querySelectorAll('.lane-hud button, .lane-chips, .lane-left, .lane-buttons button')]
       .map((e) => e.getBoundingClientRect())

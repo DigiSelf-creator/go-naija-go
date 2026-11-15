@@ -59,10 +59,50 @@ export class GamePeople {
   bubbleBox: Rect | null = null;
   /** The parked buses' passengers, picked from the street's cast. */
   private busLooks: (FolkLook | undefined)[] = [];
+  /** Milliseconds the people took this frame so far, and the average over recent frames (part 11: at most 1.5 at 4x CPU). */
+  private spent = 0;
+  costMs = 0;
+  costMax = 0;
+  private frames = 0;
+
+  constructor() {
+    // Every part the game calls is timed (update and drawing), for qa's 1.5 ms check.
+    const timed = ['update', 'drawOkada', 'drawBack', 'drawAt', 'drawStartBus', 'drawEndBus', 'drawRoom', 'drawHall', 'drawBubble'] as const;
+    const self = this as unknown as Record<string, (...a: unknown[]) => unknown>;
+    for (const m of timed) {
+      const f = self[m]!.bind(this);
+      self[m] = (...a: unknown[]): unknown => {
+        const t0 = performance.now();
+        try {
+          return f(...a);
+        } finally {
+          this.spent += performance.now() - t0;
+        }
+      };
+    }
+  }
+
+  /** The frame is drawn: keeps the running average of the people's time a frame. */
+  endFrame(): void {
+    const ms = this.spent;
+    this.spent = 0;
+    this.frames++;
+    this.costMs += (ms - this.costMs) / Math.min(this.frames, 120);
+    if (this.frames > 30) this.costMax = Math.max(this.costMax, ms);
+  }
+  resetCost(): void {
+    this.costMs = this.costMax = 0;
+    this.frames = 0;
+  }
 
   private streetFrames(look: FolkLook, i: number): FolkFrame[] {
     const all = folkFramesFor(look);
     return this.walkLooks.has(i) ? all : all.filter((f) => !f.startsWith('walk'));
+  }
+
+  /** The street sheet's last bake (ms; qa: at most 40 on the slow phone profile). */
+  get bakeMs(): number {
+    return this.streetSheet.bakeMs;
   }
 
   /** A new run (Game.begin / reset): fresh people; backing off is forgotten. */
@@ -71,6 +111,7 @@ export class GamePeople {
     this.street = null;
     this.hall = null;
     this.watch.reset();
+    this.resetCost();
   }
 
   /** Makes the place's people when the place, its look or the player's look changed. */
@@ -148,11 +189,17 @@ export class GamePeople {
     const heroSx = n.run.hero.x - n.camX;
     const t = n.clock;
     return (g, x, kind) => {
-      const near = Math.abs(x - heroSx) < CROWD.waveNear;
-      const wave = near && !n.still ? ((Math.floor(t / 0.25) % 2) + 1) as 1 | 2 : near ? 1 : 0;
-      if (kind === 'bus') drawBusHeads(g, 'pass', this.busLooks.slice(0, 4), wave, view.scale * 0.5, Math.sin(t * 14) * 0.6);
-      else drawKekeHeads(g, KEKE_RIDERS, wave, view.scale * 0.55, t);
+      const t0 = performance.now();
+      this.ridersAt(g, view, n, x, kind, heroSx, t);
+      this.spent += performance.now() - t0;
     };
+  }
+
+  private ridersAt(g: G, view: View, n: PeopleNow, x: number, kind: 'bus' | 'keke', heroSx: number, t: number): void {
+    const near = Math.abs(x - heroSx) < CROWD.waveNear;
+    const wave = near && !n.still ? (((Math.floor(t / 0.25) % 2) + 1) as 1 | 2) : near ? 1 : 0;
+    if (kind === 'bus') drawBusHeads(g, 'pass', this.busLooks.slice(0, 4), wave, view.scale * 0.5, Math.sin(t * 14) * 0.6);
+    else drawKekeHeads(g, KEKE_RIDERS, wave, view.scale * 0.55, t);
   }
 
   /** The okada on the far road (screen space, after the backdrop): every 25 s, both ways in turn. */
