@@ -1,5 +1,16 @@
 # Open questions for the product owner
 
+## designer, 15 Nov 2026: people everywhere (docs/design.md "People everywhere", Tp's feedback of 15 Nov)
+
+Tp and a tester said the game feels empty: "no persons in the game? It's boring, it's just one person, even on the lane run." The note is written, so S3g1a (art) and S3g1b (gamedev) can start. Nothing here needs Tp before building: the six rulings below are small and easy to undo (decision 64). The lead reports each to Tp in one line.
+
+- **PE-R1. People live in one back pavement layer, never on the front pavement strip.** Their feet sit 8 u above the hero's feet line, at 0.85 of the hero's size, drawn behind everything the hero can touch. Recommended because the player always sees at a glance that a person is not in the path, and the front strip stays plain so the see-through buttons read (S2.1).
+- **PE-R2. Short speech bubbles, one at a time, with no meaning.** Greetings, trader calls and cheers in English, Pidgin, Yoruba, Hausa and Igbo in equal share (decision 30), with a plain spelling if tone marks do not show on a phone. Bubbles are never read out and never cover the hero, a hazard, a coin, a button or the HUD. Recommended because a few warm words are what make a Lagos street feel alive.
+- **PE-R3. Nobody reacts when the hero loses a life.** People cheer good things only (a problem cleared, the bus stop, the bus). Recommended because even a kind "Sorry o!" can feel like being watched failing; silence is kinder.
+- **PE-R4. The well room gets a store keeper:** an elder woman sitting by the back wall, away from the rope, who waves and says "For the boss. Go well!" when the hero takes the garri parcel. Recommended because the room is under a compound and a kind elder fits the gift; she gives nothing away on the street, where nobody stands near a well.
+- **PE-R5. Danfo passengers show in the streets, not in the lane run.** In the lane run the danfos are in the lanes, and people are never in a lane, so their back windows stay dark as now (S3f0 part 16). Street danfos are in the far background, so their passengers wave.
+- **PE-R6. Crowd sounds follow the Sound switch; no new switch.** The murmur is very quiet and only plays when 5 or more people are on screen; there is never a murmur or cheer over a warning sound or the corn tune. Recommended because one fewer switch is simpler, and Sound off already silences it.
+
 ## designer, 15 Nov 2026: tilt to steer (decision 70; docs/design.md S3f0 part 25)
 
 The note for decision 70 is written, so gamedev can build it. Nothing here needs Tp before building: all four are small rulings, easy to undo (decision 64). The lead reports each to Tp in one line.
