@@ -2190,7 +2190,10 @@ export class CityScreen {
     const hb = this.hintBox;
     if (!hb || hb.x !== x || hb.y !== y || hb.w !== w || hb.h !== h) {
       this.hintBox = { x, y, w, h };
-      this.requestDraw();
+      // W10: a still city draws nothing. Signs only need placing again when the bar now sits on
+      // one of them; otherwise they keep their places (the next draw lays them out with it).
+      const box = this.hintBox;
+      if (signs.some((q) => q.x < box.x + box.w && box.x < q.x + q.w && q.y < box.y + box.h && box.y < q.y + q.h)) this.requestDraw();
     }
   }
 
