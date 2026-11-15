@@ -25,6 +25,7 @@ import type { SpotId } from '../art/city';
 import type { CityLife } from '../game/cityLife';
 import { introDue, introSeen, markIntroSeen, type IntroFrom } from '../game/intro';
 import type { Store } from '../storage';
+import type { TiltAccess } from '../game/tilt';
 import type { SoundName } from '../engine/sound';
 import { CityScreen, type CitySound, type Mission } from './city';
 import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
@@ -32,6 +33,7 @@ import { button, h } from './dom';
 import { wheelFit } from './streets';
 import { roadScreen, type RoadOpen, type RoadView, type StopInfo } from './road';
 import { GAME_NAME, WORDS } from './words';
+import { isNativeApp } from '../native/is-native';
 
 export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | null;
 
@@ -175,6 +177,10 @@ export class Menus {
   laneRun = false;
   /** S3f3: the lane Pause card's "So far: ..." line. */
   laneSoFar = '';
+  /** S3f0 part 25: can this phone tilt, and what it said (main sets it). Null: no tilt at all. */
+  tilt: TiltAccess | null = null;
+  /** Part 25.4: does iOS in the store app ask again after a no? (gamedev checks on a real iPhone.) */
+  tiltAppAsksAgain = true;
 
   constructor(
     parent: HTMLElement,
@@ -238,6 +244,29 @@ export class Menus {
   /** S3f0 part 3: "Buttons instead of swipes" in the lane run. */
   get laneButtons(): boolean {
     return this.settings.buttonsInsteadOfSwipes;
+  }
+
+  /** S3f0 part 25: "Tilt to steer" is saved on (kept even on a phone with no sensor). */
+  get tiltSaved(): boolean {
+    return this.settings.tiltToSteer;
+  }
+
+  /** Tilt steers now: saved on, a phone that can tilt, and not refused this visit (25.4, 25.5). */
+  get laneTilt(): boolean {
+    const t = this.tilt;
+    return this.settings.tiltToSteer && t !== null && t.canTilt && t.answer !== 'denied';
+  }
+
+  /** Turns "Tilt to steer" on or off (saved); any switch on screen follows. */
+  setTilt(on: boolean): void {
+    this.settings.tiltToSteer = on;
+    saveSettings(this.store, this.settings);
+    this.syncTilt();
+  }
+
+  /** The tilt switches on screen show the phone's state now (found, refused, asked). */
+  syncTilt(): void {
+    for (const row of this.layer.querySelectorAll<HTMLElement>('.tilt-row')) this.fillTiltRow(row);
   }
 
   /** The HUD sound button. Remembered on the phone. */
@@ -390,6 +419,65 @@ export class Menus {
     return sw;
   }
 
+  /**
+   * S3f0 part 25.1: "Tilt to steer: off" / "...: on", under "Buttons instead of swipes" in Settings
+   * and on the lane Pause card, only on a phone that can tilt. On an iPhone, turning it on asks
+   * Apple's box from this tap (25.4); a no turns it back off with the two lines under it.
+   */
+  private tiltRow(where: 'settings' | 'pause'): HTMLElement {
+    // Empty and hidden until the phone is found to tilt: a computer gets no switch at all.
+    const row = h('div', { class: `tilt-row ${where}`, hidden: true });
+    this.fillTiltRow(row);
+    return row;
+  }
+
+  /** The switch and its lines, made the first time the row can show. */
+  private tiltParts(row: HTMLElement): void {
+    const w = WORDS.lane;
+    const sw = this.guarded(w.tiltOff, 'minor tilt-switch', () => {
+      const t = this.tilt;
+      if (!t) return;
+      if (this.laneTilt) {
+        this.setTilt(false);
+        return;
+      }
+      this.setTilt(true);
+      if (!t.ios) return;
+      // Inside the tap: Safari shows its box only then. "Allow" works at once.
+      void t.ask('switch').then((a) => {
+        if (a === 'denied') this.setTilt(false);
+        else this.syncTilt();
+      });
+      this.syncTilt();
+    }, { role: 'switch', 'aria-label': w.tiltName, 'aria-checked': 'false' });
+    row.append(sw, h('p', { class: 'small tilt-lines' }));
+  }
+
+  private fillTiltRow(row: HTMLElement): void {
+    const w = WORDS.lane;
+    const t = this.tilt;
+    row.hidden = !t || !t.canTilt;
+    if (row.hidden) return;
+    if (!row.querySelector('.tilt-switch')) this.tiltParts(row);
+    const on = this.laneTilt;
+    const sw = row.querySelector('.tilt-switch');
+    if (sw) {
+      sw.textContent = on ? w.tiltOn : w.tiltOff;
+      sw.setAttribute('aria-checked', String(on));
+    }
+    const lines: string[] = [];
+    if (t?.ios && t.answer === 'denied') lines.push(w.tiltDenied, this.tiltAppAsksAgain || !isNativeApp() ? w.tiltRetry : w.tiltRetryApp);
+    else {
+      if (row.classList.contains('settings')) lines.push(w.tiltPrivacy);
+      if (t?.ios && t.answer !== 'granted') lines.push(w.tiltAskFirst);
+    }
+    const p = row.querySelector('.tilt-lines');
+    if (p instanceof HTMLElement) {
+      p.replaceChildren(...lines.flatMap((l, i) => (i === 0 ? [l] : [h('br'), l])));
+      p.hidden = lines.length === 0;
+    }
+  }
+
   /** "Sound: on" / "Sound: off" (title and pause). */
   private soundSwitch(): HTMLButtonElement {
     const w = WORDS.title;
@@ -431,6 +519,7 @@ export class Menus {
           this.guarded(WORDS.lane.pauseHome, 'minor', () => this.hooks.leave('city')),
         ),
         h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch(), this.laneButtonsSwitch()),
+        this.tiltRow('pause'),
       );
     }
     return h(
@@ -693,6 +782,7 @@ export class Menus {
         this.musicSwitch(),
         this.gentleSwitch(),
         this.laneButtonsSwitch(),
+        this.tiltRow('settings'),
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
         button(w.back, 'go', () => this.show(this.settingsBack)),
       ),

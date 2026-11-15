@@ -2269,6 +2269,98 @@ body.lane {
   margin-top: 24px;
 }
 
+/* S3f0 part 25 (decision 70): tilt to steer. The switch sits under "Buttons instead of swipes",
+   44 px tall, the full width of the column; the privacy and (iPhone) ask lines under it in 12 px. */
+.tilt-row:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tilt-row[hidden],
+.tilt-lines[hidden],
+.lane-button[hidden],
+.lane-hold[hidden] {
+  display: none;
+}
+.tilt-row .tilt-switch {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  justify-content: center;
+  text-align: center;
+}
+.screen .tilt-row .tilt-lines {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+}
+.pause-card .tilt-row {
+  margin-top: 6px;
+}
+/* Short screens: in Settings' two columns the row spans both, the lines beside the switch. */
+@media (max-height: 300px) {
+  .settings-list .tilt-row:not([hidden]),
+  .pause-card .tilt-row:not([hidden]) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 4px;
+  }
+  .pause-card .tilt-row {
+    margin-top: 4px;
+  }
+  .screen .settings-list .tilt-row .tilt-lines,
+  .screen .pause-card .tilt-row .tilt-lines {
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+}
+/* Settings with the tilt switch on a phone held sideways (up to 440 px tall): two columns, so
+   "Back" stays on screen. Without the switch nothing changes. */
+@media (max-height: 440px) {
+  .settings-list:has(> .tilt-row:not([hidden])) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .settings-list:has(> .tilt-row:not([hidden])) > .tilt-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 4px;
+  }
+  .screen .settings-list:has(> .tilt-row:not([hidden])) .tilt-lines {
+    text-align: left;
+  }
+  .settings-list:has(> .tilt-row:not([hidden])) .minor {
+    min-height: 44px;
+    white-space: normal;
+  }
+}
+/* Part 25.1: the offer card is at most 300 x 220 (part 15's card rules). */
+.tilt-offer .card {
+  max-width: 300px;
+}
+/* "Hold your phone the way you like." under "3, 2, 1". */
+.lane-hold {
+  position: fixed;
+  left: 50%;
+  top: calc(38% + 40px);
+  z-index: 6;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(10, 8, 30, 0.6);
+  color: #fff;
+  pointer-events: none;
+  text-align: center;
+  font: bold 14px 'Trebuchet MS', Verdana, sans-serif;
+}
+
 /* S3e0 the challenge road (src/screens/road.ts): a top row, then the road picture with its stops,
    scaled by `s` (the .road's font-size is s px, so every em below is a road unit). The sky fills
    the screen edge to edge; the buttons and the road stay inside the safe edges. */

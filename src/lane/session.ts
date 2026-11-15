@@ -17,7 +17,7 @@ import { WORDS } from '../screens/words';
 import { LANE_LEAVE_KEEPS } from '../native/leave-ask';
 import { addLaneSounds, laneStepFor, laneStepGap, laneTinkFor } from '../art/lane-sounds';
 import { laneTempoAt } from '../art/tunes';
-import { LaneButtons, SwipeReader, buttonBoxes, keyMove } from './input';
+import { LaneButtons, SwipeReader, TILT_CALIBRATE_S, TILT_LOST_S, TiltReader, buttonBoxes, keyMove, steerAngle } from './input';
 import { parseLane, type LaneLevel } from './level';
 import { NO_HAUL, addHaul, haulWords, lanePrize, subHaul, type Haul, type LaneSave } from './rewards';
 import { LaneSim, type LaneEvent, type LaneMove } from './sim';
@@ -38,6 +38,10 @@ export const CAUGHT_TIME = 1.2;
 const FLASH_TIME = 1;
 const FOOD_LINE = 2;
 const SHIELD_LINE = 1.5;
+/** Part 25.4: "Your phone said no to tilt..." and "Tilt is not working..." show this long. */
+const TILT_LINE = 3;
+/** The offer card's buttons ignore taps this soon after it opens (the tap that started the run). */
+const OFFER_GUARD_MS = 400;
 
 /** Which sound each lane event plays (art's lane sounds, S3f1; the goat's "meeh" is the streets' own, decision 62). */
 export const LANE_SOUNDS: Partial<Record<string, SoundName>> = {
@@ -85,6 +89,19 @@ export interface LaneHooks {
   buttonsOn(): boolean;
   /** The phone (touch) words for hints, else the keys words. */
   touch(): boolean;
+  /** Part 25: "Tilt to steer" is on, on a phone that can tilt, and not refused this visit. */
+  tiltOn(): boolean;
+  /** Tilt can be read now (Android, or an iPhone that said yes). */
+  tiltReady(): boolean;
+  /** An iPhone: Apple's box asks first (the offer card says so). */
+  tiltAsks(): boolean;
+  /** A run's start or resume tap: asks Apple's box if tilt is on and this visit has not asked (25.4). */
+  askTilt(): void;
+  /** The offer is due (25.1: a phone that can tilt, tilt off, never offered); `tiltOffered` marks it. */
+  tiltOffer(): boolean;
+  tiltOffered(): void;
+  /** "Try tilt": the switch goes on (and an iPhone asks, from this tap). */
+  tryTilt(): void;
   /** Safe edges in CSS px. */
   safe(): { top: number; right: number; bottom: number; left: number };
   sound(name: SoundName): void;
@@ -162,6 +179,8 @@ export interface LaneTestHook {
   introT: number;
   /** The corn count showing now (5 to 1), 0 for none. */
   cornCount: number;
+  /** Part 25: tilt steers now, its listener is on, lane moves it made this run, the held angle (memory only). */
+  tilt: { on: boolean; listening: boolean; moves: number; last: LaneMove | null; centre: number | null; hold: string; sides: boolean };
   hint: string;
   chips: string[];
   gap: number;
@@ -229,7 +248,7 @@ export class LaneSession {
   private banked: Haul = { ...NO_HAUL };
   /** The win prize, once the bus stop is reached. */
   private prize: Haul | null = null;
-  private save: LaneSave = { best: 0, goals: 0, runs: 0, hints: [] };
+  private save: LaneSave = { best: 0, goals: 0, runs: 0, hints: [], tiltOffered: false, tiltNoes: 0 };
   private bestAtStart = 0;
   /** The "+5 m" / "−15 m" flash and the line in the hint bar, with seconds left. */
   private flash = { text: '', t: 0 };
@@ -266,6 +285,19 @@ export class LaneSession {
   /** The corn count showing now (it takes the hint bar's place). */
   private countN = 0;
   private countBox: HintBarBox | null = null;
+  /** Part 25: tilt to steer. Angles stay in memory, for this run only. */
+  private readonly tilt = new TiltReader();
+  private tiltListening = false;
+  /** When the last reading came (performance.now ms), for "Tilt is not working". */
+  private tiltAt = 0;
+  private tiltLostShown = false;
+  private tiltSpoken = false;
+  private tiltMoves = 0;
+  private tiltLast: LaneMove | null = null;
+  /** The screen's turn at the last reading (90 or 270), for the flip rule. */
+  private tiltTurn = 0;
+  private readonly holdEl: HTMLDivElement;
+  private readonly onTilt = (e: DeviceOrientationEvent): void => this.tiltReading(e);
 
   constructor(private readonly hooks: LaneHooks) {
     addLaneSounds();
@@ -303,7 +335,9 @@ export class LaneSession {
       this.sayEl,
     );
     this.countEl = h('div', { class: 'lane-count', 'aria-live': 'assertive' });
-    document.body.append(this.hud, this.countEl);
+    // Part 25.2: "Hold your phone the way you like." under "3, 2, 1" with tilt on (spoken too).
+    this.holdEl = h('div', { class: 'lane-hold', 'aria-live': 'polite', hidden: true });
+    document.body.append(this.hud, this.countEl, this.holdEl);
     document.body.classList.add('lane');
     this.listen();
     this.resize();
@@ -346,6 +380,51 @@ export class LaneSession {
     const on = this.hooks.soundOn();
     this.soundButton.classList.toggle('is-off', !on);
     this.soundButton.setAttribute('aria-label', on ? WORDS.hud.soundOn : WORDS.hud.soundOff);
+  }
+
+  /** Part 25.6: one listener, only between "3, 2, 1" and a pause, a card or the end. */
+  private listenTilt(on: boolean): void {
+    if (on === this.tiltListening) return;
+    this.tiltListening = on;
+    if (on) {
+      this.tiltAt = performance.now();
+      window.addEventListener('deviceorientation', this.onTilt);
+    } else {
+      window.removeEventListener('deviceorientation', this.onTilt);
+      this.tilt.pause();
+    }
+  }
+
+  /** The screen's turn now: 90 or 270 sideways, 0 or 180 upright (older iPhones: -90 is 270). */
+  private static turn(): number {
+    const o = screen.orientation as ScreenOrientation | undefined;
+    const a = o && typeof o.angle === 'number' ? o.angle : (window as unknown as { orientation?: number }).orientation;
+    return typeof a === 'number' ? ((Math.round(a) % 360) + 360) % 360 : 90;
+  }
+
+  private tiltReading(e: DeviceOrientationEvent): void {
+    if ((this.stage !== 'play' && this.stage !== 'count') || typeof e.beta !== 'number') return;
+    const now = performance.now();
+    this.tiltAt = now;
+    const turn = LaneSession.turn();
+    const side = turn === 90 || turn === 270;
+    // Part 25.2: a flip from 90 to 270 (or back) makes no move; the centre is taken again.
+    if (side && this.tiltTurn !== 0 && turn !== this.tiltTurn) this.tilt.flip(now);
+    if (side) this.tiltTurn = turn;
+    const angle = steerAngle(e.beta, turn);
+    if (angle === null) return;
+    const m = this.tilt.read(angle, now);
+    if (m && this.stage === 'play') {
+      this.tiltMoves++;
+      this.tiltLast = m;
+      this.press(m);
+    }
+  }
+
+  /** Part 25.4: the phone said no from a run's start tap: swipes, and the line for 3 s. */
+  tiltDenied(): void {
+    this.listenTilt(false);
+    this.say(WORDS.lane.tiltDenied, TILT_LINE);
   }
 
   /** A move from a swipe, a key or a button: counts only while the run is moving. */
@@ -428,6 +507,16 @@ export class LaneSession {
     this.flights.clear();
     for (const p of this.plus) p.t = 0;
     this.view.camX = 0;
+    this.tiltLostShown = false;
+    this.tiltSpoken = false;
+    this.tiltMoves = 0;
+    this.tiltLast = null;
+    this.listenTilt(false);
+    if (!first && this.hooks.tiltOffer()) {
+      this.offerTilt();
+      this.loop.start();
+      return;
+    }
     if (first) {
       this.stage = 'intro';
       this.introT = 0;
@@ -443,7 +532,46 @@ export class LaneSession {
     this.count = COUNT_STEP * 3;
     this.goT = 0;
     this.swipes.cancel();
+    // Part 25.2: every "3, 2, 1" takes the centre afresh.
+    this.tilt.pause();
+    this.tilt.count();
+    const tilt = this.hooks.tiltOn();
+    this.listenTilt(tilt);
+    if (tilt && !this.tiltSpoken) {
+      this.tiltSpoken = true;
+      this.sayEl.textContent = this.hooks.buttonsOn() ? WORDS.lane.tiltSpokenButtons : WORDS.lane.tiltSpoken;
+    }
     this.loop.resume();
+  }
+
+  /**
+   * Part 25.1 (TS-R2): at the start of the second lane run, once, on a phone that can tilt.
+   * Either answer (or Android back, "No thanks") stops it coming back.
+   */
+  private offerTilt(): void {
+    const w = WORDS.lane;
+    this.hooks.tiltOffered();
+    const at = performance.now();
+    const soon = (): boolean => performance.now() - at < OFFER_GUARD_MS;
+    const go = (): void => {
+      this.closeCard();
+      this.countDown();
+      this.hooks.changed();
+    };
+    this.showCard(
+      w.tiltOfferHeading,
+      [w.tiltOfferLine, this.hooks.tiltAsks() ? h('p', { class: 'small' }, w.tiltAskFirst) : null],
+      button(w.tiltOfferYes, 'go', () => {
+        if (soon()) return;
+        // Inside the tap: an iPhone shows Apple's box only then.
+        this.hooks.tryTilt();
+        go();
+      }),
+      button(w.tiltOfferNo, 'minor', () => {
+        if (!soon()) go();
+      }),
+    );
+    this.card?.classList.add('tilt-offer');
   }
 
   /** Stops the run on the Pause card (main shows it). The saves are written now (part 20). */
@@ -452,6 +580,8 @@ export class LaneSession {
     this.stage = 'paused';
     this.loop.pause();
     this.swipes.cancel();
+    this.listenTilt(false);
+    this.holdEl.hidden = true;
     this.keepBest();
     this.hooks.flush();
   }
@@ -465,6 +595,7 @@ export class LaneSession {
   /** "Keep running for more" (part 12). */
   keepRunning(): void {
     if (this.sim.phase !== 'goal') return;
+    this.hooks.askTilt();
     this.closeCard();
     this.sim.keepRunning();
     this.countDown();
@@ -478,6 +609,8 @@ export class LaneSession {
       this.hooks.flush();
     }
     this.stage = 'off';
+    this.listenTilt(false);
+    this.holdEl.remove();
     this.hooks.music(null);
     this.hooks.closeHum(false);
     this.hooks.corn(null);
@@ -540,10 +673,13 @@ export class LaneSession {
     }
     if (this.stage === 'count') {
       this.count -= dt;
+      if (this.count <= TILT_CALIBRATE_S) this.tilt.collect();
       if (this.count <= 0) {
         this.stage = 'play';
         this.goT = COUNT_STEP;
         this.sim.fresh(AFTER_COUNT_SAFE);
+        this.tilt.calibrate();
+        this.tiltAt = performance.now();
       }
       return;
     }
@@ -554,12 +690,30 @@ export class LaneSession {
     }
     if (this.stage !== 'play') return;
     if (this.goT > 0) this.goT -= dt;
+    this.watchTilt();
     this.sim.step(dt);
     for (const e of this.sim.events) this.happened(e);
     if (LANE_LEAVE_KEEPS) this.bank();
     this.sounds(dt);
     this.hints();
     this.spoken();
+  }
+
+  /**
+   * Part 25: the switch can change at once (a no from Apple's box); and with no reading for 1 s
+   * the hint bar says once a run that tilt is not working. Swipes carry on as always.
+   */
+  private watchTilt(): void {
+    const on = this.hooks.tiltOn();
+    if (on !== this.tiltListening) {
+      this.listenTilt(on);
+      // Turned on mid-run (a yes that came late): the next reading is the centre.
+      if (on) this.tilt.calibrate();
+    }
+    if (!on || this.tiltLostShown || !this.hooks.tiltReady()) return;
+    if (performance.now() - this.tiltAt < TILT_LOST_S * 1000) return;
+    this.tiltLostShown = true;
+    this.say(WORDS.lane.tiltLost, TILT_LINE);
   }
 
   /** Part 17: steps, faster as you speed up; a "tunk" as each lamp behind goes off. */
@@ -648,6 +802,7 @@ export class LaneSession {
         if (!(this.sim.corn > 0)) this.hooks.sound('crowdCheerBig');
         break;
       case 'caught':
+        this.listenTilt(false);
         this.stage = 'caught';
         this.caughtT = 0;
         this.hint = null;
@@ -699,12 +854,15 @@ export class LaneSession {
       this.hint = null;
     }
     if (this.hint) return;
+    // Part 25.8: with tilt on, the change-lane hint is the tilt one, with its own key.
+    const tilt = this.hooks.tiltOn();
     for (const hn of s.level.hints) {
-      if (s.dist < hn.d || this.save.hints.includes(hn.key)) continue;
+      const key = tilt && hn.key === 'lane' ? 'tilt' : hn.key;
+      if (s.dist < hn.d || this.save.hints.includes(key)) continue;
       const kinds = HINT_THING[hn.key] ?? [];
       const at = [...s.level.things, ...s.level.pickups].filter((x) => x.d > hn.d && kinds.includes(x.kind)).sort((a, b) => a.d - b.d)[0];
       if (!at || s.dist > at.d) continue;
-      this.hint = { key: hn.key, until: at.d + 1 };
+      this.hint = { key, until: at.d + 1 };
       break;
     }
   }
@@ -731,6 +889,7 @@ export class LaneSession {
 
   private showCard(heading: string, lines: (string | HTMLElement | null)[], big: HTMLButtonElement, small: HTMLButtonElement): void {
     this.stage = 'card';
+    this.listenTilt(false);
     this.card = h(
       'div',
       { class: 'screen lane-card', 'data-ui': true },
@@ -789,7 +948,7 @@ export class LaneSession {
         w.caughtAt(m),
         [w.winSafe(got), this.save.best > this.bestAtStart && this.save.best === m ? w.newBest(m) : null],
         button(w.takeHome, 'go', () => this.takeHome()),
-        button(w.runAgain, 'minor', () => this.start()),
+        button(w.runAgain, 'minor', () => this.runAgain()),
       );
       return;
     }
@@ -806,9 +965,15 @@ export class LaneSession {
     this.showCard(
       w.caught,
       [w.keepAll(got), w.stopWas(Math.max(1, Math.ceil(s.level.goal - s.dist))), gentle],
-      button(w.runAgain, 'go', () => this.start()),
+      button(w.runAgain, 'go', () => this.runAgain()),
       button(w.takeHome, 'minor', () => this.takeHome()),
     );
+  }
+
+  /** "Run again": a start tap, so an iPhone may ask first (25.4). */
+  private runAgain(): void {
+    this.hooks.askTilt();
+    this.start();
   }
 
   private closeCard(): void {
@@ -844,6 +1009,15 @@ export class LaneSession {
       plus: this.plusEls.map((p) => (p.hidden ? '' : (p.textContent ?? ''))),
       introT: this.introT,
       cornCount: this.countN,
+      tilt: {
+        on: this.hooks.tiltOn(),
+        listening: this.tiltListening,
+        moves: this.tiltMoves,
+        last: this.tiltLast,
+        centre: Number.isNaN(this.tilt.centre) ? null : this.tilt.centre,
+        hold: this.holdEl.hidden ? '' : (this.holdEl.textContent ?? ''),
+        sides: this.buttons.sidesShown,
+      },
       hint: this.hintEl.hidden ? '' : (this.hintEl.textContent ?? ''),
       chips: this.chipNums.map((c) => c.textContent ?? ''),
       gap: s.gap,
@@ -906,6 +1080,8 @@ export class LaneSession {
     if (this.flights.list.length > 0) this.measureChips();
     this.drawFlights(g);
     this.buttons.show(this.hooks.buttonsOn() && !this.card && this.stage !== 'caught' && this.stage !== 'intro');
+    // Part 25.1: with tilt and buttons both on, tilt changes lane and the ◀ ▶ buttons hide.
+    this.buttons.sides(!this.hooks.tiltOn());
     this.hud.hidden = this.card !== null;
     this.syncCorn();
     this.drawHud();
@@ -1043,7 +1219,7 @@ export class LaneSession {
     if (this.countN > 0) hint = '';
     const chips = [formatMoney(haul.kobo), w.power(haul.power), w.tech(haul.tech)];
     const plus = this.plus.map((p, i) => (p.t > 0 && p.amount > 0 ? w.plus(i === 0 ? formatMoney(p.amount) : String(p.amount)) : ''));
-    const key = `${chips.join()}|${dark}|${change}|${lit}|${line}|${best}|${n}|${hint}|${plus.join()}`;
+    const key = `${chips.join()}|${dark}|${change}|${lit}|${line}|${best}|${n}|${hint}|${plus.join()}|${this.stage === 'count' && this.tiltListening}`;
     if (key === this.lastHud) return;
     this.lastHud = key;
     chips.forEach((c, i) => {
@@ -1076,6 +1252,9 @@ export class LaneSession {
     this.bestEl.hidden = best === '';
     this.countEl.textContent = n;
     this.countEl.hidden = n === '';
+    const hold = this.stage === 'count' && this.tiltListening ? w.tiltHold : '';
+    if (this.holdEl.textContent !== hold) this.holdEl.textContent = hold;
+    this.holdEl.hidden = hold === '';
     this.hintEl.textContent = hint;
     this.hintEl.hidden = hint === '';
   }
