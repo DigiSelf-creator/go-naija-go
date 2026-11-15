@@ -7,6 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CORN, G_PENTATONIC, TUNES, laneTempoAt, type MusicPlace, type Tune } from '../../src/art/tunes';
+import { POTHOLE_HALL_TUNE } from '../../src/worlds/ogun/hall';
 import { LOOKAHEAD, MUSIC_GAIN, Music, midiHz, noteNumber, ringSeconds, stepSeconds, trackEvents, tuneEvents } from '../../src/engine/music';
 
 const PLACES = Object.keys(TUNES) as MusicPlace[];
@@ -194,6 +195,28 @@ describe('every tune is our own', () => {
       }
     });
   }
+
+  // O5a: Ogun's Pothole Hall tune lives in the lazy Ogun part, so it is checked here by name.
+  it('Pothole Hall: its own melody, never more than 6 notes at once', () => {
+    const t = POTHOLE_HALL_TUNE;
+    const mel = melody(t);
+    expect(mel.length).toBeGreaterThan(3);
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(mel, notes.map((n) => noteNumber(n)!)), `close to the ${name}`).toBe(false);
+    const open = iv(mel.slice(0, 6)).join(',');
+    for (const p of ['street', 'well', 'hall', 'lane'] as MusicPlace[]) expect(iv(melody(TUNES[p]).slice(0, 6)).join(','), p).not.toBe(open);
+    for (let tempo = 0; tempo < t.bpm.length; tempo++) {
+      const st = stepSeconds(t, tempo);
+      const evs = tuneEvents(t, tempo);
+      for (let step = 0; step < t.bars * 16; step++) {
+        let n = 0;
+        for (const e of evs) {
+          const steps = Math.max(1, Math.ceil(ringSeconds(e, st) / st - 1e-9));
+          if (step >= e.step && step < e.step + steps) n += Math.max(1, e.notes.length);
+        }
+        expect(n, `tempo ${tempo} step ${step}`).toBeLessThanOrEqual(6);
+      }
+    }
+  });
 
   it('the four looping tunes each have their own melody', () => {
     const open = (p: MusicPlace): string => iv(melody(TUNES[p]).slice(0, 6)).join(',');
