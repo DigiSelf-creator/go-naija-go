@@ -211,10 +211,19 @@ test.describe('on the web, before the Ogun part is on the phone', () => {
     await page.locator('.download-card').getByRole('button', { name: 'Download' }).tap();
     await expect.poll(() => screenNow(page)).toBe('ride');
     // Reduced motion: the end picture, still; it goes on by itself after 1.5 s.
-    const a = await page.locator('.ride-pic').screenshot();
-    await page.waitForTimeout(300);
-    const b = await page.locator('.ride-pic').screenshot();
-    expect(a.equals(b)).toBe(true);
+    // qa O1c: the canvas itself read twice, 300 ms apart, after its first frames (two element
+    // screenshots were slow enough under load for the 1.5 s hold to end between them).
+    const still = await page.evaluate(async () => {
+      const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))));
+      await frames();
+      const pic = document.querySelector<HTMLCanvasElement>('.ride-pic')!;
+      const a = pic.toDataURL();
+      await new Promise((r) => setTimeout(r, 300));
+      return { same: a === pic.toDataURL(), inPage: pic.isConnected, blank: a.length < 5000 };
+    });
+    expect(still.inPage).toBe(true);
+    expect(still.blank).toBe(false);
+    expect(still.same).toBe(true);
     await expect.poll(() => screenNow(page), { timeout: 10_000 }).toBe('ogun');
   });
 
