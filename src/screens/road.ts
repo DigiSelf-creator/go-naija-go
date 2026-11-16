@@ -5,7 +5,7 @@
  * The pictures are art S3e1a's (src/art/road.ts), loaded when the road first opens.
  */
 import type { HeroLook } from '../art/hero';
-import type { RoadIcon, StopId as ArtStop } from '../art/road';
+import { drawCardFallback, drawCardOverlay, drawRoadPicture, edgeArrowSvg, nextPennantSvg, roadIconSvg, tickBadgeSvg, type RoadIcon, type StopId as ArtStop } from '../art/road';
 import { cardSceneSvg } from '../art/cards';
 import type { BuildId } from '../art/payspot';
 import { shownBoom } from '../game/boom';
@@ -234,34 +234,66 @@ export function stopCards(v: RoadView, laneFor: BuildId | null = null): StopInfo
  * Part 4 "Scale": 1 when the road does not fit across at scale 1 (it scrolls), else the
  * smallest of 2, open width / 680 and open height / 168.
  */
-export function roadScale(openW: number, openH: number): number {
-  return openW < ROAD_W ? 1 : Math.max(0.5, Math.min(2, openW / ROAD_W, openH / ROAD_H));
+export function roadScale(openW: number, openH: number, rw: number = ROAD_W, rh: number = ROAD_H): number {
+  return openW < rw ? 1 : Math.max(0.5, Math.min(2, openW / rw, openH / rh));
 }
 
 /** Where the road opens (part 4 rule 4): the stop asked for, else the Next stop, else the start. */
-export function openingStop(stops: readonly StopInfo[], at: StopId | null | undefined): StopInfo | null {
+export function openingStop<S extends PlanStop>(stops: readonly S[], at: StopId | string | null | undefined): S | null {
   return stops.find((s) => s.id === at) ?? stops.find((s) => s.state === 'next') ?? null;
 }
 
 // ---------- The screen ----------
 
-type Art = typeof import('../art/road');
-let artLoad: Promise<Art> | null = null;
-/** Art S3e1a's road pictures (src/art/road.ts): loaded with the road screen, never with the first page. */
-export const roadArt = (): Promise<Art> => (artLoad ??= import('../art/road'));
+/**
+ * Art S3e1a's road pictures (src/art/road.ts): part of the road screen's own lazy part, never the
+ * first page. O6b: imported by name (no module object), so the Ogun part can share src/art/road.ts
+ * with this screen without the build making an extra shared chunk.
+ */
+const ART = { drawRoadPicture, drawCardOverlay, drawCardFallback, edgeArrowSvg, nextPennantSvg, roadIconSvg, tickBadgeSvg };
+type Art = typeof ART;
+export const roadArt = (): Promise<Art> => Promise.resolve(ART);
 /** Our stop ids to art's (the "To Ogun" stop is drawn by src/art/gateway.ts). */
 const ART_ID: Record<string, ArtStop> = { 0: 'alausa', 1: 'computerVillage', 2: 'ikeja', hall: 'hall', lane: 'lane', ferry: 'ferry' };
 /** The icon each state shows (a shape for every state, part 3). */
 const STATE_ICON: Record<StopState, RoadIcon> = { locked: 'padlock', open: 'bus', next: 'bus', done: 'tick', soon: 'ferry', built: 'ferry' };
 const ic = (k: string): string => `<i class="road-ic" data-ic="${k}"></i>`;
 
+/** O6b: a stop on another state's road: Lagos's StopInfo with any id, cut and fix. */
+export interface PlanStop extends Omit<StopInfo, 'id' | 'cut' | 'forFix'> {
+  id: StopId | string;
+  cut: string;
+  forFix: string | null;
+  /** The plate's status icon in place of the state's (the "To Lagos" arch). */
+  icon?: 'arch';
+}
+
+/**
+ * O6b: another state's challenge road from its lazy part (Ogun's, ogun.md 6.5): the same screen
+ * and rules with that state's stops, plate boxes (road units), picture and card pictures.
+ */
+export interface RoadPlan {
+  stops: PlanStop[];
+  box(id: StopId | string): readonly [number, number, number, number];
+  w: number;
+  h: number;
+  /** The road picture at road units (the Next stop's id, or null). */
+  paint(g: CanvasRenderingContext2D, next: StopId | string | null): void;
+  /** A stop card's picture into its canvas (device pixels). */
+  card(c: HTMLCanvasElement, st: PlanStop): void;
+  /** A stop's big button. */
+  play(st: PlanStop, e: MouseEvent): void;
+}
+
 export interface RoadOpen {
   /** Open on this stop (from a city card, or after that stop's run). */
-  at?: StopId | null;
+  at?: StopId | string | null;
   /** With its card open (a city card's "See the stop"). */
   card?: boolean;
   /** The fix that city card was for (the lane run's Lamps or Mast). */
   laneFor?: BuildId | null;
+  /** O6b: another state's road (Ogun's), in place of Lagos's. */
+  plan?: RoadPlan;
 }
 
 export interface RoadHooks {
@@ -290,19 +322,23 @@ export interface RoadScreen {
 export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
   const w = WORDS.road;
   const v = hooks.view();
-  const stops = stopCards(v, open.laneFor ?? null);
+  const plan = open.plan;
+  const stops: PlanStop[] = plan ? plan.stops : stopCards(v, open.laneFor ?? null);
+  const boxOf = (id: StopId | string): readonly [number, number, number, number] => (plan ? plan.box(id) : STOP_BOX[id as StopId]);
+  const RW = plan ? plan.w : ROAD_W;
+  const RH = plan ? plan.h : ROAD_H;
   let s = 1;
   let shownAt = performance.now();
   let fitted = false;
   let cardEl: HTMLElement | null = null;
-  let cardStop: StopInfo | null = null;
+  let cardStop: PlanStop | null = null;
   let timer = 0;
   let downAt: { x: number; y: number } | null = null;
   let moved = false;
   const soon = (e: MouseEvent): boolean => e.detail > 0 && (moved || performance.now() - shownAt < EVENT_SCREEN_GUARD_MS);
 
   const btns = stops.map((st) => {
-    const [x, y, bw, bh] = STOP_BOX[st.id];
+    const [x, y, bw, bh] = boxOf(st.id);
     const b = button('', `road-stop ${st.state}`, (e) => {
       if (soon(e)) return;
       if (st.state === 'locked') hooks.locked();
@@ -310,7 +346,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     }, { 'data-where': String(st.id), 'aria-label': st.spoken, 'aria-disabled': st.state === 'locked' ? 'true' : undefined, style: `left:${x}em;top:${y}em;width:${bw}em;height:${bh}em` });
     // The plate inside the button (the button's own box stays still while the Next plate bobs).
     b.innerHTML =
-      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? ic('parcel') : ''}</span><span class="road-st">${ic(st.id === 'ogun' && st.state === 'open' ? 'arch' : STATE_ICON[st.state])}${st.status}</span>` +
+      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? ic('parcel') : ''}</span><span class="road-st">${ic((st.id === 'ogun' && st.state === 'open') || st.icon ? 'arch' : STATE_ICON[st.state])}${st.status}</span>` +
       (st.line3 ? `<span class="road-l3">${st.line3}</span>` : '') +
       (st.state === 'next' ? `<span class="road-next" data-ic="next"></span>` : st.state === 'done' || st.state === 'built' ? `<span class="road-tick" data-ic="tick"></span>` : '') +
       '</span>';
@@ -329,10 +365,11 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     const g = pic.getContext('2d');
     if (!art || !g || painted === String(k)) return;
     painted = String(k);
-    pic.width = Math.round(ROAD_W * k);
-    pic.height = Math.round(ROAD_H * k);
+    pic.width = Math.round(RW * k);
+    pic.height = Math.round(RH * k);
     g.setTransform(k, 0, 0, k, 0, 0);
-    art.drawRoadPicture(g, { jetty: shownBoom(v.city).boom ? 'after' : 'before', next: next && ART_ID[next.id] ? ART_ID[next.id]! : null });
+    if (plan) return plan.paint(g, next?.id ?? null);
+    art.drawRoadPicture(g, { jetty: shownBoom(v.city).boom ? 'after' : 'before', next: next && ART_ID[String(next.id)] ? ART_ID[String(next.id)]! : null });
     drawOgunBranch(g, v.lagos.hall.done, v.ogunLit === true);
   };
   const scroller = h('div', { class: 'road-scroll' }, road);
@@ -390,8 +427,8 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
   };
   window.addEventListener('pointerup', up, true);
 
-  const centre = (st: StopInfo): void => {
-    const [x, , bw] = STOP_BOX[st.id];
+  const centre = (st: PlanStop): void => {
+    const [x, , bw] = boxOf(st.id);
     scroller.scrollLeft = (x + bw / 2) * s - scroller.clientWidth / 2;
   };
   // Focusing a stop scrolls it fully into view with 16 px to spare.
@@ -417,7 +454,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     to?.focus();
   });
 
-  function openCard(st: StopInfo): void {
+  function openCard(st: PlanStop): void {
     const back = button(w.back, 'minor', (e) => {
       if (!soon(e)) closeCard();
     });
@@ -426,12 +463,14 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
           if (soon(e)) return;
           // O1c-2: "To Ogun" may open the download card over the road; this card closes first,
           // so Android back finds the download card's "Not now", not this card's hidden "Back".
-          if (st.id === 'ogun') closeCard();
-          hooks.play(st, e);
+          if (st.id === 'ogun' || plan) closeCard();
+          if (plan) plan.play(st, e);
+          else hooks.play(st as StopInfo, e);
         })
       : null;
     let picEl: HTMLElement;
-    if (st.cut === 'ogun') {
+    if (plan) picEl = h('canvas', { class: 'road-card-pic', role: 'img', 'aria-label': w.pic(st.name) });
+    else if (st.cut === 'ogun') {
       // O1b2: the gateway arch for the "To Ogun" card.
       picEl = h('span', { class: 'road-card-pic road-card-arch', role: 'img', 'aria-label': st.lines[0]! });
       picEl.innerHTML = gateIconSvg('arch', 64);
@@ -446,7 +485,15 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     spot.hidden = false;
     shownAt = performance.now();
     moved = false;
-    if (picEl instanceof HTMLCanvasElement) paintCut(picEl, st);
+    if (picEl instanceof HTMLCanvasElement) {
+      if (plan) {
+        const c = picEl;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        c.width = Math.round((c.clientWidth || 112) * dpr);
+        c.height = Math.round((c.clientHeight || 84) * dpr);
+        plan.card(c, st);
+      } else paintCut(picEl, st as StopInfo);
+    }
     (go ?? back).focus({ preventScroll: true });
     hooks.cardChanged?.();
   }
@@ -483,7 +530,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
   }
 
   const refit = (): void => {
-    s = roadScale(wrap.clientWidth, wrap.clientHeight);
+    s = roadScale(wrap.clientWidth, wrap.clientHeight, RW, RH);
     road.style.fontSize = `${s}px`;
     paintRoad();
     if (!fitted && wrap.clientWidth > 0) {
