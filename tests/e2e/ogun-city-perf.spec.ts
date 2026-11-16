@@ -113,6 +113,11 @@ test('slowed 4x CPU: Ogun\'s city beside Lagos\'s, walking by hold and slide nea
     for (const where of ['lagos', 'ogun'] as const) {
       await open(page, where);
       const ogun = where === 'ogun';
+      // O6b2 (OG-R43 a): Ogun's walkers are in before it is timed, as Lagos's are (people must stay cheap).
+      if (ogun) {
+        await expect.poll(() => page.evaluate(() => (window.__game!.ogunCity as unknown as { test: { folk: number } }).test.folk), { timeout: 15_000 }).toBeGreaterThan(0);
+        results.push(`ogun walkers: ${await page.evaluate(() => (window.__game!.ogunCity as unknown as { test: { folk: number } }).test.folk)}`);
+      }
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
       if (!work4) work4 = await busy(page);
       await page.waitForTimeout(500);
