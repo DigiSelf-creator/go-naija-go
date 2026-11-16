@@ -1066,12 +1066,12 @@ export class OgunCityScreen implements WorldCity {
     const looks = ogunLooks(st, this.wallet, this.hallWon);
     const bright = ogunBright(st, this.hallWon);
     const built = st.built;
-    const paint = `${Object.values(looks).join(',')}|${bright?.join(',') ?? '*'}|${built.join(',')}|${boomed(st)}`;
+    const paint = `${Object.values(looks).join(',')}|${bright.join(',')}|${built.join(',')}|${boomed(st)}`;
     const key = `${paint}|${want.toFixed(4)}`;
     const have = painted.get(key);
     if (have) return have;
     for (const k of painted.keys()) if (!k.startsWith(`${paint}|`)) painted.delete(k);
-    const img = makeOgunCityCanvas(looks, want, 2048, { ...(bright ? { bright } : {}), built, boom: boomed(st) });
+    const img = makeOgunCityCanvas(looks, want, 2048, { bright, built, boom: boomed(st) });
     if (!img) return null;
     const made = { img, scale: want };
     painted.set(key, made);

@@ -143,8 +143,8 @@ let cityPic: { key: string; img: HTMLCanvasElement | null } | null = null;
 function cityFor(c: OgunCityState, wallet: Wallet, hallWon: boolean): HTMLCanvasElement | null {
   const looks = ogunLooks(c, wallet, hallWon);
   const bright = ogunBright(c, hallWon);
-  const key = `${Object.values(looks).join(',')}|${bright?.join(',') ?? '*'}|${c.built.join(',')}|${boomed(c)}`;
-  if (cityPic?.key !== key) cityPic = { key, img: makeOgunCityCanvas(looks, 0.5, 2048, { ...(bright ? { bright } : {}), built: c.built, boom: boomed(c) }) };
+  const key = `${Object.values(looks).join(',')}|${bright.join(',')}|${c.built.join(',')}|${boomed(c)}`;
+  if (cityPic?.key !== key) cityPic = { key, img: makeOgunCityCanvas(looks, 0.5, 2048, { bright, built: c.built, boom: boomed(c) }) };
   return cityPic.img;
 }
 

@@ -10,8 +10,11 @@ import { OGUN, OGUN_TRAYS, StateCity, WALLET_KEYS, statePart, stateProgress } fr
 import { createStore } from '../../src/storage';
 import { part as ogunPart } from '../../src/worlds/ogun';
 import {
+  FIX_AREAS,
   OGUN_BOARDS,
   OGUN_PRICES,
+  OGUN_SPOT_AREA,
+  OGUN_STEP_ORDER,
   OGUN_TAX,
   addOgunBoom,
   collectOgunTray,
@@ -31,7 +34,7 @@ import {
 } from '../../src/worlds/ogun/cityRules';
 import { OGUN_DOORS, OGUN_MATS } from '../../src/worlds/ogun/cityScreen';
 import { OGUN_HOME, ogunLineClear, ogunNearest, ogunPath, ogunWalkable } from '../../src/worlds/ogun/walk';
-import { OGUN_SPOTS, OGUN_PLACES } from '../../src/worlds/ogun/city';
+import { OGUN_BLOCKS, OGUN_CITY_AREAS, OGUN_SPOTS, OGUN_PLACES } from '../../src/worlds/ogun/city';
 import { expresswayFor, ogunStops } from '../../src/worlds/ogun/roadPlan';
 import { OGUN_STOP_BOX } from '../../src/worlds/ogun/road';
 import { OGUN_CITY_WORDS } from '../../src/worlds/ogun/cityWords';
@@ -165,19 +168,66 @@ describe('O6b: one wallet, Ogun keeps its own fixes (decision 80)', () => {
     expect(c.boomCollect).toBe(4);
   });
 
-  it('the boom card is due once at 20; the first boom lights all of Ogun', () => {
+  it('the boom card is due once at 20; the first boom lights all of Ogun but its problems (OG-R38)', () => {
     let c = emptyOgunCity();
     for (let i = 0; i < 5; i++) c = addOgunBoom(c, 4);
     expect(c.boom).toBe(20);
     expect(ogunBoomDue(c)).toBe(20);
-    expect(ogunBright(c)).not.toBeUndefined();
+    // Held back until the card shows: 4 steps' blocks only.
+    expect(ogunBright(c)).toEqual(OGUN_CITY_AREAS.filter((a) => OGUN_STEP_ORDER.slice(0, 4).includes(a)));
     const seen = { ...c, boomSeen: 20 };
     expect(ogunBoomDue(seen)).toBe(0);
-    expect(ogunBright(seen)).toBeUndefined();
+    // Nothing fixed, the hall not won: the water point, the interchange, r1c0 and the gate stay tired.
+    expect(ogunBright(seen)).toEqual(OGUN_CITY_AREAS.filter((a) => !['water', 'interchange', 'r1c0', 'gate'].includes(a)));
+    expect(ogunBright({ ...seen, fixed: ['dryTaps', 'lightsOut', 'slowInternet', 'potholes'] }, true)).toEqual([...OGUN_CITY_AREAS]);
     // Before it: the gateway (once the hall is won) is bright, plus each fix's own part.
     expect(ogunBright(emptyOgunCity(), true)).toEqual(['gate', 'verge']);
     expect(ogunBright(emptyOgunCity())).toEqual([]);
     expect(ogunBright({ ...emptyOgunCity(), fixed: ['dryTaps'] })).toEqual(expect.arrayContaining(['water', 'motorPark']));
+  });
+
+  it('OG-R38: each fix lights its own area and one block beside it; the kola market its own block', () => {
+    expect(FIX_AREAS).toEqual({
+      badRoad: ['gate', 'verge'],
+      potholes: ['r2c0', 'r2c1'],
+      dryTaps: ['water', 'motorPark'],
+      lightsOut: ['interchange', 'r1c1', 'r1c2'],
+      slowInternet: ['r1c0', 'r0c0'],
+      adire: ['r0c1', 'r0c2'],
+      mill: ['r1c3', 'r0c3'],
+      kola: ['r2c3'],
+    });
+    for (const list of Object.values(FIX_AREAS)) for (const a of list) expect(OGUN_CITY_AREAS).toContain(a);
+    for (const f of ['potholes', 'dryTaps', 'lightsOut', 'slowInternet'] as const) {
+      const lit = ogunBright({ ...emptyOgunCity(), fixed: [f] });
+      expect(lit).toEqual(OGUN_CITY_AREAS.filter((a) => FIX_AREAS[f].includes(a)));
+    }
+  });
+
+  it('OG-R38: the meter steps light blocks from the middle outward, never one already lit, never a problem\'s own area', () => {
+    // The order: every block but the motor park's and r1c0 (the mast's problem), each once.
+    const blocks = OGUN_BLOCKS.map((b) => b.id);
+    expect([...OGUN_STEP_ORDER].sort()).toEqual(blocks.filter((b) => b !== 'r1c0').sort());
+    expect(OGUN_STEP_ORDER.slice(0, 2)).toEqual(['r1c1', 'r1c2']);
+    for (const a of Object.values(OGUN_SPOT_AREA)) if (a) expect(OGUN_STEP_ORDER).not.toContain(a);
+    // Every save on the way to the first boom: each step adds exactly one block that no fix lit.
+    const saves: OgunCityState[] = [];
+    const fixes = [[], ['lightsOut'], ['lightsOut', 'potholes'], ['dryTaps', 'slowInternet']] as const;
+    const builds = [[], ['adire'], ['adire', 'mill']] as const;
+    for (const fixed of fixes) for (const built of builds) for (let boom = 0; boom < 20; boom++) saves.push({ ...emptyOgunCity(), fixed: [...fixed], built: [...built], boom });
+    for (const c of saves) {
+      const fixLit = new Set<string>([...c.fixed.flatMap((f) => FIX_AREAS[f]), ...c.built.flatMap((p) => FIX_AREAS[p])]);
+      const lit = ogunBright(c);
+      const extra = lit.filter((a) => !fixLit.has(a));
+      // One block a step (at most 4 before the boom), fewer only when no unlit block is left in the order.
+      expect(extra.length).toBe(Math.min(4, Math.floor(c.boom / 4), OGUN_STEP_ORDER.filter((x) => !fixLit.has(x)).length));
+      for (const a of extra) expect(OGUN_STEP_ORDER).toContain(a);
+      // The step blocks are the first ones in the order not lit by a fix (no step spent on a lit block).
+      expect(extra).toEqual(OGUN_CITY_AREAS.filter((a) => OGUN_STEP_ORDER.filter((x) => !fixLit.has(x)).slice(0, extra.length).includes(a)));
+      // Only grows: one more point never darkens anything.
+      const next = ogunBright({ ...c, boom: c.boom + 1 });
+      for (const a of lit) expect(next).toContain(a);
+    }
   });
 
   it('the garri mill earns only once the new road is built (6.2)', () => {

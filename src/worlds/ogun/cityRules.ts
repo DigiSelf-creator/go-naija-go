@@ -19,10 +19,10 @@
  * Pure: every function returns new values.
  */
 import { BOOM_BUILD, BOOM_COLLECT, COLLECT_MAX, FIRST_BOOM, TRAY_MIN, nextBoom, type MapPt } from '../../game/city';
-import { markReached, meterOf } from '../../game/boom';
+import { markReached } from '../../game/boom';
 import { cleanKobo } from '../../game/money';
 import type { SpotLook } from '../../art/city';
-import type { OgunPlaceId, OgunSpotId, OgunSpotLooks } from './city';
+import { OGUN_CITY_AREAS, type OgunPlaceId, type OgunSpotId, type OgunSpotLooks } from './city';
 
 type Obj = { [k: string]: unknown };
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -224,29 +224,59 @@ export function collectOgunTray(c: OgunCityState, w: Wallet, p: OgunPlaceId): { 
   return { city, wallet: { ...w, kobo: w.kobo + amount }, amount, full };
 }
 
-/** Which parts of the map each fix or place brightens (decision 47: tired, then bright). */
+/**
+ * OG-R38 (decision 47, "each fix brightens its own block and the blocks next to it"): what each
+ * fix or place lights at once, its own area and one block beside it. The kola market comes after
+ * the first boom, when the rest is lit, so it lights its own block alone.
+ */
 export const FIX_AREAS: Readonly<Record<OgunBoard | 'badRoad', readonly string[]>> = {
   badRoad: ['gate', 'verge'],
-  potholes: ['r2c0'],
+  potholes: ['r2c0', 'r2c1'],
   dryTaps: ['water', 'motorPark'],
-  lightsOut: ['interchange', 'r1c1'],
-  slowInternet: ['r1c0'],
-  adire: ['r0c1'],
-  mill: ['r1c3'],
+  lightsOut: ['interchange', 'r1c1', 'r1c2'],
+  slowInternet: ['r1c0', 'r0c0'],
+  adire: ['r0c1', 'r0c2'],
+  mill: ['r1c3', 'r0c3'],
   kola: ['r2c3'],
 };
-/** The Booming meter's five steps light these, in order; the first boom lights everything. */
-export const STEP_AREAS: readonly string[] = ['r0c0', 'r0c2', 'r1c2', 'r0c3', 'r2c1'];
+/**
+ * OG-R38: each Booming meter step (4 points, before the first boom) lights the first block here not
+ * bright yet, from the middle outward, as Lagos's STEP_ORDER (src/game/boom.ts): a step is never
+ * spent on a lit block. The problem areas (r1c0 with its mast, the water point, the interchange,
+ * the gate) are never a step's: they wait for their own fix.
+ */
+export const OGUN_STEP_ORDER: readonly string[] = ['r1c1', 'r1c2', 'r0c1', 'r0c2', 'r2c1', 'r1c3', 'r0c3', 'r0c0', 'r2c0', 'r2c3'];
+/** OG-R38 (as Lagos's SPOT_BLOCK): each problem's own area, tired until it is fixed, even after the first boom. */
+export const OGUN_SPOT_AREA: Readonly<Record<OgunFixId | 'badRoad', string | null>> = { potholes: null, dryTaps: 'water', lightsOut: 'interchange', slowInternet: 'r1c0', badRoad: 'gate' };
+/** Points a meter step holds before the first boom (20 in 5 steps; the 5th is the boom itself). */
+const FIRST_STEP = FIRST_BOOM / 5;
 
-/** The areas drawn bright now: the hall's gateway once won (OG-R37), each fix and place, the meter's steps; all after the first boom. */
-export function ogunBright(c: OgunCityState, hallWon = false): string[] | undefined {
-  if (boomed(c)) return undefined;
+/** The areas the fixes and places done (and the hall, once won) light at once. */
+export function ogunFixAreas(c: OgunCityState, hallWon = false): Set<string> {
   const out = new Set<string>(hallWon ? FIX_AREAS.badRoad : []);
   for (const f of c.fixed) for (const a of FIX_AREAS[f]) out.add(a);
   for (const p of c.built) for (const a of FIX_AREAS[p]) out.add(a);
-  const m = meterOf(c.boom, c.boomSeen);
-  for (const a of STEP_AREAS.slice(0, m.prev === 0 ? m.step : 5)) out.add(a);
-  return [...out];
+  return out;
+}
+
+/**
+ * OG-R38: the areas drawn bright now (in OGUN_CITY_AREAS order). Before the first boom: the fixes'
+ * own areas, then one block for each meter step reached (at most 4), the first in OGUN_STEP_ORDER
+ * not lit yet. From the first boom (its card seen): everything but a problem's own area while that
+ * problem is not fixed (the gate until the hall is won). Only grows as the save grows.
+ */
+export function ogunBright(c: OgunCityState, hallWon = false): string[] {
+  const out = ogunFixAreas(c, hallWon);
+  if (boomed(c)) {
+    const tired = new Set<string>();
+    for (const f of OGUN_FIX_IDS) if (!c.fixed.includes(f) && OGUN_SPOT_AREA[f]) tired.add(OGUN_SPOT_AREA[f]!);
+    if (!hallWon) tired.add('gate');
+    for (const a of OGUN_CITY_AREAS) if (!tired.has(a)) out.add(a);
+  } else {
+    const steps = Math.min(4, Math.floor(Math.min(c.boom, FIRST_BOOM - 1) / FIRST_STEP));
+    for (const b of OGUN_STEP_ORDER.filter((x) => !out.has(x)).slice(0, steps)) out.add(b);
+  }
+  return OGUN_CITY_AREAS.filter((a) => out.has(a));
 }
 
 /** Marks a hint as shown (once each). */
