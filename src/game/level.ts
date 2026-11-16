@@ -403,55 +403,59 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
   if (spawnX < hall.leftLimit || spawnX > hall.rightLimit) fail('spawnX', 'should be between leftLimit and rightLimit');
 
   const b = obj(r['boss'], 'boss');
-  const lights = list(b['lights'], 'boss.lights').map((l, i) => {
-    const [x, y, w] = tuple(l, `boss.lights[${i}]`, 3);
-    return { x: num(x, `boss.lights[${i}][0]`), y: num(y, `boss.lights[${i}][1]`), w: num(w, `boss.lights[${i}][2]`) };
-  });
-  const phases = list(b['phases'], 'boss.phases').map((ph, i) => {
-    const p = obj(ph, `boss.phases[${i}]`);
-    const pattern = list(p['pattern'], `boss.phases[${i}].pattern`).map((k, j) => oneOf(k, `boss.phases[${i}].pattern[${j}]`, THROW_KINDS));
-    if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
-    const every = num(p['every'], `boss.phases[${i}].every`);
-    if (every <= 0) fail(`boss.phases[${i}].every`, 'should be above 0');
-    const above0 = (k: string): number => {
-      const v = num(p[k], `boss.phases[${i}].${k}`);
-      return v > 0 ? v : fail(`boss.phases[${i}].${k}`, 'should be above 0');
+  // O5b: a boss with no go lights (King Pothole) has its own rules, read by its state's lazy part.
+  let boss: BossData | null = null;
+  if (b['lights'] !== undefined) {
+    const lights = list(b['lights'], 'boss.lights').map((l, i) => {
+      const [x, y, w] = tuple(l, `boss.lights[${i}]`, 3);
+      return { x: num(x, `boss.lights[${i}][0]`), y: num(y, `boss.lights[${i}][1]`), w: num(w, `boss.lights[${i}][2]`) };
+    });
+    const phases = list(b['phases'], 'boss.phases').map((ph, i) => {
+      const p = obj(ph, `boss.phases[${i}]`);
+      const pattern = list(p['pattern'], `boss.phases[${i}].pattern`).map((k, j) => oneOf(k, `boss.phases[${i}].pattern[${j}]`, THROW_KINDS));
+      if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
+      const every = num(p['every'], `boss.phases[${i}].every`);
+      if (every <= 0) fail(`boss.phases[${i}].every`, 'should be above 0');
+      const above0 = (k: string): number => {
+        const v = num(p[k], `boss.phases[${i}].${k}`);
+        return v > 0 ? v : fail(`boss.phases[${i}].${k}`, 'should be above 0');
+      };
+      return {
+        every,
+        speed: num(p['speed'], `boss.phases[${i}].speed`),
+        pattern,
+        bpm: num(p['bpm'], `boss.phases[${i}].bpm`),
+        lightAt: above0('lightAt'),
+        greenFor: above0('greenFor'),
+        darkFor: above0('darkFor'),
+      };
+    });
+    if (lights.length === 0) fail('boss.lights', 'should have at least one light');
+    if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
+    boss = {
+      kind: str(b['kind'], 'boss.kind'),
+      x: num(b['x'], 'boss.x'),
+      throwX: num(b['throwX'], 'boss.throwX'),
+      drainX: num(b['drainX'], 'boss.drainX'),
+      startDelay: num(b['startDelay'], 'boss.startDelay'),
+      lights,
+      breakAfterHit: num(b['breakAfterHit'], 'boss.breakAfterHit'),
+      phases,
+      honkY: num(b['honkY'], 'boss.honkY'),
+      highHonkY: num(b['highHonkY'], 'boss.highHonkY'),
+      honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
+      fufu: null,
     };
-    return {
-      every,
-      speed: num(p['speed'], `boss.phases[${i}].speed`),
-      pattern,
-      bpm: num(p['bpm'], `boss.phases[${i}].bpm`),
-      lightAt: above0('lightAt'),
-      greenFor: above0('greenFor'),
-      darkFor: above0('darkFor'),
-    };
-  });
-  if (lights.length === 0) fail('boss.lights', 'should have at least one light');
-  if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
-  const boss: BossData = {
-    kind: str(b['kind'], 'boss.kind'),
-    x: num(b['x'], 'boss.x'),
-    throwX: num(b['throwX'], 'boss.throwX'),
-    drainX: num(b['drainX'], 'boss.drainX'),
-    startDelay: num(b['startDelay'], 'boss.startDelay'),
-    lights,
-    breakAfterHit: num(b['breakAfterHit'], 'boss.breakAfterHit'),
-    phases,
-    honkY: num(b['honkY'], 'boss.honkY'),
-    highHonkY: num(b['highHonkY'], 'boss.highHonkY'),
-    honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
-    fufu: null,
-  };
-  if (b['fufu'] !== undefined) {
-    const f = obj(b['fufu'], 'boss.fufu');
-    const afterHit = num(f['afterHit'], 'boss.fufu.afterHit');
-    if (!Number.isInteger(afterHit) || afterHit < 1 || afterHit >= lights.length) fail('boss.fufu.afterHit', 'should be a hit number before the last');
-    const x = num(f['x'], 'boss.fufu.x');
-    if (x < hall.leftLimit || x > hall.rightLimit) fail('boss.fufu.x', 'should be between leftLimit and rightLimit');
-    boss.fufu = { x, afterHit };
+    if (b['fufu'] !== undefined) {
+      const f = obj(b['fufu'], 'boss.fufu');
+      const afterHit = num(f['afterHit'], 'boss.fufu.afterHit');
+      if (!Number.isInteger(afterHit) || afterHit < 1 || afterHit >= lights.length) fail('boss.fufu.afterHit', 'should be a hit number before the last');
+      const x = num(f['x'], 'boss.fufu.x');
+      if (x < hall.leftLimit || x > hall.rightLimit) fail('boss.fufu.x', 'should be between leftLimit and rightLimit');
+      boss.fufu = { x, afterHit };
+    }
+    if (boss.throwX <= hall.rightLimit) fail('boss.throwX', 'should be right of the cone line (rightLimit)');
   }
-  if (boss.throwX <= hall.rightLimit) fail('boss.throwX', 'should be right of the cone line (rightLimit)');
 
   // The floor runs past both walls: there are no pits in a hall.
   const floor: readonly [number, number] = [-200, width + 200];

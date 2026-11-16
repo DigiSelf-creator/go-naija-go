@@ -9,6 +9,8 @@
  * goes on as before.
  */
 import type { CrateLook } from '../art/crate';
+import type { HeroLook, HeroPose } from '../art/hero';
+import type { View } from '../engine/view';
 import type { StreetCast } from './crowd';
 import type { CrateState } from './crates';
 import type { FoodKind, Level } from './level';
@@ -39,6 +41,8 @@ export interface SkinNow {
   people: GamePeople | null;
   /** The run cycle (0 to 1), for footsteps. */
   stride: number;
+  /** The player's hero look (O5b: the bag carried on the head follows it). */
+  look: HeroLook;
 }
 
 /** A footstep or a jump the skin hears about (from Game's own looks). */
@@ -71,6 +75,12 @@ export interface StreetSkin {
   gift?(g: G, x: number, y: number, time: number): boolean;
   /** O3b: the HUD parcel chip's icon, centred at (x, y), about `size` across. */
   parcelIcon?(g: G, x: number, y: number, size: number): void;
+  /**
+   * O5b: a later state's boss hall, all of it, in world space (after g.translate(-camX, 0)), and
+   * the HUD's hit counter. hero() draws the hero and its sparkles where they belong, and returns
+   * the pose drawn (null while the hero blinks out). True when drawn.
+   */
+  hall?(g: G, s: SkinNow, hero: () => HeroPose | null, view: View): boolean;
   /** A fresh play of the street (start, Play again). */
   restart?(): void;
   /** The street's own people (design.md "People everywhere"), or none for the Lagos casts. */

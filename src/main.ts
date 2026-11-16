@@ -9,9 +9,10 @@ import hallData from './data/levels/lagos-hall.json';
 import wellRoomData from './data/levels/lagos-well.json';
 import { Sound, soundLength } from './engine/sound';
 import { Music } from './engine/music';
+import { TUNES } from './art/tunes';
 import { CORN_GAIN, CORN_LOUD, CornDirector, MusicDirector, cornCount, musicAudible } from './game/music-cue';
 import { listenForAudioGestures } from './engine/audio-unlock';
-import { AnimalCalls } from './game/animal-calls';
+import { AnimalCalls, TkGate } from './game/animal-calls';
 import { BUS_BOARD, END_BUS_BACK, END_BUS_FRONT, busEndAt } from './art/roadside';
 import { DUST_TIME, Game, heroScreenX } from './game/game';
 import { parseLevel, type Level } from './game/level';
@@ -233,8 +234,8 @@ function startGame(): void {
   /** S3f2: ?level=lagos-lane makes "Play" start the lane run (for testing). */
   const askedLane = asked === 'lagos-lane';
   const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
-  /** O2b: ?level=ogun-1 makes "Play" load the Ogun part and start Ota (for testing). */
-  const askedOgun = /^ogun-([1-3])$/.exec(asked ?? '');
+  /** O2b: ?level=ogun-1 makes "Play" load the Ogun part and start Ota (for testing); O5b: ogun-hall, Pothole Hall. */
+  const askedOgun = /^ogun-([1-3]|hall)$/.exec(asked ?? '');
   const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
   let where: Where = firstStreet;
@@ -334,7 +335,7 @@ function startGame(): void {
       screen: menus.current ?? (playing ? 'play' : null),
       where,
       below: run.below,
-      hits: run.boss?.hits ?? 0,
+      hits: run.arena?.tempo ?? run.boss?.hits ?? 0,
       hidden: document.hidden,
     });
   }
@@ -497,6 +498,10 @@ function startGame(): void {
   let ogunPlay: { level: Level; n: number } | null = null;
   /** O3b, O4b: the Ogun streets built so far (Ota, Abeokuta, Sagamu); "Next street" stops at the last one. */
   const OGUN_BUILT = 3;
+  /** O5b: Pothole Hall, after Sagamu (ogunPlay.n). */
+  const OGUN_HALL = 4;
+  /** O5b: Go-Slow Hall's tune; an Ogun hall's tune stands in for it while that hall is played. */
+  const lagosHallTune = TUNES.hall;
   /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
   function lagosRun(at: TapPoint | null, to: Where): void {
     ogunPlay = null;
@@ -505,7 +510,8 @@ function startGame(): void {
   /** O2b: Ogun street n from its start (its part must have loaded; Ota and Abeokuta so far). */
   function ogunRun(at: TapPoint | null, n: number): void {
     const part = worlds.get(OGUN);
-    const raw = part?.levels[`ogun-${n}`];
+    const hall = n === OGUN_HALL;
+    const raw = hall && !part?.hall ? undefined : part?.levels[hall ? 'ogun-hall' : `ogun-${n}`];
     let level: Level | null = null;
     try {
       level = raw === undefined ? null : parseLevel(raw);
@@ -524,7 +530,7 @@ function startGame(): void {
     }
     ogunPlay = { level, n };
     missionFor = null; // Lagos's fixes are never an Ogun street's mission
-    startRun(at, n - 1);
+    startRun(at, hall ? 'hall' : n - 1);
   }
   /** Plays a street (or the hall) from its start: full lives, 0 kobo. */
   function startRun(at: TapPoint | null, to: Where = where): void {
@@ -553,7 +559,10 @@ function startGame(): void {
     // O3b: the parcel chip shows the state's own parcel (Ijebu garri in Ogun).
     const parcelIcon = game.skin?.parcelIcon;
     hud.setParcelIcon(parcelIcon ? (g) => game.skinDo((k) => k.parcelIcon?.(g, 16, 16, 26)) : null);
-    game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' && !og ? { parcel: lagos.parcel } : { parcelSaved: own.parcel, dash: dashSaved() });
+    // O5b: Pothole Hall's fight and tune come from the Ogun part (the parcel is Ogun's own).
+    const ogHall = og && where === 'hall' ? worlds.get(OGUN)?.hall : undefined;
+    TUNES.hall = ogHall?.tune ?? lagosHallTune;
+    game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' ? { parcel: own.parcel, arena: ogHall?.arena } : { parcelSaved: own.parcel, dash: dashSaved() });
     // S2.8: once Lagos (or Ogun, for its streets) is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(own);
     // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
@@ -823,7 +832,7 @@ function startGame(): void {
     start: (at) => {
       if (askedLane) startLane(null);
       else if (askedOgun) {
-        const n = Number(askedOgun[1]);
+        const n = askedOgun[1] === 'hall' ? OGUN_HALL : Number(askedOgun[1]);
         void worlds.load(OGUN).then((r) => (r.ok ? ogunRun(at, n) : toast.show(r.message, 4000)));
       }
       // O1b2 (ogun.md 1.6): the game opens on the city last used.
@@ -866,7 +875,8 @@ function startGame(): void {
       missionFor = null;
       // O3b, O4b: Ota's card goes on to Abeokuta, Abeokuta's to Sagamu.
       if (ogunPlay) {
-        if (ogunPlay.n < OGUN_BUILT) ogunRun(at, ogunPlay.n + 1);
+        // O5b: Sagamu's card goes on to Pothole Hall.
+        if (ogunPlay.n <= OGUN_BUILT) ogunRun(at, ogunPlay.n + 1);
         return;
       }
       startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
@@ -1029,6 +1039,10 @@ function startGame(): void {
   const HINT_MS = 3500;
   /** O2b: the next mud step is the B sound. */
   let mudB = false;
+  /** OG-R15: the gravel "tk" on screen only, one for two close landings. */
+  const gravelTk = new TkGate();
+  /** O5b: the state whose hall is being played. */
+  const hallState = (): string => (ogunPlay ? OGUN : LAGOS);
   game.onEvent = (e) => {
     switch (e.type) {
       case 'kobo':
@@ -1172,8 +1186,14 @@ function startGame(): void {
         sound.play('crackRumble');
         break;
       case 'gravelHop':
-        // O4b (ogun.md 3.3): the hopping gravel's "tk" as it lands, and its crumble.
-        sound.play('gravelTk');
+        // O4b (ogun.md 3.3): the hopping gravel's "tk" as it lands, and its crumble. OG-R15: only
+        // for a landing on screen, and one "tk" for two landings within 0.1 s.
+        if (gravelTk.due(e.x, game.camera, view.width, game.clock)) sound.play('gravelTk');
+        break;
+      case 'cue':
+        // O5b: Pothole Hall asks for its own sounds and words (ogun.md 5.3 to 5.5).
+        if (e.sound) sound.play(e.sound);
+        if (e.say) toast.show(e.say, e.ms ?? HINT_MS);
         break;
       case 'crumble':
         sound.play('gravelCrumble');
@@ -1267,7 +1287,7 @@ function startGame(): void {
           last: typeof where === 'number' && where + 1 >= streets.length,
           parcel: game.run.parcel,
           ogun: ogunPlay !== null,
-          ogunNext: ogunPlay !== null && ogunPlay.n < OGUN_BUILT,
+          ogunNext: ogunPlay !== null && ogunPlay.n <= OGUN_BUILT,
         });
         break;
       case 'bossThrow':
@@ -1301,8 +1321,8 @@ function startGame(): void {
         // 6 s kind finish never loses it (qa N3). The same save uses the garri parcel up (po ruling
         // d). 'win' saves the same again (merge, never lower).
         // O1b2: the first win sends the player on to Ogun with a big button (ogun.md 1.2).
-        firstHallWin = !progress.state(LAGOS).hall.done;
-        progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
+        firstHallWin = !progress.state(hallState()).hall.done;
+        progress.finish({ state: hallState(), hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
         // (c) The hall win adds ₦15 to Lagos.
         payHome(game.run.kobo * KOBO_PER_COIN + HALL_PRIZE);
         // P2 (po N4): no fight hint ("PEEP!") stays up over the kind finish.
@@ -1324,14 +1344,14 @@ function startGame(): void {
         controls.releaseAll();
         pauseLoop();
         toast.hide();
-        // S2.8: the hall is won, so Lagos is switched on and its cog turns.
-        progress.finish({ state: LAGOS, hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
-        menus.showWin({ kobo: game.run.kobo, lives: game.run.lives, firstHall: firstHallWin });
+        // S2.8: the hall is won, so Lagos (O5b: or Ogun) is switched on and its cog turns.
+        progress.finish({ state: hallState(), hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
+        menus.showWin({ kobo: ogunPlay ? brought : game.run.kobo, lives: game.run.lives, firstHall: firstHallWin, ogun: ogunPlay !== null });
         firstHallWin = false;
         break;
     }
     // The well room, back up, a hall hit: the tune follows (cheap when nothing changed).
-    if (e.type === 'room' || e.type === 'wellBack' || e.type === 'bossHit' || e.type === 'bossDefeat') syncMusic();
+    if (e.type === 'room' || e.type === 'wellBack' || e.type === 'bossHit' || e.type === 'bossDefeat' || e.type === 'cue') syncMusic();
   };
 
   document.addEventListener('visibilitychange', () => {
@@ -1644,6 +1664,10 @@ function startGame(): void {
     /** O2b: an Ogun street's own look is on (a fault turns it off; the Lagos look stands in). */
     get skin() {
       return game.skin !== null;
+    },
+    /** O5b: a later state's fight (King Pothole), as its part shows it, or null. */
+    get arena() {
+      return (game.run.arena as { peek?: () => Record<string, unknown> } | null)?.peek?.() ?? null;
     },
     get boss() {
       const b = game.run.boss;
@@ -2042,6 +2066,8 @@ declare global {
       };
       /** Drawn boxes (CSS px) of every kobo, food, hazard, crate, well, pit lip, the hero, the bus and its board on screen; in the hall the lights, the throws and the hero. */
       readonly drawn: readonly { readonly what: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number }[];
+      /** O5b: a later state's fight (King Pothole) as its part shows it (potholeFight.ts peek), or null. */
+      readonly arena: Record<string, unknown> | null;
       readonly boss: {
         readonly hits: number;
         readonly lit: number;

@@ -12,6 +12,8 @@
  */
 import { WORLD_PART_WORDS } from '../screens/words';
 import type { StreetSkin } from '../game/skin';
+import type { ArenaRules, Run } from '../game/run';
+import type { Tune } from '../art/tunes';
 import type { WorldUi } from './ui';
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
@@ -29,6 +31,11 @@ export interface WorldPart {
    * part has none for it yet. Optional in the shape check.
    */
   readonly street?: (level: { readonly id: string; readonly arch: number | null }) => StreetSkin | null;
+  /**
+   * O5b: the state's boss hall (its level file is `<id>-hall`): its fight, made fresh for each try,
+   * and its tune (it stands in for the hall tune while that hall is played). Optional.
+   */
+  readonly hall?: { readonly arena: (run: Run) => ArenaRules; readonly tune: Tune };
 }
 
 export type WorldLoad = { ok: true; part: WorldPart } | { ok: false; why: 'missing' | 'broken'; message: string };

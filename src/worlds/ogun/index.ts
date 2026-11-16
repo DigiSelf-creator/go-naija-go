@@ -14,7 +14,10 @@ import type { WorldPart } from '../load';
 import { ABEOKUTA_SOUNDS } from './abeokuta';
 import { OTA_SOUNDS } from './ota';
 import { SAGAMU_SOUNDS } from './sagamu';
+import { POTHOLE_HALL_TUNE, POTHOLE_SOUNDS } from './hall';
 import { ogunStreet } from './otaStreet';
+import { parsePotholeHall, potholeArena } from './potholeFight';
+import { potholeHallSkin } from './potholeHallSkin';
 import { ui } from './ride';
 
 const files = import.meta.glob<unknown>('../../data/levels/ogun-*.json', { eager: true, import: 'default' });
@@ -30,7 +33,28 @@ for (const [path, data] of Object.entries(files)) {
 addSounds(OTA_SOUNDS);
 addSounds(ABEOKUTA_SOUNDS);
 addSounds(SAGAMU_SOUNDS);
+// O5b: Pothole Hall's plop, gulp, hmph, giggle, yawn, bag lift, cone tok, mud splat and toot.
+addSounds(POTHOLE_SOUNDS);
+
+/** O5b: King Pothole's fight from ogun-hall.json (a broken file leaves the part with no hall). */
+function hall(): WorldPart['hall'] {
+  try {
+    return { arena: potholeArena(parsePotholeHall(levels['ogun-hall'])), tune: POTHOLE_HALL_TUNE };
+  } catch (err) {
+    console.warn(err);
+    return undefined;
+  }
+}
 
 // O1b2: the bus ride, the place picture and the welcome tune ride along in this part.
 // O2b: each street's own look (Ota; Abeokuta from O3b; Sagamu from O4b).
-export const part: WorldPart = { id: 'ogun', version: 1, levels, ui, street: ogunStreet };
+// O5b: Pothole Hall's fight, look and tune.
+const ogunHall = hall();
+export const part: WorldPart = {
+  id: 'ogun',
+  version: 1,
+  levels,
+  ui,
+  street: (level) => (level.id === 'ogun-hall' ? potholeHallSkin() : ogunStreet(level)),
+  ...(ogunHall ? { hall: ogunHall } : {}),
+};

@@ -10,7 +10,8 @@ import { BossFight, throwBox, type BossEvent } from './boss';
 import { CRATE_RULES, freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import { ballsOut, FUFU_RULES, stepBall, tossBall, type BallWorld, type FufuBall } from './fufu';
-import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type ThrowKind, type WellData } from './level';
+import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type MudData, type ThrowKind, type WellData } from './level';
+import type { SoundName } from '../engine/sound';
 import { pitKind, pitsOf, withBlocks, BIG_PIT, type Pit, type PitKind } from './pits';
 import { GENTLE_HINTS } from '../screens/words';
 import { freshRoom, roomWalls, WELL_RULES, type RoomData, type RoomPlay } from './well';
@@ -245,6 +246,8 @@ export type RunEvent =
   | { type: 'dashEnd' }
   | { type: 'dashReady' }
   | { type: 'dashTired'; first: boolean }
+  /** O5b: a later state's hall (its lazy part) asks for a sound and, or, words on the hint bar. */
+  | { type: 'cue'; sound?: SoundName; say?: string; ms?: number }
   | CrateEvent
   | BossEvent;
 
@@ -306,6 +309,21 @@ export interface RunOptions {
   parcel?: boolean;
   /** S2.16 B4: the dash is already turned on (saved after street 2's dash hint). */
   dash?: boolean;
+  /** O5b: a hall whose boss lives in a later state's lazy part (King Pothole): its fight, made for this try. */
+  arena?: ((run: Run) => ArenaRules) | undefined;
+}
+
+/**
+ * O5b: a boss fight from a later state's lazy part (Ogun's King Pothole, ogun.md 5). It runs the
+ * whole hall step with the run's own helpers (moves, walls, hazards, hurts, falls), so the rules
+ * stay in that part and only this shape is in the first load.
+ */
+export interface ArenaRules {
+  /** Beaten: the kind finish plays (no pause, no hurts). */
+  readonly defeated: boolean;
+  /** The hall tune's tempo step now (0 to 2). */
+  readonly tempo: number;
+  step(run: Run, dt: number, ev: RunEvent[]): void;
 }
 
 export class Run {
@@ -334,6 +352,10 @@ export class Run {
   readonly crates: CrateState[];
   /** The fight (halls only). */
   boss: BossFight | null = null;
+  /** O5b: a later state's fight (halls only), or null. */
+  arena: ArenaRules | null = null;
+  /** O2b mud patches in this play (O5b: King Pothole's splats come and go). */
+  readonly mud: MudData[];
   /**
    * The level's road and roofs, plus the boss's light platforms (solid all fight long). Its own
    * copy: a pothole plugged with fufu becomes road here for the rest of this play (S2.15).
@@ -433,17 +455,18 @@ export class Run {
     this.foods = level.foods.map((f) => ({ ...f, taken: false }));
     this.hazards = level.hazards.map((h) => freshHazard(h.kind, h.x, level.groundY));
     this.crates = featureOn('crates') ? freshCrates(level.crates) : [];
+    this.mud = [...level.mud];
     this.parcelShield = level.hall !== null && (opts.parcel ?? false);
-    if (level.hall && level.boss) {
+    if (level.hall) {
       // S2.7: the fight starts at once, the hero inside by the left door, standing, facing right.
       this.phase = 'arena';
       this.checkpointReached = true;
-      this.boss = new BossFight(level.boss, level.groundY);
-      if (this.parcelShield) {
-        this.power.shield = true; // one shield, never more (it is a yes or no, never a count)
-        this.pending.push({ type: 'parcelShield' });
-      } else {
-        this.pending.push({ type: 'hallStart' });
+      if (this.parcelShield) this.power.shield = true; // one shield, never more (it is a yes or no, never a count)
+      // O5b: a later state's fight says its own start words.
+      this.arena = opts.arena?.(this) ?? null;
+      if (level.boss) {
+        this.boss = new BossFight(level.boss, level.groundY);
+        this.pending.push({ type: this.parcelShield ? 'parcelShield' : 'hallStart' });
       }
     }
   }
@@ -451,6 +474,11 @@ export class Run {
   /** A hall: the fight is the whole level (S2.7). */
   get inHall(): boolean {
     return this.level.hall !== null;
+  }
+
+  /** The hall's boss is beaten (its kind finish plays). */
+  get beaten(): boolean {
+    return (this.boss ?? this.arena)?.defeated ?? false;
   }
 
   /** What well `i`'s room holds in this play (null before the first visit). For tests and drawing. */
@@ -469,12 +497,12 @@ export class Run {
    * finish after the third hit (po M4: they do nothing in the finish), nor on any end card.
    */
   get inPlay(): boolean {
-    if (this.phase === 'arena') return !this.boss?.defeated;
+    if (this.phase === 'arena') return !this.beaten;
     return this.phase === 'run' || this.phase === 'wellDown' || this.phase === 'roomIn' || this.phase === 'room' || this.phase === 'wellUp';
   }
 
   press(by: PressSource = 'tap'): ReturnType<typeof press> {
-    if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches the finish
+    if (this.phase === 'arena' && this.beaten) return null; // the hero stands and watches the finish
     if (this.phase !== 'run' && this.phase !== 'arena' && this.phase !== 'room') return null;
     if (this.dustOff > 0) return null; // dusting off after a Gentle mode climb-out (S2.13)
     const out = press(this.hero);
@@ -493,7 +521,7 @@ export class Run {
   steer(move: -1 | 0 | 1): void {
     if (!this.hero.manual) return;
     this.heldMove = move;
-    const free = (this.phase === 'run' && this.dustOff === 0) || this.phase === 'room' || (this.phase === 'arena' && !this.boss?.defeated);
+    const free = (this.phase === 'run' && this.dustOff === 0) || this.phase === 'room' || (this.phase === 'arena' && !this.beaten);
     steer(this.hero, free ? move : 0);
   }
 
@@ -822,7 +850,7 @@ export class Run {
   }
 
   /** The hero stays inside the start fence and the end wall (a hall: its left wall and the cone line); bumping one stops dead. */
-  private walls(): void {
+  walls(): void {
     const h = this.hero;
     const hall = this.level.hall;
     const lo = hall ? hall.leftLimit : this.level.startWall + RULES.wallGap;
@@ -879,8 +907,12 @@ export class Run {
    * still and cannot be hurt while the kind finish plays.
    */
   private arenaStep(dt: number, ev: RunEvent[]): RunEvent[] {
-    const boss = this.boss!;
+    const boss = this.boss;
     this.steps++;
+    if (!boss) {
+      this.arena?.step(this, dt, ev);
+      return ev;
+    }
     if (this.parcelShield && this.steps === RULES.parcelWordsSteps) ev.push({ type: 'hallStart' });
     this.tickPower(ev);
     const h = this.hero;
@@ -944,7 +976,7 @@ export class Run {
     }
   }
 
-  private newHero(x: number): Body {
+  newHero(x: number): Body {
     if (this.level.manual) return createWalker(x, this.terrain, { walk: this.level.walkSpeed, run: this.level.runSpeed });
     const b = createBody(x, this.terrain);
     b.speed = this.level.runSpeed;
@@ -955,14 +987,14 @@ export class Run {
 
   /** True when x is on a mud patch (its left edge to its right edge). */
   mudAt(x: number): boolean {
-    for (const m of this.level.mud) if (x >= m.x && x <= m.x + m.w) return true;
+    for (const m of this.mud) if (x >= m.x && x <= m.x + m.w) return true;
     return false;
   }
 
   /** The hero's feet are in mud now: on the road (not a roof or in the air) over a patch. */
   get inMud(): boolean {
     const h = this.hero;
-    return h.grounded && h.on === null && this.level.mud.length > 0 && this.mudAt(h.x);
+    return h.grounded && h.on === null && this.mud.length > 0 && this.mudAt(h.x);
   }
 
   /** In mud with no ikokore: top speed is walk speed (ogun.md 3.3). */
@@ -975,8 +1007,8 @@ export class Run {
    * at 0, so a run builds again only after leaving it (walking off, or landing on firm road).
    * Jumps work as normal; mud never hurts. A dash ends in mud. Ikokore: mud does not slow you.
    */
-  private mudStep(h: Body): void {
-    if (!h.manual || this.level.mud.length === 0) return;
+  mudStep(h: Body): void {
+    if (!h.manual || this.mud.length === 0) return;
     if (this.slowed) {
       h.gait = { walk: h.gait.walk, run: h.gait.walk };
       h.runTime = 0;
@@ -989,7 +1021,7 @@ export class Run {
   }
 
   /** After the move: feet on firm road (or a roof) again after mud, so the run builds from 0. */
-  private leftMud(h: Body): void {
+  leftMud(h: Body): void {
     if (!this.wasMud || !h.grounded || this.inMud) return;
     this.wasMud = false;
     h.runTime = 0;
@@ -1039,7 +1071,7 @@ export class Run {
     for (const c of this.cracks) if (c.state === 'shut' && c.x - x <= reach && c.x + c.w >= x - RULES.heroHalfW) c.state = 'sealed';
   }
 
-  private tickPower(ev: RunEvent[]): void {
+  tickPower(ev: RunEvent[]): void {
     for (const kind of TIMED) {
       const left = this.power[kind];
       if (left <= 0) continue;
@@ -1054,7 +1086,7 @@ export class Run {
     }
   }
 
-  private heroBox(): { l: number; r: number; t: number; b: number } {
+  heroBox(): { l: number; r: number; t: number; b: number } {
     const h = this.hero;
     return { l: h.x - RULES.heroHalfW, r: h.x + RULES.heroHalfW, t: h.y - RULES.heroH, b: h.y };
   }
@@ -1096,7 +1128,7 @@ export class Run {
   /** Throw can be pressed now: balls held, in play, not dusting off. */
   get canThrow(): boolean {
     if (this.fufu <= 0 || this.dustOff > 0) return false;
-    return this.phase === 'run' || (this.phase === 'arena' && !this.boss?.defeated);
+    return this.phase === 'run' || (this.phase === 'arena' && !this.beaten);
   }
 
   /**
@@ -1202,7 +1234,7 @@ export class Run {
     this.balls = this.balls.filter((b) => b.mode !== 'gone');
   }
 
-  private moveHazards(dt: number, ev: RunEvent[]): void {
+  moveHazards(dt: number, ev: RunEvent[]): void {
     const { hazardSpeeds, groundY } = this.level;
     const terrain = this.terrain; // plugged potholes are road (S2.15)
     const heroX = this.hero.x;
@@ -1281,7 +1313,7 @@ export class Run {
     }
   }
 
-  private touchHazards(ev: RunEvent[]): void {
+  touchHazards(ev: RunEvent[]): void {
     const h = this.hero;
     const box = this.heroBox();
     for (const z of this.hazards) {
@@ -1410,7 +1442,7 @@ export class Run {
     }
   }
 
-  private hurt(ev: RunEvent[]): void {
+  hurt(ev: RunEvent[]): void {
     if (this.safe > 0) return;
     if (this.power.shield) {
       this.power.shield = false;
@@ -1426,7 +1458,7 @@ export class Run {
     if (this.lives <= 0) this.gameOver(ev);
   }
 
-  private fall(ev: RunEvent[]): void {
+  fall(ev: RunEvent[]): void {
     this.lives--;
     ev.push({ type: 'fall' });
     // Food effects end on every fall, the last one too (so the HUD never shows a food at 0 lives).
