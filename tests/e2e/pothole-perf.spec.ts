@@ -42,7 +42,9 @@ test('slowed 4x CPU: Pothole Hall by the keys, every phase and the kind finish, 
   await page.getByRole('button', { name: 'Play' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await page.getByRole('dialog', { name: 'Ogun' }).getByRole('button', { name: 'Go to Pothole Hall' }).tap();
+  // OG-R35/R37 (qa O7: this test still used the retired Ogun place screen): the Bad road pin's card.
+  await page.locator('.ogun-city .city-pin[data-spot="badRoad"]').tap();
+  await page.getByRole('dialog', { name: 'Bad road' }).getByRole('button', { name: 'Go to Pothole Hall' }).tap();
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('ogun-hall');
   const dpr = await page.evaluate(() => devicePixelRatio);
