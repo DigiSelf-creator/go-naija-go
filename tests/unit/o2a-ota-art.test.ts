@@ -6,7 +6,12 @@
 import { describe, expect, it } from 'vitest';
 import { OGUN_WORDS } from '../../src/screens/words';
 import { isTrader } from '../../src/game/crowd';
+import { POTHOLE, POTHOLE_RIM, ROAD } from '../../src/art/palette';
+import { ABK } from '../../src/worlds/ogun/abeokuta';
 import {
+  MUD,
+  MUD_INK,
+  OTA,
   OTA_CAST,
   OTA_SIGNS,
   OTA_SOUNDS,
@@ -100,5 +105,80 @@ describe('O2a Ota art', () => {
       }
     }
     expect(bad).toEqual([]);
+  });
+
+  describe('OG-R33: mud never looks like a pothole', () => {
+    const grey = (hex: string): number => {
+      const n = parseInt(hex.slice(1), 16);
+      return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+    };
+    /** A canvas that keeps a log of every call, and notes each stroked path holding a closed ring. */
+    function logCanvas(): { g: CanvasRenderingContext2D; log: string[]; rings: string[]; pts: [string, number][] } {
+      const log: string[] = [];
+      const rings: string[] = [];
+      const pts: [string, number][] = [];
+      let ringInPath = false;
+      const st: Record<string, unknown> = {};
+      const g = new Proxy(st, {
+        get: (_t, k) => {
+          if (typeof k !== 'string') return undefined;
+          if (k in st) return st[k];
+          return (...a: number[]) => {
+            log.push(`${k}(${a.map((v) => (typeof v === 'number' ? v.toFixed(2) : v)).join(',')})`);
+            if (k === 'beginPath') ringInPath = false;
+            if ((k === 'ellipse' && Math.abs((a[6] ?? 0) - (a[5] ?? 0)) >= Math.PI * 2 - 1e-6) || (k === 'arc' && Math.abs((a[4] ?? 0) - (a[3] ?? 0)) >= Math.PI * 2 - 1e-6)) ringInPath = true;
+            if (k === 'stroke' && ringInPath && st.strokeStyle === OTA.shine) rings.push(String(st.strokeStyle));
+            if (k === 'moveTo' || k === 'lineTo') pts.push([k, a[1]!]);
+            if (k === 'quadraticCurveTo') pts.push([k, a[3]!]);
+            if (k === 'ellipse') pts.push([k, a[1]! - a[3]!]);
+          };
+        },
+        set: (_t, k, v) => {
+          st[k as string] = v;
+          log.push(`${String(k)}=${v}`);
+          return true;
+        },
+      }) as unknown as CanvasRenderingContext2D;
+      return { g, log, rings, pts };
+    }
+
+    it('is a mid brown, lighter in grey than the tar, every pothole and pothole water', () => {
+      const fill = grey(MUD_INK.fill);
+      for (const dark of [ROAD, POTHOLE, POTHOLE_RIM, ABK.water, ABK.waterDeep]) expect(fill - grey(dark), dark).toBeGreaterThan(15);
+      expect(fill).toBeLessThan(170); // still a brown, not a pale sand
+    });
+
+    it('lies level with the road: the edge band stays clear, only clods sit on top', () => {
+      for (const w of [80, 130, 200]) {
+        const { g, pts } = logCanvas();
+        drawMud(g, 2000, w, 300, 1.3, false);
+        expect(MUD.top).toBeGreaterThanOrEqual(5); // the road's edge band (5 u) runs on unbroken
+        for (const [k, y] of pts) {
+          // Clods are drawn as ellipses resting on the road line, no taller than 6 u
+          if (k === 'ellipse') expect(y).toBeGreaterThanOrEqual(300 - 6.01);
+          else if (y < 300 + MUD.top) expect(y).toBe(300); // a clod's foot on the line
+        }
+      }
+    });
+
+    it('has boot prints from the start and shine streaks, never rings', () => {
+      for (const [w, boots] of [[80, 2], [160, 3]] as const) {
+        const { g, log, rings } = logCanvas();
+        drawMud(g, 2000, w, 300, 0.7, false);
+        expect(log.filter((c) => c.startsWith('roundRect(')).length).toBe(boots * 2); // sole + heel each
+        expect(rings).toEqual([]);
+      }
+    });
+
+    it('holds still under reduced motion', () => {
+      const a = logCanvas();
+      const b = logCanvas();
+      drawMud(a.g, 2000, 150, 300, 0, true);
+      drawMud(b.g, 2000, 150, 300, 9.37, true);
+      expect(a.log).toEqual(b.log);
+      const c = logCanvas();
+      drawMud(c.g, 2000, 150, 300, 9.37, false);
+      expect(c.log).not.toEqual(b.log);
+    });
   });
 });

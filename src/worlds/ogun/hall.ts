@@ -1269,9 +1269,9 @@ export function drawMudPatch(g: G, x: number, width: number, floorY: number, dry
   if (d > 0.4) {
     // Drying: a pale crust and little cracks
     g.globalAlpha *= (d - 0.4) / 0.6;
-    rect(g, x0 + 2, floorY + 1, width - 4, 10, '#b08a62');
-    line(g, [x0 + 10, floorY + 3, x0 + 16, floorY + 8, x0 + 22, floorY + 5], 1, PH.crack);
-    line(g, [x0 + 34, floorY + 4, x0 + 40, floorY + 9, x0 + 48, floorY + 6], 1, PH.crack);
+    rect(g, x0 + 2, floorY + 6, width - 4, 12, '#b08a62');
+    line(g, [x0 + 10, floorY + 8, x0 + 16, floorY + 13, x0 + 22, floorY + 10], 1, PH.crack);
+    line(g, [x0 + 34, floorY + 9, x0 + 40, floorY + 14, x0 + 48, floorY + 11], 1, PH.crack);
   }
   g.restore();
 }

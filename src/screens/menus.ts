@@ -658,8 +658,13 @@ export class Menus {
       h(
         'div',
         { class: 'ogun-words' },
-        h('p', {}, h('b', {}, w.line)),
-        h('p', {}, v.ogun.beaten ? OGUN_WORDS.hall.open : this.hooks.ogunDone(3) ? w.sagamuDone : this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
+        // QA-O-1: the two lines together, so short screens can put the Play buttons beside them.
+        h(
+          'div',
+          { class: 'ogun-lines' },
+          h('p', {}, h('b', {}, w.line)),
+          h('p', {}, v.ogun.beaten ? OGUN_WORDS.hall.open : this.hooks.ogunDone(3) ? w.sagamuDone : this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
+        ),
         // O3b, O4b: the newest open street is the big button, the ones before it small. O5b: then Pothole Hall.
         ...[4, 3, 2, 1].map((n) => {
           const top = this.hooks.ogunDone(3) ? 4 : this.hooks.ogunDone(2) ? 3 : this.hooks.ogunDone(1) ? 2 : 1;

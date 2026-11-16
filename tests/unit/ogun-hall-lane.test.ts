@@ -49,7 +49,7 @@ describe('ogun.md 5.2: Pothole Hall (ogun-hall.json)', () => {
     for (const k of ['schema', 'type', 'groundY', 'width', 'spawnX', 'leftLimit'] as const) expect(H[k], k).toBe(lagosHall[k]);
     expect(H.rightLimit).toBe(530);
     expect(B).toMatchObject({ kind: 'king-pothole', rollerX: 500, lamps: 8, startDelay: 2.0, gulp: 0.5, breakAfterHit: 1.5 });
-    expect(B.pit).toEqual({ width: 100, track: [230, 400], startX: 400, dropZone: 40, bumpGap: 10, resumeAfterLand: 0.3 });
+    expect(B.pit).toEqual({ width: 100, track: [230, 400], startX: 400, dropZone: 40, bumpGap: 30, resumeAfterLand: 0.3 });
     expect(B.bag).toEqual({ pile: [60, 90], x: 80, newAfter: 1.0 });
   });
 

@@ -78,7 +78,7 @@ function bag(p: ReturnType<typeof play>): void {
 
 describe('ogun.md 5.6: the hall file', () => {
   it('reads King Pothole\'s block and the room', () => {
-    expect(DATA.pit).toEqual({ width: 100, track: [230, 400], startX: 400, dropZone: 40, bumpGap: 10, resumeAfterLand: 0.3 });
+    expect(DATA.pit).toEqual({ width: 100, track: [230, 400], startX: 400, dropZone: 40, bumpGap: 30, resumeAfterLand: 0.3 });
     expect(DATA.phases.map((p) => [p.every, p.slide, p.pattern.join(',')])).toEqual([
       [2.6, 30, 'gravel'],
       [2.2, 40, 'gravel,mud'],
@@ -273,7 +273,7 @@ describe('ogun.md 5.3: carry the road mix and drop it in', () => {
     expect(p.f.bagReady).toBe(true);
   });
 
-  it('Gentle: climbs out on his left lip, he stays and slides a fifth slower', () => {
+  it('Gentle (OG-R24, R26): climbs out 40 u left of his left lip, he goes back to 400; slides a fifth slower', () => {
     const p = play({ gentle: true });
     steps(p, 60);
     expect(p.f.pitX).toBeCloseTo(400 - 30 * 0.8, 0);
@@ -283,9 +283,49 @@ describe('ogun.md 5.3: carry the road mix and drop it in', () => {
     p.run.hero.y = 330;
     for (let i = 0; i < 120 && !p.ev.some((e) => e.type === 'fall'); i++) p.ev.push(...p.run.step(DT));
     expect(p.run.lives).toBe(4);
-    expect(p.f.pitX).toBe(pit);
-    expect(p.run.hero.x).toBeLessThan(p.f.lips[0] - RULES.heroHalfW - DATA.pit.bumpGap + 1e-6);
+    expect(p.run.hero.x).toBe(pit - DATA.pit.width / 2 - POTHOLE_RULES.climbBack);
+    expect(p.f.pitX).toBe(400);
+    expect(p.f.dir).toBe(-1);
+    // Clear of his lip by more than the bump gap, so he never slides at the hero there.
+    expect(p.f.gapTo(p.run.hero.x, p.f.pitX)).toBeGreaterThanOrEqual(DATA.pit.bumpGap);
     expect(p.ev.some((e) => e.type === 'climbOut')).toBe(true);
+  });
+
+  it('5.4 tuning, Gentle only: throws every 2.8 / 2.4 / 2.0 s (normal 2.6 / 2.2 / 1.8)', () => {
+    for (const gentle of [false, true]) {
+      const p = play({ gentle });
+      expect([0, 1, 2].map((i) => p.f.everyOf(i))).toEqual(gentle ? [2.8, 2.4, 2.0] : [2.6, 2.2, 1.8]);
+      steps(p, secs(2.0));
+      const first = p.f.nextThrowAt;
+      expect(first - p.run.steps).toBe(secs(gentle ? 2.8 : 2.6));
+    }
+  });
+
+  it('OG-R26: the gulp is 0.8 s in Gentle mode, 0.5 s in normal', () => {
+    expect(DATA.gulp).toBe(0.5);
+    expect(DATA.gentle.gulp).toBe(0.8);
+    expect(DATA.gentle.every).toEqual([2.8, 2.4, 2.0]);
+    for (const [gentle, gulp] of [[false, 0.5], [true, 0.8]] as const) {
+      const p = play({ gentle });
+      steps(p, secs(2.0 - gulp) - 1);
+      expect(p.f.gulp).toBe(-1);
+      steps(p, 1);
+      expect(p.f.gulp).toBeGreaterThanOrEqual(0);
+      steps(p, secs(gulp));
+      expect(p.run.hazards).toHaveLength(1);
+    }
+  });
+
+  it('OG-R25: a lump never comes out touching a hero standing still by his lip', () => {
+    for (const x of [150, 200, 250, 300]) {
+      const p = play();
+      p.run.hero.x = x;
+      steps(p, secs(12), () => {
+        // The moment a lump is thrown, it is clear of the standing hero's box.
+        for (const z of p.run.hazards) if (z.t === 0) expect(Math.abs(z.x - p.run.hero.x)).toBeGreaterThan(RULES.heroHalfW + 9);
+      });
+      expect(p.ev.some((e) => e.type === 'hit')).toBe(true); // they still come at the hero
+    }
   });
 });
 
