@@ -48,6 +48,8 @@ export const OGUN_CITY_WORDS = {
     slowInternet: 'Fast internet here. The factories are busy.',
     mill: 'The garri mill is open here.',
     kola: 'The kola market is open here.',
+    /** OG-R37: back in the city after the first hall win. */
+    badRoad: 'The gateway is open. The road is smooth.',
   },
   /** W8 Not enough: Ogun's challenges to earn more (new, as Lagos's). */
   earnRun: 'Run Ota to earn more.',

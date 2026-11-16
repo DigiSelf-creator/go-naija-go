@@ -660,7 +660,7 @@ export class Menus {
         button(w.wheel, 'minor two-line', () => this.showWheel('ogun')),
       ],
       run: (spot, e) => this.hooks.runOgunSpot(spot, tapPoint(e)),
-      seeStop: (spot) => this.showOgunRoad(spot === 'potholes' ? 'ota' : 'expressway', true),
+      seeStop: (spot) => this.showOgunRoad(spot === 'potholes' ? 'ota' : spot === 'badRoad' ? 'hall' : 'expressway', true),
       ignoreTap: (e) => this.ignoreTap(e),
       sound: (name) => this.hooks.playSound(name as MenuSound),
       gentle: () => this.settings.gentle,

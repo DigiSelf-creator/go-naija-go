@@ -126,11 +126,29 @@ describe('O6b: one wallet, Ogun keeps its own fixes (decision 80)', () => {
     expect(before).toBeGreaterThanOrEqual(FIRST_BOOM);
   });
 
-  it('pins: ready when the wallet holds enough, fixed once paid; Bad road is the hall\'s and always fixed here', () => {
+  it('pins: ready when the wallet holds enough, fixed once paid; Bad road is the problem until the hall is won (OG-R37)', () => {
     const c = emptyOgunCity();
-    expect(ogunLooks(c, W(0, 0, 0))).toEqual({ potholes: 'problem', dryTaps: 'problem', lightsOut: 'problem', slowInternet: 'problem', badRoad: 'fixed' });
-    expect(ogunLooks(c, W(1200, 8, 6))).toEqual({ potholes: 'ready', dryTaps: 'problem', lightsOut: 'ready', slowInternet: 'ready', badRoad: 'fixed' });
+    expect(ogunLooks(c, W(0, 0, 0))).toEqual({ potholes: 'problem', dryTaps: 'problem', lightsOut: 'problem', slowInternet: 'problem', badRoad: 'problem' });
+    expect(ogunLooks(c, W(1200, 8, 6))).toEqual({ potholes: 'ready', dryTaps: 'problem', lightsOut: 'ready', slowInternet: 'ready', badRoad: 'problem' });
+    expect(ogunLooks(c, W(1200, 8, 6), true).badRoad).toBe('fixed');
     expect(ogunLooks({ ...c, fixed: ['potholes'] }, W()).potholes).toBe('fixed');
+    // No wallet ever makes Bad road "ready": only the hall fixes it.
+    expect(ogunLooks(c, W(99999, 99, 99)).badRoad).toBe('problem');
+  });
+
+  it('OG-R37: Bad road earns no Booming points; the gate and verge stay tired until the hall is won', () => {
+    expect(OGUN_BOARDS).not.toContain('badRoad');
+    expect(ogunBright(emptyOgunCity())).not.toEqual(expect.arrayContaining(['gate']));
+    expect(ogunBright(emptyOgunCity())).not.toEqual(expect.arrayContaining(['verge']));
+    expect(ogunBright(emptyOgunCity(), true)).toEqual(expect.arrayContaining(['gate', 'verge']));
+    const w = OGUN_CITY_WORDS;
+    expect(w.badRoad.line1).toBe('King Pothole is blocking the gateway.');
+    expect(w.badRoad.clear).toBe('Clear Ota, Abeokuta and Sagamu to reach Pothole Hall.');
+    expect([1, 2, 3].map(w.badRoad.run)).toEqual(['Run Ota', 'Run Abeokuta', 'Run Sagamu']);
+    expect(w.badRoad.toHall).toBe('Go to Pothole Hall.');
+    expect(w.badRoad.hall).toBe('Go to Pothole Hall');
+    expect(w.built.badRoad).toBe('The gateway is open. The road is smooth.');
+    expect(w.fixedName.badRoad).toBe('The gateway');
   });
 
   it('collect: the tray goes into the one wallet; a full tray fills the meter by 1, at most 4 from collecting each boom', () => {
@@ -156,8 +174,9 @@ describe('O6b: one wallet, Ogun keeps its own fixes (decision 80)', () => {
     const seen = { ...c, boomSeen: 20 };
     expect(ogunBoomDue(seen)).toBe(0);
     expect(ogunBright(seen)).toBeUndefined();
-    // Before it: the gateway (the hall) is bright, plus each fix's own part.
-    expect(ogunBright(emptyOgunCity())).toEqual(['gate', 'verge']);
+    // Before it: the gateway (once the hall is won) is bright, plus each fix's own part.
+    expect(ogunBright(emptyOgunCity(), true)).toEqual(['gate', 'verge']);
+    expect(ogunBright(emptyOgunCity())).toEqual([]);
     expect(ogunBright({ ...emptyOgunCity(), fixed: ['dryTaps'] })).toEqual(expect.arrayContaining(['water', 'motorPark']));
   });
 

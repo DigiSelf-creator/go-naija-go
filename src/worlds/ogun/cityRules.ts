@@ -9,8 +9,9 @@
  *   meter, hints and where the hero stood:
  *     { "fixed": ["potholes"], "fixes": 1, "paid": {"dryTaps": 4}, "built": ["adire"],
  *       "trays": {"adire": 40}, "boom": 8, "boomCollect": 0, "boomSeen": 0, "hints": [], "at": {...} }
- * - "Bad road" (pin 7) is fixed by winning Pothole Hall, and the city opens only after that win,
- *   so it is always fixed here. It earns no Booming points (6.4 counts 24 points from 6 places).
+ * - "Bad road" (pin 7) is fixed by winning Pothole Hall (OG-R37): the city opens from the first
+ *   visit (OG-R35), so its pin shows the problem until that win (`hallWon`, from states.ogun.hall,
+ *   never saved here). It earns no Booming points (6.4 counts 24 points from 6 places).
  * - A board shows once what it needs is there: the road, the adire market, the pump, the lamps
  *   and the mast at once; the garri mill once the road is built (6.2 "needs pin 1"); the kola
  *   market from the first boom (6.4). (City.md W7's "one new board at a time" is Lagos's teaching
@@ -154,10 +155,10 @@ export function canPay(c: OgunCityState, w: Wallet, b: OgunBoard): boolean {
   return !isDone(c, b) && inBucket(w, OGUN_PRICES[b].bucket) >= leftOn(c, b);
 }
 
-/** Each pin's look: Bad road is always fixed here (the hall is won). */
-export function ogunLooks(c: OgunCityState, w: Wallet): OgunSpotLooks {
+/** Each pin's look: Bad road is the problem until Pothole Hall is won (OG-R37), then fixed. */
+export function ogunLooks(c: OgunCityState, w: Wallet, hallWon = false): OgunSpotLooks {
   const look = (s: OgunFixId): SpotLook => (c.fixed.includes(s) ? 'fixed' : canPay(c, w, s) ? 'ready' : 'problem');
-  return { potholes: look('potholes'), dryTaps: look('dryTaps'), lightsOut: look('lightsOut'), slowInternet: look('slowInternet'), badRoad: 'fixed' };
+  return { potholes: look('potholes'), dryTaps: look('dryTaps'), lightsOut: look('lightsOut'), slowInternet: look('slowInternet'), badRoad: hallWon ? 'fixed' : 'problem' };
 }
 
 /** Adds Booming points (W6): a collect adds nothing once 4 have come from collecting since the last mark. */
@@ -237,10 +238,10 @@ export const FIX_AREAS: Readonly<Record<OgunBoard | 'badRoad', readonly string[]
 /** The Booming meter's five steps light these, in order; the first boom lights everything. */
 export const STEP_AREAS: readonly string[] = ['r0c0', 'r0c2', 'r1c2', 'r0c3', 'r2c1'];
 
-/** The areas drawn bright now: the hall's gateway, each fix and place, the meter's steps; all after the first boom. */
-export function ogunBright(c: OgunCityState): string[] | undefined {
+/** The areas drawn bright now: the hall's gateway once won (OG-R37), each fix and place, the meter's steps; all after the first boom. */
+export function ogunBright(c: OgunCityState, hallWon = false): string[] | undefined {
   if (boomed(c)) return undefined;
-  const out = new Set<string>(FIX_AREAS.badRoad);
+  const out = new Set<string>(hallWon ? FIX_AREAS.badRoad : []);
   for (const f of c.fixed) for (const a of FIX_AREAS[f]) out.add(a);
   for (const p of c.built) for (const a of FIX_AREAS[p]) out.add(a);
   const m = meterOf(c.boom, c.boomSeen);

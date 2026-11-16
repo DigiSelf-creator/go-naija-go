@@ -27,7 +27,7 @@ import { formatMoney, spokenMoney } from '../../game/money';
 import { button, h } from '../../screens/dom';
 import { WORDS } from '../../screens/words';
 import type { WorldCity, WorldCityHooks } from '../ui';
-import { OGUN_PLACES, OGUN_SPOTS, OGUN_SPOT_WORDS, drawOgunPin, makeOgunCityCanvas, type OgunPlaceId } from './city';
+import { OGUN_PLACES, OGUN_SPOTS, OGUN_SPOT_WORDS, drawOgunPin, makeOgunCityCanvas, type OgunPlaceId, type OgunSpotId } from './city';
 import { drawAdireMarket, drawGarriMill, drawKolaMarket } from './places';
 import { OGUN_CITY_WORDS } from './cityWords';
 import {
@@ -138,7 +138,9 @@ export class OgunCityScreen implements WorldCity {
   private wobble: { board: OgunBoard; t: number } | null = null;
   private lines: { text: string; t: number }[] = [];
   private hintUntil = 0;
-  private pins: { spot: OgunFixId; el: HTMLButtonElement; word: string }[] = [];
+  private pins: { spot: OgunSpotId; el: HTMLButtonElement; word: string }[] = [];
+  /** OG-R37: Pothole Hall is won (the Bad road pin is fixed, the gate and verge bright). */
+  private readonly hallWon: boolean;
   private readonly boardEls = new Map<OgunBoard, HTMLButtonElement>();
   private readonly bubbleEls = new Map<OgunPlaceId, HTMLButtonElement>();
   private boardBox = new Map<OgunBoard, Box>();
@@ -165,6 +167,7 @@ export class OgunCityScreen implements WorldCity {
     const w = WORDS.city;
     const o = OGUN_CITY_WORDS;
     this.st = readOgunCity(hooks.own.own);
+    this.hallWon = hooks.hallWon === true;
     const at = this.st.at && ogunWalkable(this.st.at) ? this.st.at : this.st.at ? ogunNearest(this.st.at) : { ...OGUN_HOME };
     this.hero = { x: at.x, y: at.y, dir: 's', phase: 0, moving: false };
     this.map = h('canvas', { class: 'city-map', role: 'img', 'aria-label': o.map });
@@ -212,6 +215,12 @@ export class OgunCityScreen implements WorldCity {
     this.cam = this.clamp(lastCam ? { ...lastCam } : this.centreOn(this.hero, 'far'));
     const line = this.hooks.line;
     if (line) this.addLine(line);
+    // OG-R37: back in the city after the first hall win, the gateway's built line plays once.
+    if (this.hallWon && !this.st.hints.includes('gate')) {
+      this.save(withOgunHint(this.st, 'gate'), true);
+      this.addLine(OGUN_CITY_WORDS.built.badRoad);
+      this.hooks.sound('built');
+    }
     if (ogunBoomDue(this.st)) this.openBoom();
     else if (!this.st.hints.includes('walk')) {
       this.setHint(this.hooks.touch() ? OGUN_CITY_WORDS.hintWalk : OGUN_CITY_WORDS.hintWalkKeys, 5);
@@ -361,15 +370,17 @@ export class OgunCityScreen implements WorldCity {
 
   private makePins(): void {
     const w = WORDS.city;
-    const looks = ogunLooks(this.shown, this.wallet);
-    const spots = (['potholes', 'dryTaps', 'lightsOut', 'slowInternet'] as const).filter((s) => looks[s] !== 'fixed');
+    const looks = ogunLooks(this.shown, this.wallet, this.hallWon);
+    // OG-R37: the Bad road pin stays until Pothole Hall is won.
+    const spots = (['potholes', 'dryTaps', 'lightsOut', 'slowInternet', 'badRoad'] as const).filter((s) => looks[s] !== 'fixed');
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.pins = spots.map((spot) => {
       const ready = looks[spot] === 'ready';
       const word = ready ? 'Ready' : OGUN_SPOT_WORDS[spot];
       const el = button('', `city-pin ${looks[spot]}`, (e) => {
         if (this.hooks.ignoreTap(e) || this.busy()) return;
-        this.openCard(spot);
+        if (spot === 'badRoad') this.openBadRoad();
+        else this.openCard(spot);
       }, { 'aria-label': ready ? w.pinReady(OGUN_SPOT_WORDS[spot]) : w.pinProblem(OGUN_SPOT_WORDS[spot]), 'data-spot': spot });
       const box = pinTapBox(0, 0, word);
       const pic = h('canvas', { 'aria-hidden': 'true' });
@@ -395,7 +406,7 @@ export class OgunCityScreen implements WorldCity {
     this.pinLayer.replaceChildren(...this.pins.map((p) => p.el));
   }
 
-  private pinBox(spot: OgunFixId, word: string): Box {
+  private pinBox(spot: OgunSpotId, word: string): Box {
     const at = this.toScreen(OGUN_SPOTS[spot].pin);
     return pinTapBox(at.x, at.y, word);
   }
@@ -827,6 +838,24 @@ export class OgunCityScreen implements WorldCity {
     this.showCard(spot, OGUN_SPOT_WORDS[spot], [h('h2', {}, c.line1), h('p', {}, c.line2), h('p', {}, w.need(priceText(bucket, leftOn(this.st, spot)))), big ? walk(true) : run(true)], big ? [run(false), see, back] : [see, back]);
   }
 
+  /**
+   * OG-R37: the Bad road card. Before Sagamu is cleared: "Clear Ota, Abeokuta and Sagamu to reach
+   * Pothole Hall." with a big "Run {next street}"; after: "Go to Pothole Hall." with its big button.
+   */
+  openBadRoad(): void {
+    const w = WORDS.city;
+    const o = OGUN_CITY_WORDS.badRoad;
+    const n = Math.max(1, Math.min(4, this.hooks.nextStreet ?? 1));
+    const go = button(n < 4 ? o.run(n) : o.hall, 'go', (e) => {
+      if (!this.hooks.ignoreTap(e)) this.hooks.play?.(n, e);
+    });
+    const see = button(w.seeStop, 'minor', (e) => {
+      if (!this.hooks.ignoreTap(e)) this.hooks.seeStop?.('badRoad');
+    });
+    const back = button(w.back, 'minor', () => this.closeCard());
+    this.showCard('badRoad', OGUN_SPOT_WORDS.badRoad, [h('h2', {}, o.line1), h('p', {}, n < 4 ? o.clear : o.toHall), go], [see, back]);
+  }
+
   /** W8: nothing in that bucket. */
   private showNotEnough(b: OgunBoard): void {
     const w = WORDS.city;
@@ -1034,8 +1063,8 @@ export class OgunCityScreen implements WorldCity {
   private picture(dpr: number): { img: HTMLCanvasElement; scale: number } | null {
     const want = Math.min(this.scale(this.cam.zoom) * dpr, 2048 / CITY_MAP.w);
     const st = this.shown;
-    const looks = ogunLooks(st, this.wallet);
-    const bright = ogunBright(st);
+    const looks = ogunLooks(st, this.wallet, this.hallWon);
+    const bright = ogunBright(st, this.hallWon);
     const built = st.built;
     const paint = `${Object.values(looks).join(',')}|${bright?.join(',') ?? '*'}|${built.join(',')}|${boomed(st)}`;
     const key = `${paint}|${want.toFixed(4)}`;

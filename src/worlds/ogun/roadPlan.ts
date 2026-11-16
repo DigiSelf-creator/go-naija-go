@@ -7,8 +7,8 @@
  * - "To Lagos" (start) is a link, not a challenge: it travels back to Lagos.
  * - Ota pays for the New road while it is not built; the Expressway (the lane run) pays for the
  *   pump, then the lamps, then the mast (CR-Q1 a, as Lagos's side road).
- * - Abeokuta opens once Ota is done, Sagamu once Abeokuta is; Pothole Hall once Sagamu is (and it
- *   is always won by the time this road shows, since Ogun's city opens with that win).
+ * - Abeokuta opens once Ota is done, Sagamu once Abeokuta is; Pothole Hall once Sagamu is. The
+ *   road is open from the first visit (OG-R35), so any stop may still be locked.
  * - "The way on" and "Border market" are "Coming soon" and cannot be played.
  */
 import type { PlanStop, RoadPlan, StopState } from '../../screens/road';
@@ -140,9 +140,9 @@ function soon(id: 'wayOn' | 'border', name: string, line: string, line3: string)
 
 /** The still city for the card cuts, painted once per look (half a pixel a map unit). */
 let cityPic: { key: string; img: HTMLCanvasElement | null } | null = null;
-function cityFor(c: OgunCityState, wallet: Wallet): HTMLCanvasElement | null {
-  const looks = ogunLooks(c, wallet);
-  const bright = ogunBright(c);
+function cityFor(c: OgunCityState, wallet: Wallet, hallWon: boolean): HTMLCanvasElement | null {
+  const looks = ogunLooks(c, wallet, hallWon);
+  const bright = ogunBright(c, hallWon);
   const key = `${Object.values(looks).join(',')}|${bright?.join(',') ?? '*'}|${c.built.join(',')}|${boomed(c)}`;
   if (cityPic?.key !== key) cityPic = { key, img: makeOgunCityCanvas(looks, 0.5, 2048, { ...(bright ? { bright } : {}), built: c.built, boom: boomed(c) }) };
   return cityPic.img;
@@ -167,7 +167,7 @@ export function ogunRoad(v: OgunRoadView, play: (st: PlanStop, e: MouseEvent) =>
       const cut = CUT_OF[st.cut];
       if (st.cut === 'toLagos' || st.cut === 'wayOn' || st.cut === 'border') drawOgunCardPicture(g, st.cut, c.width, c.height, 0, still());
       else if (cut) {
-        const city = cityFor(v.city, v.wallet);
+        const city = cityFor(v.city, v.wallet, v.ogun.hall.done);
         if (city) drawOgunCardCut(g, city, 0.5, OGUN_CARD_CUTS[cut], c.width, c.height);
       } else {
         // Pothole Hall: its part of the road picture (lit once won).
