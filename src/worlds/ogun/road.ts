@@ -195,16 +195,19 @@ function works(g: G, x: number): void {
   for (let k = 0; k < 46; k += 10) g.fillRect(x + k, 112, 5, 6);
   rect(g, x + 2, 118, 2.4, 12, '#5d6670');
   rect(g, x + 41, 118, 2.4, 12, '#5d6670');
-  for (const cx of [x - 12, x + 58]) {
-    g.fillStyle = '#f07a2b';
-    g.beginPath();
-    g.moveTo(cx - 4, 132);
-    g.lineTo(cx, 116);
-    g.lineTo(cx + 4, 132);
-    g.closePath();
-    g.fill();
-    rect(g, cx - 2.2, 123, 4.4, 2, WHITE);
-  }
+  for (const cx of [x - 12, x + 58]) cone(g, cx, 132);
+}
+
+/** One road cone, its foot at (cx, y). */
+function cone(g: G, cx: number, y: number): void {
+  g.fillStyle = '#f07a2b';
+  g.beginPath();
+  g.moveTo(cx - 4, y);
+  g.lineTo(cx, y - 16);
+  g.lineTo(cx + 4, y);
+  g.closePath();
+  g.fill();
+  rect(g, cx - 2.2, y - 9, 4.4, 2, WHITE);
 }
 
 /** Pothole Hall behind its stop: a road works yard under a zinc roof on steel posts, granite cladding over an indigo stripe, a gravel heap, cones and a little roller. No writing, no palace. */
@@ -303,6 +306,8 @@ export function drawOgunRoadPicture(g: G, opts: OgunRoadOpts): void {
   palm(g, 262, 92, 40);
   palm(g, 544, 90);
   palm(g, 806, 88, 38);
+  // OG-R41: the hall's three road cones in a row on the verge in front of its door
+  for (let k = 0; k < 3; k++) cone(g, OGUN_STOP_BOX.hall.x + 40 + k * 16, 112);
   // The side roads: to the Expressway (a tipper and a tanker queued) and to the border market
   for (const [sx, top] of [[OGUN_SIDE_X.expressway, 60], [OGUN_SIDE_X.border, 60]] as const) {
     g.fillStyle = C.road;

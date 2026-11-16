@@ -260,8 +260,7 @@ test('qa O7 a11y: every new Ogun button has a name a screen reader says; pins sa
   expect(errors).toEqual([]);
 });
 
-test('qa O7 OG-R41 (open bug QA-O7-1): Pothole Hall\'s road card picture is spoken "Pothole Hall, with its road cones."; its crop shows the roof and three cones at 320 x 240', async ({ page }) => {
-  test.fail(true, 'QA-O7-1: on Ogun\'s road the hall card picture is spoken "Seen from above. A stop sign says Pothole Hall. Your hero is getting on a danfo." (w.pic), not OG-R41\'s words');
+test('qa O7 OG-R41 (QA-O7-1, fixed): Pothole Hall\'s road card picture is spoken "Pothole Hall, with its road cones."; its crop shows the roof and three cones at 320 x 240', async ({ page }) => {
   const errors = errorsOf(page);
   await openWith(page, JSON.stringify({ v: 2, states: { lagos: { streets: STREETS, parcel: false, hall: HALL }, ogun: { arrived: true, streets: STREETS } }, city: { kobo: 500, power: 0, tech: 0, fixed: [], fixes: 0, hints: ['walk', 'bright', 'buka', 'collect', 'road'] }, where: 'ogun' }), { 'gidi-busRide': 'false' });
   await toOgun(page);

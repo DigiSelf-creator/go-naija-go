@@ -93,6 +93,8 @@ export const OGUN_CITY_WORDS = {
      * OG-R42: Pothole Hall's two lines, as Lagos's hall (WORDS.road.hallLines): [before the win
      * line 1, after line 1, before line 2, after line 2].
      */
+    /** OG-R41: the hall card's picture (as Lagos's "Go-Slow Hall, with its traffic lights."). */
+    picHall: 'Pothole Hall, with its road cones.',
     hallLines: ['King Pothole is blocking the gateway.', 'The gateway is open. Ogun is switched on.', 'A win brings ₦15 and opens the gateway.', 'A win brings ₦15.'] as readonly string[],
     /** New: Ota, Abeokuta and Sagamu's line 2 (Lagos's says "for Lagos"; the wallet is shared). */
     earns: 'Earns Naira.',

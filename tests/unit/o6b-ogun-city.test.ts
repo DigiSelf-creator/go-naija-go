@@ -333,6 +333,12 @@ describe('O6b: Ogun\'s challenge road (6.5)', () => {
     for (const s of stops) expect(OGUN_STOP_BOX[s.id as keyof typeof OGUN_STOP_BOX], String(s.id)).toBeDefined();
   });
 
+  it('OG-R41: only the hall card picture is spoken "Pothole Hall, with its road cones."', () => {
+    const s = ogunStops(view(3, false));
+    expect(s.find((x) => x.id === 'hall')!.pic).toBe('Pothole Hall, with its road cones.');
+    for (const x of s) if (x.id !== 'hall') expect(x.pic, String(x.id)).toBeUndefined();
+  });
+
   it('To Lagos is a link; the way on and the border market cannot be played', () => {
     const s = ogunStops(view(3, true));
     const to = s.find((x) => x.id === 'toLagos')!;

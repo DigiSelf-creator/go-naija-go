@@ -267,6 +267,8 @@ export interface PlanStop extends Omit<StopInfo, 'id' | 'cut' | 'forFix'> {
   forFix: string | null;
   /** The plate's status icon in place of the state's (the "To Lagos" arch). */
   icon?: 'arch';
+  /** What the card picture is spoken as, in place of the general words (OG-R41: the hall). */
+  pic?: string;
 }
 
 /**
@@ -470,7 +472,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
         })
       : null;
     let picEl: HTMLElement;
-    if (plan) picEl = h('canvas', { class: 'road-card-pic', role: 'img', 'aria-label': w.pic(st.name) });
+    if (plan) picEl = h('canvas', { class: 'road-card-pic', role: 'img', 'aria-label': st.pic ?? w.pic(st.name) });
     else if (st.cut === 'ogun') {
       // O1b2: the gateway arch for the "To Ogun" card.
       picEl = h('span', { class: 'road-card-pic road-card-arch', role: 'img', 'aria-label': st.lines[0]! });

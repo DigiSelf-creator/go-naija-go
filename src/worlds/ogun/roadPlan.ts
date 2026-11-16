@@ -97,6 +97,7 @@ export function ogunStops(v: OgunRoadView): PlanStop[] {
       go: locked ? null : hall ? OGUN_WORDS.cleared.toHall : w.run(nm),
       forFix: locked ? null : forFix,
       cut: (['ota', 'abeokuta', 'sagamu', 'hall'] as const)[k]!,
+      ...(hall ? { pic: o.picHall } : {}),
     });
     // The Expressway's side road leaves between Ota and Abeokuta.
     if (k === 0) out.push(expressway(v));
