@@ -616,7 +616,9 @@ function startGame(): void {
     where = firstStreet;
     game.fixed = false;
     game.reset(startLevel);
-    if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : null, ogunAt, mission !== null && mission.plain !== true);
+    // OG-R39: Out of lives keeps the money (paid home at once): Home says so, with no heading.
+    const lostLine = !mission && ogunAt !== 'expressway' && paidHome && brought > 0 ? WORDS.city.mission.brought(formatMoney(brought)) : null;
+    if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : lostLine, ogunAt, mission !== null && mission.plain !== true);
     else if (to === 'wheel') {
       menus.showWheel(fromOgun ? 'ogun' : 'city');
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
@@ -745,7 +747,8 @@ function startGame(): void {
             return { bucket: laneFor === 'lamps' ? 'power' : 'tech', left: leftOf(cityLife.state, laneFor) };
           },
           setGentle: (on) => menus.setGentle(on),
-          home: (r) => (ogun ? leave('city', { build: null, kobo: r.haul.kobo, plain: !r.won, line: WORDS.lane.broughtHome(haulWords(r.haul)) }) : laneHome(r.won, r.haul)),
+          // OG-R39: a win says "Mission complete!" over the line; a loss says the line only if something came home.
+          home: (r) => (ogun ? leave('city', r.won || r.haul.kobo > 0 || r.haul.power > 0 || r.haul.tech > 0 ? { build: null, kobo: r.haul.kobo, plain: !r.won, line: WORDS.lane.broughtHome(haulWords(r.haul)) } : null) : laneHome(r.won, r.haul)),
           changed: () => {
             syncUpdate();
             nativeApp?.screenChanged();

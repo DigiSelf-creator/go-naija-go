@@ -136,7 +136,7 @@ export class OgunCityScreen implements WorldCity {
   private building: { board: OgunBoard; t: number; before: OgunCityState } | null = null;
   private collecting: { place: OgunPlaceId; amount: number; t: number; pieces: number } | null = null;
   private wobble: { board: OgunBoard; t: number } | null = null;
-  private lines: { text: string; t: number }[] = [];
+  private lines: { text: string; t: number; head?: string }[] = [];
   private hintUntil = 0;
   private pins: { spot: OgunSpotId; el: HTMLButtonElement; word: string }[] = [];
   /** OG-R37: Pothole Hall is won (the Bad road pin is fixed, the gate and verge bright). */
@@ -213,8 +213,9 @@ export class OgunCityScreen implements WorldCity {
   start(): void {
     this.measure();
     this.cam = this.clamp(lastCam ? { ...lastCam } : this.centreOn(this.hero, 'far'));
+    // OG-R39: after a win, "Mission complete!" over "You brought ₦X home."; else the line alone.
     const line = this.hooks.line;
-    if (line) this.addLine(line);
+    if (line) this.addLine(line, this.hooks.won ? WORDS.city.mission.heading : undefined);
     // OG-R37: back in the city after the first hall win, the gateway's built line plays once.
     if (this.hallWon && !this.st.hints.includes('gate')) {
       this.save(withOgunHint(this.st, 'gate'), true);
@@ -765,15 +766,15 @@ export class OgunCityScreen implements WorldCity {
 
   // ---------- Lines, hints, cards ----------
 
-  private addLine(text: string): void {
-    this.lines.push({ text, t: 0 });
+  private addLine(text: string, head?: string): void {
+    this.lines.push(head ? { text, t: 0, head } : { text, t: 0 });
     this.showLine();
-    this.say.textContent = text;
+    this.say.textContent = head ? `${head} ${text}` : text;
   }
   private showLine(): void {
     const l = this.lines[0];
     this.banner.hidden = !l;
-    if (l && this.banner.textContent !== l.text) this.banner.replaceChildren(h('p', {}, l.text));
+    if (l && this.banner.textContent !== `${l.head ?? ''}${l.text}`) this.banner.replaceChildren(...(l.head ? [h('p', { class: 'city-mission-head' }, h('b', {}, l.head))] : []), h('p', {}, l.text));
   }
   private setHint(text: string | null, secs = 4): void {
     this.hintEl.hidden = !text;

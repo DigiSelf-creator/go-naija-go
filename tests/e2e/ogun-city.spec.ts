@@ -178,7 +178,9 @@ test('Pothole Hall won, then Ogun\'s city: buy with the one wallet, the Booming 
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await pause.getByRole('button', { name: 'Back to Ogun' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
+  // OG-R39: leaving early says the line alone, with no "Mission complete!".
   await expect(page.locator('.ogun-city .city-banner')).toContainText(/^You brought .* home\.$/);
+  await expect(page.locator('.ogun-city .city-banner .city-mission-head')).toHaveCount(0);
   await expect(page.locator('.ogun-city .chip-power')).toContainText(`Power ${2 + haul.power}`);
 
   // 8. The save at the end: Ogun's city as bought; Lagos's fixes, places, meter and lane run as they were.
