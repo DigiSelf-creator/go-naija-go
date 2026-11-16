@@ -16,6 +16,7 @@ import { blitBaked, type Baked } from '../art/lane-shade';
 import { HERO_HEIGHT, SIZE, isDodge, type ThingKind } from './level';
 import type { CoinSlot, LaneSim, Slot } from './sim';
 import { LaneFolk, type LaneFolkNow, type LaneProject } from './folk';
+import type { FrontWindow } from '../art/folkLane';
 
 export const CAM_BACK = 4;
 export const CAM_UP = 2.6;
@@ -37,6 +38,23 @@ export const DARK_FROM = 30;
 export const WARN_UNDER = 15;
 /** Pickups float this high (m); the bulb, chip and foods are anchored at their middle. */
 const PICKUP_UP = 0.8;
+
+/**
+ * O6b: another state's look for the lane run (Ogun's Expressway, ogun.md 6.6), from its lazy
+ * part: its sky, road, ready-made things (its vehicles and bus stop over Lagos's), scenery and the
+ * key each `danfo` thing is drawn with. The rules, sizes and camera stay Lagos's.
+ */
+export interface LaneLook {
+  sky(w: number, horizonY: number): HTMLCanvasElement | OffscreenCanvas | null;
+  road(g: CanvasRenderingContext2D, v: ArtView, dist: number): void;
+  things(ppm: number): Map<string, Baked>;
+  scenery(ppm: number): Map<string, Baked>;
+  sceneryKeys: readonly string[];
+  /** The bake key of a `danfo` thing at metre d in a lane, on hazard frame `frame`. */
+  danfo(d: number, lane: number, frame: number): string;
+  /** The roadside house fronts (folkLane's FRONT_TILE units), in place of Lagos's two-storey ones. */
+  front?(g: CanvasRenderingContext2D, o: { wall: number; windows: readonly [FrontWindow, FrontWindow]; door: 'open' | 'shut' }): void;
+}
 
 /** What the hero is doing, for its picture. */
 export interface HeroPose {
@@ -105,6 +123,8 @@ export class LaneView {
   readonly folk = new LaneFolk();
   /** People on (tests turn them off to check the run is the same). */
   people = true;
+  /** O6b: another state's look (null: Lagos's). */
+  look: LaneLook | null = null;
 
   /**
    * People never stop the run (design.md "People everywhere" part 2 rule 1, part 11): an error in
@@ -135,10 +155,11 @@ export class LaneView {
     this.nearPpm = (this.f / CAM_BACK) * this.ratio;
     this.farPpm = (this.f / (25 + CAM_BACK)) * farBoost(25) * this.ratio;
     // The sky is soft: made at CSS size and stretched to the device pixels.
-    if (!this.sky) this.sky = bakeLaneSky(Math.round(this.w), this.hz);
-    this.near ??= bakeLaneThings(this.nearPpm);
-    this.far ??= bakeLaneThings(this.farPpm);
-    this.scenery ??= bakeLaneScenery((this.f / (12 + CAM_BACK)) * this.ratio);
+    const lk = this.look;
+    if (!this.sky) this.sky = lk ? lk.sky(Math.round(this.w), this.hz) : bakeLaneSky(Math.round(this.w), this.hz);
+    this.near ??= (lk?.things ?? bakeLaneThings)(this.nearPpm);
+    this.far ??= (lk?.things ?? bakeLaneThings)(this.farPpm);
+    this.scenery ??= (lk?.scenery ?? bakeLaneScenery)((this.f / (12 + CAM_BACK)) * this.ratio);
     if (this.people) {
       try {
         this.folk.ready(this.f / (8 + CAM_BACK), this.ratio);
@@ -202,7 +223,8 @@ export class LaneView {
   private blit(g: CanvasRenderingContext2D, key: string, x: number, y: number, ppm: number, alpha: number): boolean {
     const dev = ppm * this.ratio;
     const set = dev > (this.nearPpm + this.farPpm) / 2 ? this.near : this.far;
-    const b = set?.get(key) ?? this.near?.get(key);
+    // O6b: the scenery and the bus stop are baked apart (bakeLaneScenery); until now they were never found here.
+    const b = set?.get(key) ?? this.near?.get(key) ?? this.scenery?.get(key);
     if (!b) return false;
     // Baked in device pixels: draw in device pixels.
     this.dev(g);
@@ -240,7 +262,7 @@ export class LaneView {
     const near = Math.max(dist - CAM_BACK + 0.3, this.camD + (CAM_UP * this.f) / Math.max(1, h - hz));
     const far = dist + sim.level.spawnAhead + 10;
     if (this.sky) g.drawImage(this.sky as CanvasImageSource, 0, 0, w, this.sky.height);
-    drawLaneRoad(g, v, dist);
+    (this.look?.road ?? drawLaneRoad)(g, v, dist);
     const fade = (d: number): number => Math.min(1, Math.max(0, (sim.level.spawnAhead - (d - dist)) / FADE_M));
     const ppmAt = (d: number): number => this.f / (d - this.camD);
     const gap = sim.gap;
@@ -282,7 +304,8 @@ export class LaneView {
       const side = i % 2 === 0 ? 1 : -1;
       pieces.push({ i, d, side });
       const x = side * (ROAD.half + ROAD.kerb + (side < 0 ? ROAD.divider : 0) + 2.6);
-      this.blit(g, LANE_SCENERY[i % LANE_SCENERY.length]!, this.sx(x, d), this.sy(0, d), ppmAt(d), fade(d));
+      const keys = this.look?.sceneryKeys ?? LANE_SCENERY;
+      this.blit(g, keys[i % keys.length]!, this.sx(x, d), this.sy(0, d), ppmAt(d), fade(d));
     }
     if (folk) {
       try {
@@ -385,7 +408,7 @@ export class LaneView {
         // A goat trots off to the pavement on its side; the cones slide to the kerb.
         const off = s.state === 'off' ? (s.lane === 0 ? -1 : 1) * Math.min(1, s.t * 1.2) * 3.5 * ppm : 0;
         const frame = ak === 'danfo' ? hazardFrame(t, this.still) : ak === 'goat' ? goatChewFrame(t) : ak.startsWith('goatOff') ? Math.floor(s.t / 0.12) % 2 : 0;
-        this.blit(g, laneKey(ak, frame), x + off, y, ppm, a);
+        this.blit(g, ak === 'danfo' && this.look ? this.look.danfo(s.d, s.lane, frame) : laneKey(ak, frame), x + off, y, ppm, a);
         if (boxes) {
           const z = SIZE[kind];
           const hh = Math.max(z.h, 0.3) * ppm;
