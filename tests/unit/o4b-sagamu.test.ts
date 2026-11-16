@@ -21,6 +21,7 @@ import { OGUN_WORDS } from '../../src/screens/words';
 import * as art from '../../src/worlds/ogun/sagamu';
 import { flyoversOf, sagamuSkin, SAGAMU_LOOK } from '../../src/worlds/ogun/sagamuStreet';
 import { ogunStreet } from '../../src/worlds/ogun/otaStreet';
+import { OGUN_CITY_WORDS } from '../../src/worlds/ogun/cityWords';
 
 vi.mock('../../src/worlds/ogun/sagamu', async (orig) => {
   const real = await orig<typeof import('../../src/worlds/ogun/sagamu')>();
@@ -480,10 +481,11 @@ describe("Sagamu's look (skin.ts hookups from art)", () => {
 });
 
 describe("Sagamu's words and place", () => {
-  it('the place shows "Play Sagamu" once Abeokuta is done, and plain lines', () => {
-    expect(OGUN_WORDS.place.playSagamu).toBe('Play Sagamu');
-    expect(OGUN_WORDS.place.abeokutaDone).toBe('Abeokuta is moving again. Sagamu is open.');
-    expect(OGUN_WORDS.place.sagamuDone).toBe('Sagamu is moving again. Pothole Hall is open.');
+  it('the city\'s Bad road card says "Run Sagamu" once Abeokuta is done (OG-R35/R37: the place screen is retired), and plain lines', () => {
+    expect(OGUN_CITY_WORDS.badRoad.run(3)).toBe('Run Sagamu');
+    expect(OGUN_CITY_WORDS.badRoad.run(2)).toBe('Run Abeokuta');
+    expect(OGUN_CITY_WORDS.badRoad.clear).toBe('Clear Ota, Abeokuta and Sagamu to reach Pothole Hall.');
+    expect(OGUN_CITY_WORDS.road.sagamuLines[1]).toBe('Sagamu is moving again.');
     expect(OGUN_WORDS.streets[2]).toBe('Sagamu');
     // Every hint fits the hint bar (35 characters or fewer) and matches the file word for word.
     expect(SAG.hints.map((h) => h.words)).toEqual(OGUN_WORDS.hints.sagamu);

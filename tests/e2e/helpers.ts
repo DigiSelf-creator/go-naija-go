@@ -71,6 +71,19 @@ export async function playStop(page: Page, where: string): Promise<void> {
 }
 
 /**
+ * OG-R35: Ogun's city is home from the first visit (the place screen is retired). From it, an Ogun
+ * street or the hall by the city's "Challenge road" and that stop's card (its data-where: ota,
+ * abeokuta, sagamu, hall, expressway).
+ */
+export async function ogunCityToStop(page: Page, where: string): Promise<void> {
+  await expect(page.locator('.ogun-city')).toBeVisible();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.locator('.ogun-city').getByRole('button', { name: 'Challenge road' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('road');
+  await playStop(page, where);
+}
+
+/**
  * From the title screen into a run, by touch: "Make your hero" (then the intro, skipped) and
  * "Start running" on a first visit, or "Play" when a hero is saved. Slice 3: with no ?level
  * these open Lagos from above, and the Potholes pin's "Run Alausa" starts street 1.

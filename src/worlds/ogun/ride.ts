@@ -10,8 +10,7 @@
  * - Reduced motion: the end picture only, still, for 1.5 s.
  * - The welcome tune starts as the bus reaches the arch (or with the end picture).
  */
-import { BUS_RIDE, busRideAt, drawBusRide, drawGateArch, GATEWAY_TUNE } from '../../art/ogunGate';
-import { SKY_LOW, SKY_TOP } from '../../art/palette';
+import { BUS_RIDE, busRideAt, drawBusRide, GATEWAY_TUNE } from '../../art/ogunGate';
 import { button, h } from '../../screens/dom';
 import type { RideOptions, WorldUi } from '../ui';
 
@@ -129,34 +128,4 @@ export function busRide(o: RideOptions): { el: HTMLElement; close(): void } {
   };
 }
 
-/** The still picture behind Ogun's place screen: sky, green hills, the road and the gateway. */
-export function paintHome(c: HTMLCanvasElement, o: { lit: boolean }): void {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = c.clientWidth || window.innerWidth;
-  const hh = c.clientHeight || window.innerHeight;
-  c.width = Math.round(w * dpr);
-  c.height = Math.round(hh * dpr);
-  const g = c.getContext('2d');
-  if (!g) return;
-  g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const ground = hh * 0.72;
-  const sky = g.createLinearGradient(0, 0, 0, ground);
-  sky.addColorStop(0, SKY_TOP);
-  sky.addColorStop(1, SKY_LOW);
-  g.fillStyle = sky;
-  g.fillRect(0, 0, w, ground);
-  g.fillStyle = '#8fbf6a';
-  g.beginPath();
-  g.moveTo(0, ground);
-  for (let x = 0; x <= w + 8; x += 8) g.lineTo(x, ground - 18 - 12 * Math.sin(x / 70) - 6 * Math.sin(x / 23));
-  g.lineTo(w, ground);
-  g.fill();
-  g.fillStyle = '#e8d6ac';
-  g.fillRect(0, ground, w, hh - ground);
-  g.fillStyle = '#66666d';
-  g.fillRect(0, ground + 6, w, Math.max(20, (hh - ground) * 0.5));
-  const s = Math.min(1.1, (ground * 0.62) / 178, (w * 0.5) / 212);
-  drawGateArch(g, w / 2, ground + 8, s, { face: 'front', lit: o.lit, still: true });
-}
-
-export const ui: WorldUi = { busRide, paintHome, tune: GATEWAY_TUNE };
+export const ui: WorldUi = { busRide, tune: GATEWAY_TUNE };

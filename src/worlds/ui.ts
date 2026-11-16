@@ -30,8 +30,6 @@ export interface RideOptions {
 export interface WorldUi {
   /** The bus ride, a full-screen element; close() stops it without calling done(). */
   busRide(o: RideOptions): { el: HTMLElement; close(): void };
-  /** The still picture behind the state's place screen, painted to the canvas's own size. */
-  paintHome(c: HTMLCanvasElement, o: { lit: boolean }): void;
   /** The welcome tune (about 1.5 s, our own). */
   readonly tune: Tune;
 }
@@ -59,6 +57,14 @@ export interface WorldCityHooks {
   cogOn(): boolean;
   /** A line to show as the screen opens ("You brought N12 home."), or null. */
   line: string | null;
+  /** OG-R39: the line follows a win: "Mission complete!" over it. */
+  won?: boolean;
+  /** OG-R37: Pothole Hall has been won (the Bad road pin is fixed, the gate bright). */
+  hallWon?: boolean;
+  /** OG-R37: the next street to clear (1 Ota, 2 Abeokuta, 3 Sagamu), or 4 once all three are. */
+  nextStreet?: number;
+  /** OG-R37: plays Ogun street n (4: Pothole Hall). */
+  play?(n: number, e: MouseEvent): void;
 }
 
 export interface WorldCity {

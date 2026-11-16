@@ -242,7 +242,7 @@ test('qa O break: offline after the Ogun download, Ota plays from the phone with
     await dl.tap();
   }
   await expect.poll(() => screenNow(page), { timeout: 15_000 }).toBe('ogun');
-  // Offline, a fresh load: the game opens on Ogun's place, and Ota plays.
+  // Offline, a fresh load: the game opens on Ogun's city (OG-R35), and Ota plays from its Potholes card.
   await context.setOffline(true);
   await page.reload();
   const asked: string[] = [];
@@ -253,7 +253,8 @@ test('qa O break: offline after the Ogun download, Ota plays from the phone with
   await expect.poll(() => screenNow(page), { timeout: 15_000 }).toBe('ogun');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   const before = asked.length;
-  await page.getByRole('dialog', { name: 'Ogun', exact: true }).getByRole('button', { name: 'Play Ota' }).tap();
+  await page.getByRole('dialog', { name: 'Ogun', exact: true }).locator('[data-spot="potholes"]').tap();
+  await page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Ota' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
   const cdp = await page.context().newCDPSession(page);

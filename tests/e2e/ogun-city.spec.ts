@@ -1,7 +1,9 @@
 /**
- * O6b (docs/ogun.md part 6; decision 80): from a save with Sagamu cleared, win Pothole Hall by the
- * keys; the Win screen now goes on to Ogun's Challenge road and the wheel, and "Take it home"
- * opens Ogun's city. There, buy the adire market and the water pump with the one wallet (Naira
+ * O6b (docs/ogun.md part 6; decision 80): from a save with Sagamu cleared, Ogun's city is already
+ * home (OG-R35): the Bad road pin is a problem and its card sends you to Pothole Hall (OG-R37).
+ * Win the hall by the keys; the Win screen goes on to Ogun's Challenge road and the wheel, and
+ * "Take it home" opens Ogun's city with "Mission complete!" (OG-R39), the gateway fixed and lit and
+ * its built line (OG-R37). There, buy the adire market and the water pump with the one wallet (Naira
  * and Power earned in Lagos), see the Booming meter and the Travel card count Ogun's points, open
  * Ogun's Challenge road, run the Expressway (the lane run in Ogun's look: ogun-lane.json, theme
  * "expressway"), pick up Power, and go back to Ogun's city. Checks the save at each step: Ogun's
@@ -48,9 +50,16 @@ test('Pothole Hall won, then Ogun\'s city: buy with the one wallet, the Booming 
   await page.getByRole('button', { name: 'Play' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  // Before the hall: Ogun's place (no city yet).
-  await expect(page.locator('.ogun-city')).toHaveCount(0);
-  await page.getByRole('dialog', { name: 'Ogun' }).getByRole('button', { name: 'Go to Pothole Hall' }).tap();
+  // OG-R35: before the hall, Ogun's city is home; OG-R37: the Bad road pin shows the problem and its
+  // card sends you to the hall (all three streets are cleared).
+  await expect(page.locator('.ogun-city')).toBeVisible();
+  await expect(page.locator('.ogun-city [data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
+  await page.locator('.ogun-city [data-spot="badRoad"]').tap();
+  const bad = page.getByRole('dialog', { name: 'Bad road' });
+  await expect(bad.getByText('King Pothole is blocking the gateway.')).toBeVisible();
+  await expect(bad.getByText('Go to Pothole Hall.')).toBeVisible();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await bad.getByRole('button', { name: 'Go to Pothole Hall' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
 
   // 1. Win the hall by the keys (3 tries at most).
@@ -78,12 +87,15 @@ test('Pothole Hall won, then Ogun\'s city: buy with the one wallet, the Booming 
   expect(s.city['kobo']).toBe(1300 + hallKobo);
   let wallet = 1300 + hallKobo;
 
-  // 2. Take it home: Ogun's city (unlocked by the hall).
+  // 2. Take it home: Ogun's city, "Mission complete!" over the money (OG-R39), then the gateway's line (OG-R37).
   await waitOutTapLock(page);
   await win.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
   const city = page.locator('.ogun-city');
   await expect(city).toBeVisible();
+  await expect(city.locator('.city-banner')).toContainText('Mission complete!');
+  await expect(city.locator('.city-banner')).toContainText(`You brought ${formatMoney(hallKobo, '₦')} home.`);
+  await expect(city.locator('.city-banner')).toContainText('The gateway is open. The road is smooth.', { timeout: 10_000 });
   await expect(city.locator('.city-head')).toHaveAttribute('aria-label', 'Ogun. Booming meter. 0 of 20 to the next boom.');
   await expect(city.locator('.chip-naira')).toContainText(formatMoney(wallet, '₦'));
   await expect(city.locator('.chip-power')).toContainText('Power 12');

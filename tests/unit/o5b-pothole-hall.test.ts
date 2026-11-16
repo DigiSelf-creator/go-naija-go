@@ -17,6 +17,7 @@ import { TkGate } from '../../src/game/animal-calls';
 import { parseLevel } from '../../src/game/level';
 import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
 import { OGUN_WORDS } from '../../src/screens/words';
+import { OGUN_CITY_WORDS } from '../../src/worlds/ogun/cityWords';
 import { POTHOLE_RULES, PotholeDataError, PotholeFight, RUN_NUMBERS, parsePotholeHall } from '../../src/worlds/ogun/potholeFight';
 import { musicCue } from '../../src/game/music-cue';
 
@@ -469,8 +470,9 @@ describe('OG-R15: the gravel "tk"', () => {
 });
 
 describe('words (ogun.md 5 and 8)', () => {
-  it('the place says Pothole Hall is open once Sagamu is done; the Win screen', () => {
-    expect(OGUN_WORDS.place.sagamuDone).toBe('Sagamu is moving again. Pothole Hall is open.');
+  it('the city\'s Bad road card sends you to Pothole Hall once Sagamu is done (OG-R37); the Win screen', () => {
+    expect(OGUN_CITY_WORDS.badRoad.toHall).toBe('Go to Pothole Hall.');
+    expect(OGUN_CITY_WORDS.badRoad.hall).toBe('Go to Pothole Hall');
     expect(OGUN_WORDS.win.heading).toBe('Ogun is switched on!');
     expect(OGUN_WORDS.win.money(1500)).toBe('You got ₦15.');
     expect(OGUN_WORDS.cleared.toHall).toBe('Go to Pothole Hall');

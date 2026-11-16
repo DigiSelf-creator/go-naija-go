@@ -368,21 +368,23 @@ test.describe('O1c on the web, no service worker', () => {
     await expect.poll(() => screenNow(page), { timeout: 15_000 }).toBe('ogun');
     await everySize(page, 'arrival card');
     await page.getByRole('button', { name: "Let's go" }).tap();
-    // The 24 px safe edges on Ogun's place are their own test below (O1c-5).
-    await everySize(page, "Ogun's place", false);
+    // The 24 px safe edges on Ogun's home are their own test below (O1c-5). OG-R35: it is Ogun's city now.
+    await expect(page.locator('.ogun-city')).toBeVisible();
+    await everySize(page, "Ogun's city", false);
     test.info().annotations.push({ type: 'seen only after a scroll', description: scrolled.join(' | ') || 'none' });
     console.log(`seen only after a scroll: ${scrolled.join(' | ') || 'none'}`);
     expect(errors).toEqual([]);
   });
 
-  test("o1c: Ogun's place keeps 24 px safe edges at 320 x 240", async ({ page }) => {
-    // Game bug O1c-5 (fixed): .ogun-words (with O2b's "Play Ota") is 90% wide and centred, not inside
-    // --safe-left / --safe-right, so at 320 x 240 with 24 px edges its button starts at x = 16.
+  test("o1c: Ogun's home (its city, OG-R35) keeps 24 px safe edges at 320 x 240", async ({ page }) => {
+    // Game bug O1c-5 (fixed on the place screen, now retired): at 320 x 240 with 24 px edges every
+    // button of Ogun's home stays inside --safe-left / --safe-right.
     await open(page, ARRIVED, { 'gidi-busRide': 'false' });
     await travel(page, 'lagos', 'ogun');
     await downloadIfAsked(page);
     await expect.poll(() => screenNow(page)).toBe('ogun');
-    await safeAt320(page, "Ogun's place");
+    await expect(page.locator('.ogun-city')).toBeVisible();
+    await safeAt320(page, "Ogun's city");
   });
 
   test('o1c CO3: "Opening the road..." shows while the road is late, then the road comes', async ({ page }) => {

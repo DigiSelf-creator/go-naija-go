@@ -83,7 +83,7 @@ describe('Android back on the new screens and cards', () => {
     rideSkip: OGUN_WORDS.busRide.skip,
   };
   const at = (s: Partial<BackState>): BackState => ({ askOpen: false, sinceScreen: 1000, screen: null, running: false, hall: false, heroSaved: true, ...s });
-  it("a card's own way out; Skip on the ride; Ogun's place asks to leave, as Lagos does", () => {
+  it("a card's own way out; Skip on the ride; Ogun's city asks to leave, as Lagos does", () => {
     expect(backStep(at({ screen: 'city', card: true }), L)).toEqual({ kind: 'press', labels: ['Back', 'Not now', 'OK', "Let's go"] });
     expect(backStep(at({ screen: 'ride' }), L)).toEqual({ kind: 'press', labels: ['Skip'] });
     expect(backStep(at({ screen: 'ogun' }), L)).toEqual({ kind: 'ask', fromRun: null });

@@ -1,11 +1,12 @@
 /**
  * O2b (docs/ogun.md 1.4, 3.3, 3.4, 4.1, 7 and 8): Ota, Ogun street 1, on the phone profile.
- * A player with Go-Slow Hall won and Ogun as the city last used opens the game, taps "Play Ota"
- * on Ogun's place, and plays by hand with two thumbs from the arch to the bus: the arch's welcome,
- * mud that slows to walk speed, ikokore that keeps the feet firm, the bus stop, the cleared card
- * ("Take it home" back to Ogun's place), and the save under states.ogun with the money in the one
- * wallet (decision 80). Out of lives says "You keep {money} for Ogun"; Pause and the cards have no
- * Challenge road from Ogun.
+ * A player with Go-Slow Hall won and Ogun as the city last used opens the game on Ogun's city
+ * (OG-R35: from the first visit), taps the Potholes pin and its "Run Ota", and plays by hand with
+ * two thumbs from the arch to the bus: the arch's welcome, mud that slows to walk speed, ikokore
+ * that keeps the feet firm, the bus stop, the cleared card ("Take it home" back to Ogun's city,
+ * "Mission complete!", OG-R39), and the save under states.ogun with the money in the one wallet
+ * (decision 80). Out of lives says "You keep {money} for Ogun"; Pause and the cards have Ogun's
+ * Challenge road (OG-R35).
  */
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
@@ -21,9 +22,9 @@ const IN_OGUN = { v: 2, states: { lagos: { streets: STREETS, parcel: false, hall
 
 type Saved = { states?: { lagos?: unknown; ogun?: { streets?: Record<string, { done?: boolean; best?: number }>; arrived?: boolean } }; city?: { kobo?: number } };
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress') ?? '{}') as Saved);
-const ogunPlace = (page: Page) => page.getByRole('dialog', { name: 'Ogun' });
+const ogunCity = (page: Page) => page.locator('.ogun-city');
 
-/** A saved hero and progress, then "Play": Ogun's place (its part loads from the phone). */
+/** A saved hero and progress, then "Play": Ogun's city (its part loads from the phone). */
 async function openOgun(page: Page): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -44,8 +45,11 @@ async function openOgun(page: Page): Promise<string[]> {
   return errors;
 }
 
+/** OG-R35: the Potholes pin's card in Ogun's city: "Run Ota". */
 async function playOta(page: Page): Promise<void> {
-  const play = ogunPlace(page).getByRole('button', { name: 'Play Ota' });
+  await expect(ogunCity(page)).toBeVisible();
+  await ogunCity(page).getByRole('button', { name: /^Potholes, (problem|ready to fix)$/ }).tap();
+  const play = page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Ota' });
   await expect(play).toBeVisible();
   expect((await play.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await play.tap();
@@ -54,10 +58,11 @@ async function playOta(page: Page): Promise<void> {
   expect(await page.evaluate(() => window.__game!.level.id)).toBe('ogun-1');
 }
 
-test('Ota by hand from Ogun\'s place: the arch, mud, ikokore, the bus stop, the bus, the cleared card and the save under states.ogun', async ({ page }) => {
+test('Ota by hand from Ogun\'s city: the arch, mud, ikokore, the bus stop, the bus, the cleared card and the save under states.ogun', async ({ page }) => {
   test.setTimeout(240_000);
   const errors = await openOgun(page);
-  await expect(ogunPlace(page).getByText('Ota is open. It is the first street on the road from Lagos.')).toBeVisible();
+  // OG-R37: before any street, the Bad road pin is a problem whose card says to run Ota.
+  await expect(ogunCity(page).locator('[data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
   await playOta(page);
   expect(await page.evaluate(() => window.__game!.skin)).toBe(true);
   expect(await page.evaluate(() => window.__game!.run.lives)).toBe(3);
@@ -106,14 +111,14 @@ test('Ota by hand from Ogun\'s place: the arch, mud, ikokore, the bus stop, the 
   expect(mud.firmTop).toBeGreaterThan(130);
   expect(crates.opened.length).toBeGreaterThanOrEqual(3);
 
-  // The cleared card: Ota's line, Take it home, Next street (O3b: on to Abeokuta) and Play again; no Challenge road.
+  // The cleared card: Ota's line, Take it home, Next street (O3b: on to Abeokuta), Play again and Ogun's Challenge road (OG-R35).
   const kobo = last.r.kobo;
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
   const money = (await page.evaluate(() => window.__game!.run.kobo)) * 10 + 500;
   await expect(dialog.getByText(`Ota is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
-  for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
-  for (const b of ['Challenge road', 'Go to Go-Slow Hall']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
+  for (const b of ['Take it home', 'Next street', 'Play again', 'Challenge road']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Go to Go-Slow Hall', exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Take it home' })).toBeFocused();
   // Saved under states.ogun; Lagos as it was; the money in the one wallet (decision 80).
   const s = await saved(page);
@@ -126,20 +131,25 @@ test('Ota by hand from Ogun\'s place: the arch, mud, ikokore, the bus stop, the 
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('Ota is moving again. Abeokuta is open.')).toBeVisible();
+  // Ogun's city: "Mission complete!" over the money brought home (OG-R39); the Bad road card now says "Run Abeokuta".
+  await expect(ogunCity(page).locator('.city-banner')).toContainText('Mission complete!');
+  await expect(ogunCity(page).locator('.city-banner')).toContainText(`You brought ${formatMoney(money)} home.`);
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await ogunCity(page).locator('[data-spot="badRoad"]').tap();
+  await expect(page.getByRole('dialog', { name: 'Bad road' }).getByRole('button', { name: 'Run Abeokuta' })).toBeVisible();
   expect(await page.evaluate(() => window.__game!.skin)).toBe(false);
   expect(errors).toEqual([]);
 });
 
-test('Ota out of lives: "You keep {money} for Ogun", no Challenge road, Home is Ogun\'s place; Pause has no Challenge road', async ({ page }) => {
+test('Ota out of lives: "You keep {money} for Ogun", Ogun\'s Challenge road, Home is Ogun\'s city; Pause has the Challenge road', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = await openOgun(page);
   await playOta(page);
-  // Pause from Ota: Keep playing, Start again, Home; no Challenge road.
+  // Pause from Ota: Keep playing, Start again, Challenge road (OG-R35), Home.
   await page.getByRole('button', { name: 'Pause' }).tap();
   const pause = page.getByRole('dialog', { name: 'Paused' });
   await expect(pause).toBeVisible();
-  await expect(pause.getByRole('button', { name: 'Challenge road' })).toHaveCount(0);
+  await expect(pause.getByRole('button', { name: 'Challenge road' })).toBeVisible();
   await expect(pause.getByRole('button', { name: 'Home' })).toBeVisible();
   await waitOutTapLock(page);
   await pause.getByRole('button', { name: 'Keep playing' }).tap();
@@ -156,10 +166,13 @@ test('Ota out of lives: "You keep {money} for Ogun", no Challenge road, Home is 
   expect(s.r.lives).toBe(0);
   const over = page.getByRole('dialog', { name: 'Out of lives' });
   await expect(over.getByText(/^You keep .+ for Ogun\. The street is still here\. Try again!$/)).toBeVisible();
-  await expect(over.getByRole('button', { name: 'Challenge road' })).toHaveCount(0);
+  await expect(over.getByRole('button', { name: 'Challenge road' })).toBeVisible();
   await waitOutTapLock(page);
   await over.getByRole('button', { name: 'Home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
+  await expect(ogunCity(page)).toBeVisible();
+  // OG-R39: after a loss, no "Mission complete!".
+  await expect(ogunCity(page).locator('.city-banner')).not.toContainText('Mission complete!');
   expect((await saved(page)).states?.ogun?.streets?.['1']?.done).not.toBe(true);
   expect(errors).toEqual([]);
 });

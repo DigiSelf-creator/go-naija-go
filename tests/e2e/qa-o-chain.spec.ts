@@ -1,10 +1,11 @@
 /**
  * qa slice O (O2c, O3c, O4c): the three Ogun streets one after another by hand, as a player does
- * it: "Play Ota" on Ogun's place, then "Next street" on each cleared card, Ota to Abeokuta to
+ * it: "Run Ota" on Ogun's city's Potholes card (OG-R35), then "Next street" on each cleared card, Ota to Abeokuta to
  * Sagamu. Each street is played by the two-thumb hand bot with crates; lives lost are the "tries"
- * proxy (3 lives a try). After Sagamu: no "Next street", "Take it home" goes to Ogun's place with
- * Sagamu's line, the saves are under states.ogun.streets 1 to 3 and the money is in the one
- * wallet (top-level city). With QA_SHOTS=<folder> it saves a picture of each street and the place.
+ * proxy (3 lives a try). After Sagamu: no "Next street", "Take it home" goes to Ogun's city, whose
+ * Bad road card now sends you to Pothole Hall (OG-R37), the saves are under states.ogun.streets 1
+ * to 3 and the money is in the one wallet (top-level city). With QA_SHOTS=<folder> it saves a
+ * picture of each street and the city.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
@@ -19,7 +20,7 @@ const LAGOS = { streets: { 1: DONE, 2: DONE, 3: DONE }, parcel: false, hall: { d
 const IN_OGUN = { v: 2, states: { lagos: LAGOS, ogun: { arrived: true } }, city: CITY, where: 'ogun' };
 type Saved = { states?: { lagos?: unknown; ogun?: { streets?: Record<string, { done?: boolean; best?: number }>; parcel?: boolean } }; city?: { kobo?: number } };
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress') ?? '{}') as Saved);
-const ogunPlace = (page: Page) => page.getByRole('dialog', { name: 'Ogun', exact: true });
+const ogunCity = (page: Page) => page.getByRole('dialog', { name: 'Ogun', exact: true });
 const SHOTS = process.env['QA_SHOTS'];
 /** Where each street's picture is taken (a calm moment: mud, a crack's sign, the flyover). */
 const SHOT_AT: Record<string, number> = { 'ogun-1': 2140, 'ogun-2': 5080, 'ogun-3': 4250 };
@@ -47,7 +48,7 @@ async function playHere(page: Page, id: string) {
   return { stats, last, crates };
 }
 
-test('qa O: Ota, Next street, Abeokuta, Next street, Sagamu by hand from Ogun\'s place; saves and one wallet', async ({ page }) => {
+test('qa O: Ota, Next street, Abeokuta, Next street, Sagamu by hand from Ogun\'s city; saves and one wallet', async ({ page }) => {
   test.setTimeout(480_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -64,7 +65,8 @@ test('qa O: Ota, Next street, Abeokuta, Next street, Sagamu by hand from Ogun\'s
   await page.getByRole('button', { name: 'Play' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await ogunPlace(page).getByRole('button', { name: 'Play Ota' }).tap();
+  await ogunCity(page).locator('[data-spot="potholes"]').tap();
+  await page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Ota' }).tap();
 
   let wallet = 1000;
   const report: string[] = [];
@@ -99,11 +101,18 @@ test('qa O: Ota, Next street, Abeokuta, Next street, Sagamu by hand from Ogun\'s
   console.log(report.join('\n'));
   test.info().annotations.push({ type: 'chain', description: report.join(' | ') });
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  // O5b (OG-R18): Pothole Hall is open and is the big button; the three streets are small.
-  await expect(ogunPlace(page).getByText('Sagamu is moving again. Pothole Hall is open.')).toBeVisible();
-  await expect(ogunPlace(page).getByRole('button', { name: 'Go to Pothole Hall' })).toHaveClass(/\bgo\b/);
-  for (const b of ['Play Sagamu', 'Play Abeokuta', 'Play Ota']) await expect(ogunPlace(page).getByRole('button', { name: b })).toHaveClass(/minor/);
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/oqa-ogun-place.png` });
+  // O5b, OG-R37: Pothole Hall is open: the Bad road card's big button; the three streets stay open on the road.
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await ogunCity(page).locator('[data-spot="badRoad"]').tap();
+  const bad = page.getByRole('dialog', { name: 'Bad road' });
+  await expect(bad.getByText('Go to Pothole Hall.')).toBeVisible();
+  await expect(bad.getByRole('button', { name: 'Go to Pothole Hall' })).toHaveClass(/\bgo\b/);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/oqa-ogun-city.png` });
+  await bad.getByRole('button', { name: 'Back' }).tap();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await ogunCity(page).getByRole('button', { name: 'Challenge road' }).tap();
+  for (const w of ['ota', 'abeokuta', 'sagamu']) await expect(page.locator(`[data-where="${w}"]`)).toHaveAttribute('aria-label', /Done/);
+  await expect(page.locator('[data-where="hall"]')).toHaveAttribute('aria-label', /Next/);
   const s = await saved(page);
   expect(Object.keys(s.states?.ogun?.streets ?? {}).sort()).toEqual(['1', '2', '3']);
   expect(errors).toEqual([]);

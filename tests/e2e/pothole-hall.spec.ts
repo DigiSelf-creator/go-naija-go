@@ -1,12 +1,13 @@
 /**
  * O5b (docs/ogun.md 5.2 to 5.5 and 8): Pothole Hall on the phone profile. A player who has
- * cleared Sagamu opens Ogun's place, which says the hall is open, taps "Go to Pothole Hall" (the
- * big button now), and plays it with the keys (arrows and Space): carry the road mix bag, jump
+ * cleared Sagamu opens Ogun's city (OG-R35), taps the Bad road pin, whose card says to go to
+ * Pothole Hall (OG-R37), taps its big "Go to Pothole Hall", and plays it with the keys (arrows and Space): carry the road mix bag, jump
  * over King Pothole three times, hop his gravel. The bot plays the plan in pothole-brain.ts (the
  * unit bot plays the same plan on the rules). Then the kind finish, the Win screen ("Ogun is
  * switched on!", "You got ₦15.", Take it home, Play again, and from O6b Challenge road and the wheel),
  * the save under states.ogun.hall (Lagos and the streets as they were, the one wallet), and
- * Ogun's city after it (O6b; its Win screen gains Challenge road and the wheel). No page errors.
+ * Ogun's city after it with "Mission complete!" (OG-R39), the gateway fixed and its built line
+ * (OG-R37). No page errors.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { keyPad } from './hall-play';
@@ -22,7 +23,6 @@ const save = (parcel: boolean) => ({ v: 2, states: { lagos: LAGOS, ogun: { arriv
 
 type Saved = { states?: { lagos?: unknown; ogun?: { streets?: unknown; hall?: unknown; parcel?: unknown } }; city?: { kobo?: number } };
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress') ?? '{}') as Saved);
-const ogunPlace = (page: Page) => page.getByRole('dialog', { name: 'Ogun' });
 
 async function openOgun(page: Page, parcel: boolean): Promise<string[]> {
   const errors: string[] = [];
@@ -44,13 +44,17 @@ async function openOgun(page: Page, parcel: boolean): Promise<string[]> {
   return errors;
 }
 
-test('Pothole Hall from Ogun\'s place: carry three bags over King Pothole by the keys, the kind finish, the Win screen and the save under states.ogun.hall', async ({ page }) => {
+test('Pothole Hall from Ogun\'s city: carry three bags over King Pothole by the keys, the kind finish, the Win screen and the save under states.ogun.hall', async ({ page }) => {
   test.setTimeout(240_000);
   const errors = await openOgun(page, true);
-  // Sagamu done: the hall is open and its button is the big one.
-  await expect(ogunPlace(page).getByText('Sagamu is moving again. Pothole Hall is open.')).toBeVisible();
-  await expect(ogunPlace(page).locator('.ogun-play')).toHaveText(['Go to Pothole Hall', 'Play Sagamu', 'Play Abeokuta', 'Play Ota']);
-  const go = ogunPlace(page).getByRole('button', { name: 'Go to Pothole Hall' });
+  // Sagamu done: the Bad road card says the hall is open and its button is the big one.
+  const city = page.locator('.ogun-city');
+  await expect(city.locator('[data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
+  await city.locator('[data-spot="badRoad"]').tap();
+  const card = page.getByRole('dialog', { name: 'Bad road' });
+  await expect(card.getByText('King Pothole is blocking the gateway.')).toBeVisible();
+  await expect(card.getByText('Go to Pothole Hall.')).toBeVisible();
+  const go = card.getByRole('button', { name: 'Go to Pothole Hall' });
   await expect(go).toHaveClass(/\bgo\b/);
   expect((await go.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await go.tap();
@@ -119,7 +123,11 @@ test('Pothole Hall from Ogun\'s place: carry three bags over King Pothole by the
   await waitOutTapLock(page);
   await win.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  // O6b: with the hall won, Ogun's place is Ogun's city.
+  // OG-R35: home is Ogun's city; OG-R39: "Mission complete!" over the money; OG-R37: the gateway is
+  // fixed (no Bad road pin) and its built line plays once.
   await expect(page.locator('.ogun-city')).toBeVisible();
+  await expect(page.locator('.ogun-city .city-banner')).toContainText('Mission complete!');
+  await expect(page.locator('.ogun-city [data-spot="badRoad"]')).toHaveCount(0);
+  await expect(page.locator('.ogun-city .city-banner')).toContainText('The gateway is open. The road is smooth.', { timeout: 10_000 });
   expect(errors).toEqual([]);
 });

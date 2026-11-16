@@ -600,24 +600,6 @@ export const OGUN_WORDS = {
   laneHome: 'Back to Ogun',
   /** Part 1.8: Settings, under "Saved on this phone". */
   saved: 'Your hero, Lagos and Ogun are saved on this phone.',
-  /**
-   * O1b2: Ogun's place until Ogun's city (O6b) is built. Not in the note: gamedev's words for
-   * designer to check (ogun.md part 1 leaves this screen open). O2b: Ota plays from here.
-   */
-  place: {
-    heading: 'Ogun',
-    line: 'The Gateway State',
-    soon: 'Ota is open. It is the first street on the road from Lagos.',
-    /** Once Ota is cleared: O3b, Abeokuta plays. */
-    otaDone: 'Ota is moving again. Abeokuta is open.',
-    /** Once Abeokuta is cleared: O4b, Sagamu plays. */
-    abeokutaDone: 'Abeokuta is moving again. Sagamu is open.',
-    /** Once Sagamu is cleared: O5b, Pothole Hall plays (OG-R18). */
-    sagamuDone: 'Sagamu is moving again. Pothole Hall is open.',
-    play: 'Play Ota',
-    playAbeokuta: 'Play Abeokuta',
-    playSagamu: 'Play Sagamu',
-  },
   /** Part 3.1 (decision 76): the three streets, in order along the road from Lagos. */
   streets: ['Ota', 'Abeokuta', 'Sagamu'] as readonly string[],
   /** Part 8: Out of lives on an Ogun street (the Lagos card's words, with Ogun). */

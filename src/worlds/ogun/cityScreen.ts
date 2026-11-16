@@ -1,5 +1,5 @@
 /**
- * O6b: Ogun from above, Ogun's home screen once Pothole Hall is won (docs/ogun.md part 6;
+ * O6b: Ogun from above, Ogun's home screen from the first visit (OG-R35; docs/ogun.md part 6;
  * decisions 47, 71, 80; city.md 5W, W2 to W8, W18, d5 to d9). The Lagos city's way of playing on
  * Ogun's map (src/screens/city.ts is Lagos's, in the first load; this lighter twin lives in the
  * lazy Ogun part so the first load stays small):
@@ -385,6 +385,11 @@ export class OgunCityScreen implements WorldCity {
         drawOgunPin(g, -box.x, -box.y, spot, ready ? 'ready' : 'problem', 0);
       }
       el.append(pic);
+      // OG-R35 (W7 step 2): on the first visit the Potholes pin hops until it is tapped (never with reduced motion).
+      if (spot === 'potholes' && !this.st.hints.includes('pin') && !this.hooks.still() && typeof pic.animate === 'function') {
+        el.classList.add('first');
+        pic.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-7px)' }], { duration: 450, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' });
+      }
       return { spot, el, word };
     });
     this.pinLayer.replaceChildren(...this.pins.map((p) => p.el));
@@ -795,6 +800,11 @@ export class OgunCityScreen implements WorldCity {
   /** 6.2: a problem pin's card: what is wrong, what fixes it, and the challenge that helps. */
   openCard(spot: OgunFixId): void {
     const w = WORDS.city;
+    if (spot === 'potholes' && !this.st.hints.includes('pin')) {
+      this.save(withOgunHint(this.st, 'pin'), true);
+      this.makePins();
+      this.placePins();
+    }
     const c = OGUN_CITY_WORDS.cards[spot];
     const back = button(w.back, 'minor', () => this.closeCard());
     const run = (big: boolean): HTMLButtonElement =>

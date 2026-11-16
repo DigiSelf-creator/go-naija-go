@@ -167,7 +167,7 @@ export interface MenuHooks {
   arrived(): void;
   /** O1b2: the welcome tune as the bus passes under the arch (the Music switch rules). */
   playTune(tune: Tune): void;
-  /** O2b: Ogun's place: play Ogun street n (Ota is 1). */
+  /** O2b: play Ogun street n (Ota is 1, Pothole Hall 4): the Bad road card (OG-R37). */
   playOgun(n: number, at: TapPoint | null): void;
   /** O2b: Ogun street n is done (saved under states.ogun). */
   ogunDone(n: number): boolean;
@@ -189,7 +189,7 @@ export interface RunSummary {
   hall?: boolean;
   /** O1b2: the first Go-Slow Hall win: the Win screen's big "On to Ogun" (later wins: a small "Go to Ogun"). */
   firstHall?: boolean;
-  /** O2b: lost on an Ogun street: "You keep {money} for Ogun..." and no Challenge road. */
+  /** O2b: lost on an Ogun street: "You keep {money} for Ogun..."; Challenge road goes to Ogun's (OG-R35). */
   ogun?: boolean;
 }
 
@@ -202,7 +202,7 @@ export interface ClearedSummary {
   last: boolean;
   /** Got on the bus with the garri parcel: it is saved for the hall. */
   parcel: boolean;
-  /** O2b: an Ogun street: home is Ogun's place; no Challenge road. */
+  /** O2b: an Ogun street: home is Ogun's city, the road Ogun's (OG-R35). */
   ogun?: boolean;
   /** O3b: an Ogun street with the next one built (Ota to Abeokuta): "Next street". */
   ogunNext?: boolean;
@@ -245,7 +245,7 @@ export class Menus {
   private cityScreen: CityScreen | null = null;
   /** O6b: Ogun's city showing now (tests), and the line it shows as it opens next ("You brought ₦12 home."). */
   ogunScreen: WorldCity | null = null;
-  ogunLine: string | null = null;
+  ogunLine: { text: string; won: boolean } | null = null;
   /** Mission complete for the next city screen (5W W5), played once. */
   private mission: Mission | null = null;
   /** Lays out the wheel screen again (on resize while it shows). */
@@ -630,57 +630,10 @@ export class Menus {
     return ride.el;
   }
 
-  /**
-   * Ogun's place. Ogun's city comes with O6b and Ota's street play with O2b; until then this is
-   * the gateway picture, the words that Ota is next, and Travel, the wheel and Settings.
-   */
+  /** OG-R35: Ogun's home is Ogun's city from the first visit (the arrival card over it the first time). */
   private ogunCard(): HTMLElement | null {
     const part = this.hooks.worldPart('ogun');
-    const ui = part?.ui;
-    if (!ui) return null;
-    const v = this.hooks.states();
-    // O6b: once Pothole Hall is won, Ogun's place is Ogun's city.
-    if (v.ogun.beaten && part.city) return this.ogunCityCard(part.city, v.arrived);
-    const w = OGUN_WORDS.place;
-    const pic = h('canvas', { class: 'ogun-pic', 'aria-hidden': 'true' });
-    const sound = this.guarded(this.settings.sound ? WORDS.city.soundOn : WORDS.city.soundOff, 'minor', () => {
-      this.settings.sound = !this.settings.sound;
-      saveSettings(this.store, this.settings);
-      sound.textContent = this.settings.sound ? WORDS.city.soundOn : WORDS.city.soundOff;
-      this.hooks.soundChanged(this.settings.sound);
-    });
-    const el = h(
-      'div',
-      { class: 'card ogun-screen', role: 'dialog', 'aria-label': w.heading },
-      pic,
-      h('div', { class: 'ogun-top' }, h('h2', {}, w.heading), h('div', { class: 'minor-row' }, sound, this.guarded(WORDS.city.settings, 'minor', () => this.showSettings('ogun')))),
-      // O2b: Ota plays (Ogun's city comes with O6b).
-      h(
-        'div',
-        { class: 'ogun-words' },
-        // QA-O-1: the two lines together, so short screens can put the Play buttons beside them.
-        h(
-          'div',
-          { class: 'ogun-lines' },
-          h('p', {}, h('b', {}, w.line)),
-          h('p', {}, v.ogun.beaten ? OGUN_WORDS.hall.open : this.hooks.ogunDone(3) ? w.sagamuDone : this.hooks.ogunDone(2) ? w.abeokutaDone : this.hooks.ogunDone(1) ? w.otaDone : w.soon),
-        ),
-        // O3b, O4b: the newest open street is the big button, the ones before it small. O5b: then Pothole Hall.
-        ...[4, 3, 2, 1].map((n) => {
-          const top = this.hooks.ogunDone(3) ? 4 : this.hooks.ogunDone(2) ? 3 : this.hooks.ogunDone(1) ? 2 : 1;
-          return n <= top && this.guarded([w.play, w.playAbeokuta, w.playSagamu, OGUN_WORDS.cleared.toHall][n - 1]!, n === top ? 'go ogun-play' : 'minor ogun-play', (e) => this.hooks.playOgun(n, tapPoint(e)));
-        }),
-      ),
-      h('div', { class: 'ogun-bottom' }, this.travelButton(), this.guarded(WORDS.city.wheel, 'minor two-line', () => this.showWheel('ogun'))),
-    );
-    this.refit = () => ui.paintHome(pic, { lit: v.ogun.beaten });
-    if (!v.arrived) {
-      this.overlayNext = arrivalCard(() => {
-        this.hooks.arrived();
-        this.closeOverlay();
-      });
-    }
-    return el;
+    return part?.ui && part.city ? this.ogunCityCard(part.city, this.hooks.states().arrived) : null;
   }
 
   /** O6b: Ogun from above (the Lagos city's buttons; its challenge road is Ogun's). */
@@ -694,6 +647,7 @@ export class Menus {
     });
     const line = this.ogunLine;
     this.ogunLine = null;
+    const v = this.hooks.states();
     const screen = make({
       life: this.hooks.cityLife,
       own: this.hooks.ogunCity,
@@ -713,7 +667,12 @@ export class Menus {
       still: () => this.hooks.stillWanted(),
       touch: () => this.touchWords(),
       cogOn: () => this.hooks.states().ogun.turning,
-      line,
+      // OG-R37: the Bad road pin and card follow the streets and the hall.
+      hallWon: v.ogun.beaten,
+      nextStreet: [1, 2, 3].findIndex((n) => !this.hooks.ogunDone(n)) + 1 || 4,
+      play: (n, e) => this.hooks.playOgun(n, tapPoint(e)),
+      line: line?.text ?? null,
+      won: line?.won === true,
     });
     this.ogunScreen = screen;
     this.cleanup = () => screen.close();
@@ -744,11 +703,13 @@ export class Menus {
     this.showRoad({ at, card, plan });
   }
 
-  /** O6b: from an Ogun run, home is Ogun's city (or its place before the hall), the road Ogun's. */
-  ogunHome(to: 'city' | 'road', line: string | null = null, at: string | null = null): void {
-    const part = this.hooks.worldPart('ogun');
-    if (to === 'road' && this.hooks.states().ogun.beaten && part?.road) return this.showOgunRoad(at);
-    this.ogunLine = line;
+  /**
+   * O6b: from an Ogun run, home is Ogun's city (OG-R35: from the first visit), the road Ogun's.
+   * OG-R39: `won` puts "Mission complete!" over the line.
+   */
+  ogunHome(to: 'city' | 'road', line: string | null = null, at: string | null = null, won = false): void {
+    if (to === 'road' && this.hooks.worldPart('ogun')?.road) return this.showOgunRoad(at);
+    this.ogunLine = line ? { text: line, won } : null;
     this.show('ogun');
   }
 
@@ -917,8 +878,7 @@ export class Menus {
         { class: 'pause-grid' },
         this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
         this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
-        // O2b: the challenge road is Lagos's; from an Ogun street Home is Ogun's place.
-        (!this.ogunRun || this.hooks.states().ogun.beaten) && this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
@@ -941,7 +901,7 @@ export class Menus {
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
-        ...(this.summary.ogun && !this.hooks.states().ogun.beaten ? [] : [this.guarded(w.road, 'minor', () => this.hooks.leave('road'))]),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
     );
@@ -958,14 +918,14 @@ export class Menus {
       h('p', {}, w.text(c.name, c.kobo)),
       c.parcel && h('p', { class: 'parcel-line' }, c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
-      // O2b: from Ogun it goes home to Ogun's place; O3b: Ota's card goes on to Abeokuta.
+      // O2b: from Ogun it goes home to Ogun's city; O3b: Ota's card goes on to Abeokuta.
       this.actions(
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome()),
         ...(c.ogun
           ? [
               ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)))] : []),
               this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-              ...(this.hooks.states().ogun.beaten ? [this.guarded(w.road, 'minor', () => this.hooks.leave('road'))] : []),
+              this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
             ]
           : [
               this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),

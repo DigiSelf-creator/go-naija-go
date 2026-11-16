@@ -30,6 +30,15 @@ export const OGUN_CITY_WORDS = {
     lightsOut: { line1: 'Lamps are out on this road.', line2: 'Run the Expressway for Power.', go: 'Run the Expressway' },
     slowInternet: { line1: 'Slow internet here.', line2: 'Run the Expressway for Tech.', go: 'Run the Expressway' },
   },
+  /** OG-R37: the Bad road card (the gateway). Before Sagamu is cleared: clear the streets; after: the hall. */
+  badRoad: {
+    line1: 'King Pothole is blocking the gateway.',
+    clear: 'Clear Ota, Abeokuta and Sagamu to reach Pothole Hall.',
+    toHall: 'Go to Pothole Hall.',
+    hall: 'Go to Pothole Hall',
+    /** "Run Ota", "Run Abeokuta", "Run Sagamu": the next street to clear (1 to 3). */
+    run: (n: number) => `Run ${['Ota', 'Abeokuta', 'Sagamu'][n - 1] ?? 'Ota'}`,
+  },
   /** 6.2: each fix's Mission complete line, shown as the build goes up (2 s). */
   built: {
     potholes: 'New road here. Trucks and buses are moving.',

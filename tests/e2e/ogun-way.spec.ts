@@ -143,9 +143,15 @@ test.describe('on the web, before the Ogun part is on the phone', () => {
     await page.keyboard.press('Escape');
     await expect(arrival).toHaveCount(0);
     expect((await saved(page)).states?.ogun?.arrived).toBe(true);
-    // O2b: Ota plays from Ogun's place.
-    await expect(ogunCard(page).getByText('Ota is open. It is the first street on the road from Lagos.')).toBeVisible();
-    await expect(ogunCard(page).getByRole('button', { name: 'Play Ota' })).toBeVisible();
+    // OG-R35: Ogun's city from the first visit; the Potholes pin hops until it is tapped, and its card plays Ota.
+    await expect(page.locator('.ogun-city')).toBeVisible();
+    const pin = ogunCard(page).locator('[data-spot="potholes"]');
+    await expect(pin).toHaveClass(/\bfirst\b/);
+    await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+    await pin.tap();
+    await expect(page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Ota' })).toBeVisible();
+    await expect(ogunCard(page).locator('[data-spot="potholes"]')).not.toHaveClass(/\bfirst\b/);
+    await page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Back' }).tap();
 
     // Reload: "Play" opens Ogun again, with no ride and no arrival card.
     await page.reload();

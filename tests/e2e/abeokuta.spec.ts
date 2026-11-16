@@ -1,16 +1,27 @@
 /**
  * O3b (docs/ogun.md 3.3, 3.5, 3.7, 4.1 and 8): Abeokuta, Ogun street 2, on the phone profile.
- * A player who has cleared Ota opens Ogun's place, taps "Play Abeokuta", and plays by hand with
+ * A player who has cleared Ota opens Ogun's city (OG-R35), taps the Bad road pin's big "Run
+ * Abeokuta" (OG-R37), and plays by hand with
  * two thumbs: the rock steps and the ledge over its pothole, the water potholes, down the well
  * into the Ijebu garri store for the parcel and back up, the cracks that rumble open, ofada that
  * keeps the next ones shut, the corn stretch and the bus. The cleared card says Abeokuta's line
- * and the parcel's, the save goes under states.ogun (street 2 and the parcel), and Ogun's place
- * then says Sagamu is open (O4b). Before Ota is done, Ogun's place has no "Play Abeokuta".
+ * and the parcel's, the save goes under states.ogun (street 2 and the parcel), and Ogun's city's
+ * Bad road card then says "Run Sagamu" (O4b). Before Ota is done, its card says "Run Ota" and the
+ * road's Abeokuta stop is locked.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { crateActor, type CrateLog } from './crate-bot';
 import { LEFT, buttonCentres, hands, playStreetByHand, snap, type Hands, type Snap } from './hands';
 import { PAST_DOUBLE_TAP_MS, screenNow, waitOutTapLock } from './helpers';
+
+/** OG-R37: the Bad road pin's card in Ogun's city. */
+async function badRoadCard(page: Page) {
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.locator('.ogun-city [data-spot="badRoad"]').tap();
+  const card = page.getByRole('dialog', { name: 'Bad road' });
+  await expect(card).toBeVisible();
+  return card;
+}
 import { wellBot } from './well-bot';
 import { formatMoney } from '../../src/game/money';
 
@@ -28,7 +39,6 @@ const save = (otaDone: boolean) => ({
 
 type Saved = { states?: { lagos?: unknown; ogun?: { streets?: Record<string, { done?: boolean; best?: number }>; parcel?: boolean } }; city?: { kobo?: number } };
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('gidi-progress') ?? '{}') as Saved);
-const ogunPlace = (page: Page) => page.getByRole('dialog', { name: 'Ogun' });
 
 async function openOgun(page: Page, otaDone: boolean): Promise<string[]> {
   const errors: string[] = [];
@@ -50,21 +60,27 @@ async function openOgun(page: Page, otaDone: boolean): Promise<string[]> {
   return errors;
 }
 
-test('Before Ota is done, Ogun\'s place has only "Play Ota"', async ({ page }) => {
+test('Before Ota is done, Ogun\'s city sends you to Ota and the road\'s Abeokuta stop is locked', async ({ page }) => {
   const errors = await openOgun(page, false);
-  await expect(ogunPlace(page).getByRole('button', { name: 'Play Ota' })).toBeVisible();
-  await expect(ogunPlace(page).getByRole('button', { name: 'Play Abeokuta' })).toHaveCount(0);
+  const card = await badRoadCard(page);
+  await expect(card.getByRole('button', { name: 'Run Ota' })).toHaveClass(/\bgo\b/);
+  await expect(card.getByRole('button', { name: 'Run Abeokuta' })).toHaveCount(0);
+  await card.getByRole('button', { name: 'Back' }).tap();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.locator('.ogun-city').getByRole('button', { name: 'Challenge road' }).tap();
+  await expect(page.locator('[data-where="abeokuta"]')).toHaveAttribute('aria-label', /Locked/);
+  await expect(page.locator('[data-where="ota"]')).toHaveAttribute('aria-label', /Next/);
   expect(errors).toEqual([]);
 });
 
-test('Abeokuta by hand from Ogun\'s place: rocks, water, the well room and its parcel, cracks, ofada, the bus, the cleared card and the save', async ({ page }) => {
+test('Abeokuta by hand from Ogun\'s city: rocks, water, the well room and its parcel, cracks, ofada, the bus, the cleared card and the save', async ({ page }) => {
   test.setTimeout(300_000);
   const errors = await openOgun(page, true);
-  await expect(ogunPlace(page).getByText('Ota is moving again. Abeokuta is open.')).toBeVisible();
-  // Abeokuta is the big button now; Ota stays playable beside it.
-  const play = ogunPlace(page).getByRole('button', { name: 'Play Abeokuta' });
-  await expect(play).toBeVisible();
-  await expect(ogunPlace(page).getByRole('button', { name: 'Play Ota' })).toBeVisible();
+  // Abeokuta is the Bad road card's big button now; Ota stays playable (its pin and road stop).
+  const card = await badRoadCard(page);
+  await expect(card.getByText('Clear Ota, Abeokuta and Sagamu to reach Pothole Hall.')).toBeVisible();
+  const play = card.getByRole('button', { name: 'Run Abeokuta' });
+  await expect(play).toHaveClass(/\bgo\b/);
   expect((await play.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await play.tap();
   await expect.poll(() => screenNow(page)).toBe('play');
@@ -171,8 +187,7 @@ test('Abeokuta by hand from Ogun\'s place: rocks, water, the well room and its p
   await expect(dialog.getByText(`Abeokuta is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
   await expect(dialog.getByText('Your Ijebu garri parcel is saved for Pothole Hall.')).toBeVisible();
   // O4b: Abeokuta's card goes on to Sagamu.
-  for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
+  for (const b of ['Take it home', 'Next street', 'Play again', 'Challenge road']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
   // Saved under states.ogun: street 2 and the parcel; Lagos as it was; the money in the one wallet.
   const s = await saved(page);
   expect(s.states?.ogun?.streets?.['2']).toEqual({ done: true, best: kobo * 10 });
@@ -184,9 +199,9 @@ test('Abeokuta by hand from Ogun\'s place: rocks, water, the well room and its p
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('Abeokuta is moving again. Sagamu is open.')).toBeVisible();
-  // O4b: Sagamu is the big button now; Abeokuta and Ota are small.
-  await expect(ogunPlace(page).getByRole('button', { name: 'Play Sagamu' })).toHaveClass(/\bgo\b/);
-  await expect(ogunPlace(page).getByRole('button', { name: 'Play Abeokuta' })).toHaveClass(/minor/);
+  await expect(page.locator('.ogun-city .city-banner')).toContainText('Mission complete!');
+  // O4b: Sagamu is the Bad road card's big button now.
+  const after = await badRoadCard(page);
+  await expect(after.getByRole('button', { name: 'Run Sagamu' })).toHaveClass(/\bgo\b/);
   expect(errors).toEqual([]);
 });

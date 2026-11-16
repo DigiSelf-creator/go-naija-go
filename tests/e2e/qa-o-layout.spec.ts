@@ -1,13 +1,14 @@
 /**
  * qa slice O round (O1c recheck): the short-screen layout (`@media (max-height: 320px)`, commit
- * 6cc56d5) for Ogun's place with one, two and three streets open, the Travel card and the download
+ * 6cc56d5) for Ogun's home with one, two and three streets open (OG-R35: Ogun's city, whose Bad
+ * road card now holds the next street's button, OG-R37), the Travel card and the download
  * card, at 320 x 240, 568 x 320, 640 x 200, 851 x 393 and 1280 x 720, with and without 24 px safe
  * edges. Every button 44 x 44 or more, inside the safe edges, no two buttons on top of each other,
- * Ogun's words box whole (not cut off) and clear of the top row (Ogun, Sound, Settings) and the
- * bottom row (Travel, the wheel).
+ * every card whole (no scroll). The map's own pins and boards move with the map (their edge arrows
+ * and short sticks are ogun-city.spec's); here the city's rows and its cards.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PAST_DOUBLE_TAP_MS, screenNow } from './helpers';
+import { PAST_DOUBLE_TAP_MS, ogunCityToStop, screenNow } from './helpers';
 
 const LOOK = '{"skin":2,"hair":0,"outfit":0,"body":0,"age":1}';
 const CITY = { kobo: 12345, power: 3, tech: 2, fixed: [], fixes: 0, paid: {}, hints: ['walk', 'bright', 'buka', 'collect', 'road'], boom: 7 };
@@ -55,12 +56,12 @@ async function layout(page: Page) {
       vw: innerWidth,
       vh: innerHeight,
       sw: document.documentElement.scrollWidth,
-      buttons: [...top.querySelectorAll<HTMLElement>('button')].filter((b) => b.getClientRects().length > 0).map((b) => box(b)),
+      buttons: [...top.querySelectorAll<HTMLElement>('button')].filter((b) => b.getClientRects().length > 0 && !b.closest('.city-stage')).map((b) => box(b)),
       words: words ? { ...box(words, 'words'), sh: words.scrollHeight, ch: words.clientHeight } : null,
       lines: [...(words?.querySelectorAll('p') ?? [])].map((p) => box(p)),
       topRow: top.querySelector('.ogun-top') ? box(top.querySelector('.ogun-top')!, 'top row') : null,
       bottomRow: top.querySelector('.ogun-bottom') ? box(top.querySelector('.ogun-bottom')!, 'bottom row') : null,
-      card: card && !card.classList.contains('ogun-screen') ? { ...box(card, 'card'), sh: card.scrollHeight, ch: card.clientHeight } : null,
+      card: card && !card.classList.contains('city-card') ? { ...box(card, 'card'), sh: card.scrollHeight, ch: card.clientHeight } : null,
     };
   });
 }
@@ -128,22 +129,28 @@ async function openOgun(page: Page, done: number): Promise<void> {
 }
 
 for (const done of [0, 1, 2, 3]) {
-  test(`qa O: Ogun's place with ${done} street(s) cleared fits every size, nothing on the Travel row`, async ({ page }) => {
+  test(`qa O: Ogun's city with ${done} street(s) cleared and its Bad road card fit every size, nothing on the Travel row`, async ({ page }) => {
     // Game bug QA-O-1b (fixed): at 320 x 240 with 24 px safe edges the top row wrapped ("Settings"
     // under "Sound: on") and Ogun's words box covered "Settings"; at 640 x 200 with safe edges the
     // words box ran under the Travel row.
     // Game bug QA-O-1 (fixed): with two or three streets open, the small "Play Abeokuta" / "Play Ota"
     // dropped to a third grid row under the short-screen rule and sat under "Travel" and "Nigeria's
-    // wheel" at 640 x 200 (and at 320 x 240 with safe edges). Now Ogun's place is a column on short
-    // screens: top row, the words with the Play buttons beside and under them, the Travel row.
+    // wheel" at 640 x 200 (and at 320 x 240 with safe edges). OG-R35 retired the place: the next
+    // street's button is the Bad road card's big one, checked open and closed at every size.
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await openOgun(page, done);
-    // O5b: once Sagamu is done, "Go to Pothole Hall" is the big button, so four in all.
-    await expect(page.locator('.ogun-play')).toHaveCount(done + 1);
     const found: string[] = [];
-    await check(page, `Ogun's place (${done} done)`, found);
-    // The Travel card opened from Ogun's place, at the same sizes.
+    await expect(page.locator('.ogun-city')).toBeVisible();
+    await check(page, `Ogun's city (${done} done)`, found);
+    // O5b, OG-R37: the Bad road card's big button is the next street, or "Go to Pothole Hall" once Sagamu is done.
+    await page.locator('.ogun-city [data-spot="badRoad"]').tap();
+    const card = page.getByRole('dialog', { name: 'Bad road' });
+    await expect(card.locator('.go')).toHaveText(['Run Ota', 'Run Abeokuta', 'Run Sagamu', 'Go to Pothole Hall'][done]!);
+    await check(page, `Bad road card (${done} done)`, found);
+    await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+    await card.getByRole('button', { name: 'Back' }).tap();
+    // The Travel card opened from Ogun's city, at the same sizes.
     await page.getByRole('dialog', { name: 'Ogun', exact: true }).getByRole('button', { name: 'Travel' }).tap();
     await expect(page.getByRole('dialog', { name: 'Where to?' })).toBeVisible();
     if (done === 2) await check(page, 'Travel card from Ogun', found);
@@ -183,10 +190,10 @@ test.describe('download card', () => {
   });
 });
 
-for (const [name, id] of [['Play Ota', 'ogun-1'], ['Play Abeokuta', 'ogun-2'], ['Play Sagamu', 'ogun-3']] as const) {
-  test(`qa O: with all three streets cleared, "${name}" on Ogun's place starts ${id}`, async ({ page }) => {
+for (const [name, id] of [['ota', 'ogun-1'], ['abeokuta', 'ogun-2'], ['sagamu', 'ogun-3']] as const) {
+  test(`qa O: with all three streets cleared, the "${name}" stop on Ogun's Challenge road (from its city, OG-R35) starts ${id}`, async ({ page }) => {
     await openOgun(page, 3);
-    await page.getByRole('dialog', { name: 'Ogun', exact: true }).getByRole('button', { name }).tap();
+    await ogunCityToStop(page, name);
     await expect.poll(() => screenNow(page)).toBe('play');
     await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
     expect(await page.evaluate(() => window.__game!.level.id)).toBe(id);

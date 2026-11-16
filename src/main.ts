@@ -595,8 +595,9 @@ function startGame(): void {
       const h = lane.haul;
       if (h.kobo > 0 || h.power > 0 || h.tech > 0) mission = { build: null, kobo: h.kobo, plain: true, line: WORDS.lane.broughtHome(haulWords(h)) };
     }
-    // O2b: from an Ogun street, Home (and Take it home) go back to Ogun's place; O6b: its city once
-    // the hall is won, with the money brought home, and its road on the stop just played.
+    // O6b, OG-R35: from an Ogun run, Home (and Take it home) go back to Ogun's city (from the first
+    // visit), with the money brought home, and its road on the stop just played. OG-R39: a win
+    // ("Take it home", a lane run won) puts "Mission complete!" over the line.
     const fromOgun = ogunPlay !== null || (lane !== null && laneOgun);
     const ogunAt = lane ? 'expressway' : ogunPlay ? (['ota', 'abeokuta', 'sagamu', 'hall'][ogunPlay.n - 1] ?? null) : null;
     closeLane();
@@ -615,7 +616,7 @@ function startGame(): void {
     where = firstStreet;
     game.fixed = false;
     game.reset(startLevel);
-    if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : null, ogunAt);
+    if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : null, ogunAt, mission !== null && mission.plain !== true);
     else if (to === 'wheel') {
       menus.showWheel(fromOgun ? 'ogun' : 'city');
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
@@ -744,7 +745,7 @@ function startGame(): void {
             return { bucket: laneFor === 'lamps' ? 'power' : 'tech', left: leftOf(cityLife.state, laneFor) };
           },
           setGentle: (on) => menus.setGentle(on),
-          home: (r) => (ogun ? leave('city', { build: null, kobo: r.haul.kobo, plain: true, line: WORDS.lane.broughtHome(haulWords(r.haul)) }) : laneHome(r.won, r.haul)),
+          home: (r) => (ogun ? leave('city', { build: null, kobo: r.haul.kobo, plain: !r.won, line: WORDS.lane.broughtHome(haulWords(r.haul)) }) : laneHome(r.won, r.haul)),
           changed: () => {
             syncUpdate();
             nativeApp?.screenChanged();
@@ -991,7 +992,7 @@ function startGame(): void {
       if (!musicAudible(menus.sound, menus.music) || document.hidden) return;
       gateMusic.playTune(tune);
     },
-    // O2b: Ogun's place, "Play Ota".
+    // O2b, OG-R37: Ogun's Bad road card ("Run Ota" ... "Go to Pothole Hall").
     playOgun: (n, at) => ogunRun(at, n),
     ogunDone: (n) => streetRecord(progress.state(OGUN), n).done,
     // O6b: Ogun's city and its challenge road.
