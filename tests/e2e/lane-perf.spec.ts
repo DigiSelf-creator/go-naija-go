@@ -92,6 +92,33 @@ async function play(page: Page, secs: number): Promise<void> {
   await page.waitForTimeout(secs * 1000);
 }
 
+/** The Expressway: from a save with Pothole Hall won, Ogun's city, its Challenge road, the side road. */
+async function expresswayFromOgun(page: Page): Promise<void> {
+  const D = { done: true, best: 100 };
+  const save = {
+    v: 2,
+    states: { lagos: { streets: { 1: D, 2: D, 3: D }, parcel: false, hall: { done: true, best: 0 } }, ogun: { arrived: true, streets: { 1: D, 2: D, 3: D }, parcel: false, hall: { done: true, best: 0 }, lane: { best: 0, goals: 1, runs: 3, hints: ['pothole', 'cones', 'danfo', 'barrier', 'bulb', 'chip', 'corn', 'blackout', 'swipe'], tiltOffered: true, tiltNoes: 0 } } },
+    city: { kobo: 1000, power: 0, tech: 0, fixed: [], fixes: 0, paid: {}, hints: ['walk', 'bright', 'buka', 'collect', 'road', 'tax'] },
+    lane: { best: 0, goals: 1, runs: 3, hints: ['pothole', 'cones', 'danfo', 'barrier', 'bulb', 'chip', 'corn', 'blackout', 'swipe'], tiltOffered: true, tiltNoes: 0 },
+    where: 'ogun',
+  };
+  await page.goto('./');
+  await page.evaluate((p) => {
+    localStorage.setItem('gidi-look', '{"skin":2,"hair":1,"outfit":1,"body":1,"age":1}');
+    localStorage.setItem('gidi-progress', p);
+  }, JSON.stringify(save));
+  await page.reload();
+  await page.getByRole('button', { name: 'Play' }).tap();
+  await expect(page.locator('.ogun-city')).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.locator('.ogun-city').getByRole('button', { name: 'Challenge road' }).tap();
+  await expect(page.locator('[data-where="expressway"]')).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.locator('[data-where="expressway"]').tap();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog', { name: 'Side road: Expressway' }).getByRole('button', { name: 'Run the Expressway' }).tap();
+}
+
 function measure(frames: [number, number, string, number][]) {
   return ['road', 'endless'].map((name) => {
     let n = 0;
@@ -111,15 +138,19 @@ function measure(frames: [number, number, string, number][]) {
   });
 }
 
-for (const rate of [1, 4] as const) {
-  test(`slowed ${rate}x CPU: the lane run, the road and the endless part at top speed, ${rate === 4 ? 'at least 45' : 'about 60'} fps`, async ({ page }) => {
+// qa slice O (O6c): the Expressway (ogun-lane, the lane run in Ogun's look) at 4x beside Lagos's.
+for (const [rate, level] of [[1, 'lagos-lane'], [4, 'lagos-lane'], [4, 'ogun-lane']] as const) {
+  test(`slowed ${rate}x CPU: the lane run${level === 'ogun-lane' ? ' (Expressway)' : ''}, the road and the endless part at top speed, ${rate === 4 ? 'at least 45' : 'about 60'} fps`, async ({ page }) => {
     test.setTimeout(240_000);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await page.goto('./?level=lagos-lane');
-    await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-    await startRun(page);
+    if (level === 'lagos-lane') {
+      await page.goto(`./?level=${level}`);
+      await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+      await startRun(page);
+    } else await expresswayFromOgun(page);
     await expect.poll(() => page.evaluate(() => window.__lane?.stage), { timeout: 15_000 }).toBe('play');
+    expect(await page.evaluate(() => window.__lane!.level)).toBe(level);
     const dpr = await page.evaluate(() => devicePixelRatio);
     const canvas = await page.evaluate(() => `${document.querySelector('canvas')!.width}x${document.querySelector('canvas')!.height}`);
     await startBotAndLog(page);
@@ -139,7 +170,7 @@ for (const rate of [1, 4] as const) {
     const pixels = await page.evaluate(() => window.__lane!.pixels);
     const bar = rate === 4 ? BAR_4X : BAR_1X;
     const report = parts.map((p) => `${p.name}: ${p.fps.toFixed(1)} fps over ${p.secs.toFixed(1)} s, ${p.steps.toFixed(1)} steps/s, up to ${p.things} things${p.fps < bar ? ' (UNDER)' : ''}`).join('; ');
-    console.log(`${rate}x CPU, lane run (dpr ${dpr}, canvas ${canvas} at the start, ${pixels} canvas px per CSS px after settling), bar ${bar}: ${report}. Stumbles ${tally['stumbles']}. Fixed work 1x ${work1.toFixed(0)} ms, now ${work.toFixed(0)} ms`);
+    console.log(`${rate}x CPU, ${level} (dpr ${dpr}, canvas ${canvas} at the start, ${pixels} canvas px per CSS px after settling), bar ${bar}: ${report}. Stumbles ${tally['stumbles']}. Fixed work 1x ${work1.toFixed(0)} ms, now ${work.toFixed(0)} ms`);
     test.info().annotations.push({ type: `lane fps ${rate}x`, description: report });
     expect(errors).toEqual([]);
     if (rate > 1) expect(work, 'the slowdown is on').toBeGreaterThan(work1 * 2.5);
