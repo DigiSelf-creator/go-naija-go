@@ -31,11 +31,12 @@ import { CityScreen, type CitySound, type Mission } from './city';
 import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
 import { button, h } from './dom';
 import { wheelFit } from './streets';
-import type { RoadOpen, RoadView, StopInfo } from './road';
+import type { PlanStop, RoadOpen, RoadView, StopInfo } from './road';
 import { GAME_NAME, OGUN_WORDS, WORDS, WORLD_PART_WORDS } from './words';
 import type { StateId } from '../game/states';
-import type { WorldLoad, WorldPart } from '../worlds/load';
-import type { WorldUi } from '../worlds/ui';
+import type { WorldLoad, WorldPart, WorldRoadView } from '../worlds/load';
+import type { WorldCity, WorldUi } from '../worlds/ui';
+import type { StateCity } from '../game/states';
 import type { Tune } from '../art/tunes';
 import { gateIconSvg } from '../art/gateway';
 import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelButtonHtml, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
@@ -170,6 +171,14 @@ export interface MenuHooks {
   playOgun(n: number, at: TapPoint | null): void;
   /** O2b: Ogun street n is done (saved under states.ogun). */
   ogunDone(n: number): boolean;
+  /** O6b: Ogun's own city part in memory (its fixes, trays and Booming meter; never the wallet). */
+  ogunCity: StateCity;
+  /** O6b: an Ogun problem card's challenge (Ota for the road, the Expressway for Power and Tech). */
+  runOgunSpot(spot: string, at: TapPoint | null): void;
+  /** O6b: an Ogun road stop's big button (a street, the hall or the Expressway). */
+  playOgunStop(stop: PlanStop, at: TapPoint | null): void;
+  /** O6b: what Ogun's challenge road reads. */
+  ogunRoadView(): WorldRoadView;
 }
 
 /** What the game over and win screens show. */
@@ -234,6 +243,9 @@ export class Menus {
   private cleanup: (() => void) | null = null;
   private introScreen: IntroScreen | null = null;
   private cityScreen: CityScreen | null = null;
+  /** O6b: Ogun's city showing now (tests), and the line it shows as it opens next ("You brought ₦12 home."). */
+  ogunScreen: WorldCity | null = null;
+  ogunLine: string | null = null;
   /** Mission complete for the next city screen (5W W5), played once. */
   private mission: Mission | null = null;
   /** Lays out the wheel screen again (on resize while it shows). */
@@ -423,6 +435,7 @@ export class Menus {
     this.lastTap = null;
     this.layer.replaceChildren();
     this.overlay = null;
+    this.ogunScreen = null;
     this.layer.hidden = screen === null;
     this.layer.classList.toggle('full', FULL_SCREENS.includes(screen));
     this.hooks.screenChanged?.(screen);
@@ -451,6 +464,7 @@ export class Menus {
     this.overlayNext = null;
     if (next) this.openOverlay(next);
     if (screen === 'city') this.cityScreen?.start();
+    if (screen === 'ogun') (this.ogunScreen as WorldCity | null)?.start();
     // Set by wheel() just now (TypeScript still thinks it is the null set above).
     (this.refit as (() => void) | null)?.();
     // po M4 bug 4: a card that opens in a run puts focus on its big button, so Space or Enter
@@ -515,7 +529,7 @@ export class Menus {
         this.hooks.setWhere('lagos');
         this.show('city');
       };
-      if (ui && this.settings.busRide && this.screen === 'ogun') {
+      if (ui && this.settings.busRide && (this.screen === 'ogun' || this.screen === 'road')) {
         this.rideNext = { ui, toLagos: true, first: false, then: home };
         this.show('ride');
       } else home();
@@ -621,9 +635,12 @@ export class Menus {
    * the gateway picture, the words that Ota is next, and Travel, the wheel and Settings.
    */
   private ogunCard(): HTMLElement | null {
-    const ui = this.hooks.worldPart('ogun')?.ui;
+    const part = this.hooks.worldPart('ogun');
+    const ui = part?.ui;
     if (!ui) return null;
     const v = this.hooks.states();
+    // O6b: once Pothole Hall is won, Ogun's place is Ogun's city.
+    if (v.ogun.beaten && part.city) return this.ogunCityCard(part.city, v.arrived);
     const w = OGUN_WORDS.place;
     const pic = h('canvas', { class: 'ogun-pic', 'aria-hidden': 'true' });
     const sound = this.guarded(this.settings.sound ? WORDS.city.soundOn : WORDS.city.soundOff, 'minor', () => {
@@ -659,6 +676,73 @@ export class Menus {
       });
     }
     return el;
+  }
+
+  /** O6b: Ogun from above (the Lagos city's buttons; its challenge road is Ogun's). */
+  private ogunCityCard(make: NonNullable<WorldPart['city']>, arrived: boolean): HTMLElement {
+    const w = WORDS.city;
+    const sound = this.guarded(this.settings.sound ? w.soundOn : w.soundOff, 'minor', () => {
+      this.settings.sound = !this.settings.sound;
+      saveSettings(this.store, this.settings);
+      sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
+      this.hooks.soundChanged(this.settings.sound);
+    });
+    const line = this.ogunLine;
+    this.ogunLine = null;
+    const screen = make({
+      life: this.hooks.cityLife,
+      own: this.hooks.ogunCity,
+      look: () => this.look,
+      topRight: [sound, button(w.settings, 'minor', () => this.showSettings('ogun'))],
+      bottom: [
+        button(w.road, 'minor two-line', () => this.showOgunRoad()),
+        this.travelButton(),
+        button(w.hero, 'minor', (e) => this.show('builder', e)),
+        button(w.wheel, 'minor two-line', () => this.showWheel('ogun')),
+      ],
+      run: (spot, e) => this.hooks.runOgunSpot(spot, tapPoint(e)),
+      seeStop: (spot) => this.showOgunRoad(spot === 'potholes' ? 'ota' : 'expressway', true),
+      ignoreTap: (e) => this.ignoreTap(e),
+      sound: (name) => this.hooks.playSound(name as MenuSound),
+      gentle: () => this.settings.gentle,
+      still: () => this.hooks.stillWanted(),
+      touch: () => this.touchWords(),
+      cogOn: () => this.hooks.states().ogun.turning,
+      line,
+    });
+    this.ogunScreen = screen;
+    this.cleanup = () => screen.close();
+    if (!arrived) {
+      this.overlayNext = arrivalCard(() => {
+        this.hooks.arrived();
+        this.closeOverlay();
+      });
+    }
+    return screen.el;
+  }
+
+  /** O6b: Ogun's challenge road (ogun.md 6.5), on a stop (with its card open from a city card). */
+  showOgunRoad(at: string | null = null, card = false): void {
+    const part = this.hooks.worldPart('ogun');
+    if (!part?.road) return this.show('ogun');
+    const plan = part.road(
+      this.hooks.ogunRoadView(),
+      (st, e) => {
+        this.hooks.playSound('horn');
+        if (st.id === 'toLagos') this.travelTo('lagos');
+        else this.hooks.playOgunStop(st, tapPoint(e));
+      },
+      () => this.hooks.stillWanted(),
+    );
+    this.showRoad({ at, card, plan });
+  }
+
+  /** O6b: from an Ogun run, home is Ogun's city (or its place before the hall), the road Ogun's. */
+  ogunHome(to: 'city' | 'road', line: string | null = null, at: string | null = null): void {
+    const part = this.hooks.worldPart('ogun');
+    if (to === 'road' && this.hooks.states().ogun.beaten && part?.road) return this.showOgunRoad(at);
+    this.ogunLine = line;
+    this.show('ogun');
   }
 
   /** A tap that should not count: the second half of a double tap, or too soon after the game opened a screen. */
@@ -811,7 +895,7 @@ export class Menus {
           { class: 'pause-grid' },
           this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
           this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
-          this.guarded(WORDS.lane.pauseHome, 'minor', () => this.hooks.leave('city')),
+          this.guarded(this.ogunRun ? OGUN_WORDS.laneHome : WORDS.lane.pauseHome, 'minor', () => this.hooks.leave('city')),
         ),
         h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch(), this.laneButtonsSwitch()),
         this.tiltRow('pause'),
@@ -827,7 +911,7 @@ export class Menus {
         this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
         this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
         // O2b: the challenge road is Lagos's; from an Ogun street Home is Ogun's place.
-        !this.ogunRun && this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+        (!this.ogunRun || this.hooks.states().ogun.beaten) && this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
@@ -850,7 +934,7 @@ export class Menus {
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
-        ...(this.summary.ogun ? [] : [this.guarded(w.road, 'minor', () => this.hooks.leave('road'))]),
+        ...(this.summary.ogun && !this.hooks.states().ogun.beaten ? [] : [this.guarded(w.road, 'minor', () => this.hooks.leave('road'))]),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
       ),
     );
@@ -874,6 +958,7 @@ export class Menus {
           ? [
               ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)))] : []),
               this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
+              ...(this.hooks.states().ogun.beaten ? [this.guarded(w.road, 'minor', () => this.hooks.leave('road'))] : []),
             ]
           : [
               this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),
@@ -896,7 +981,13 @@ export class Menus {
         h('h2', {}, o.heading),
         h('p', {}, o.line),
         h('p', {}, OGUN_WORDS.win.money(this.summary.kobo)),
-        this.actions(this.guarded(o.takeHome, 'go', () => this.hooks.takeHome()), this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)))),
+        // O6b: the Challenge road (Ogun's) and the wheel, as Lagos's Win screen.
+        this.actions(
+          this.guarded(o.takeHome, 'go', () => this.hooks.takeHome()),
+          this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
+          this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+          this.guarded(w.wheel, 'minor', () => this.hooks.leave('wheel')),
+        ),
       );
     }
     const o = OGUN_WORDS.lagosWin;
@@ -956,13 +1047,14 @@ export class Menus {
       sound.setAttribute('aria-label', t);
     };
     label();
+    const ogun = this.roadOpen.plan !== undefined;
     const screen = m.roadScreen(
       {
         view: () => this.hooks.roadView(),
         look: () => this.look,
         still: () => this.hooks.stillWanted(),
         soundButton: sound,
-        home: () => this.show('city'),
+        home: () => this.show(ogun ? 'ogun' : 'city'),
         play: (stop, e) => {
           this.hooks.playSound('horn');
           // O1b2: the "To Ogun" stop goes to Ogun (the bus ride), never a run.

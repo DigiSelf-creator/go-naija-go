@@ -14,7 +14,10 @@ import { WORLD_PART_WORDS } from '../screens/words';
 import type { StreetSkin } from '../game/skin';
 import type { ArenaRules, Run } from '../game/run';
 import type { Tune } from '../art/tunes';
-import type { WorldUi } from './ui';
+import type { WorldCity, WorldCityHooks, WorldUi } from './ui';
+import type { RoadPlan, PlanStop } from '../screens/road';
+import type { LaneLook } from '../lane/view';
+import type { Obj, StateProgress } from '../game/progress';
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
 export const WORLD_PART_VERSION = 1;
@@ -36,6 +39,27 @@ export interface WorldPart {
    * and its tune (it stands in for the hall tune while that hall is played). Optional.
    */
   readonly hall?: { readonly arena: (run: Run) => ArenaRules; readonly tune: Tune };
+  /** O6b: the state's city from above (opens once its hall is won). Optional. */
+  readonly city?: (hooks: WorldCityHooks) => WorldCity;
+  /** O6b: the state's challenge road, for the road screen. Optional. */
+  readonly road?: (v: WorldRoadView, play: (st: PlanStop, e: MouseEvent) => void, still: () => boolean) => RoadPlan;
+  /** O6b: the state's lane run (its level file, look, and the fix a win is for). Optional. */
+  readonly lane?: {
+    readonly level: unknown;
+    readonly look: LaneLook;
+    /** The fix a win is for now (`fix`: the city's spot id), what bucket pays it and what is left, or null. */
+    forFix(own: Readonly<Obj>, wallet: { kobo: number; power: number; tech: number }): { fix: string; bucket: 'power' | 'tech'; left: number } | null;
+  };
+  /** O6b: what is left to pay on a city spot (own units: kobo for Naira), for a win's prize. */
+  readonly left?: (own: Readonly<Obj>, spot: string) => number;
+}
+
+/** O6b: what a state's challenge road reads (its own streets, city part, the wallet and its lane best). */
+export interface WorldRoadView {
+  progress: StateProgress;
+  own: Readonly<Obj>;
+  wallet: { kobo: number; power: number; tech: number };
+  lane: { best: number; goals: number };
 }
 
 export type WorldLoad = { ok: true; part: WorldPart } | { ok: false; why: 'missing' | 'broken'; message: string };

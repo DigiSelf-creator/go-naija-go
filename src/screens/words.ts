@@ -596,6 +596,8 @@ export const OGUN_WORDS = {
     /** In "All names", after the pennant (never colour alone). */
     listNext: 'Ogun, next',
   },
+  /** O6b: the Expressway's Pause card button (Lagos's says "Back to Lagos"). */
+  laneHome: 'Back to Ogun',
   /** Part 1.8: Settings, under "Saved on this phone". */
   saved: 'Your hero, Lagos and Ogun are saved on this phone.',
   /**

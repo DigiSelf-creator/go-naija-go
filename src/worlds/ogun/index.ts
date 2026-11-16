@@ -19,6 +19,10 @@ import { ogunStreet } from './otaStreet';
 import { parsePotholeHall, potholeArena } from './potholeFight';
 import { potholeHallSkin } from './potholeHallSkin';
 import { ui } from './ride';
+import { ogunCity } from './cityScreen';
+import { ogunRoad, expresswayFor } from './roadPlan';
+import { EXPRESSWAY_LOOK } from './laneLook';
+import { OGUN_PRICES, leftOn, readOgunCity, readWallet } from './cityRules';
 
 const files = import.meta.glob<unknown>('../../data/levels/ogun-*.json', { eager: true, import: 'default' });
 
@@ -57,4 +61,20 @@ export const part: WorldPart = {
   ui,
   street: (level) => (level.id === 'ogun-hall' ? potholeHallSkin() : ogunStreet(level)),
   ...(ogunHall ? { hall: ogunHall } : {}),
+  // O6b: Ogun's city (after Pothole Hall), its challenge road and the Expressway run.
+  city: ogunCity,
+  road: (v, play, still) => ogunRoad({ ogun: v.progress, city: readOgunCity(v.own), wallet: readWallet(v.wallet), lane: v.lane }, play, still),
+  lane: {
+    level: levels['ogun-lane'],
+    look: EXPRESSWAY_LOOK,
+    forFix: (own) => {
+      const c = readOgunCity(own);
+      const fix = expresswayFor(c);
+      return fix ? { fix, bucket: OGUN_PRICES[fix].bucket === 'tech' ? 'tech' : 'power', left: leftOn(c, fix) } : null;
+    },
+  },
+  left: (own, spot) => (spot in OGUN_PRICES ? leftOn(readOgunCity(own), spot as keyof typeof OGUN_PRICES) : 0),
 };
+
+/** O6b: the debug galleries read the part's art from here (see galleryArt.ts). */
+export * from './galleryArt';
