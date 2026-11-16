@@ -15,7 +15,7 @@ import { drawFoodIcon, drawKobo } from './items';
 import { INK } from './palette';
 import { GROUND_Y, drawRoad } from './street';
 import { drawGateArch } from './ogunGate';
-import { OGUN_WORDS } from '../screens/words';
+import { OGUN_WORDS } from '../worlds/ogun/partWords';
 
 type Ota = typeof import('../worlds/ogun');
 let ota: Ota | null = null;

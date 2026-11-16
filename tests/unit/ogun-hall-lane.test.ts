@@ -13,7 +13,8 @@ import lagosHall from '../../src/data/levels/lagos-hall.json';
 import laneRaw from '../../src/data/levels/ogun-lane.json';
 import lagosLaneRaw from '../../src/data/levels/lagos-lane.json';
 import { checkChunk, checkFair, chunkRows, freeLanes, isDodge, parseLane, rowsOf, timeTo } from '../../src/lane/level';
-import { OGUN_WORDS, WORDS } from '../../src/screens/words';
+import { WORDS } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 
 const H = hallRaw;
 const B = H.boss;

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import ogun1 from '../../src/data/levels/ogun-1.json';
 import { crowdSpots, isTrader, ownCast } from '../../src/game/crowd';
 import { parseLevel } from '../../src/game/level';
-import { OGUN_WORDS } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 import { OTA_CAST, OTA_STALL_WORDS, OTA_TRADERS, OTA_TRADER_LOOKS, OTA_TRAVELLERS } from '../../src/worlds/ogun/ota';
 import { MUD_LOOK, ogunStreet, otaCast, otaSkin } from '../../src/worlds/ogun/otaStreet';
 import type { SkinNow } from '../../src/game/skin';

@@ -17,7 +17,7 @@ import type { StreetCast } from '../../game/crowd';
 import type { Level } from '../../game/level';
 import type { HazardState } from '../../game/run';
 import type { SkinNow, StreetSkin } from '../../game/skin';
-import { OGUN_WORDS } from '../../screens/words';
+import { OGUN_WORDS } from './partWords';
 import {
   SAGAMU_CAST,
   SAGAMU_TRADERS,

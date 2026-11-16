@@ -24,7 +24,7 @@
 import { CITY_MAP, PIN, drawBusShelter, drawCityBus, drawCityLamp, drawPotholeSpot, drawSpotIcon, pinHitBox, type CityBox, type SpotLook } from '../../art/city';
 import { TIRED_COLOURS, brightColour, drawCityFolk, drawCityPalm, drawCityTree, fadeColour, tiredColour, tiredRoof } from '../../art/bright';
 import { drawFolk, type Folk } from '../../art/places';
-import { drawMiniArch } from '../../art/gateway';
+import { drawMiniArch } from '../../art/gatewayRoad';
 import { CREAM, INK, WHITE } from '../../art/palette';
 
 const TAU = Math.PI * 2;

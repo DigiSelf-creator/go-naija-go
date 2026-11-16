@@ -16,7 +16,7 @@ import type { FolkLook } from '../../art/folk';
 import type { StreetCast } from '../../game/crowd';
 import type { Level } from '../../game/level';
 import type { StreetSkin } from '../../game/skin';
-import { OGUN_WORDS } from '../../screens/words';
+import { OGUN_WORDS } from './partWords';
 import {
   ABEOKUTA_CAST,
   ABEOKUTA_TRADERS,

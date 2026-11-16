@@ -5,7 +5,44 @@ import { join, relative, resolve, sep } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
 /** Files the service worker must NOT fetch on install. Later worlds load only when reached. */
-const PRECACHE_SKIP = [/^sw\.js$/, /\.map$/, /^worlds\//];
+const PRECACHE_SKIP = [/^sw\.js$/, /\.map$/, /^worlds\//, /^assets\/debug\//];
+
+/**
+ * qa O2: the debug art galleries (?gallery=…, src/art/galleries.ts and the gallery*.ts files it
+ * opens). They and whatever only they import are built into dist/assets/debug/, outside the first-visit
+ * cache: a player never downloads them, and the test link still fetches them when asked.
+ */
+const DEBUG_ROOT = /[\\/]src[\\/]art[\\/]galler(y[^\\/]*|ies)\.ts$/;
+
+/** Modules the game itself never reaches (only the debug galleries do); filled at the end of each build. */
+const debugOnly = new Set<string>();
+
+/** Finds the modules reachable from the page without passing through a debug gallery. */
+function debugModules(): Plugin {
+  return {
+    name: 'gidi-debug-modules',
+    apply: 'build',
+    buildEnd() {
+      debugOnly.clear();
+      const ids = [...this.getModuleIds()];
+      const game = new Set<string>();
+      const todo = ids.filter((id) => this.getModuleInfo(id)?.isEntry);
+      while (todo.length > 0) {
+        const id = todo.pop()!;
+        if (game.has(id) || DEBUG_ROOT.test(id)) continue;
+        game.add(id);
+        const info = this.getModuleInfo(id);
+        if (info) todo.push(...info.importedIds, ...info.dynamicallyImportedIds);
+      }
+      for (const id of ids) if (!game.has(id)) debugOnly.add(id);
+    },
+  };
+}
+
+/** True when every module in a chunk is debug only (a gallery, or art only galleries draw). */
+function isDebugChunk(moduleIds: readonly string[]): boolean {
+  return moduleIds.length > 0 && moduleIds.every((m) => debugOnly.has(m));
+}
 
 /**
  * O1b2: art that only a later state shows, though it lives in src/art/ (art's galleries import it
@@ -86,6 +123,7 @@ export default defineConfig(({ mode }) => ({
         // O1b1: a later state's part (src/worlds/<id>/ and what only it imports) is built into
         // dist/worlds/<id>/, outside the first load and the first-visit cache.
         chunkFileNames: (chunk) => {
+          if (isDebugChunk(chunk.moduleIds)) return 'assets/debug/[name]-[hash].js';
           const id = worldOf(chunk.facadeModuleId) ?? worldOf(chunk.moduleIds.find((m) => worldOf(m)) ?? null);
           return id ? `worlds/${id}/[name]-[hash].js` : 'assets/[name]-[hash].js';
         },
@@ -96,7 +134,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  plugins: mode === 'app' ? [] : [serviceWorker()],
+  plugins: mode === 'app' ? [debugModules()] : [debugModules(), serviceWorker()],
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',

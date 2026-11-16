@@ -176,12 +176,12 @@ test('qa O2 hall: three falls into him lose; Out of lives says the hall\'s words
 });
 
 /**
- * BUG QA-O2-1 (low): OG-R27 says the first-try hints show once per visit, "each time you come into
+ * QA-O2-1 (fixed by gamedev: newHallVisit when the hall is entered from a card). OG-R27 says the first-try hints show once per visit, "each time you come into
  * the hall". The counter (potholeFight.ts `triesThisVisit`) is set once per page load and never
  * reset, so after Home and a new visit in the same session the hints never show again.
  * Fix: count tries per visit (reset when the hall is entered from a card, not on Play again).
  */
-test.fail('qa O2 hall: Home, then a new visit to the hall shows the first-try hint again (OG-R27)', async ({ page }) => {
+test('qa O2 hall: Home, then a new visit to the hall shows the first-try hint again (OG-R27)', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = errorsOf(page);
   await openOgun(page, save(ALL3));

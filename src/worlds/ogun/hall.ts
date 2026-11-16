@@ -39,7 +39,7 @@ import { drawCone } from '../../art/roadside';
 import { blitLayer, type PixelLayer } from '../../art/street';
 import type { Recipe } from '../../engine/sound';
 import type { Tune } from '../../art/tunes';
-import { OGUN_WORDS } from '../../screens/words';
+import { OGUN_WORDS } from './partWords';
 import { drawMud, OTA_CAST } from './ota';
 import { SAGAMU_TRADER_LOOKS } from './sagamu';
 import { drawOgunTruck } from './city';
@@ -297,19 +297,33 @@ export function potholeFinishAt(t: number, pitX: number, from = 0.45, still = fa
   };
 }
 
-/** The roller's happy lap: out from its place to the patch, over it and back, then home. */
+/**
+ * QA-O2-2: after its lap the roller parks on the new smooth patch (its middle), never back in the
+ * right doorway, so the danfo and the tipper rolling out through the doors are seen whole,
+ * passengers and all. Its back end (26 u right of its middle, facing left) stays at least 4 u short
+ * of the door line; the cone line (12 u past his right lip) stays clear of it.
+ */
+export const ROLLER_FINISH_MAX_X = POT_HALL.rightDoors.x0 - 30;
+export function rollerFinishX(pitX: number): number {
+  return Math.min(Number.isFinite(pitX) ? pitX : POT_HALL.startX, ROLLER_FINISH_MAX_X);
+}
+
+/** The roller's happy lap: out from its place to the patch, over it and back, then it parks on the patch. */
 function rollerAt(t: number, pitX: number): RollerAt {
   const F = POTHOLE_FINISH;
   const home = POT_HALL.rollerX;
+  const park = rollerFinishX(pitX);
   const far = pitX - POT_HALL.pitW / 2 - 6;
-  let x = home;
+  let x: number = home;
   let facing: 1 | -1 = -1;
   if (t >= F.rollerOut && t < F.rollerBack) {
     // Out and over the patch, leftwards
     x = home + (far - home) * ease((t - F.rollerOut) / (F.rollerBack - F.rollerOut));
   } else if (t >= F.rollerBack && t < F.rollerParked) {
-    x = far + (home - far) * ease((t - F.rollerBack) / (F.rollerParked - F.rollerBack));
+    x = far + (park - far) * ease((t - F.rollerBack) / (F.rollerParked - F.rollerBack));
     facing = 1;
+  } else if (t >= F.rollerParked) {
+    x = park;
   }
   // The drum turns as far as the roller has rolled (r 15)
   const drum = (x - home) / 15;
@@ -550,15 +564,18 @@ function paintBack(g: G, x0: number, viewH: number): void {
 }
 
 const backLayer = { layer: null as PixelLayer | null };
+/** The back with the right doors shut and every lamp off (the whole fight). */
+const darkLayer = { layer: null as PixelLayer | null };
 
 // ---------------------------------------------------------------- live layers
 
 /**
  * O6b (ogun.md part 7): once the doors are open, a danfo and then a tipper roll out through them
  * onto the expressway (seconds since they could go; none with reduced motion). Our own plain
- * vehicles, no writing; the danfo's windows show its passengers' heads.
+ * vehicles, no writing; the danfo's windows show its passengers' heads. QA-O2-2: they start just
+ * behind the door edge and close together, so both are in the doorway before the Win screen.
  */
-export const ROLL_OUT = { speed: 70, gap: 1.1, from: -60 } as const;
+export const ROLL_OUT = { speed: 70, gap: 0.9, from: -30 } as const;
 function drawRollOut(g: G, t: number): void {
   const r = POT_HALL.rightDoors;
   const fy = POT_HALL.floorY;
@@ -651,6 +668,11 @@ export interface PotholeHallLook {
   arrows?: number | undefined;
   time?: number | undefined;
   still?: boolean | undefined;
+  /**
+   * Perf (qa O2): the roller parked at POT_HALL.rollerX is drawn here (in the fight it is copied
+   * with the dark back, not drawn path by path each frame). Leave it unset while it rolls.
+   */
+  parkedRoller?: boolean | undefined;
 }
 
 /**
@@ -668,18 +690,42 @@ export function drawPotholeHall(g: G, camX: number, viewW: number, viewH = 420, 
   const time = num(look.time ?? 0);
   const still = look.still === true;
   const doors = clamp01(look.doors ?? 0);
-  if (!blitLayer(g, backLayer, `phall|${bottom}`, x0, TOP, w, bottom - TOP, (cg) => paintBack(cg, x0, bottom))) {
-    g.save();
-    g.translate(x0, TOP);
-    paintBack(g, x0, bottom);
-    g.restore();
-  }
-  if (doors > 0) drawOutside(g, look.gateLit === true, time, still, look.rollOut ?? -1);
-  drawRightDoors(g, doors);
   const lamps = look.lamps ?? [];
   const on = H.lamps.filter((_, i) => (lamps[i] ?? -1) >= 0).length;
   const dim = 0.3 * (1 - on / H.lamps.length);
-  if (dim > 0.001) {
+  const back = (cg: G): void => paintBack(cg, x0, bottom);
+  const parked = look.parkedRoller === true;
+  // Perf (qa O2): the whole fight, the doors shut and every lamp off, is one copy of a layer that
+  // already holds the shut doors and the dark, not a full-screen see-through fill each frame.
+  let darkDone = false;
+  if (doors === 0 && on === 0) {
+    // The lit back is baked now as well (it is drawn over at once), so the finish never bakes it.
+    if (!backLayer.layer) blitLayer(g, backLayer, `phall|${bottom}`, x0, TOP, w, bottom - TOP, back);
+    const dark = (cg: G): void => {
+      back(cg);
+      cg.save();
+      cg.translate(-x0, -TOP);
+      drawRightDoors(cg, 0);
+      cg.globalAlpha = dim;
+      cg.fillStyle = PH.dim;
+      cg.fillRect(H.wallL, TOP, H.wallR - H.wallL, H.apronY - TOP);
+      cg.globalAlpha = 1;
+      if (parked) drawRoller(cg, H.rollerX, H.floorY);
+      cg.restore();
+    };
+    darkDone = blitLayer(g, darkLayer, `phdark|${bottom}|${parked ? 'r' : ''}`, x0, TOP, w, bottom - TOP, dark);
+  }
+  if (!darkDone && !blitLayer(g, backLayer, `phall|${bottom}`, x0, TOP, w, bottom - TOP, back)) {
+    g.save();
+    g.translate(x0, TOP);
+    back(g);
+    g.restore();
+  }
+  if (doors > 0) drawOutside(g, look.gateLit === true, time, still, look.rollOut ?? -1);
+  if (!darkDone) drawRightDoors(g, doors);
+  if (darkDone) {
+    // The shut doors, the dark and the parked roller are in the layer.
+  } else if (dim > 0.001) {
     g.globalAlpha = dim;
     g.fillStyle = PH.dim;
     g.fillRect(H.wallL, TOP, H.wallR - H.wallL, H.apronY - TOP);
@@ -690,6 +736,7 @@ export function drawPotholeHall(g: G, camX: number, viewW: number, viewH = 420, 
     g.fillRect(H.wallL, TOP, H.wallR - H.wallL, H.apronY - TOP);
     g.globalAlpha = 1;
   }
+  if (parked && !darkDone) drawRoller(g, H.rollerX, H.floorY);
   H.lamps.forEach((x, i) => {
     const age = lamps[i] ?? -1;
     if (Number.isFinite(age) && age >= 0) drawLitLamp(g, x, age);

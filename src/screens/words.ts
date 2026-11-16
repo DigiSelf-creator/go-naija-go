@@ -639,27 +639,13 @@ export const OGUN_WORDS = {
     parcel: 'Your Ijebu garri parcel is saved for Pothole Hall.',
     toHall: 'Go to Pothole Hall',
   },
-  /** Part 5: Pothole Hall. */
+  /**
+   * Part 5: Pothole Hall. Only what the first load shows; the hall's own words (and Ogun's
+   * bubbles, part 7) are in src/worlds/ogun/partWords.ts, in the lazy Ogun part (qa O2: size).
+   */
   hall: {
     name: 'Pothole Hall',
-    /** Painted over the left door, and the tag on the bag. */
-    sign: 'POTHOLE HALL',
-    bagTag: 'READY',
-    parcelShield: 'Your Ijebu garri parcel: the shield is on!',
-    start: 'King Pothole is blocking the gateway!',
-    /** First try only. */
-    pickUp: 'Pick up the road mix bag.',
-    jumpOver: 'Jump over King Pothole to drop it in.',
-    /** "Plop! 2 more bags." / "Plop! 1 more bag." */
-    plop: (left: number) => `Plop! ${left} more ${left === 1 ? 'bag' : 'bags'}.`,
-    /** Before phase 3. */
-    cross: "He's cross! Two gravel lumps now. Jump them both.",
-    smooth: 'The road is smooth!',
     open: 'The gateway is open! Ogun is switched on!',
-    /** The hit counter's spoken words. */
-    bagsSpoken: (n: number) => `Bags in: ${n} of 3.`,
-    /** King Pothole's own bubbles (he is a pothole, never a person). */
-    pothole: { bump: 'Hmph!', hit: 'Oof... hm!', giggle: 'Hee hee, that tickles!' },
   },
   /** Part 5.5: the Win screen after Pothole Hall (the money line is the Lagos one). */
   win: {
@@ -668,23 +654,6 @@ export const OGUN_WORDS = {
     takeHome: 'Take it home',
     /** The money line, as Lagos's cards: "You got ₦15." */
     money: (kobo: number) => `You got ${formatMoney(kobo)}.`,
-  },
-  /**
-   * Part 7: Ogun's bubbles, split by language as WORDS.folk (decision 30). Greetings and cheers
-   * are the Lagos ones. Each line is checked by a speaker before it ships.
-   */
-  folk: {
-    /** By the arch on Ota. */
-    welcome: { en: ['Welcome!'], pcm: ['You don land!'], yo: ['Ẹ káàbọ̀!'], ha: ['Barka da zuwa!'], ig: ['Nnọọ!'] },
-    traders: {
-      ota: ['Ofada rice dey!', 'Fresh bread!', 'Recharge card dey!'],
-      abeokuta: ['Fine adire!', 'New cloth!', 'Ofada, hot!'],
-      sagamu: ['Fresh kola!', 'Garri Ijebu!', 'Ikokore, hot!'],
-    },
-    /** The well room's store keeper as the hero takes the parcel. */
-    storeKeeper: 'For Pothole Hall. Go well!',
-    /** The plain spelling, if a phone shows a tone mark as a box. */
-    plain: { 'Ẹ káàbọ̀!': 'E kaabo!', 'Nnọọ!': 'Nnoo!' } as Readonly<Record<string, string>>,
   },
 } as const;
 

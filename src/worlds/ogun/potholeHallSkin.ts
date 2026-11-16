@@ -16,7 +16,7 @@ import { drawBubble, drawFolkFrame, FOLK_BOX, type FolkFrame } from '../../art/f
 import { INK, WHITE } from '../../art/palette';
 import type { SkinEvent, SkinNow, StreetSkin } from '../../game/skin';
 import { WORDS } from '../../screens/words';
-import { OGUN_WORDS } from '../../screens/words';
+import { OGUN_WORDS } from './partWords';
 import {
   CROWN_CONES,
   HALL_CHEER_SPOTS,
@@ -189,8 +189,9 @@ export function potholeHallSkin(): StreetSkin {
       const fin = f.defeated ? potholeFinishAt(f.finishT, f.pitX, POTHOLE_FILL[2], still) : null;
       // O6b: the danfo and the tipper roll out once the doors are open (ogun.md part 7).
       const rollOut = f.defeated ? f.finishT - POTHOLE_FINISH.doorsFrom - POTHOLE_FINISH.doorsSwing : -1;
-      drawPotholeHall(g, camX, viewW, H, fin ? { lamps: fin.lamps, doors: fin.doors, gateLit: fin.gateLit, arrows: fin.smooth, rollOut, time: clock, still } : { time: clock, still });
-      drawRoller(g, fin ? fin.roller.x : POT_HALL.rollerX, gy, fin ? fin.roller : {});
+      // Before the finish the parked roller is drawn with the hall's back (perf, qa O2).
+      drawPotholeHall(g, camX, viewW, H, fin ? { lamps: fin.lamps, doors: fin.doors, gateLit: fin.gateLit, arrows: fin.smooth, rollOut, time: clock, still } : { time: clock, still, parkedRoller: true });
+      if (fin) drawRoller(g, fin.roller.x, gy, fin.roller);
       // The door people, unless the people are switched off (a fault, as in Go-Slow Hall). CO1: their cost is kept for qa.
       if (s.people?.on !== false) {
         const t0 = performance.now();

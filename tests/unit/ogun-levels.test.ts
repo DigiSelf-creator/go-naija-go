@@ -11,7 +11,8 @@ import ogunWell from '../../src/data/levels/ogun-well.json';
 import { parseLevel } from '../../src/game/level';
 import { RULES, STEPS_PER_SECOND } from '../../src/game/run';
 import { parseRoom } from '../../src/game/well';
-import { OGUN_WORDS, SHORT_AT, SHORT_TOAST, hintWords } from '../../src/screens/words';
+import { SHORT_AT, SHORT_TOAST, hintWords } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 import { OGUN_FOODS, playableOgun } from './ogun-level-data';
 
 type Raw = typeof ogun1 & { mud: number[][]; arch?: number; cracks?: number[][]; rocks?: number[][]; waterPits?: number[] };

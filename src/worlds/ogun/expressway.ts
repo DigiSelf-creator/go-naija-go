@@ -22,7 +22,7 @@ import { LANE_BOXES, bakeLaneThings, drawLaneAt, drawLaneThing, hazardFrame, lan
 import { drawFoodIcon } from '../../art/items';
 import { drawFolkBust, drawFolkFrame, type FolkFrame, type FolkLook } from '../../art/folk';
 import { FRONT_TILE, type FrontWindow } from '../../art/folkLane';
-import { drawMiniArch } from '../../art/gateway';
+import { drawMiniArch } from '../../art/gatewayRoad';
 import { WHITE } from '../../art/palette';
 import { OTA_CAST } from './ota';
 import { SAGAMU_CAST, SAGAMU_TRADER_LOOKS } from './sagamu';
@@ -512,7 +512,7 @@ export { FRONT_TILE };
 export const EXPRESSWAY_STOP_BOX: UBox = { l: -104, r: 130, t: -150, b: 6 };
 
 /**
- * The bus stop goal under a small copy of the gateway arch (gateway.ts's drawMiniArch: faded,
+ * The bus stop goal under a small copy of the gateway arch (gatewayRoad.ts's drawMiniArch: faded,
  * then bright once reached): a shelter with a bench and people (one waving), a plain stop sign
  * with a bus picture, and a danfo waiting at the kerb. Lane units, ground centre at the origin;
  * place it on the right verge. `bright`: the goal is reached.

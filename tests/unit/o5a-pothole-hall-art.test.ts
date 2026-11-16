@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import hallFile from '../../src/data/levels/ogun-hall.json';
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, heroHeadTop, type HeroPose } from '../../src/art/hero';
-import { OGUN_WORDS } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 import { noteNumber, trackEvents } from '../../src/engine/music';
 import { boundsContext } from './bounds-context';
 import {
@@ -17,6 +17,7 @@ import {
   HALL_DOOR_PEOPLE,
   POTHOLE_FILL,
   POTHOLE_FINISH,
+  ROLL_OUT,
   POTHOLE_HALL_TUNE,
   POTHOLE_SOUNDS,
   POT_BAG_TAG,
@@ -37,6 +38,7 @@ import {
   drawRoadMixPile,
   drawRoller,
   potholeFinishAt,
+  rollerFinishX,
   potholeLampTimes,
   type PotholeMood,
 } from '../../src/worlds/ogun/hall';
@@ -98,7 +100,24 @@ describe('O5a Pothole Hall art', () => {
     expect(at(1.79).roller.x).toBe(POT_HALL.rollerX);
     expect(at(2.4).roller.x).toBeLessThan(300);
     expect(at(2.5).roller.toot).toBeGreaterThan(0);
-    expect(at(3.3).roller.x).toBe(POT_HALL.rollerX);
+    // QA-O2-2: it parks on the new patch, clear of the right doors (the roll-out shows whole).
+    expect(at(3.3).roller.x).toBe(300);
+    expect(at(5.9).roller.x).toBe(300);
+    for (const pitX of [POT_HALL.track[0], 300, POT_HALL.track[1], 999]) {
+      const x = potholeFinishAt(5, pitX).roller.x;
+      expect(x).toBe(rollerFinishX(pitX));
+      expect(x + 26, `pit at ${pitX}`).toBeLessThan(POT_HALL.rightDoors.x0);
+      // The cone line (his right lip + 12) stays clear of the parked roller's back end.
+      if (pitX <= POT_HALL.track[1]) expect(x + 26).toBeLessThan(pitX + POT_HALL.pitW / 2 + 12);
+    }
+    // QA-O2-2: just before the Win screen the danfo and the tipper (their middles) are both in the doorway.
+    const t = POTHOLE_FINISH.winScreen - 0.05 - POTHOLE_FINISH.doorsFrom - POTHOLE_FINISH.doorsSwing;
+    const danfo = POT_HALL.rightDoors.x0 + ROLL_OUT.from + t * ROLL_OUT.speed;
+    const tipper = danfo - ROLL_OUT.gap * ROLL_OUT.speed;
+    for (const x of [danfo, tipper]) {
+      expect(x).toBeGreaterThan(POT_HALL.rightDoors.x0);
+      expect(x).toBeLessThan(POT_HALL.rightDoors.x1);
+    }
     const lamps = potholeLampTimes();
     expect(lamps).toHaveLength(8);
     expect(lamps[0]).toBe(3);

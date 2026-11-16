@@ -4,7 +4,7 @@
  * sounds are short and soft, and every piece draws with good numbers, still or moving.
  */
 import { describe, expect, it } from 'vitest';
-import { OGUN_WORDS } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 import { isTrader } from '../../src/game/crowd';
 import { POTHOLE, POTHOLE_RIM, ROAD } from '../../src/art/palette';
 import { ABK } from '../../src/worlds/ogun/abeokuta';
