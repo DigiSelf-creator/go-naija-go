@@ -59,9 +59,11 @@ export class UpdateState {
 /**
  * Decision 68: an attempt is on while a street, the well room, Go-Slow Hall or a lane run is being
  * played, and also while it is paused: one tap on the banner reloads the page, which would quietly
- * throw the attempt away. `screen` is the menu card showing (null: none, the run itself).
+ * throw the attempt away. The bus ride to or from Ogun counts as well. `screen` is the menu card showing (null: none, the run itself).
  */
 export function inAttempt(running: boolean, screen: string | null): boolean {
+  // O1c-4: the bus ride counts too: `where` is saved only when it ends.
+  if (screen === 'ride') return true;
   return running && (screen === null || screen === 'pause');
 }
 

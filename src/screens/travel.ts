@@ -48,7 +48,8 @@ export const boomShown = (points: number): number => Math.max(0, Math.min(20, Ma
 
 /** A card on a dim layer. Escape runs `out`. */
 function layer(card: HTMLElement, out: () => void): HTMLElement {
-  const dim = h('div', { class: 'travel-dim' }, card);
+  // tabindex -1: with no button showing ("Downloading Ogun..."), focus stays here so Escape still closes it.
+  const dim = h('div', { class: 'travel-dim', tabindex: '-1' }, card);
   dim.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     e.preventDefault();
@@ -60,7 +61,7 @@ function layer(card: HTMLElement, out: () => void): HTMLElement {
 
 /** Focus the card's first big button once it is in the page. */
 export function focusCard(dim: HTMLElement): void {
-  dim.querySelector<HTMLElement>('.go, button')?.focus({ preventScroll: true });
+  (dim.querySelector<HTMLElement>('.go, button') ?? dim).focus({ preventScroll: true });
 }
 
 /** ogun.md 1.5: "Where to?" with a big button per open state. */

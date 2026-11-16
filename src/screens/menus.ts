@@ -546,14 +546,16 @@ export class Menus {
     const from = this.screen;
     const load = async (card: DownloadCard | null): Promise<void> => {
       const r = await this.hooks.loadWorld('ogun');
-      if (this.screen !== from) return;
+      // The player left first (another screen, or the card closed by Escape, "Not now" or back):
+      // do nothing more. The part may stay on the phone for next time.
+      if (this.screen !== from || (card && this.overlay !== card.el)) return;
       if (r.ok && r.part.ui) {
         this.closeOverlay();
         then(r.part.ui);
         return;
       }
       const message = r.ok ? WORLD_PART_WORDS.broken : r.message;
-      if (card && this.overlay === card.el) card.step(message === OGUN_WORDS.download.noNet ? 'noNet' : 'broken', message);
+      if (card) card.step(message === OGUN_WORDS.download.noNet ? 'noNet' : 'broken', message);
       else this.openOverlay(noticeCard(message, () => this.closeOverlay()));
     };
     // The store app has the part inside; a web player who already downloaded it is not asked again.

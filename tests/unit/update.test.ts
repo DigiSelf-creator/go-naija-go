@@ -98,6 +98,12 @@ describe('U1 bannerShows (decision 68)', () => {
     expect(bannerShows(true, inAttempt(true, 'pause'))).toBe(false);
   });
 
+  it('the bus ride to or from Ogun counts as an attempt: a reload there would lose where you are going (O1c-4)', () => {
+    expect(inAttempt(false, 'ride')).toBe(true);
+    expect(bannerShows(true, inAttempt(false, 'ride'))).toBe(false);
+    expect(bannerShows(true, inAttempt(false, 'ogun'))).toBe(true);
+  });
+
   it('the result cards and the menus are not an attempt', () => {
     for (const card of ['gameover', 'cleared', 'win']) expect(bannerShows(true, inAttempt(true, card))).toBe(true);
     for (const screen of ['title', 'road', 'city', 'wheel', 'settings', 'builder', 'intro', null]) expect(bannerShows(true, inAttempt(false, screen))).toBe(true);

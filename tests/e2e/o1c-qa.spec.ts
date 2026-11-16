@@ -178,9 +178,8 @@ test.describe('O1c on the web, no service worker', () => {
   });
 
   test('o1c: leaving while Ogun downloads (Escape on "Downloading Ogun...") starts no bus ride later', async ({ page }) => {
-    // Game bug O1c-1: withOgun() goes on to the ride after the card was closed (menus.ts withOgun:
+    // Game bug O1c-1 (fixed): withOgun() went on to the ride after the card was closed (menus.ts withOgun:
     // the success path checks only `this.screen !== from`, not that the card is still open).
-    test.fail(true, 'O1c-1: the ride starts after the player left the download card');
     const errors = errorsOf(page);
     await open(page, HALL_WON);
     await page.route(/\/worlds\/ogun\//, async (route) => {
@@ -331,9 +330,8 @@ test.describe('O1c on the web, no service worker', () => {
   });
 
   test('o1c: Android back on the download card opened from the road presses "Not now", not the road\'s own button', async ({ page }) => {
-    // Game bug O1c-2: the road's "To Ogun" card stays open under the download card, so the back
+    // Game bug O1c-2 (fixed): the road's "To Ogun" card stays open under the download card, so the back
     // table (cardOut: Back, Not now, OK, Let's go) finds that card's "Back" first.
-    test.fail(true, 'O1c-2: Android back presses the hidden road card\'s Back, not "Not now"');
     await open(page, HALL_WON);
     await lagos(page).getByRole('button', { name: 'Challenge road' }).tap();
     const road = page.getByRole('region', { name: 'Challenge road' });
@@ -378,9 +376,8 @@ test.describe('O1c on the web, no service worker', () => {
   });
 
   test("o1c: Ogun's place keeps 24 px safe edges at 320 x 240", async ({ page }) => {
-    // Game bug O1c-5: .ogun-words (with O2b's "Play Ota") is 90% wide and centred, not inside
+    // Game bug O1c-5 (fixed): .ogun-words (with O2b's "Play Ota") is 90% wide and centred, not inside
     // --safe-left / --safe-right, so at 320 x 240 with 24 px edges its button starts at x = 16.
-    test.fail(true, "O1c-5: Ogun's place words box ignores the safe edges");
     await open(page, ARRIVED, { 'gidi-busRide': 'false' });
     await travel(page, 'lagos', 'ogun');
     await downloadIfAsked(page);

@@ -2735,6 +2735,9 @@ body.lane {
   padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 8px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 8px);
   background: rgba(10, 8, 30, 0.55);
 }
+.travel-dim:focus {
+  outline: none;
+}
 .travel-card {
   max-height: 100%;
   overflow: auto;
@@ -2865,10 +2868,12 @@ body.lane {
 }
 .ogun-words {
   position: absolute;
-  left: 50%;
+  /* Inside the safe edges like the top and bottom rows (O1c-5), centred, at most 460 px. */
+  left: calc(var(--safe-left) + 6px);
+  right: calc(var(--safe-right) + 6px);
   top: calc(var(--safe-top) + 56px);
-  transform: translateX(-50%);
-  width: min(90%, 460px);
+  max-width: 460px;
+  margin: 0 auto;
   padding: 4px 12px;
   border-radius: 10px;
   background: rgba(255, 250, 240, 0.94);
@@ -2886,4 +2891,77 @@ body.lane {
 }
 body.has-update .screen.full .ogun-screen {
   top: calc(max(4px, var(--safe-top)) + 52px);
+}
+/* Short screens (320 x 240, 640 x 200): every button shows with no scroll. Tighter spacing, the
+   download card's two buttons side by side, and the Travel card's Back beside its heading. */
+@media (max-height: 320px) {
+  .card.travel-card {
+    padding: 8px 12px;
+  }
+  .screen .travel-card h2 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+  }
+  .travel-card p {
+    margin: 2px 0;
+  }
+  .travel-card .actions {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .travel-card .actions .go {
+    flex: 1;
+    width: auto;
+    min-height: 48px;
+    margin: 4px 0 0;
+  }
+  .travel-card .actions .minor {
+    margin-top: 4px;
+  }
+  .travel-card:has(.travel-places) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 8px;
+  }
+  .travel-card:has(.travel-places) .travel-places {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 6px;
+  }
+  .travel-card:has(.travel-places) .actions .minor {
+    margin-top: 0;
+  }
+  /* The name and how it is booming on one line. */
+  .travel-place {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 10px;
+    min-height: 52px;
+    padding: 4px 10px;
+  }
+  /* Ogun's place: the words beside "Play Ota", so they stay between the top and bottom rows. */
+  .ogun-words {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 8px;
+    padding: 4px 8px;
+    font-size: 13px;
+    line-height: 1.25;
+    text-align: left;
+  }
+  .ogun-words p {
+    grid-column: 1;
+    margin: 2px 0;
+  }
+  .ogun-words .go {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: auto;
+    min-height: 48px;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 1rem;
+  }
 }
