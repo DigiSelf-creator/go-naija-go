@@ -139,7 +139,8 @@ for (const done of [0, 1, 2, 3]) {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await openOgun(page, done);
-    await expect(page.locator('.ogun-play')).toHaveCount(Math.min(3, done + 1));
+    // O5b: once Sagamu is done, "Go to Pothole Hall" is the big button, so four in all.
+    await expect(page.locator('.ogun-play')).toHaveCount(done + 1);
     const found: string[] = [];
     await check(page, `Ogun's place (${done} done)`, found);
     // The Travel card opened from Ogun's place, at the same sizes.

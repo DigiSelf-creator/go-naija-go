@@ -99,9 +99,10 @@ test('qa O: Ota, Next street, Abeokuta, Next street, Sagamu by hand from Ogun\'s
   console.log(report.join('\n'));
   test.info().annotations.push({ type: 'chain', description: report.join(' | ') });
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('Sagamu is moving again. Pothole Hall is coming next.')).toBeVisible();
-  await expect(ogunPlace(page).getByRole('button', { name: 'Play Sagamu' })).toHaveClass(/\bgo\b/);
-  for (const b of ['Play Abeokuta', 'Play Ota']) await expect(ogunPlace(page).getByRole('button', { name: b })).toHaveClass(/minor/);
+  // O5b (OG-R18): Pothole Hall is open and is the big button; the three streets are small.
+  await expect(ogunPlace(page).getByText('Sagamu is moving again. Pothole Hall is open.')).toBeVisible();
+  await expect(ogunPlace(page).getByRole('button', { name: 'Go to Pothole Hall' })).toHaveClass(/\bgo\b/);
+  for (const b of ['Play Sagamu', 'Play Abeokuta', 'Play Ota']) await expect(ogunPlace(page).getByRole('button', { name: b })).toHaveClass(/minor/);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/oqa-ogun-place.png` });
   const s = await saved(page);
   expect(Object.keys(s.states?.ogun?.streets ?? {}).sort()).toEqual(['1', '2', '3']);
