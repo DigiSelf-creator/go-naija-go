@@ -42,6 +42,8 @@ import type { Tune } from '../../art/tunes';
 import { OGUN_WORDS } from '../../screens/words';
 import { drawMud, OTA_CAST } from './ota';
 import { SAGAMU_TRADER_LOOKS } from './sagamu';
+import { drawOgunTruck } from './city';
+import { drawDanfoSide } from '../../art/road';
 
 const TAU = Math.PI * 2;
 type G = CanvasRenderingContext2D;
@@ -551,8 +553,31 @@ const backLayer = { layer: null as PixelLayer | null };
 
 // ---------------------------------------------------------------- live layers
 
+/**
+ * O6b (ogun.md part 7): once the doors are open, a danfo and then a tipper roll out through them
+ * onto the expressway (seconds since they could go; none with reduced motion). Our own plain
+ * vehicles, no writing; the danfo's windows show its passengers' heads.
+ */
+export const ROLL_OUT = { speed: 70, gap: 1.1, from: -60 } as const;
+function drawRollOut(g: G, t: number): void {
+  const r = POT_HALL.rightDoors;
+  const fy = POT_HALL.floorY;
+  const x = r.x0 + ROLL_OUT.from + t * ROLL_OUT.speed;
+  if (x < r.x1 + 40) {
+    drawDanfoSide(g, x, fy - 8, false, 0.9);
+    g.fillStyle = '#5b3a22';
+    for (let k = 0; k < 3; k++) {
+      g.beginPath();
+      g.arc(x - 14.5 + k * 8, fy - 8 - 17 * 0.9 + 1, 1.8, 0, TAU);
+      g.fill();
+    }
+  }
+  const x2 = x - ROLL_OUT.gap * ROLL_OUT.speed;
+  if (x2 > r.x0 - 40 && x2 < r.x1 + 40) drawOgunTruck(g, x2, fy - 16, 'e', 'tipper');
+}
+
 /** The outside through the right doors: the expressway, and the gateway arch beyond (lit at the finish). */
-function drawOutside(g: G, lit: boolean, time: number, still: boolean): void {
+function drawOutside(g: G, lit: boolean, time: number, still: boolean, rollOut = -1): void {
   const r = POT_HALL.rightDoors;
   const fy = POT_HALL.floorY;
   g.save();
@@ -565,6 +590,7 @@ function drawOutside(g: G, lit: boolean, time: number, still: boolean): void {
   rect(g, r.x0, fy - 30, r.x1 - r.x0, 30, PH.outsideRoad);
   g.fillStyle = '#f4f1e6';
   for (let x = r.x0 + 4; x < r.x1; x += 24) g.fillRect(x, fy - 16, 12, 2);
+  if (!still && rollOut >= 0) drawRollOut(g, rollOut);
   g.restore();
 }
 
@@ -619,6 +645,8 @@ export interface PotholeHallLook {
   doors?: number | undefined;
   /** The gateway arch beyond is lit and its cog turns. */
   gateLit?: boolean | undefined;
+  /** O6b: seconds since the doors were open (the danfo and the tipper roll out); unset: none. */
+  rollOut?: number | undefined;
   /** Floor arrows lit, 0 to 1. */
   arrows?: number | undefined;
   time?: number | undefined;
@@ -646,7 +674,7 @@ export function drawPotholeHall(g: G, camX: number, viewW: number, viewH = 420, 
     paintBack(g, x0, bottom);
     g.restore();
   }
-  if (doors > 0) drawOutside(g, look.gateLit === true, time, still);
+  if (doors > 0) drawOutside(g, look.gateLit === true, time, still, look.rollOut ?? -1);
   drawRightDoors(g, doors);
   const lamps = look.lamps ?? [];
   const on = H.lamps.filter((_, i) => (lamps[i] ?? -1) >= 0).length;

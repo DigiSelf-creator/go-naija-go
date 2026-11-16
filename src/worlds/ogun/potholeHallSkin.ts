@@ -187,7 +187,9 @@ export function potholeHallSkin(): StreetSkin {
       const gy = POT_HALL.floorY;
       const t = still ? 0 : clock;
       const fin = f.defeated ? potholeFinishAt(f.finishT, f.pitX, POTHOLE_FILL[2], still) : null;
-      drawPotholeHall(g, camX, viewW, H, fin ? { lamps: fin.lamps, doors: fin.doors, gateLit: fin.gateLit, arrows: fin.smooth, time: clock, still } : { time: clock, still });
+      // O6b: the danfo and the tipper roll out once the doors are open (ogun.md part 7).
+      const rollOut = f.defeated ? f.finishT - POTHOLE_FINISH.doorsFrom - POTHOLE_FINISH.doorsSwing : -1;
+      drawPotholeHall(g, camX, viewW, H, fin ? { lamps: fin.lamps, doors: fin.doors, gateLit: fin.gateLit, arrows: fin.smooth, rollOut, time: clock, still } : { time: clock, still });
       drawRoller(g, fin ? fin.roller.x : POT_HALL.rollerX, gy, fin ? fin.roller : {});
       // The door people, unless the people are switched off (a fault, as in Go-Slow Hall). CO1: their cost is kept for qa.
       if (s.people?.on !== false) {
