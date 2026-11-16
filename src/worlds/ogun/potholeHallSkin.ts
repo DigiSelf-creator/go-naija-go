@@ -42,7 +42,7 @@ import {
   potholeFinishAt,
   type PotholeMood,
 } from './hall';
-import type { PotholeFight } from './potholeFight';
+import { DOOR_COST, type PotholeFight } from './potholeFight';
 import { drawGravelNow, SAGAMU_LOOK } from './sagamuStreet';
 import { drawGravelCrumble, drawGravelDust } from './sagamu';
 import { STEPS } from './ogunLook';
@@ -104,23 +104,29 @@ class DoorSprites {
   /** Draws person i's frame with the feet at device pixel (x, y). */
   draw(g: G, i: number, frame: FolkFrame, x: number, y: number, px: number): void {
     if (Math.abs(px - this.px) > 0.01) {
+      // A new screen scale: every frame of all three is baked now, so the finish never bakes.
       this.cells.clear();
       this.px = px;
+      HALL_DOOR_PEOPLE.forEach((_, k) => DOOR_FRAMES.forEach((f) => this.cells.set(`${k}:${f}`, this.bake(k, f))));
     }
-    const key = `${i}:${frame}`;
-    let c = this.cells.get(key);
-    if (!c) {
-      c = document.createElement('canvas');
-      c.width = Math.ceil((FOLK_BOX.r - FOLK_BOX.l) * px) + 2;
-      c.height = Math.ceil((FOLK_BOX.b - FOLK_BOX.t) * px) + 2;
-      const cg = c.getContext('2d')!;
-      cg.setTransform(px, 0, 0, px, 1 - FOLK_BOX.l * px, 1 - FOLK_BOX.t * px);
-      drawFolkFrame(cg, HALL_DOOR_PEOPLE[i]!, frame);
-      this.cells.set(key, c);
-    }
+    const c = this.cells.get(`${i}:${frame}`) ?? this.bake(i, frame);
     g.drawImage(c, Math.round(x - 1 + FOLK_BOX.l * px), Math.round(y - 1 + FOLK_BOX.t * px));
   }
+
+  private bake(i: number, frame: FolkFrame): HTMLCanvasElement {
+    const px = this.px;
+    const c = document.createElement('canvas');
+    c.width = Math.ceil((FOLK_BOX.r - FOLK_BOX.l) * px) + 2;
+    c.height = Math.ceil((FOLK_BOX.b - FOLK_BOX.t) * px) + 2;
+    const cg = c.getContext('2d')!;
+    cg.setTransform(px, 0, 0, px, 1 - FOLK_BOX.l * px, 1 - FOLK_BOX.t * px);
+    drawFolkFrame(cg, HALL_DOOR_PEOPLE[i]!, frame);
+    return c;
+  }
 }
+
+/** The door people's frames: standing, cheering and walking in. */
+const DOOR_FRAMES: readonly FolkFrame[] = ['stand', 'cheer0', 'cheer1', 'walk0', 'walk1', 'walk2', 'walk3'];
 
 /** A fresh Pothole Hall look for one try. */
 export function potholeHallSkin(): StreetSkin {
@@ -183,7 +189,16 @@ export function potholeHallSkin(): StreetSkin {
       const fin = f.defeated ? potholeFinishAt(f.finishT, f.pitX, POTHOLE_FILL[2], still) : null;
       drawPotholeHall(g, camX, viewW, H, fin ? { lamps: fin.lamps, doors: fin.doors, gateLit: fin.gateLit, arrows: fin.smooth, time: clock, still } : { time: clock, still });
       drawRoller(g, fin ? fin.roller.x : POT_HALL.rollerX, gy, fin ? fin.roller : {});
-      doorPeople(g, f, clock, still);
+      // The door people, unless the people are switched off (a fault, as in Go-Slow Hall). CO1: their cost is kept for qa.
+      if (s.people?.on !== false) {
+        const t0 = performance.now();
+        doorPeople(g, f, clock, still);
+        const ms = performance.now() - t0;
+        const c = DOOR_COST;
+        c.frames++;
+        c.avg += (ms - c.avg) / Math.min(c.frames, 120);
+        if (c.frames > 30) c.max = Math.max(c.max, ms);
+      }
       drawRoadMixPile(g, f.bagReady, gy);
       // King Pothole: fuller with each bag; his cones fall one by one.
       const hits = f.hits;

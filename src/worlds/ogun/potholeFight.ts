@@ -160,6 +160,11 @@ export const POTHOLE_RULES = {
   bumpLook: 0.6,
   /** First try only: the bag hint shows this long after the start words. */
   pickUpAfter: secs(3),
+  /**
+   * Gentle mode: the hero climbs out on his left side this far from his left lip, clear of where
+   * his next gravel lump comes out (its box reaches 19 u from his lip), with room to run at him.
+   */
+  climbBack: 40,
   /** Words on the hint bar, ms. */
   toastMs: 3000,
   hintMs: 3500,
@@ -178,6 +183,12 @@ export interface MudSplat {
   readonly at: number;
   readonly until: number;
 }
+
+/**
+ * CO1 for qa: what the hall's door people cost to draw, ms a frame (running average and the
+ * longest), filled by the hall's look (potholeHallSkin.ts), shown in peek().
+ */
+export const DOOR_COST = { avg: 0, max: 0, frames: 0 };
 
 /** The hint bar's first-try hints show once a visit (ogun.md 5.4: "once only on the first try"). */
 let triesThisVisit = 0;
@@ -291,7 +302,13 @@ export class PotholeFight implements ArenaRules {
     // ogun.md 5.4, t = 0: the parcel's shield words first, then his; on the first try, the bag hint.
     if (s === 1) this.cue(ev, { sound: 'arena', say: run.parcelShield ? W.parcelShield : W.start, ms: R.toastMs });
     if (run.parcelShield && s === this.startAt) this.cue(ev, { say: W.start, ms: R.toastMs });
+    // The bag hints wait for his words to finish: "Pick up..." if no bag is carried yet, then
+    // "Jump over..." once one is (both once, first try only).
     if (this.firstTry && s === this.startAt + R.pickUpAfter && !this.carrying && this.hits === 0) this.cue(ev, { say: W.pickUp, ms: R.hintMs });
+    if (this.firstTry && !this.jumpHintShown && this.carrying && this.hits === 0 && s >= this.startAt + R.pickUpAfter) {
+      this.jumpHintShown = true;
+      this.cue(ev, { say: W.jumpOver, ms: R.hintMs });
+    }
     run.tickPower(ev);
 
     const h = run.hero;
@@ -351,10 +368,6 @@ export class PotholeFight implements ArenaRules {
       if (r >= d.bag.x - R.bagHalfW && l <= d.bag.x + R.bagHalfW && h.y >= d.groundY - R.bagH && h.y - RULES.heroH <= d.groundY) {
         this.carrying = true;
         this.cue(ev, { sound: 'bagLift' });
-        if (this.firstTry && !this.jumpHintShown) {
-          this.jumpHintShown = true;
-          this.cue(ev, { say: OGUN_WORDS.hall.jumpOver, ms: R.hintMs });
-        }
       }
       return;
     }
@@ -550,7 +563,7 @@ export class PotholeFight implements ArenaRules {
     run.fall(ev);
     if (run.phase !== 'arena') return;
     if (run.gentle) {
-      const x = Math.max(d.leftLimit, this.lips[0] - RULES.heroHalfW - d.pit.bumpGap - 1);
+      const x = Math.max(d.leftLimit, this.lips[0] - POTHOLE_RULES.climbBack);
       const { down, move } = run.hero;
       run.hero = run.newHero(x);
       run.hero.down = down;
@@ -590,6 +603,7 @@ export class PotholeFight implements ArenaRules {
   peek(): Record<string, unknown> {
     return {
       kind: 'king-pothole',
+      doorMs: { ...DOOR_COST },
       pitX: this.pitX,
       lips: this.lips,
       dir: this.dir,
@@ -603,6 +617,10 @@ export class PotholeFight implements ArenaRules {
       gulp: this.gulp,
       blobs: this.blobs.map((b) => ({ ...this.blobAt(b), to: b.x1 })),
       mud: this.splats.map((q) => ({ ...q.m })),
+      gravel: this.run.hazards.filter((z) => z.mode === 'move').map((z) => ({ x: z.x, y: z.y, vx: z.vx })),
+      lives: this.run.lives,
+      time: this.run.time,
+      runPhase: this.run.phase,
     };
   }
 }

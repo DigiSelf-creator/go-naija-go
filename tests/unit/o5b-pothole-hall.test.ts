@@ -118,6 +118,7 @@ describe('ogun.md 5.6: the hall file', () => {
     steps(p, POTHOLE_RULES.pickUpAfter + 1);
     expect(cues(p.ev).some((c) => c.say === OGUN_WORDS.hall.pickUp)).toBe(true);
     pickUp(p);
+    steps(p, 1);
     expect(cues(p.ev).some((c) => c.say === OGUN_WORDS.hall.jumpOver)).toBe(true);
     expect(cues(p.ev).some((c) => c.sound === 'bagLift')).toBe(true);
   });
