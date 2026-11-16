@@ -5,6 +5,8 @@
  */
 import type { HeroLook } from '../art/hero';
 import type { Tune } from '../art/tunes';
+import type { CityLife } from '../game/cityLife';
+import type { StateCity } from '../game/states';
 
 export interface RideOptions {
   look: HeroLook;
@@ -32,4 +34,38 @@ export interface WorldUi {
   paintHome(c: HTMLCanvasElement, o: { lit: boolean }): void;
   /** The welcome tune (about 1.5 s, our own). */
   readonly tune: Tune;
+}
+
+/** O6b: what a state's city screen (Ogun from above) is given by the first load. */
+export interface WorldCityHooks {
+  /** The live Lagos city: it holds the one wallet (decision 80) and its tick fills every state's trays. */
+  life: CityLife;
+  /** This state's own city part (fixes, trays, Booming meter), never the wallet. */
+  own: StateCity;
+  look(): HeroLook;
+  /** Buttons for the top right (Sound, Settings) and the bottom row (Challenge road, Travel, Hero, wheel). */
+  topRight: HTMLElement[];
+  bottom: HTMLElement[];
+  /** A problem card's challenge (Ota for the road; the Expressway for Power and Tech). */
+  run(spot: 'potholes' | 'dryTaps' | 'lightsOut' | 'slowInternet', e: MouseEvent): void;
+  /** A problem card's "See the stop": the state's challenge road on that stop. */
+  seeStop?(spot: string): void;
+  ignoreTap(e: MouseEvent): boolean;
+  sound(name: string): void;
+  gentle(): boolean;
+  still(): boolean;
+  touch(): boolean;
+  /** The state's cog already turns on Nigeria's wheel (the boom card then has no cog line). */
+  cogOn(): boolean;
+  /** A line to show as the screen opens ("You brought N12 home."), or null. */
+  line: string | null;
+}
+
+export interface WorldCity {
+  el: HTMLElement;
+  /** Once the screen is in the page. */
+  start(): void;
+  close(): void;
+  /** Map draws so far (tests: a still city draws nothing). */
+  readonly draws: number;
 }
