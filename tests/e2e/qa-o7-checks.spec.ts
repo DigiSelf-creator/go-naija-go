@@ -312,10 +312,9 @@ test('qa O7 OG-R41 (QA-O7-1, fixed): Pothole Hall\'s road card picture is spoken
   expect(spoken).toBe('Pothole Hall, with its road cones.');
 });
 
-// ---------- QA-O7-2 (open, shared with Lagos) ----------
+// ---------- QA-O7-2 (fixed, shared with Lagos) ----------
 for (const where of ['lagos', 'ogun'] as const) {
-  test(`qa O7 QA-O7-2 (open bug, shared with Lagos): ${where}'s side road card fits 640 x 200 whole, its buttons in view with no scroll`, async ({ page }) => {
-    test.fail(true, 'QA-O7-2: at 640 x 200 the side road card is taller than the room (Lagos 190 in 184 px, Ogun 198 in 184; with 24 px edges 136 px and the buttons are scrolled out of sight)');
+  test(`qa O7 QA-O7-2 (fixed, shared with Lagos): ${where}'s side road card fits 640 x 200 whole, its buttons in view with no scroll`, async ({ page }) => {
     const errors = errorsOf(page);
     const city = { kobo: 5000, power: 3, tech: 1, fixed: ['potholes'], fixes: 1, built: ['buka'], trays: {}, boom: 8, hints: ['walk', 'bright', 'buka', 'collect', 'road', 'tax'] };
     await openWith(page, JSON.stringify({ v: 2, states: { lagos: { streets: STREETS, parcel: false, hall: HALL }, ogun: { arrived: true, streets: STREETS, hall: HALL } }, city, lane: { best: 700, goals: 1 }, where }), { 'gidi-busRide': 'false' });

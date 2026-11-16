@@ -92,7 +92,16 @@ const tappable = (page: Page) =>
           const r = b.getBoundingClientRect();
           return { t: (b.textContent ?? '').trim() || b.getAttribute('aria-label') || '?', x: r.x, y: r.y, w: r.width, h: r.height };
         }),
-      scroll: card && !card.classList.contains('city-card') ? card.scrollHeight > card.clientHeight + 1 : false,
+      // QA-O7-2: a card on a short screen may scroll its words only while all its buttons stay in view.
+      scroll:
+        card && !card.classList.contains('city-card')
+          ? card.scrollHeight > card.clientHeight + 1 &&
+            [...card.querySelectorAll('button')].some((b) => {
+              const r = b.getBoundingClientRect();
+              const c = card.getBoundingClientRect();
+              return r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5;
+            })
+          : false,
     };
   });
 /** Checks the screen at every size and safe edge: buttons 44 px, inside the edges, apart; no sideways scroll; no card scroll. */
@@ -449,14 +458,9 @@ test('qa O7: a new player\'s whole Ogun, by touch, from Lagos with Go-Slow Hall 
 
   console.log(log.join('\n'));
   test.info().annotations.push({ type: 'o7 journey', description: log.join(' | ') });
-  // QA-O7-2 (open, the card layout Lagos shares; its own test.fail in qa-o7-checks.spec.ts): on the
-  // shortest screens these cards are taller than the room and scroll, their buttons under the edge.
-  const KNOWN = /^(Pothole Hall win card|Ogun boom card|Expressway road card) (320x240 safe 24|640x200( safe 24)?):/;
-  const known = found.filter((f) => KNOWN.test(f));
-  const fresh = found.filter((f) => !KNOWN.test(f));
-  test.info().annotations.push({ type: 'QA-O7-2 (known)', description: known.join(' | ') || 'none' });
-  console.log(`size faults: ${fresh.length} new, ${known.length} known (QA-O7-2)\n  ${found.join('\n  ')}`);
-  expect.soft(fresh, 'every size fits').toEqual([]);
+  // QA-O7-2 (fixed): on the shortest screens these cards keep their buttons in view.
+  console.log(`size faults: ${found.length}\n  ${found.join('\n  ')}`);
+  expect.soft(found, 'every size fits').toEqual([]);
   expect(other, 'no request to any other site').toEqual([]);
   expect(errors).toEqual([]);
 });

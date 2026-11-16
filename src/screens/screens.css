@@ -935,6 +935,24 @@
     min-height: 44px;
   }
 }
+/* QA-O7-2: when a run's card or a city's boom card is still taller than a short screen (320 x 240
+   or 640 x 200 with safe edges), its words scroll and its buttons stay in view at the bottom. */
+@media (max-height: 300px) {
+  .card.event .actions,
+  .city-problem > .go:has(+ .minor-row:empty) {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+  }
+  .card.event .actions {
+    background: #fffaf0;
+    box-shadow: 0 6px 0 #fffaf0;
+  }
+  /* The boom card's only button: a ring the card's colour hides the words scrolled under it. */
+  .city-problem > .go:has(+ .minor-row:empty) {
+    box-shadow: 0 0 0 8px #fffaf0;
+  }
+}
 /* Short screens, game over: the gentle offer beside its switch, and "Play again", "Streets" and
    "Home" in one row (short words, so this fits 320 x 240 too). */
 @media (max-height: 300px) and (orientation: landscape) {
@@ -2689,6 +2707,36 @@ body.lane {
   }
   .screen .road-card p:first-child {
     font-size: 14px;
+  }
+}
+/* QA-O7-2: short screens (640 x 200; 320 x 240 with safe edges), Lagos and Ogun: a smaller
+   picture, and the words scroll inside the card while its two buttons always stay in view. */
+@media (max-height: 300px) {
+  .card.road-card {
+    display: flex;
+    flex-direction: column;
+  }
+  .screen .road-card h2 {
+    flex: none;
+    margin-bottom: 2px;
+    line-height: 20px;
+  }
+  .road-card-body {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .road-card-pic {
+    width: 96px;
+    height: 72px;
+  }
+  .road-card-row {
+    flex: none;
+    margin-top: 4px;
+  }
+  .road-card-row .go {
+    min-height: 44px;
+    padding: 4px 10px;
+    font-size: 1rem;
   }
 }
 @media (min-width: 1200px) and (min-height: 700px) {
