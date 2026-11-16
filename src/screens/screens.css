@@ -2895,8 +2895,12 @@ body.has-update .screen.full .ogun-screen {
 /* Short screens (320 x 240, 640 x 200): every button shows with no scroll. Tighter spacing, the
    download card's two buttons side by side, and the Travel card's Back beside its heading. */
 @media (max-height: 320px) {
+  /* QA-O-2: the safe edges are the margin; no extra 8 px on top of them. */
+  .travel-dim {
+    padding: calc(var(--safe-top) + 2px) calc(var(--safe-right) + 4px) calc(var(--safe-bottom) + 2px) calc(var(--safe-left) + 4px);
+  }
   .card.travel-card {
-    padding: 8px 12px;
+    padding: 6px 10px;
   }
   .screen .travel-card h2 {
     margin: 0 0 4px;
@@ -2940,28 +2944,75 @@ body.has-update .screen.full .ogun-screen {
     min-height: 52px;
     padding: 4px 10px;
   }
-  /* Ogun's place: the words beside "Play Ota", so they stay between the top and bottom rows. */
-  .ogun-words {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    column-gap: 8px;
+  /* Ogun's place (QA-O-1, QA-O-1b): a column inside the safe edges. The top row on one line, the
+     Travel row at the bottom, and the words with every Play button (up to five) in what is left
+     between them: the words first, the buttons beside and under them, sharing the width.
+     (.card.ogun-screen: above the small-screen .card:not(.hero-card) padding.) */
+  .card.ogun-screen {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: calc(var(--safe-top) + 2px) calc(var(--safe-right) + 4px) calc(var(--safe-bottom) + 2px) calc(var(--safe-left) + 4px);
+  }
+  .ogun-top,
+  .ogun-words,
+  .ogun-bottom {
+    position: relative;
+    inset: auto;
+    flex: none;
+  }
+  .ogun-top .minor-row {
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 0;
+  }
+  .ogun-top .minor,
+  .ogun-bottom .minor {
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
+  .ogun-bottom {
+    align-self: flex-start;
+    gap: 6px;
+  }
+  .screen .ogun-top h2 {
     padding: 4px 8px;
-    font-size: 13px;
-    line-height: 1.25;
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .ogun-words {
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 4px;
+    width: 100%;
+    max-width: 640px;
+    min-height: 0;
+    margin: auto;
+    padding: 2px 6px;
+    font-size: 12px;
+    line-height: 1.15;
     text-align: left;
   }
-  .ogun-words p {
-    grid-column: 1;
-    margin: 2px 0;
+  .ogun-lines {
+    flex: 1 1 140px;
+  }
+  .screen .ogun-words p {
+    margin: 0;
+    line-height: 1.15;
+  }
+  .ogun-words button {
+    flex: 1 1 4.5em;
+    min-width: min-content;
+    width: auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 2px 6px;
+    font-size: 13px;
+    line-height: 1.1;
   }
   .ogun-words .go {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    width: auto;
-    min-height: 48px;
-    margin: 0;
-    padding: 8px 12px;
-    font-size: 1rem;
+    flex: 2 1 7.5em;
   }
 }

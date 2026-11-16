@@ -129,13 +129,13 @@ async function openOgun(page: Page, done: number): Promise<void> {
 
 for (const done of [0, 1, 2, 3]) {
   test(`qa O: Ogun's place with ${done} street(s) cleared fits every size, nothing on the Travel row`, async ({ page }) => {
-    // Game bug QA-O-1b (open): at 320 x 240 with 24 px safe edges the top row wraps ("Settings"
-    // under "Sound: on") and Ogun's words box covers "Settings"; at 640 x 200 with safe edges the
-    // words box runs under the Travel row.
-    // Game bug QA-O-1 (open): with two or three streets open, the small "Play Abeokuta" / "Play Ota"
-    // drop to a third grid row under the short-screen rule and sit under "Travel" and "Nigeria's
-    // wheel" at 640 x 200 (and at 320 x 240 with safe edges).
-    test.fail(true, done === 0 ? 'QA-O-1b: Settings covered by the words box at 320 x 240 with safe edges' : 'QA-O-1: small Play buttons under the Travel row on short screens');
+    // Game bug QA-O-1b (fixed): at 320 x 240 with 24 px safe edges the top row wrapped ("Settings"
+    // under "Sound: on") and Ogun's words box covered "Settings"; at 640 x 200 with safe edges the
+    // words box ran under the Travel row.
+    // Game bug QA-O-1 (fixed): with two or three streets open, the small "Play Abeokuta" / "Play Ota"
+    // dropped to a third grid row under the short-screen rule and sat under "Travel" and "Nigeria's
+    // wheel" at 640 x 200 (and at 320 x 240 with safe edges). Now Ogun's place is a column on short
+    // screens: top row, the words with the Play buttons beside and under them, the Travel row.
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await openOgun(page, done);
@@ -157,9 +157,8 @@ for (const done of [0, 1, 2, 3]) {
 test.describe('download card', () => {
   test.use({ serviceWorkers: 'block' });
   test('qa O: the download card fits every size, with and without safe edges', async ({ page }) => {
-    // Game bug QA-O-2 (open, minor): with 24 px safe edges the Travel card (320 x 240) and the
-    // download card (320 x 240, 640 x 200) need a small scroll; every button can still be reached.
-    test.fail(true, 'QA-O-2: Travel and download cards scroll at 320 x 240 / 640 x 200 with 24 px safe edges');
+    // Game bug QA-O-2 (fixed, minor): with 24 px safe edges the Travel card (320 x 240) and the
+    // download card (320 x 240, 640 x 200) needed a small scroll.
     await page.goto('./');
     await page.evaluate(
       ({ look, p }) => {
