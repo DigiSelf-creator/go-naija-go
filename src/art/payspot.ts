@@ -264,10 +264,14 @@ interface BoardLayout {
   size: number;
   icon: boolean;
   done: boolean;
+  bucket: BucketKind;
 }
 
-function boardLayout(g: CanvasRenderingContext2D, build: BuildId, left: number, st: BoardState): BoardLayout {
-  const b = BUILDS[build];
+/** O6b: a board by its id, or another state's board given as its bucket, price and name. */
+export type BoardOf = BuildId | { bucket: BucketKind; price: number; name: string };
+
+function boardLayout(g: CanvasRenderingContext2D, build: BoardOf, left: number, st: BoardState): BoardLayout {
+  const b = typeof build === 'string' ? BUILDS[build] : build;
   const l = Number.isFinite(left) ? Math.max(0, left) : b.price;
   const done = st.done === true || l <= 0;
   const part = !done && l < b.price;
@@ -291,14 +295,14 @@ function boardLayout(g: CanvasRenderingContext2D, build: BuildId, left: number, 
   g.font = `${BOARD.name}px sans-serif`;
   const nw = textW(g, b.name, BOARD.name);
   const w = Math.min(maxW, Math.max(BOARD.minW, Math.ceil(Math.max(need, nw) + 14)));
-  return { w, top, name: b.name, size: pick[0], icon: pick[1], done };
+  return { w, top, name: b.name, size: pick[0], icon: pick[1], done, bucket: b.bucket };
 }
 
 /**
  * The tap area of a board whose stick stands at (x, y) in screen px: the whole board and
  * stick, at least 48 x 48 and at most 96 wide.
  */
-export function priceBoardBox(g: CanvasRenderingContext2D, x: number, y: number, build: BuildId, left: number, st: BoardState = {}): { x: number; y: number; w: number; h: number } {
+export function priceBoardBox(g: CanvasRenderingContext2D, x: number, y: number, build: BoardOf, left: number, st: BoardState = {}): { x: number; y: number; w: number; h: number } {
   g.save();
   const { w } = boardLayout(g, build, left, st);
   g.restore();
@@ -312,7 +316,7 @@ export function priceBoardBox(g: CanvasRenderingContext2D, x: number, y: number,
  * shows "₦4 left"; 0 (or st.done) shows "Done ✓". Bucket icon on the first line (a Power or
  * any board drops it first if the words would not fit, then goes to 12 px bold: W16).
  */
-export function drawPriceBoard(g: CanvasRenderingContext2D, x: number, y: number, build: BuildId, left: number, st: BoardState = {}): void {
+export function drawPriceBoard(g: CanvasRenderingContext2D, x: number, y: number, build: BoardOf, left: number, st: BoardState = {}): void {
   g.save();
   const L = boardLayout(g, build, left, st);
   const wob = Number.isFinite(st.wobble) ? Math.max(-6, Math.min(6, st.wobble!)) : 0;
@@ -348,7 +352,7 @@ export function drawPriceBoard(g: CanvasRenderingContext2D, x: number, y: number
   const lx = -(tw + iconW) / 2;
   const ly = top + 13;
   if (L.done) tick(g, lx + BOARD.icon / 2, ly, 5, '#7be08f');
-  else if (L.icon) drawBucketIcon(g, BUILDS[build].bucket, lx + BOARD.icon / 2, ly, BOARD.icon);
+  else if (L.icon) drawBucketIcon(g, L.bucket, lx + BOARD.icon / 2, ly, BOARD.icon);
   g.fillStyle = BOARD.chalk;
   g.textAlign = 'left';
   g.textBaseline = 'middle';

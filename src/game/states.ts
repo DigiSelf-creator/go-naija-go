@@ -121,3 +121,79 @@ export function walletOf(part: Readonly<Obj>): Partial<Record<(typeof WALLET_KEY
   for (const k of WALLET_KEYS) if (k in part) out[k] = part[k];
   return out;
 }
+
+/**
+ * O6b (ogun.md 6.3, OG-R8): Ogun's tax places as [seconds of play a sale, kobo a sale, cap, the
+ * spot that must be fixed first or '']. Kept here so the trays fill while you play anywhere, even
+ * before the Ogun part has loaded this visit. The Ogun part keeps its own copy (a test pins them).
+ */
+export const OGUN_TRAYS: Readonly<Record<string, readonly [number, number, number, string]>> = { adire: [8, 10, 120, ''], mill: [15, 30, 240, 'potholes'], kola: [12, 20, 120, ''] };
+
+/**
+ * O6b: a later state's own city part (`states.<id>.city`: fixes, trays, Booming meter, where the
+ * hero stood; never the wallet, decision 80) kept in memory while the game runs, like CityLife.
+ * Its trays fill in play time anywhere (tick, called wherever Lagos's trays fill); it is written
+ * at once on a pay or a collect, else at most once every 10 s of play and on flush().
+ */
+export class StateCity {
+  own: Obj;
+  private readonly clock: Record<string, number> = {};
+  private dirty = false;
+  private quiet = 0;
+
+  constructor(
+    load: () => unknown,
+    private readonly save: (own: Obj) => void,
+    private readonly trays: Readonly<Record<string, readonly [number, number, number, string]>>,
+  ) {
+    const saved = load();
+    this.own = writeStateCity(isObj(saved) ? saved : {});
+  }
+
+  /** A new own part (the wallet fields are dropped). `now`: write it at once. */
+  set(next: Obj, now = false): void {
+    this.own = writeStateCity(next);
+    this.dirty = true;
+    if (now) this.flush();
+  }
+
+  /** `dt` seconds of play: each built place whose need is fixed adds its sale every so often, up to its cap. */
+  tick(dt: number): string[] {
+    const d = Number.isFinite(dt) && dt > 0 ? dt : 0;
+    const own = this.own;
+    const has = (k: string, id: string): boolean => Array.isArray(own[k]) && (own[k] as unknown[]).includes(id);
+    const trays: Obj = isObj(own['trays']) ? own['trays'] : {};
+    const changed: string[] = [];
+    for (const [p, [every, each, cap, need]] of Object.entries(this.trays)) {
+      const was = typeof trays[p] === 'number' ? (trays[p] as number) : 0;
+      let tray = was;
+      if (!has('built', p) || (need && !has('fixed', need)) || tray >= cap) {
+        this.clock[p] = 0;
+        continue;
+      }
+      let c = (this.clock[p] ?? 0) + d;
+      while (c >= every && tray < cap) {
+        c -= every;
+        tray = Math.min(cap, tray + each);
+      }
+      this.clock[p] = tray >= cap ? 0 : c;
+      if (tray !== was) changed.push(p);
+      trays[p] = tray;
+    }
+    if (changed.length) {
+      own['trays'] = trays;
+      this.dirty = true;
+    }
+    this.quiet += d;
+    if (this.dirty && this.quiet >= 10) this.flush();
+    return changed;
+  }
+
+  /** Writes now if anything changed since the last write. */
+  flush(): void {
+    if (!this.dirty) return;
+    this.dirty = false;
+    this.quiet = 0;
+    this.save(structuredClone(this.own));
+  }
+}
