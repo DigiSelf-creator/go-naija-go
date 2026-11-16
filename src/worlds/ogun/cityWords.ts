@@ -53,6 +53,8 @@ export const OGUN_CITY_WORDS = {
   },
   /** W8 Not enough: Ogun's challenges to earn more (new, as Lagos's). */
   earnRun: 'Run Ota to earn more.',
+  /** OG-R44: the Not enough card's Power and Tech line (Ogun's lane run is the Expressway everywhere). */
+  earnLane: (bucket: 'power' | 'tech') => `Run the Expressway to earn ${bucket === 'power' ? 'Power' : 'Tech'}.`,
   /** W18 with Ogun's names: the tax places as the collect line says them. */
   placeName: { adire: 'the adire market', mill: 'the garri mill', kola: 'the kola market' },
   /** W18: once, after the first collect in Ogun (hint id `taxOgun`). */
@@ -83,18 +85,24 @@ export const OGUN_CITY_WORDS = {
       dryTaps: 'The taps are dry. The pump needs Power.',
       lightsOut: 'Lamps are out on this road.',
       slowInternet: 'Slow internet here.',
-      none: 'Water, lamps and internet are on.',
+      /** OG-R44: as Lagos's "Lamps on and fast internet here." */
+      none: 'Water on, lamps on and fast internet here.',
     },
     expresswayGo: 'Run the Expressway',
-    hallWon: 'The gateway is open. Play it again any time.',
+    /**
+     * OG-R42: Pothole Hall's two lines, as Lagos's hall (WORDS.road.hallLines): [before the win
+     * line 1, after line 1, before line 2, after line 2].
+     */
+    hallLines: ['King Pothole is blocking the gateway.', 'The gateway is open. Ogun is switched on.', 'A win brings ₦15 and opens the gateway.', 'A win brings ₦15.'] as readonly string[],
     /** New: Ota, Abeokuta and Sagamu's line 2 (Lagos's says "for Lagos"; the wallet is shared). */
     earns: 'Earns Naira.',
     wayOn: 'The way on',
-    wayOnLine: 'The road north to the rest of Nigeria is still being built.',
+    /** OG-R42: no compass word (decision 82: North or East). */
+    wayOnLine: 'The road to the rest of Nigeria is still being built.',
     moreOfNigeria: 'More of Nigeria',
     border: 'Border market',
-    borderLine: 'A busy market road. Coming soon.',
-    later: 'Later',
+    /** OG-R42: the stop's status already says "Coming soon"; its line 3 is WORDS.road.moreSoon ("More soon"). */
+    borderLine: 'A busy market road.',
     otaLines: ['The gateway road from Lagos.', 'Ota is moving again.'] as readonly string[],
     abeokutaLines: ['The adire yards.', 'Abeokuta is moving again.'] as readonly string[],
     sagamuLines: ['The interchange.', 'Sagamu is moving again.'] as readonly string[],

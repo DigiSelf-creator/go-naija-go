@@ -75,7 +75,9 @@ export function ogunStops(v: OgunRoadView): PlanStop[] {
     const rec = hall ? s.hall : streetRecord(s, k + 1);
     const best = !hall && st === 'done' ? formatMoney(rec.best) : null;
     const forFix: OgunFixId | null = k === 0 && !road ? 'potholes' : null;
-    const lines: string[] = hall ? [s.hall.done ? o.hallWon : OGUN_WORDS.wheel.ogunTurning] : [streetLines[k]![st === 'done' ? 1 : 0]!, forFix ? pays(c, forFix) : o.earns];
+    // OG-R42: the hall's lines follow Lagos's hall (never the wheel's "Ogun is turning..." line).
+    const won = s.hall.done ? 1 : 0;
+    const lines: string[] = hall ? [o.hallLines[won]!, o.hallLines[2 + won]!] : [streetLines[k]![st === 'done' ? 1 : 0]!, forFix ? pays(c, forFix) : o.earns];
     const locked = st === 'locked';
     if (locked) lines[1] = w.finish(hall ? names[2]! : names[k - 1]!);
     else if (best) lines.push(w.yourBest(best));
@@ -99,7 +101,7 @@ export function ogunStops(v: OgunRoadView): PlanStop[] {
     // The Expressway's side road leaves between Ota and Abeokuta.
     if (k === 0) out.push(expressway(v));
   }
-  out.push(soon('wayOn', o.wayOn, o.wayOnLine, o.moreOfNigeria), soon('border', o.border, o.borderLine, o.later));
+  out.push(soon('wayOn', o.wayOn, o.wayOnLine, o.moreOfNigeria), soon('border', o.border, o.borderLine, w.moreSoon));
   return out;
 }
 
@@ -133,9 +135,10 @@ function expressway(v: OgunRoadView): PlanStop {
   };
 }
 
+/** "The way on" and "Border market": a coming-soon stop, spoken "{name}. {line} Coming soon." (OG-R42). */
 function soon(id: 'wayOn' | 'border', name: string, line: string, line3: string): PlanStop {
   const w = WORDS.road;
-  return { id, state: 'soon', heading: name, name, status: w.soon, line3, parcel: false, spoken: `${name}. ${w.soon}. ${line3}.`, label: name, lines: [line, w.soon], go: null, forFix: null, cut: id };
+  return { id, state: 'soon', heading: name, name, status: w.soon, line3, parcel: false, spoken: `${name}. ${line} ${w.soon}.`, label: name, lines: [line, w.soon], go: null, forFix: null, cut: id };
 }
 
 /** The still city for the card cuts, painted once per look (half a pixel a map unit). */

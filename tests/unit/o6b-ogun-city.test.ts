@@ -344,7 +344,53 @@ describe('O6b: Ogun\'s challenge road (6.5)', () => {
       expect(x.go).toBeNull();
     }
     expect(s.find((y) => y.id === 'wayOn')!.line3).toBe('More of Nigeria');
-    expect(s.find((y) => y.id === 'border')!.line3).toBe('Later');
+    expect(s.find((y) => y.id === 'border')!.line3).toBe('More soon');
+  });
+
+  it('OG-R42: the way on and the border market are spoken "{name}. {line} Coming soon."; no compass word', () => {
+    const s = ogunStops(view(0, false));
+    const way = s.find((y) => y.id === 'wayOn')!;
+    const border = s.find((y) => y.id === 'border')!;
+    expect(way.lines).toEqual(['The road to the rest of Nigeria is still being built.', 'Coming soon']);
+    expect(way.spoken).toBe('The way on. The road to the rest of Nigeria is still being built. Coming soon.');
+    expect(border.lines).toEqual(['A busy market road.', 'Coming soon']);
+    expect(border.spoken).toBe('Border market. A busy market road. Coming soon.');
+    for (const x of s) expect(`${x.spoken} ${x.lines.join(' ')}`).not.toMatch(/\b(north|south|east|west)\b/i);
+    // The city pin's card keeps the whole line.
+    expect(OGUN_CITY_WORDS.border.line).toBe('A busy market road. Coming soon.');
+  });
+
+  it('OG-R42: Pothole Hall\'s lines follow Lagos\'s hall, before and after the win', () => {
+    const before = ogunStops(view(3, false)).find((y) => y.id === 'hall')!;
+    expect(before.lines.slice(0, 2)).toEqual(['King Pothole is blocking the gateway.', 'A win brings ₦15 and opens the gateway.']);
+    const after = ogunStops(view(3, true)).find((y) => y.id === 'hall')!;
+    expect(after.lines.slice(0, 2)).toEqual(['The gateway is open. Ogun is switched on.', 'A win brings ₦15.']);
+    for (const st of [before, after]) expect(st.lines.join(' ')).not.toContain('Ogun is turning');
+    // Locked (Sagamu not cleared): line 2 says what to finish, as every locked stop.
+    const locked = ogunStops(view(2, false)).find((y) => y.id === 'hall')!;
+    expect(locked.lines).toEqual(['King Pothole is blocking the gateway.', 'Finish Sagamu first.']);
+  });
+
+  it('OG-R44: the new and changed words', () => {
+    const o = OGUN_CITY_WORDS;
+    expect(o.road.expresswayLines.none).toBe('Water on, lamps on and fast internet here.');
+    expect(ogunStops(view(3, true, { ...emptyOgunCity(), fixed: ['dryTaps', 'lightsOut', 'slowInternet'] })).find((y) => y.id === 'expressway')!.lines[0]).toBe('Water on, lamps on and fast internet here.');
+    expect(o.earnLane('power')).toBe('Run the Expressway to earn Power.');
+    expect(o.earnLane('tech')).toBe('Run the Expressway to earn Tech.');
+    expect(o.earnRun).toBe('Run Ota to earn more.');
+    expect(o.board.dryTaps).toBe('Water pump');
+    expect(o.fixedName.dryTaps).toBe('Water on');
+    expect(o.map).toBe('Ogun from above. Tap where you want to go.');
+    expect(o.hintWalk).toBe('Tap where you want to go. Walk onto a board to pay.');
+    expect(o.hintWalkKeys).toBe('Use the arrow keys to walk. Walk onto a board to pay.');
+    expect(o.boom.cog).toBe("Ogun's cog is turning on Nigeria's wheel!");
+    expect(o.road.earns).toBe('Earns Naira.');
+    expect([o.road.toLagos, o.road.toLagosLine, o.road.goLagos]).toEqual(['To Lagos', 'The road back to Lagos.', 'Go to Lagos']);
+    expect(o.road.expresswayGo).toBe('Run the Expressway');
+    expect([o.road.otaLines[0], o.road.abeokutaLines[0], o.road.sagamuLines[0]]).toEqual(['The gateway road from Lagos.', 'The adire yards.', 'The interchange.']);
+    // Nothing the rulings retired is left.
+    const all = JSON.stringify(o);
+    for (const old of ['Water, lamps and internet are on.', 'Play it again any time.', 'The road north', 'Lane runs earn']) expect(all).not.toContain(old);
   });
 
   it('streets open in order; Ota pays for the new road while it is not built', () => {

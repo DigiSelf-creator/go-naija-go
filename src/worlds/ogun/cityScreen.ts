@@ -866,7 +866,7 @@ export class OgunCityScreen implements WorldCity {
     const go = button(OGUN_CITY_WORDS.cards[spot].go, 'go', (e) => {
       if (!this.hooks.ignoreTap(e)) this.hooks.run(spot, e);
     });
-    const card = this.showCard(b, OGUN_CITY_WORDS.board[b], [h('p', { class: 'city-need' }, w.need(priceText(bucket, leftOn(this.st, b)))), h('p', {}, bucket === 'naira' ? OGUN_CITY_WORDS.earnRun : w.earnLane(bucket)), go], [back]);
+    const card = this.showCard(b, OGUN_CITY_WORDS.board[b], [h('p', { class: 'city-need' }, w.need(priceText(bucket, leftOn(this.st, b)))), h('p', {}, bucket === 'naira' ? OGUN_CITY_WORDS.earnRun : OGUN_CITY_WORDS.earnLane(bucket)), go], [back]);
     card.classList.add('city-short');
   }
 
