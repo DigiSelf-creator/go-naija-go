@@ -1640,13 +1640,10 @@
   }
 }
 
-/* QA-O2-4: on a short screen the city's rows sit 4 px from the edges and 4 px apart, so the top
-   row and the bottom rows never meet (320 x 240 with 24 px safe edges), Lagos and Ogun alike. */
+/* QA-O2-4: on a short screen the city's bottom rows sit 4 px from the edge and 4 px apart, so they
+   never meet the top row (320 x 240 with 24 px safe edges), Lagos and Ogun alike. The top row stays
+   where it was, so the signs beside it keep their room. */
 @media (max-height: 300px) {
-  .city-top {
-    top: 4px;
-    gap: 4px;
-  }
   .city-bottom {
     bottom: 4px;
   }
