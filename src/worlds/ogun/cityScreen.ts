@@ -999,8 +999,12 @@ export class OgunCityScreen implements WorldCity {
     if (text) this.placeHint();
   }
   private placeHint(): void {
-    this.hintEl.style.top = `${Math.round(this.view.top + 4)}px`;
-    this.banner.style.top = `${Math.round(this.view.top + (this.hintEl.hidden ? 4 : 40))}px`;
+    // QA-O2: under the whole top row (heading, chips, buttons), even where the map's own top is
+    // held at half the screen (320 x 240), so the hint never covers the chips.
+    const r = this.el.getBoundingClientRect();
+    const low = Math.max(this.view.top, ...[...this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button')].map((e) => e.getBoundingClientRect().bottom - r.top));
+    this.hintEl.style.top = `${Math.round(low + 4)}px`;
+    this.banner.style.top = `${Math.round(low + (this.hintEl.hidden ? 4 : 40))}px`;
   }
 
   private showCard(id: string, name: string, body: HTMLElement[], small: HTMLElement[]): HTMLElement {

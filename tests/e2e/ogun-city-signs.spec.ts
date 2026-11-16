@@ -138,6 +138,30 @@ test('OG-R43 b: Ogun\'s boards, bubble and pins stay whole and clear on small sc
   expect(errors).toEqual([]);
 });
 
+test('QA-O2: at 320 x 240 the first-visit hint sits under the whole top row, clear of the chips', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 240 });
+  await page.goto('./');
+  const p = { ...SAVE, states: { ...SAVE.states, ogun: { ...SAVE.states.ogun, city: { ...OGUN_CITY, hints: ['taxOgun', 'pin', 'gate'] } } } };
+  await page.evaluate(
+    ({ look, p }) => {
+      localStorage.setItem('gidi-look', look);
+      localStorage.setItem('gidi-intro', '"seen"');
+      localStorage.setItem('gidi-progress', p);
+    },
+    { look: LOOK, p: JSON.stringify(p) },
+  );
+  await page.reload();
+  await page.getByRole('button', { name: 'Play' }).tap();
+  const hint = page.locator('.ogun-city .city-hint');
+  await expect(hint).toHaveText('Tap where you want to go. Walk onto a board to pay.');
+  const bb = (b: { x: number; y: number; width: number; height: number }): Box => ({ x: b.x, y: b.y, w: b.width, h: b.height });
+  const hb = bb((await hint.boundingBox())!);
+  for (const chip of await page.locator('.ogun-city .city-chip, .ogun-city .city-head, .ogun-city .city-top button').all()) {
+    const cb = bb((await chip.boundingBox())!);
+    expect(overlaps(hb, cb), `the hint covers ${(await chip.textContent())?.trim()}`).toBe(false);
+  }
+});
+
 test('OG-R43 a: people walk about Ogun\'s city once the people\'s kit is in; still, nothing is drawn', async ({ page }) => {
   const errors = await open(page);
   // 3, plus 1 for the adire market, plus 2 for the one Booming step: 6 walkers.

@@ -53,8 +53,10 @@ async function openOgun(page: Page, p: unknown, extra: Record<string, string> = 
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
 }
 
+/** OG-R35, OG-R37: from Ogun's city, the Bad road card's "Go to Pothole Hall". */
 async function enterHall(page: Page): Promise<void> {
-  await ogunPlace(page).getByRole('button', { name: 'Go to Pothole Hall' }).tap();
+  await ogunPlace(page).locator('[data-spot="badRoad"]').tap();
+  await page.getByRole('dialog', { name: 'Bad road' }).getByRole('button', { name: 'Go to Pothole Hall' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('ogun-hall');
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(2);
@@ -114,7 +116,8 @@ test('qa O2 hall: from Sagamu\'s Street cleared card, "Go to Pothole Hall" opens
   test.setTimeout(300_000);
   const errors = errorsOf(page);
   await openOgun(page, save({ 1: { done: true, best: 300 }, 2: { done: true, best: 400 } }));
-  await ogunPlace(page).getByRole('button', { name: 'Play Sagamu' }).tap();
+  await ogunPlace(page).locator('[data-spot="badRoad"]').tap();
+  await page.getByRole('dialog', { name: 'Bad road' }).getByRole('button', { name: 'Run Sagamu' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);
   const cdp = await page.context().newCDPSession(page);
@@ -158,7 +161,8 @@ test('qa O2 hall: three falls into him lose; Out of lives says the hall\'s words
     const box = (await over.getByRole('button', { name: b, exact: true }).boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(44);
   }
-  await expect(over.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
+  // OG-R35: Ogun's Challenge road is open from the first visit.
+  await expect(over.getByRole('button', { name: 'Challenge road', exact: true })).toBeVisible();
 
   // Play again: the same visit, so no first-try hint.
   await waitOutTapLock(page);

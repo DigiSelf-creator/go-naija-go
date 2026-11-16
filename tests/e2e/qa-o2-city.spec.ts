@@ -69,13 +69,13 @@ const BUSY = { kobo: 2500, power: 12, tech: 7, fixed: [], fixes: 0, paid: {}, hi
 const BUSY_OGUN = { fixed: ['potholes'], fixes: 1, built: ['adire', 'mill'], trays: { adire: 120, mill: 90 }, boom: 12, hints: ['taxOgun'] };
 
 /**
- * BUG QA-O2-3 (low, shared with Lagos's city): at 320 x 240 and 640 x 200 (and 568 x 320 with
+ * BUG QA-O2-3 (low, shared with Lagos's city; fixed in O6b2): at 320 x 240 and 640 x 200 (and 568 x 320 with
  * 24 px safe edges) price boards and tax bubbles can sit partly under the fixed buttons (Travel,
  * Hero, Challenge road, the wheel, Sound, Settings, zoom). Lagos's city does the same, so it is not
  * new in slice O. Fix: count the button rows as taken when placing signs (as the heading is, F1).
  */
 for (const where of ['lagos', 'ogun'] as const) {
-test.fail(`qa O2 city (${where}): tiny screens with and without 24 px safe edges: buttons 44 px inside the edges; boards and tax bubbles clear of every button`, async ({ page }) => {
+test(`qa O2 city (${where}): tiny screens with and without 24 px safe edges: buttons 44 px inside the edges; boards and tax bubbles clear of every button`, async ({ page }) => {
   test.setTimeout(120_000);
   const errors = errorsOf(page);
   await open(page, where === 'lagos' ? { ...BUSY, built: ['buka'], trays: { buka: 150 } } : BUSY, BUSY_OGUN, where);
@@ -277,12 +277,14 @@ test('qa O2 road: Ogun\'s Challenge road: Coming soon stops cannot be played; "T
   await expect(page.locator('.road-stop')).toHaveCount(8, { timeout: 15_000 });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await page.screenshot({ path: `${SHOTS}/oqa2-ogun-road.png` });
-  for (const [id, line3] of [
-    ['wayOn', 'More of Nigeria'],
-    ['border', 'Later'],
+  for (const [id, spoken, line3] of [
+    // OG-R42: a coming-soon stop is spoken "{name}. {line} Coming soon."; line 3 shows on its plate.
+    ['wayOn', 'The way on. The road to the rest of Nigeria is still being built. Coming soon.', 'More of Nigeria'],
+    ['border', 'Border market. A busy market road. Coming soon.', 'More soon'],
   ] as const) {
     const stop = page.locator(`[data-where="${id}"]`);
-    await expect(stop).toHaveAttribute('aria-label', new RegExp(`Coming soon\\. ${line3}\\.`));
+    await expect(stop).toHaveAttribute('aria-label', spoken);
+    await expect(stop).toContainText(line3);
     await stop.tap();
     const card = page.locator('[role="dialog"]').last();
     await expect(card).toContainText('Coming soon');

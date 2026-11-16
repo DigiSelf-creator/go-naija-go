@@ -435,8 +435,10 @@ interface SignSpot {
   away: boolean;
   /** A board on its short stick. */
   short?: boolean;
-  /** No clear place was found: it covers something (the least it could). */
+  /** No clear place was found: it covers something (the least it could), or it is hidden. */
   bad?: boolean;
+  /** No place clear of the buttons at all: not shown until the camera moves (QA-O2-3). */
+  hidden?: boolean;
 }
 /** Something a sign keeps clear of. Soft ones (the heading, a fixed spot's tap area, which has no pin drawn) are given up only when a tiny screen has no other room. */
 interface Block extends ScreenBox {
@@ -1191,25 +1193,27 @@ export class CityScreen {
         }
       if (pick) return pick;
     }
-    // Nowhere is free: on screen where it covers the least (a soft thing before a pin, a pin before a button).
-    let pick: SignSpot | null = null;
-    let least = Infinity;
-    for (let by = 0; by + bh <= vh; by += step * 2)
-      for (let bx = 0; bx + bw <= vw; bx += step * 2) {
-        const sp = at({ x: bx - b0.x, y: by - b0.y }, true);
-        const b = sp.box;
-        let over = 0;
-        for (const o of blocks) {
-          const ov = Math.max(0, Math.min(b.x + bw, o.x + o.w + 2) - Math.max(b.x, o.x - 2)) * Math.max(0, Math.min(b.y + bh, o.y + o.h + 2) - Math.max(b.y, o.y - 2));
-          over += ov * (o.soft ? 1 : pins.includes(o) ? 20 : 400);
+    // QA-O2-3: no room clear of the pins and signs: still never under a button, a chip or the heading
+    // (a sign there would catch the button's tap); a pin or another sign may be under it.
+    {
+      let pick: SignSpot | null = null;
+      let best = Infinity;
+      for (let by = 0; by + bh <= vh; by += step)
+        for (let bx = 0; bx + bw <= vw; bx += step) {
+          const c = { x: bx - b0.x, y: by - b0.y };
+          const d = (c.x - home.x) ** 2 + (c.y - home.y) ** 2;
+          if (d >= best) continue;
+          const sp = at(c, true);
+          if (fitsIn(sp, this.covers, 2)) {
+            best = d;
+            pick = sp;
+          }
         }
-        const score = over * 1000 + (sp.x - home.x) ** 2 + (sp.y - home.y) ** 2;
-        if (score < least) {
-          least = score;
-          pick = sp;
-        }
-      }
-    return { ...(pick ?? at(home, false)), bad: true };
+      if (pick) return { ...pick, bad: true };
+    }
+    // Nowhere is free even of the buttons (a tiny screen with safe edges): it waits, hidden, until
+    // the camera moves (QA-O2-3: never under a button, where it would catch the button's tap).
+    return { ...at(home, false), bad: true, hidden: true };
   }
 
   // ---------- The problem card and the not-enough card ----------
@@ -2293,6 +2297,8 @@ export class CityScreen {
   private readonly onResize = (): void => {
     this.measure();
     this.fitHead();
+    // QA-O2-3: fitting the heading can move the top row: the covers signs keep clear of follow it.
+    this.measure();
     this.cam = clampCam(this.cam, this.view);
     this.paintPins();
     this.requestDraw();
@@ -2880,6 +2886,11 @@ export class CityScreen {
     for (const a of boardAsks) {
       const foot = spots.get(a.id)!;
       const { b, units, done } = a;
+      if (foot.hidden) {
+        this.boardBox.delete(b);
+        this.placeSign(this.boardEls.get(b), { x: -10_000, y: -10_000, w: foot.box.w, h: foot.box.h });
+        continue;
+      }
       const wob = this.wobble?.build === b ? boardWobble(this.wobble.t) : 0;
       const short = !!foot.short;
       const sp = wob ? null : this.sprite(`board|${b}|${units}|${done}|${short}|${dpr}`, foot.box.w + 16, foot.box.h + 16, foot.x - foot.box.x + 8, foot.y - foot.box.y + 8, dpr, (c) => drawPriceBoard(c, 0, 0, b, units, { done, short }));
@@ -2891,6 +2902,11 @@ export class CityScreen {
     for (const a of bubbleAsks) {
       const at = spots.get(a.id)!;
       const { p, text, full } = a;
+      if (at.hidden) {
+        this.bubbleBox.delete(p);
+        this.placeSign(this.bubbleEls.get(p), { x: -10_000, y: -10_000, w: at.box.w, h: at.box.h });
+        continue;
+      }
       const tail = !at.away;
       const sp = this.sprite(`bubble|${text}|${full}|${tail}|${tiny}|${dpr}`, at.box.w + 16, at.box.h + 16, at.x - at.box.x + 8, at.y - at.box.y + 8, dpr, (c) => {
         if (!tail) {
