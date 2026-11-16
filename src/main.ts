@@ -77,137 +77,10 @@ let updateReady = (): void => {};
 const updates = isNativeApp() ? null : registerServiceWorker(() => updateReady());
 
 const query = new URLSearchParams(location.search);
-if (query.get('gallery')?.startsWith('lane')) {
-  // Debug only: the lane run's pictures (S3f1): ?gallery=lane, lane2, lane3, lane4; &t=1.5 holds the time.
-  void import('./art/galleryLane').then(({ drawLaneGallery }) => {
-    const t0 = performance.now();
-    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawLaneGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery')?.startsWith('folk')) {
-  // Debug only: the people kit (S3g1a): ?gallery=folk, folk2 ... folk5; &t=1.5 holds the time.
-  void import('./art/galleryFolk').then(({ drawFolkGallery }) => {
-    const t0 = performance.now();
-    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawFolkGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery')?.startsWith('ogun-city')) {
-  // Debug only: Ogun's city, challenge road and Expressway (O6a): ?gallery=ogun-city, ogun-city2, ogun-city3; &t=1.5 holds the time, &still=1 the reduced-motion look.
-  void import('./art/galleryOgunCity').then(({ drawOgunCityGallery }) => {
-    const t0 = performance.now();
-    const page = Math.max(0, (Number(query.get('gallery')!.slice(9)) || 1) - 1);
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const still = query.get('still') === '1';
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawOgunCityGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page, still);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery')?.startsWith('ogun')) {
-  // Debug only: Ogun's gateway pieces (O1a): ?gallery=ogun, ogun2, ogun3; &t=1.5 holds the time.
-  void import('./art/galleryOgun').then(({ drawOgunGallery }) => {
-    const t0 = performance.now();
-    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawOgunGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery') === 'ota') {
-  // Debug only: Ota's pieces (O2a): ?gallery=ota; &t=1.5 holds the time, &still=1 the reduced-motion look.
-  void import('./art/galleryOta').then(({ drawOtaGallery }) => {
-    const t0 = performance.now();
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const still = query.get('still') === '1';
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawOtaGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, still);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery') === 'abeokuta') {
-  // Debug only: Abeokuta's pieces and the Ogun well room (O3a): ?gallery=abeokuta; &t=1.5 holds the time, &still=1 the reduced-motion look.
-  void import('./art/galleryAbeokuta').then(({ drawAbeokutaGallery }) => {
-    const t0 = performance.now();
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const still = query.get('still') === '1';
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawAbeokutaGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, still);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery') === 'sagamu') {
-  // Debug only: Sagamu's pieces (O4a): ?gallery=sagamu; &t=1.5 holds the time, &still=1 the reduced-motion look.
-  void import('./art/gallerySagamu').then(({ drawSagamuGallery }) => {
-    const t0 = performance.now();
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const still = query.get('still') === '1';
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawSagamuGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, still);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery') === 'hall-ogun') {
-  // Debug only: Pothole Hall and King Pothole (O5a): ?gallery=hall-ogun; &t=1.5 holds the time, &still=1 the reduced-motion look.
-  void import('./art/galleryHallOgun').then(({ drawHallOgunGallery }) => {
-    const t0 = performance.now();
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const still = query.get('still') === '1';
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawHallOgunGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, still);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.get('gallery')?.startsWith('road')) {
-  // Debug only: the challenge road's pictures (S3e1a): ?gallery=road, road2 ... road8; &t=1.5 holds the time.
-  void import('./art/galleryRoad').then(({ drawRoadGallery }) => {
-    const t0 = performance.now();
-    const page = Math.max(0, (Number(query.get('gallery')!.slice(4)) || 1) - 1);
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawRoadGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-} else if (query.has('gallery')) {
-  // Debug only: every picture at once, for art checks (?gallery, ?gallery=2 for page 2, &t=1.5 to hold the time).
-  void import('./art/gallery').then(({ drawGallery }) => {
-    const t0 = performance.now();
-    const page = Number(query.get('gallery')) || 0;
-    const hold = query.has('t') ? Number(query.get('t')) : NaN;
-    const frame = (now: number): void => {
-      g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawGallery(g, view.width, view.height, Number.isFinite(hold) ? hold : (now - t0) / 1000, page);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
+if (query.has('gallery')) {
+  // Debug only: the art galleries (?gallery, ?gallery=lane, ogun-city, hall-ogun ...; &t=1.5 holds the time,
+  // &still=1 the reduced-motion look). The list is in src/art/galleries.ts; built outside the offline cache.
+  void import('./art/galleries').then(({ openGallery }) => openGallery(query, g, () => view));
 } else if (query.has('sounds')) {
   // Debug only: a board of every code-made sound, the goat's "meeh" and the birds' "hawk hawk" first (decision 62).
   void import('./screens/soundBoard').then(({ showSoundBoard }) => showSoundBoard(document.body));
@@ -529,6 +402,7 @@ function startGame(): void {
       return;
     }
     ogunPlay = { level, n };
+    if (hall) part?.hall?.newVisit?.(); // QA-O2-1: a new visit shows the first-try hints again (Play again does not come here)
     missionFor = null; // Lagos's fixes are never an Ogun street's mission
     ogunFor = null;
     startRun(at, hall ? 'hall' : n - 1);

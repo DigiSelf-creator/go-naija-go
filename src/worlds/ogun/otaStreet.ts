@@ -11,7 +11,7 @@
  *   the travellers by the arch saying welcome.
  */
 import { drawGateArch } from '../../art/ogunGate';
-import { OGUN_WORDS } from '../../screens/words';
+import { OGUN_WORDS } from './partWords';
 import type { StreetSkin } from '../../game/skin';
 import type { StreetCast } from '../../game/crowd';
 import type { FolkLook } from '../../art/folk';

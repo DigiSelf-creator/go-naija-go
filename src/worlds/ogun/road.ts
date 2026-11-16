@@ -13,7 +13,7 @@
  * plates sit at OGUN_STOP_BOX. Lives in the lazy Ogun part.
  */
 import { PLATE, drawDanfoSide, drawStopPlate, roadBend, type PlateState, type RoadBox } from '../../art/road';
-import { drawMiniArch } from '../../art/gateway';
+import { drawMiniArch } from '../../art/gatewayRoad';
 import { drawGateArch } from '../../art/ogunGate';
 import { INK, WHITE } from '../../art/palette';
 import { OG, drawAdireCloth, drawOgunTruck } from './city';

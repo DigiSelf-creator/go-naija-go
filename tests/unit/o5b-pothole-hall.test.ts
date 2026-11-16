@@ -16,8 +16,8 @@ import hallRaw from '../../src/data/levels/ogun-hall.json';
 import { TkGate } from '../../src/game/animal-calls';
 import { parseLevel } from '../../src/game/level';
 import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
-import { OGUN_WORDS } from '../../src/screens/words';
-import { POTHOLE_RULES, PotholeDataError, PotholeFight, RUN_NUMBERS, parsePotholeHall } from '../../src/worlds/ogun/potholeFight';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
+import { POTHOLE_RULES, PotholeDataError, PotholeFight, RUN_NUMBERS, newHallVisit, parsePotholeHall } from '../../src/worlds/ogun/potholeFight';
 import { musicCue } from '../../src/game/music-cue';
 
 const DT = 1 / STEPS_PER_SECOND;
@@ -481,5 +481,22 @@ describe('the fight copies the run\'s numbers (no value import from run.ts in th
   it('RUN_NUMBERS match run.ts RULES', () => {
     for (const [k, v] of Object.entries(RUN_NUMBERS)) expect(RULES[k as keyof typeof RUN_NUMBERS]).toBe(v);
     expect(STEPS_PER_SECOND).toBe(60);
+  });
+});
+
+describe('QA-O2-1: the first-try hints show once a visit (OG-R27)', () => {
+  const fight = (): PotholeFight => {
+    let f: PotholeFight | null = null;
+    new Run(LEVEL, { gentle: false, parcel: false, arena: (r) => (f = new PotholeFight(DATA, r)) });
+    return f!;
+  };
+  it('first try of a visit only; Play again (a new fight, same visit) has none; a new visit has them again', () => {
+    newHallVisit();
+    expect(fight().firstTry).toBe(true);
+    expect(fight().firstTry).toBe(false);
+    expect(fight().firstTry).toBe(false);
+    newHallVisit();
+    expect(fight().firstTry).toBe(true);
+    expect(fight().firstTry).toBe(false);
   });
 });

@@ -37,8 +37,9 @@ export interface WorldPart {
   /**
    * O5b: the state's boss hall (its level file is `<id>-hall`): its fight, made fresh for each try,
    * and its tune (it stands in for the hall tune while that hall is played). Optional.
+   * newVisit: the hall is entered from a card (not Play again), so its first-try hints show again.
    */
-  readonly hall?: { readonly arena: (run: Run) => ArenaRules; readonly tune: Tune };
+  readonly hall?: { readonly arena: (run: Run) => ArenaRules; readonly tune: Tune; readonly newVisit?: () => void };
   /** O6b: the state's city from above (opens once its hall is won). Optional. */
   readonly city?: (hooks: WorldCityHooks) => WorldCity;
   /** O6b: the state's challenge road, for the road screen. Optional. */

@@ -16,7 +16,8 @@ import { drawCityCut } from './city';
 import { button, h } from './dom';
 import { EVENT_SCREEN_GUARD_MS } from './menus';
 import { OGUN_WORDS, WORDS } from './words';
-import { drawOgunBranch, gateIconSvg, OGUN_STOP_BOX } from '../art/gateway';
+import { gateIconSvg } from '../art/gateway';
+import { drawOgunBranch, OGUN_STOP_BOX } from '../art/gatewayRoad';
 
 /**
  * CR-Q1 (open for Tp): a win from a stop pays for that stop's fix (answer a). False is answer b:

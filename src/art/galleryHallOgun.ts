@@ -12,7 +12,7 @@
 import { drawBubble, drawFolkFrame, type FolkFrame, type FolkLook } from './folk';
 import { drawHero, type HeroLook, type HeroPose } from './hero';
 import { INK } from './palette';
-import { OGUN_WORDS } from '../screens/words';
+import { OGUN_WORDS } from '../worlds/ogun/partWords';
 
 type Hall = typeof import('../worlds/ogun');
 type Sag = typeof import('../worlds/ogun');

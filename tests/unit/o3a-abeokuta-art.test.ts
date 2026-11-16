@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { OGUN_WORDS } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 import { isTrader } from '../../src/game/crowd';
 import {
   ABEOKUTA_CAST,

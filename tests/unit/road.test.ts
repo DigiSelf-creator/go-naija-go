@@ -15,7 +15,7 @@ import { Game } from '../../src/game/game';
 import { parseLevel } from '../../src/game/level';
 import { readState, type StateProgress } from '../../src/game/progress';
 import * as ART from '../../src/art/road';
-import { OGUN_STOP_BOX } from '../../src/art/gateway';
+import { OGUN_STOP_BOX } from '../../src/art/gatewayRoad';
 import { CUTS, ROAD_ORDER, STOP_BOX, STOP_PAYS_FIX, openingStop, roadScale, stopCards, type RoadView, type StopInfo } from '../../src/screens/road';
 import { recorder } from './recorder';
 

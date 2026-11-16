@@ -11,7 +11,7 @@ import type { StreetCast } from '../../game/crowd';
 import type { FoodKind } from '../../game/level';
 import type { CrackState } from '../../game/run';
 import type { SkinEvent, SkinNow, StreetSkin } from '../../game/skin';
-import { OGUN_WORDS } from '../../screens/words';
+import { OGUN_WORDS } from './partWords';
 import { CRACK, OGUN_STORE_KEEPER, OGUN_STORE_KEEPER_SPOT, drawCrack, drawCrackSign, drawIjebuParcel, drawIjebuParcelIcon, drawOgunShelf, drawOgunWellRoom, drawSackStack } from './abeokuta';
 import { drawIjebuGarriCrate, drawIjebuGarriIcon, drawIkokore, drawIkokoreIcon, drawMud, drawMudPrint, drawMudSplash } from './ota';
 

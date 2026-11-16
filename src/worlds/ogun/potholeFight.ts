@@ -23,7 +23,7 @@
 import { halt, steer, step } from '../../engine/physics';
 import type { ArenaRules, HazardState, Run, RunEvent } from '../../game/run';
 import type { MudData } from '../../game/level';
-import { OGUN_WORDS } from '../../screens/words';
+import { OGUN_WORDS } from './partWords';
 import { potholeLampTimes, POTHOLE_FINISH } from './hall';
 
 /**
@@ -207,8 +207,16 @@ export interface MudSplat {
  */
 export const DOOR_COST = { avg: 0, max: 0, frames: 0 };
 
-/** The hint bar's first-try hints show once a visit (ogun.md 5.4: "once only on the first try"). */
+/**
+ * The hint bar's first-try hints show once a visit (ogun.md 5.4: "once only on the first try";
+ * OG-R27: each time you come into the hall). Play again is the same visit; newHallVisit starts one.
+ */
 let triesThisVisit = 0;
+
+/** QA-O2-1: the hall is entered from a card (Sagamu's "Go to Pothole Hall", Ogun's place), not Play again. */
+export function newHallVisit(): void {
+  triesThisVisit = 0;
+}
 
 export class PotholeFight implements ArenaRules {
   /** His middle x and the way he slides (-1 left, 1 right). */

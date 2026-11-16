@@ -15,7 +15,7 @@ import { drawFood, drawKobo } from './items';
 import { INK } from './palette';
 import { GROUND_Y, drawRoad } from './street';
 import { drawWell } from './well';
-import { OGUN_WORDS } from '../screens/words';
+import { OGUN_WORDS } from '../worlds/ogun/partWords';
 
 type Sag = typeof import('../worlds/ogun');
 type Abk = typeof import('../worlds/ogun/abeokuta');

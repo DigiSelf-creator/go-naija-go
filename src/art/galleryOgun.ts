@@ -7,7 +7,8 @@
  * ?gallery=ogun3  the challenge road with the "To Ogun" branch: locked, open, open and bright.
  * Same fixed 960 x 720 layout as the other pages; &t=1.5 holds the time.
  */
-import { drawGateIcon, drawMiniArch, drawOgunBranch, GATE_ICONS, gateIconSvg, OGUN_STOP_BOX } from './gateway';
+import { drawGateIcon, GATE_ICONS, gateIconSvg } from './gateway';
+import { drawMiniArch, drawOgunBranch, OGUN_STOP_BOX } from './gatewayRoad';
 import type { HeroLook } from './hero';
 import { drawBusRide, drawGateArch, BUS_RIDE } from './ogunGate';
 import { INK } from './palette';

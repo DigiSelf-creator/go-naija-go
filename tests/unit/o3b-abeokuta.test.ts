@@ -18,7 +18,7 @@ import { LevelError, parseLevel, type Level } from '../../src/game/level';
 import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
 import type { SkinNow } from '../../src/game/skin';
 import { WELL_RULES, parseRoom } from '../../src/game/well';
-import { OGUN_WORDS } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 import * as art from '../../src/worlds/ogun/abeokuta';
 import { abeokutaSkin, crackOpen, gapUnder } from '../../src/worlds/ogun/abeokutaStreet';
 import { ogunStreet } from '../../src/worlds/ogun/otaStreet';

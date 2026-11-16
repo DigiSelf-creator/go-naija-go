@@ -16,7 +16,7 @@ import { OTA_SOUNDS } from './ota';
 import { SAGAMU_SOUNDS } from './sagamu';
 import { POTHOLE_HALL_TUNE, POTHOLE_SOUNDS } from './hall';
 import { ogunStreet } from './otaStreet';
-import { parsePotholeHall, potholeArena } from './potholeFight';
+import { newHallVisit, parsePotholeHall, potholeArena } from './potholeFight';
 import { potholeHallSkin } from './potholeHallSkin';
 import { ui } from './ride';
 import { ogunCity } from './cityScreen';
@@ -43,7 +43,7 @@ addSounds(POTHOLE_SOUNDS);
 /** O5b: King Pothole's fight from ogun-hall.json (a broken file leaves the part with no hall). */
 function hall(): WorldPart['hall'] {
   try {
-    return { arena: potholeArena(parsePotholeHall(levels['ogun-hall'])), tune: POTHOLE_HALL_TUNE };
+    return { arena: potholeArena(parsePotholeHall(levels['ogun-hall'])), tune: POTHOLE_HALL_TUNE, newVisit: newHallVisit };
   } catch (err) {
     console.warn(err);
     return undefined;

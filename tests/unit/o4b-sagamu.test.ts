@@ -17,7 +17,7 @@ import { parseLevel, type Level } from '../../src/game/level';
 import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type HazardState, type RunEvent } from '../../src/game/run';
 import type { SkinNow } from '../../src/game/skin';
 import { parseRoom } from '../../src/game/well';
-import { OGUN_WORDS } from '../../src/screens/words';
+import { OGUN_WORDS } from '../../src/worlds/ogun/partWords';
 import * as art from '../../src/worlds/ogun/sagamu';
 import { flyoversOf, sagamuSkin, SAGAMU_LOOK } from '../../src/worlds/ogun/sagamuStreet';
 import { ogunStreet } from '../../src/worlds/ogun/otaStreet';

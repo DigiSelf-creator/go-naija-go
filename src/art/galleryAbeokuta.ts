@@ -18,7 +18,7 @@ import { INK } from './palette';
 import { drawPotholeSign } from './sign';
 import { GROUND_Y, drawRoad } from './street';
 import { drawRoomRope, ROOM_ROPE_BUCKET_Y } from './wellRoom';
-import { OGUN_WORDS } from '../screens/words';
+import { OGUN_WORDS } from '../worlds/ogun/partWords';
 
 type Abk = typeof import('../worlds/ogun/abeokuta');
 type Ota = typeof import('../worlds/ogun');
