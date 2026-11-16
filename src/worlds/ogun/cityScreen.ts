@@ -18,7 +18,7 @@
  */
 import { BUCKETS, CITY_MAP, bucketIconSvg, type BucketKind } from '../../art/city';
 import { boomBarSvg, boomIconSvg } from '../../art/boomMeter';
-import { MAT, PAY, boardWobble, drawFlyingMoney, drawPayMat, drawPriceBoard, drawTrayBubble, flyingCount, payTime, priceBoardBox, trayBubbleBox, trayWords, type BoardOf } from '../../art/payspot';
+import { EDGE_ARROW, MAT, PAY, boardWobble, drawEdgeArrow, drawFlyingMoney, drawPayMat, drawPriceBoard, drawTrayBubble, edgeArrowPlace, flyingCount, payTime, priceBoardBox, trayBubbleBox, trayWords, type BoardOf, type EdgeIcon } from '../../art/payspot';
 import { WALKER, drawCityHero, drawWalkRing, walkDir, walkerSize, type WalkDir } from '../../art/walker';
 import { meterOf } from '../../game/boom';
 import { FIRST_BOOM, TRAY_MIN } from '../../game/city';
@@ -27,7 +27,7 @@ import { formatMoney, spokenMoney } from '../../game/money';
 import { button, h } from '../../screens/dom';
 import { WORDS } from '../../screens/words';
 import type { WorldCity, WorldCityHooks } from '../ui';
-import { OGUN_PLACES, OGUN_SPOTS, OGUN_SPOT_WORDS, drawOgunPin, makeOgunCityCanvas, type OgunPlaceId, type OgunSpotId } from './city';
+import { OGUN_PLACES, OGUN_SPOTS, OGUN_SPOT_IDS, OGUN_SPOT_WORDS, drawOgunPin, makeOgunCityCanvas, type OgunPlaceId, type OgunSpotId } from './city';
 import { drawAdireMarket, drawGarriMill, drawKolaMarket } from './places';
 import { OGUN_CITY_WORDS } from './cityWords';
 import {
@@ -52,6 +52,8 @@ import {
   type Wallet,
 } from './cityRules';
 import { OGUN_HOME, ogunNearest, ogunPath, ogunWalkable, type Pt } from './walk';
+import { OgunCityFolk } from './cityFolk';
+import { loadPeople, peopleKit } from '../../game/peopleLoad';
 
 /** Where each board's mat lies (map units, on walkable ground by its pin or place). */
 export const OGUN_MATS: Readonly<Record<OgunBoard, Pt>> = {
@@ -109,7 +111,10 @@ const boardUnits = (b: OgunBoard, own: number): number => (OGUN_PRICES[b].bucket
 const boardOf = (b: OgunBoard): BoardOf => ({ bucket: OGUN_PRICES[b].bucket, price: boardUnits(b, OGUN_PRICES[b].price), name: OGUN_CITY_WORDS.board[b] });
 const priceText = (bucket: BucketKind, own: number): string => (bucket === 'naira' ? formatMoney(own) : `${bucket === 'power' ? 'Power' : 'Tech'} ${own}`);
 const spokenPrice = (bucket: BucketKind, own: number): string => (bucket === 'naira' ? spokenMoney(own) : `${bucket === 'power' ? 'Power' : 'Tech'} ${own}`);
-const overlap = (a: Box, b: Box): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+/** Two boxes come closer than `gap` px. */
+const near = (a: Box, b: Box, gap: number): boolean => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+/** OG-R43 b: an edge arrow's icon for each pin (Lagos's spot icons; the pump's and the gateway's by what fixes them). */
+const SPOT_ICON: Readonly<Record<OgunSpotId, EdgeIcon>> = { potholes: 'potholes', dryTaps: 'power', lightsOut: 'lightsOut', slowInternet: 'slowInternet', badRoad: 'potholes' };
 
 export class OgunCityScreen implements WorldCity {
   readonly el: HTMLElement;
@@ -141,6 +146,15 @@ export class OgunCityScreen implements WorldCity {
   private pins: { spot: OgunSpotId; el: HTMLButtonElement; word: string }[] = [];
   /** OG-R37: Pothole Hall is won (the Bad road pin is fixed, the gate and verge bright). */
   private readonly hallWon: boolean;
+  /**
+   * OG-R43 a: people walking about (Lagos's walkers from the people's kit, Ogun's ground and cast),
+   * once the kit has arrived. They hold still while the map is not drawing every frame.
+   */
+  private folk: OgunCityFolk | null = null;
+  /** People switched off for this visit after an error in their code (they never stop the city). */
+  private folkOff = false;
+  private brightKey = '';
+  private brightSet: ReadonlySet<string> = new Set();
   private readonly boardEls = new Map<OgunBoard, HTMLButtonElement>();
   private readonly bubbleEls = new Map<OgunPlaceId, HTMLButtonElement>();
   private boardBox = new Map<OgunBoard, Box>();
@@ -276,7 +290,20 @@ export class OgunCityScreen implements WorldCity {
   }
 
   /** Tests: where things are on screen, the save and the wallet. */
-  get test(): { boards: Record<string, Box>; bubbles: Record<string, Box>; pins: Record<string, Box>; hero: Pt; paying: boolean; open: string | null; city: Record<string, unknown>; mats: Record<string, Pt> } {
+  get test(): {
+    boards: Record<string, Box>;
+    bubbles: Record<string, Box>;
+    pins: Record<string, Box>;
+    hero: Pt;
+    paying: boolean;
+    open: string | null;
+    city: Record<string, unknown>;
+    mats: Record<string, Pt>;
+    folk: number;
+    arrows: { icon: string; x: number; y: number; tap: number; for: string }[];
+    roomless: string[];
+    short: string[];
+  } {
     const pins: Record<string, Box> = {};
     for (const p of this.pins) pins[p.spot] = this.pinBox(p.spot, p.word);
     return {
@@ -288,6 +315,10 @@ export class OgunCityScreen implements WorldCity {
       open: this.open,
       city: writeOgunCity(this.st),
       mats: { ...OGUN_MATS },
+      folk: this.folk?.count ?? 0,
+      arrows: this.arrowBox.map((a) => ({ ...a })),
+      roomless: [...this.roomless],
+      short: [...this.boardShort],
     };
   }
 
@@ -328,7 +359,20 @@ export class OgunCityScreen implements WorldCity {
     const dpr = Math.min(window.devicePixelRatio || 1, MAP_DPR);
     this.map.width = Math.round(this.view.w * dpr);
     this.map.height = Math.round(this.view.h * dpr);
+    this.coversDirty = true;
   }
+
+  /** The top row's and bottom row's boxes, measured again once they may have moved (a resize, new chips or meter). */
+  private measureCovers(): void {
+    if (!this.coversDirty) return;
+    this.coversDirty = false;
+    const r = this.el.getBoundingClientRect();
+    this.covers = [...this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button'), ...this.el.querySelectorAll<HTMLElement>('.city-bottom button')]
+      .map((e) => e.getBoundingClientRect())
+      .filter((b) => b.width > 0 && b.height > 0)
+      .map((b) => ({ x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height }));
+  }
+  private coversDirty = true;
 
   // ---------- Heading, chips, pins ----------
 
@@ -340,6 +384,7 @@ export class OgunCityScreen implements WorldCity {
     if (key === this.meterKey) return;
     this.meterKey = key;
     this.head.setAttribute('aria-label', `${OGUN_CITY_WORDS.heading}. ${w.meterSpoken(m.points, m.next)}`);
+    this.coversDirty = true;
     this.head.innerHTML =
       `<span class="city-head-row"><span>${OGUN_CITY_WORDS.heading}</span><span class="boom-icon">${boomIconSvg(small ? 14 : 16)}</span><b class="boom-word">${w.booming}</b></span>` +
       `<span class="city-head-row">${boomBarSvg(m.filled, m.per, small)}<b class="boom-num">${w.meter(m.points, m.next)}</b></span>`;
@@ -367,6 +412,7 @@ export class OgunCityScreen implements WorldCity {
       tech: chip('tech', w.tech(val.tech), w.spokenTech(val.tech)),
     };
     this.chips.replaceChildren(...BUCKETS.map((b) => made[b]));
+    this.coversDirty = true;
   }
 
   private makePins(): void {
@@ -480,25 +526,76 @@ export class OgunCityScreen implements WorldCity {
     }
   }
 
-  /** Where each board and bubble stands on screen now: by its mat or place, moved off the pins and each other. */
+  /**
+   * Where each board and bubble stands on screen now (OG-R43 b, as Lagos's 5W and W15): by its mat
+   * or place when that is clear; else the nearest clear place round it, clear of every drawn pin,
+   * the top row, the bottom buttons and each other sign; on a small screen with no room at full
+   * size, a board stands on its short stick (48 px tall). One whose place is off the screen hides
+   * there, and an edge arrow with its icon shows the way (drawArrows).
+   */
   private placeSigns(g: CanvasRenderingContext2D | null): void {
-    const taken: Box[] = this.pins.map((p) => this.pinBox(p.spot, p.word));
-    const fit = (want: Box, dx: number): Box => {
-      const tries = [0, -1, 1, -2, 2].flatMap((k) => [[0, k * (want.h + 4)], [dx, k * (want.h + 4)], [-dx, k * (want.h + 4)]] as const);
-      for (const [ox, oy] of tries) {
-        const b = { ...want, x: want.x + ox, y: want.y + oy };
-        if (b.y >= this.view.top && b.y + b.h <= this.view.h && !taken.some((t) => overlap(t, b))) return b;
+    this.measureCovers();
+    const hard: Box[] = [...this.pins.map((p) => this.pinBox(p.spot, p.word)), ...this.covers];
+    const taken: Box[] = [];
+    const vw = this.view.w;
+    const vh = this.view.h;
+    const inView = (b: Box): boolean => b.x >= 0 && b.y >= 0 && b.x + b.w <= vw && b.y + b.h <= vh;
+    const strict = (b: Box): boolean => inView(b) && !hard.some((t) => near(t, b, 2)) && !taken.some((t) => near(t, b, 2));
+    // A tiny screen with no clear room: never over a button or off the map; a pin or sign may be under it.
+    const loose = (b: Box): boolean => inView(b) && !this.covers.some((t) => near(t, b, 2));
+    /** Its own place, its last place, then rings round its own place, 8 px apart (the nearest clear one). */
+    const fit = (id: string, want: Box, clear = strict): Box | null => {
+      const prev = this.signAt.get(id);
+      const cands: Box[] = [want];
+      if (prev && Math.hypot(prev.dx, prev.dy) < 260) cands.push({ ...want, x: want.x + prev.dx, y: want.y + prev.dy });
+      for (const c of cands) if (clear(c)) return c;
+      for (let r = 8; r <= 240; r += 8) {
+        const n = Math.max(8, Math.round(r / 5));
+        for (let k = 0; k < n; k++) {
+          const t = (k / n) * Math.PI * 2;
+          const c = { ...want, x: Math.round(want.x + Math.cos(t) * r), y: Math.round(want.y + Math.sin(t) * r * 0.75) };
+          if (clear(c)) return c;
+        }
       }
-      return want;
+      return null;
+    };
+    const offScreen = (b: Box): boolean => {
+      const cx = b.x + b.w / 2;
+      const cy = b.y + b.h / 2;
+      return cx < 0 || cy < 0 || cx > vw || cy > vh;
     };
     const ctx = g ?? this.map.getContext('2d');
     const at = (foot: Pt, r: Box): Box => ({ x: foot.x + r.x, y: foot.y + r.y, w: r.w, h: r.h });
+    const keep = (id: string, home: Box, box: Box): void => {
+      this.signAt.set(id, { dx: box.x - home.x, dy: box.y - home.y });
+    };
+    this.boardShort.clear();
+    this.roomless.clear();
+    /** No room at all on this screen: it hides until the camera moves (never over a button). */
+    const hide = (id: string, b: Box): Box => {
+      this.roomless.add(id);
+      return { ...b, x: -10_000 - b.w };
+    };
     for (const b of this.boardEls.keys()) {
       const foot = this.toScreen({ x: OGUN_MATS[b].x, y: OGUN_MATS[b].y - MAT.h / 2 });
       const left = boardUnits(b, leftOn(this.shown, b));
       const done = this.boardDone(b);
-      const box0 = ctx ? at(foot, this.relBox(`b|${b}|${left}|${done}`, () => priceBoardBox(ctx, 0, 0, boardOf(b), left, { done }))) : { x: foot.x - 40, y: foot.y - 54, w: 80, h: 54 };
-      const box = fit(box0, box0.w + 6);
+      const full = ctx ? at(foot, this.relBox(`b|${b}|${left}|${done}|`, () => priceBoardBox(ctx, 0, 0, boardOf(b), left, { done }))) : { x: foot.x - 40, y: foot.y - 54, w: 80, h: 54 };
+      let box: Box = full;
+      if (!offScreen(full)) {
+        const got = fit(`b|${b}`, full);
+        if (got) box = got;
+        else if (ctx) {
+          // No room at full size: the short stick (W15).
+          const short = at(foot, this.relBox(`b|${b}|${left}|${done}|s`, () => priceBoardBox(ctx, 0, 0, boardOf(b), left, { done, short: true })));
+          const s2 = fit(`b|${b}`, short) ?? fit(`b|${b}`, short, loose);
+          if (s2) {
+            box = s2;
+            this.boardShort.add(b);
+          } else box = hide(b, full);
+        } else box = hide(b, full);
+        keep(`b|${b}`, full, box);
+      }
       taken.push(box);
       this.boardBox.set(b, box);
     }
@@ -508,13 +605,122 @@ export class OgunCityScreen implements WorldCity {
       const text = WORDS.city.trayLabel(trayWords(amount));
       const full = amount >= OGUN_TAX[p].cap;
       const box0 = ctx ? at(foot, this.relBox(`t|${text}|${full}`, () => trayBubbleBox(ctx, 0, 0, text, full))) : { x: foot.x - 50, y: foot.y - 34, w: 100, h: 34 };
-      const box = fit(box0, box0.w + 6);
+      let box = box0;
+      if (!offScreen(box0)) {
+        box = fit(`t|${p}`, box0) ?? fit(`t|${p}`, box0, loose) ?? hide(p, box0);
+        keep(`t|${p}`, box0, box);
+      }
       taken.push(box);
       this.bubbleBox.set(p, box);
     }
     for (const [b, el] of this.boardEls) this.placeEl(el, this.boardBox.get(b));
     for (const [p, el] of this.bubbleEls) this.placeEl(el, this.bubbleBox.get(p));
   }
+
+  /**
+   * OG-R43 b (5W, W15 as Lagos): a pin, board or tray bubble off the screen gets a round sign at the
+   * edge with its icon, pointing the way; tapping it does what tapping the thing does. Its 48 px tap
+   * square (44, then 40, only when no 48 fits) stays on the map, clear of the top row, the bottom
+   * buttons, every sign and drawn pin, and every other arrow.
+   */
+  private drawArrows(g: CanvasRenderingContext2D): void {
+    const vw = this.view.w;
+    const vh = this.view.h;
+    const top = this.view.top;
+    const off = (b: Box): boolean => {
+      const cx = b.x + b.w / 2;
+      const cy = b.y + b.h / 2;
+      if (!(cx < 0 || cx > vw || cy < 0 || cy > vh)) return false;
+      const seen = Math.max(0, Math.min(b.x + b.w, vw) - Math.max(b.x, 0)) * Math.max(0, Math.min(b.y + b.h, vh) - Math.max(b.y, 0));
+      return seen < (b.w * b.h) / 4;
+    };
+    const onView = (b: Box): boolean => b.x + b.w > 0 && b.y + b.h > 0 && b.x < vw && b.y < vh;
+    const want: { icon: EdgeIcon; at: Pt; go: () => void; label: string }[] = [];
+    for (const p of this.pins) {
+      const b = this.pinBox(p.spot, p.word);
+      if (off(b)) want.push({ icon: SPOT_ICON[p.spot], at: { x: b.x + b.w / 2, y: b.y + b.h / 2 }, go: () => (p.spot === 'badRoad' ? this.openBadRoad() : this.openCard(p.spot)), label: OGUN_SPOT_WORDS[p.spot] });
+    }
+    for (const [b, box] of this.boardBox) if (off(box) && !this.roomless.has(b)) want.push({ icon: OGUN_PRICES[b].bucket, at: { x: box.x + box.w / 2, y: box.y + box.h / 2 }, go: () => this.goPay(b), label: OGUN_CITY_WORDS.board[b] });
+    for (const [p, box] of this.bubbleBox) if (off(box) && !this.roomless.has(p)) want.push({ icon: 'naira', at: { x: box.x + box.w / 2, y: box.y + box.h / 2 }, go: () => this.walkTo(OGUN_DOORS[p]), label: OGUN_CITY_WORDS.placeName[p] });
+    const avoid: Box[] = [...this.covers, ...[...this.boardBox.values(), ...this.bubbleBox.values()].filter(onView), ...this.pins.map((p) => this.pinBox(p.spot, p.word)).filter(onView)];
+    this.arrowBox = [];
+    while (this.arrowEls.length < want.length) {
+      const el = button('', 'city-sign city-arrow', () => undefined, { 'aria-hidden': 'true', tabindex: '-1' });
+      this.arrowEls.push(el);
+      this.signLayer.append(el);
+    }
+    const inset = Math.max(EDGE_ARROW.r + 2, Math.min(EDGE_ARROW.inset, (vh - top) / 2));
+    this.arrowEls.forEach((el, i) => {
+      const a = want[i];
+      el.hidden = !a;
+      if (!a) return;
+      const base = edgeArrowPlace(a.at.x, a.at.y, vw, vh, top, inset);
+      const spot = base ? this.arrowSpot(base, avoid, inset) : null;
+      if (!spot) {
+        el.hidden = true;
+        return;
+      }
+      const r = spot.tap / 2;
+      avoid.push({ x: spot.x - r, y: spot.y - r, w: r * 2, h: r * 2 });
+      drawEdgeArrow(g, spot.x, spot.y, Math.atan2(a.at.y - spot.y, a.at.x - spot.x), a.icon);
+      this.placeEl(el, { x: spot.x - r, y: spot.y - r, w: r * 2, h: r * 2 });
+      el.dataset['for'] = a.label;
+      el.onclick = (e) => {
+        if (this.hooks.ignoreTap(e) || this.busy()) return;
+        a.go();
+      };
+      this.arrowBox.push({ icon: String(a.icon), x: spot.x, y: spot.y, tap: spot.tap, for: a.label });
+    });
+  }
+
+  /** The nearest clear place for an arrow on the edge band (then bands nearer the edge), 48 px tap first. */
+  private arrowSpot(base: Pt, avoid: readonly Box[], inset: number): { x: number; y: number; tap: number } | null {
+    const vw = this.view.w;
+    const vh = this.view.h;
+    const top = this.view.top;
+    for (const tap of [48, 44, 40, 36]) {
+      const r = tap / 2 + 0.5;
+      const ok = (x: number, y: number): boolean => x - r >= 0 && y - r >= 0 && x + r <= vw && y + r <= vh && !avoid.some((o) => x + r > o.x && o.x + o.w > x - r && y + r > o.y && o.y + o.h > y - r);
+      const b0 = { x: Math.round(base.x), y: Math.round(base.y) };
+      if (ok(b0.x, b0.y)) return { ...b0, tap };
+      let pick: Pt | null = null;
+      let best = Infinity;
+      for (let ins = Math.max(Math.ceil(r), Math.round(inset)); ins >= Math.ceil(r); ins -= 6) {
+        const x0 = ins;
+        const x1 = Math.max(x0, Math.round(vw) - ins);
+        const y0 = Math.round(top) + ins;
+        const y1 = Math.max(y0, Math.round(vh) - ins);
+        const tryAt = (x: number, y: number): void => {
+          const d = (x - b0.x) ** 2 + (y - b0.y) ** 2;
+          if (d < best && ok(x, y)) {
+            best = d;
+            pick = { x, y };
+          }
+        };
+        for (let x = x0; x <= x1; x += 4) {
+          tryAt(x, y0);
+          tryAt(x, y1);
+        }
+        for (let y = y0; y <= y1; y += 4) {
+          tryAt(x0, y);
+          tryAt(x1, y);
+        }
+        if (pick) return { ...(pick as Pt), tap };
+      }
+      // Anywhere clear on the map, nearest its own spot (also between the top rows and beside the bottom buttons).
+      for (let y = Math.ceil(r); y <= vh - r; y += 6)
+        for (let x = Math.ceil(r); x <= vw - r; x += 6) {
+          const d = (x - b0.x) ** 2 + (y - b0.y) ** 2;
+          if (d < best && ok(x, y)) {
+            best = d;
+            pick = { x, y };
+          }
+        }
+      if (pick) return { ...(pick as Pt), tap };
+    }
+    return null;
+  }
+
   /** A board's or bubble's box round its foot (0, 0), measured once per words. */
   private relBox(key: string, make: () => Box): Box {
     let b = this.signRel.get(key);
@@ -546,6 +752,16 @@ export class OgunCityScreen implements WorldCity {
     g.drawImage(img, foot.x + rel.x - 8, foot.y + rel.y - 8, img.width / dpr, img.height / dpr);
   }
   private readonly signRel = new Map<string, Box>();
+  /** Where each sign last stood, from its own place (so a fitted sign stays put while the camera slides). */
+  private readonly signAt = new Map<string, { dx: number; dy: number }>();
+  /** Boards on their short stick now (W15). */
+  private readonly boardShort = new Set<OgunBoard>();
+  private arrowEls: HTMLButtonElement[] = [];
+  /** Signs with no room on this tiny screen (hidden, no arrow: their place is on the screen). */
+  private readonly roomless = new Set<string>();
+  private arrowBox: { icon: string; x: number; y: number; tap: number; for: string }[] = [];
+  /** Screen boxes signs and arrows keep clear of: the heading, chips and top buttons, the bottom buttons. */
+  private covers: Box[] = [];
   private readonly sprites = new Map<string, HTMLCanvasElement>();
 
   private placeEl(el: HTMLElement, b: Box | undefined): void {
@@ -954,10 +1170,11 @@ export class OgunCityScreen implements WorldCity {
     this.hold = null;
   };
   private readonly onResize = (): void => {
-    this.measure();
-    this.cam = this.clamp(this.cam);
+    // The meter first: its size on a small screen moves the top row, which the view and the covers follow.
     this.meterKey = '';
     this.fillMeter();
+    this.measure();
+    this.cam = this.clamp(this.cam);
     this.requestDraw();
   };
 
@@ -975,7 +1192,7 @@ export class OgunCityScreen implements WorldCity {
   }
   /** Something moves: walking, keys, money, a build, a line, the camera easing. */
   private active(): boolean {
-    return this.hero.moving || this.path.length > 0 || this.keys.size > 0 || this.hold?.on === true || this.pay !== null || this.building !== null || this.collecting !== null || this.ring !== null || this.wobble !== null || this.lines.length > 0 || this.camMoving;
+    return this.hero.moving || this.path.length > 0 || this.keys.size > 0 || this.hold?.on === true || this.pay !== null || this.building !== null || this.collecting !== null || this.ring !== null || this.wobble !== null || this.lines.length > 0 || this.camMoving || this.folk?.baking === true;
   }
   private camMoving = false;
 
@@ -1023,6 +1240,7 @@ export class OgunCityScreen implements WorldCity {
       this.needDraw = true;
     }
     if (!this.busy()) this.moveHero(dt);
+    this.stepFolk(dt);
     this.onStand(dt);
     this.stepPay(dt);
     this.stepBuild(dt);
@@ -1058,6 +1276,52 @@ export class OgunCityScreen implements WorldCity {
       this.cam = want;
       this.needDraw = true;
     }
+  }
+
+  /** The bright areas as a set (for the walkers' choice of block), made again only when the city changes. */
+  private bright(): ReadonlySet<string> {
+    const st = this.shown;
+    const key = `${st.fixed.join(',')}|${st.built.join(',')}|${st.boom}|${st.boomSeen}`;
+    if (key !== this.brightKey) {
+      this.brightKey = key;
+      this.brightSet = new Set(ogunBright(st, this.hallWon));
+    }
+    return this.brightSet;
+  }
+
+  /** OG-R43 a: the walkers, once the people's kit has arrived (the city shows without them until then). */
+  private stepFolk(dt: number): void {
+    if (this.folkOff) return;
+    const kit = peopleKit();
+    if (!kit) {
+      void loadPeople().catch(() => undefined);
+      return;
+    }
+    try {
+      this.folk ??= new OgunCityFolk(kit, [...Object.values(OGUN_MATS), ...Object.values(OGUN_DOORS), ...OGUN_SPOT_IDS.map((s) => OGUN_SPOTS[s].pin)]);
+      // They walk only while the map draws every frame (a still city draws nothing).
+      this.folk.step(dt, this.shown, this.bright(), this.hero, dt <= 0.1 && !this.hooks.still() && this.active());
+      if (this.folk.baking) this.needDraw = true;
+    } catch (err) {
+      this.folkFail(err);
+    }
+  }
+
+  private folkDraw(draw: () => void): void {
+    if (this.folkOff) return;
+    try {
+      draw();
+    } catch (err) {
+      this.folkFail(err);
+    }
+  }
+
+  /** People never stop the city: an error in their code switches them off for the visit (as Lagos's folkFail). */
+  private folkFail(err: unknown): void {
+    this.folkOff = true;
+    this.folk = null;
+    this.needDraw = true;
+    console.warn('People switched off:', err);
   }
 
   /** The painted still city for these looks at this zoom (made again only when a look or the size changes). */
@@ -1102,23 +1366,41 @@ export class OgunCityScreen implements WorldCity {
     g.setTransform(s * dpr, 0, 0, s * dpr, this.cam.x * dpr, this.cam.y * dpr);
     const still = this.hooks.still();
     for (const b of this.boards()) drawPayMat(g, OGUN_MATS[b].x, OGUN_MATS[b].y, this.pay?.board === b);
+    if (this.ring) drawWalkRing(g, this.ring.x, this.ring.y, still ? 0 : this.ring.t);
+    // Standing things, back to front: the tax places, the walkers (OG-R43 a), the hero.
+    const items: { y: number; draw: () => void }[] = [];
     for (const p of OGUN_PLACE_LIST) {
       const building = this.building?.board === p ? this.building.t / BUILD_TIME : null;
       if (!this.shown.built.includes(p) && building === null) continue;
       const tax = OGUN_TAX[p];
       const tray = this.st.trays[p] ?? 0;
-      DRAW_PLACE[p](g, OGUN_PLACES[p].x, OGUN_PLACES[p].y, {
-        time: still ? 0 : this.time,
-        sale: still ? 0.3 : (this.time / tax.every) % 1,
-        served: Math.floor(tray / tax.each),
-        stock: Math.min(1, 0.3 + tray / tax.cap),
-        full: tray >= tax.cap,
-        build: building ?? 1,
-        still,
+      items.push({
+        y: OGUN_PLACES[p].y,
+        draw: () =>
+          DRAW_PLACE[p](g, OGUN_PLACES[p].x, OGUN_PLACES[p].y, {
+            time: still ? 0 : this.time,
+            sale: still ? 0.3 : (this.time / tax.every) % 1,
+            served: Math.floor(tray / tax.each),
+            stock: Math.min(1, 0.3 + tray / tax.cap),
+            full: tray >= tax.cap,
+            build: building ?? 1,
+            still,
+          }),
       });
     }
-    if (this.ring) drawWalkRing(g, this.ring.x, this.ring.y, still ? 0 : this.ring.t);
-    drawCityHero(g, this.hooks.look(), this.hero.x, this.hero.y, { dir: this.hero.dir, phase: this.hero.phase, moving: this.hero.moving, time: this.time, still, size: walkerSize(s) });
+    const folk = this.folk;
+    if (folk && !this.folkOff) {
+      try {
+        folk.ready(this.hooks.look(), s * Math.min(window.devicePixelRatio || 1, MAP_DPR));
+        // Each walker's drawing is guarded too: an error switches people off, never the city.
+        folk.items((y, draw) => items.push({ y, draw: () => this.folkDraw(draw) }), g, s, still);
+      } catch (err) {
+        this.folkFail(err);
+      }
+    }
+    items.push({ y: this.hero.y + 0.5, draw: () => drawCityHero(g, this.hooks.look(), this.hero.x, this.hero.y, { dir: this.hero.dir, phase: this.hero.phase, moving: this.hero.moving, time: this.time, still, size: walkerSize(s) }) });
+    items.sort((a, b) => a.y - b.y);
+    for (const it of items) it.draw();
     // Screen px: boards, bubbles, flying money.
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.placeSigns(g);
@@ -1126,13 +1408,14 @@ export class OgunCityScreen implements WorldCity {
     for (const [b, box] of this.boardBox) {
       const done = this.boardDone(b);
       const left = boardUnits(b, leftOn(this.shown, b));
-      const rel = this.relBox(`b|${b}|${left}|${done}`, () => priceBoardBox(g, 0, 0, boardOf(b), left, { done }));
+      const short = this.boardShort.has(b);
+      const rel = this.relBox(`b|${b}|${left}|${done}|${short ? 's' : ''}`, () => priceBoardBox(g, 0, 0, boardOf(b), left, { done, short }));
       const foot = { x: box.x - rel.x, y: box.y - rel.y };
       const wob = this.wobble?.board === b && !still ? boardWobble(this.wobble.t) : 0;
       // While money flies the board counts down with it (drawn live); else its copy.
       const units = this.pay?.board === b ? boardUnits(b, Math.round(leftOn(this.pay.before, b) - (this.pay.amount * this.pay.landed) / this.pay.pieces)) : left;
-      if (wob || units !== left) drawPriceBoard(g, foot.x, foot.y, boardOf(b), units, { done, wobble: wob });
-      else this.sprite(g, `b|${b}|${left}|${done}`, rel, foot, dpr, (c) => drawPriceBoard(c, 0, 0, boardOf(b), left, { done }));
+      if (wob || units !== left) drawPriceBoard(g, foot.x, foot.y, boardOf(b), units, { done, wobble: wob, short });
+      else this.sprite(g, `b|${b}|${left}|${done}|${short ? 's' : ''}`, rel, foot, dpr, (c) => drawPriceBoard(c, 0, 0, boardOf(b), left, { done, short }));
     }
     for (const [p, box] of this.bubbleBox) {
       const amount = this.st.trays[p] ?? 0;
@@ -1141,6 +1424,7 @@ export class OgunCityScreen implements WorldCity {
       const rel = this.relBox(`t|${text}|${full}`, () => trayBubbleBox(g, 0, 0, text, full));
       this.sprite(g, `t|${text}|${full}`, rel, { x: box.x - rel.x, y: box.y - rel.y }, dpr, (c) => drawTrayBubble(c, 0, 0, 'naira', text, full, 0));
     }
+    this.drawArrows(g);
     const hero = this.toScreen({ x: this.hero.x, y: this.hero.y - WALKER.h });
     const pay = this.pay;
     if (pay) {

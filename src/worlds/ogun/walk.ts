@@ -123,20 +123,50 @@ export function ogunPath(a: Pt, to: Pt): Pt[] {
   const from = new Int32Array(OGUN_GRID.length).fill(-1);
   const cost = new Float64Array(OGUN_GRID.length).fill(Infinity);
   cost[start] = 0;
-  // Dijkstra on a small grid (2560 cells): a plain list kept sorted is fast enough.
-  const open: number[] = [start];
-  while (open.length) {
-    let bi = 0;
-    for (let k = 1; k < open.length; k++) if (cost[open[k]!]! < cost[open[bi]!]!) bi = k;
-    const i = open.splice(bi, 1)[0]!;
+  // Dijkstra on the grid (2560 cells) with a small binary heap (O6b2: the city's walkers ask for
+  // ways too, so a slow phone never stalls when several start at once). Stale heap entries skip.
+  const heap: number[] = [start];
+  const less = (a: number, b: number): boolean => cost[a]! < cost[b]!;
+  const push = (v: number): void => {
+    heap.push(v);
+    for (let k = heap.length - 1; k > 0; ) {
+      const p = (k - 1) >> 1;
+      if (!less(heap[k]!, heap[p]!)) break;
+      [heap[k], heap[p]] = [heap[p]!, heap[k]!];
+      k = p;
+    }
+  };
+  const pop = (): number => {
+    const top = heap[0]!;
+    const last = heap.pop()!;
+    if (heap.length) {
+      heap[0] = last;
+      for (let k = 0; ; ) {
+        const l = 2 * k + 1;
+        const r = l + 1;
+        let m = k;
+        if (l < heap.length && less(heap[l]!, heap[m]!)) m = l;
+        if (r < heap.length && less(heap[r]!, heap[m]!)) m = r;
+        if (m === k) break;
+        [heap[k], heap[m]] = [heap[m]!, heap[k]!];
+        k = m;
+      }
+    }
+    return top;
+  };
+  const done = new Uint8Array(OGUN_GRID.length);
+  while (heap.length) {
+    const i = pop();
+    if (done[i]) continue;
+    done[i] = 1;
     if (i === goal) break;
     for (const j of around(OGUN_GRID, i)) {
       const step = j % COLS !== i % COLS && Math.floor(j / COLS) !== Math.floor(i / COLS) ? 1.414 : 1;
       const c = cost[i]! + step;
       if (c < cost[j]!) {
-        if (cost[j] === Infinity) open.push(j);
         cost[j] = c;
         from[j] = i;
+        push(j);
       }
     }
   }
