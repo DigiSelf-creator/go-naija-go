@@ -111,13 +111,13 @@ test('Sagamu by hand from Ogun\'s place: hopping gravel, the low road under the 
   for (const t of ['Hopping gravel! Jump or bounce.', 'Two roads! Climb up, or stay low.']) expect(toasts).toContain(t);
   expect(crates.opened.length).toBeGreaterThanOrEqual(3);
 
-  // The cleared card: Sagamu's line; Take it home and Play again (no street after Sagamu yet).
+  // The cleared card: Sagamu's line; Take it home, Go to Pothole Hall (O5b) and Play again.
   const kobo = last.r.kobo;
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
   const money = kobo * 10 + 500;
   await expect(dialog.getByText(`Sagamu is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
-  for (const b of ['Take it home', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  for (const b of ['Take it home', 'Go to Pothole Hall', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
   for (const b of ['Next street', 'Challenge road']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
   // Saved under states.ogun.streets: street 3; the others and Lagos as they were; the one wallet.
   const s = await saved(page);
@@ -130,7 +130,9 @@ test('Sagamu by hand from Ogun\'s place: hopping gravel, the low road under the 
   await waitOutTapLock(page);
   await dialog.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('Sagamu is moving again. Pothole Hall is coming next.')).toBeVisible();
-  await expect(ogunPlace(page).getByRole('button', { name: 'Play Sagamu' })).toHaveClass(/\bgo\b/);
+  // O5b: the hall is open, its button the big one.
+  await expect(ogunPlace(page).getByText('Sagamu is moving again. Pothole Hall is open.')).toBeVisible();
+  await expect(ogunPlace(page).getByRole('button', { name: 'Go to Pothole Hall' })).toHaveClass(/\bgo\b/);
+  await expect(ogunPlace(page).getByRole('button', { name: 'Play Sagamu' })).toHaveClass(/minor/);
   expect(errors).toEqual([]);
 });
