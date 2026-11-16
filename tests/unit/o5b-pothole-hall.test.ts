@@ -291,9 +291,20 @@ describe('ogun.md 5.3: carry the road mix and drop it in', () => {
     expect(p.ev.some((e) => e.type === 'climbOut')).toBe(true);
   });
 
+  it('5.4 tuning, Gentle only: throws every 2.8 / 2.4 / 2.0 s (normal 2.6 / 2.2 / 1.8)', () => {
+    for (const gentle of [false, true]) {
+      const p = play({ gentle });
+      expect([0, 1, 2].map((i) => p.f.everyOf(i))).toEqual(gentle ? [2.8, 2.4, 2.0] : [2.6, 2.2, 1.8]);
+      steps(p, secs(2.0));
+      const first = p.f.nextThrowAt;
+      expect(first - p.run.steps).toBe(secs(gentle ? 2.8 : 2.6));
+    }
+  });
+
   it('OG-R26: the gulp is 0.8 s in Gentle mode, 0.5 s in normal', () => {
     expect(DATA.gulp).toBe(0.5);
     expect(DATA.gentle.gulp).toBe(0.8);
+    expect(DATA.gentle.every).toEqual([2.8, 2.4, 2.0]);
     for (const [gentle, gulp] of [[false, 0.5], [true, 0.8]] as const) {
       const p = play({ gentle });
       steps(p, secs(2.0 - gulp) - 1);

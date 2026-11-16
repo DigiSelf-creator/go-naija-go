@@ -64,11 +64,21 @@ export interface PotholeData {
   mud: { near: number; far: number; notByHero: number; shadow: number; width: number; lasts: number };
   fall: { backTo: number; pitTo: number };
   /** Gentle mode: slide speeds times slideScale; a longer gulp (OG-R26). */
-  gentle: { slideScale: number; gulp: number };
+  gentle: { slideScale: number; gulp: number; every: readonly number[] | null };
 }
 
 /** Thrown when the hall file is not the shape the fight needs (the part then has no hall). */
 export class PotholeDataError extends Error {}
+
+/** boss.gentle.every: one throw gap (s, above 0) per phase. */
+function gentleEvery(v: unknown, n: number, num: (v: unknown, p: string) => number): number[] {
+  if (!Array.isArray(v) || v.length !== n) throw new PotholeDataError('ogun-hall: boss.gentle.every should have one gap per phase');
+  return v.map((x, i) => {
+    const e = num(x, `boss.gentle.every[${i}]`);
+    if (e <= 0) throw new PotholeDataError(`ogun-hall: boss.gentle.every[${i}] should be above 0`);
+    return e;
+  });
+}
 
 /** Reads ogun-hall.json's numbers and King Pothole's block, with a light check. */
 export function parsePotholeHall(raw: unknown): PotholeData {
@@ -141,6 +151,8 @@ export function parsePotholeHall(raw: unknown): PotholeData {
       slideScale: num(gentle['slideScale'], 'boss.gentle.slideScale'),
       // OG-R26: Gentle's own gulp; left out, the normal one.
       gulp: gentle['gulp'] === undefined ? num(b['gulp'], 'boss.gulp') : num(gentle['gulp'], 'boss.gentle.gulp'),
+      // ogun.md 5.4 tuning, Gentle only: its own throw gaps by phase; left out, the phases' own.
+      every: gentle['every'] === undefined ? null : gentleEvery(gentle['every'], phases.length, num),
     },
   };
   const [t0, t1] = d.pit.track;
@@ -290,6 +302,12 @@ export class PotholeFight implements ArenaRules {
     return this.run.gentle ? this.data.gentle.gulp : this.data.gulp;
   }
 
+  /** Seconds between throws in phase i (ogun.md 5.4 tuning: Gentle has its own, 2.8 / 2.4 / 2.0). */
+  everyOf(i: number): number {
+    const k = Math.min(i, this.data.phases.length - 1);
+    return (this.run.gentle ? this.data.gentle.every?.[k] : undefined) ?? this.data.phases[k]!.every;
+  }
+
   /** What the next throw will be. */
   private get nextKind(): PotholeThrow {
     const p = this.data.phases[Math.min(this.phase, this.data.phases.length - 1)]!.pattern;
@@ -415,7 +433,7 @@ export class PotholeFight implements ArenaRules {
     this.breakUntil = s + secs(d.breakAfterHit);
     this.gulpAt = -1;
     this.patternIdx = 0;
-    this.nextThrowAt = this.breakUntil + secs(d.phases[this.hits]!.every);
+    this.nextThrowAt = this.breakUntil + secs(this.everyOf(this.hits));
   }
 
   /** Every gravel lump and mud blob in the air pops into dust. */
@@ -498,7 +516,7 @@ export class PotholeFight implements ArenaRules {
     if (s < this.nextThrowAt) return;
     let kind = this.nextKind;
     this.patternIdx++;
-    this.nextThrowAt += secs(this.phaseData.every);
+    this.nextThrowAt += secs(this.everyOf(this.phase));
     this.gulpAt = -1;
     const h = run.hero;
     const side: -1 | 1 = h.x < this.pitX ? -1 : 1;
@@ -587,7 +605,7 @@ export class PotholeFight implements ArenaRules {
     this.dir = -1;
     this.frozen = false;
     this.gulpAt = -1;
-    this.nextThrowAt = Math.max(this.nextThrowAt, s + secs(this.phaseData.every));
+    this.nextThrowAt = Math.max(this.nextThrowAt, s + secs(this.everyOf(this.phase)));
   }
 
   /** 5.5: the funny, kind finish, seconds from the third bag. */

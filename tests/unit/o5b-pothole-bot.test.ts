@@ -94,6 +94,8 @@ describe('ogun.md 5.4: three tries', () => {
         console.log(`Pothole bot ${gentle ? 'Gentle' : 'normal'}, late ${late}: ${said}`);
         // OG-R26: Gentle must hold up for a player 0.1 s late; normal mode too, on time or a little late.
         if (gentle || late <= 3) expect(tries.some((t) => t.won)).toBe(true);
+        // With Gentle's own throw gaps (5.4 tuning), a slow player wins by the second try.
+        if (gentle) expect(tries.slice(0, 2).some((t) => t.won), 'Gentle won by try 2').toBe(true);
       });
     }
   }
