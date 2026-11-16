@@ -1622,6 +1622,22 @@
   }
 }
 
+/* QA-O2-4: on a short screen the city's rows sit 4 px from the edges and 4 px apart, so the top
+   row and the bottom rows never meet (320 x 240 with 24 px safe edges), Lagos and Ogun alike. */
+@media (max-height: 300px) {
+  .city-top {
+    top: 4px;
+    gap: 4px;
+  }
+  .city-bottom {
+    bottom: 4px;
+  }
+  .city-buttons,
+  .city-zoom {
+    gap: 4px;
+  }
+}
+
 /* Settings on a short screen: two columns (Sound | Music, Gentle mode | Buttons instead of swipes, Watch the story | Back),
    so every button shows with no scroll at 320 x 240. */
 @media (max-height: 300px) {

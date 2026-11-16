@@ -86,13 +86,7 @@ async function check(page: Page, name: string, found: string[]): Promise<void> {
       }
       for (let i = 0; i < l.buttons.length; i++)
         for (let j = i + 1; j < l.buttons.length; j++)
-          if (overlaps(l.buttons[i]!, l.buttons[j]!)) {
-            const m = `"${l.buttons[i]!.t}" overlaps "${l.buttons[j]!.t}"`;
-            // Known gap QA-O2-4 (shared with Lagos's city, same rows and styles): at 320 x 240 with
-            // 24 px safe edges the city's top and bottom rows meet. Reported, not counted here.
-            if (name.startsWith("Ogun's city") && size.width === 320 && safe === 24) test.info().annotations.push({ type: 'QA-O2-4 city rows meet', description: `${at}: ${m}` });
-            else bad(m);
-          }
+          if (overlaps(l.buttons[i]!, l.buttons[j]!)) bad(`"${l.buttons[i]!.t}" overlaps "${l.buttons[j]!.t}"`);
       if (l.words) {
         if (l.words.sh > l.words.ch + 1) bad('words box cut off inside');
         if (l.words.y + l.words.h > l.vh - safe + 0.5) bad(`words box runs off the bottom (${(l.words.y + l.words.h).toFixed(0)} of ${l.vh})`);

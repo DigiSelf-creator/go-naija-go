@@ -1007,6 +1007,18 @@ export class OgunCityScreen implements WorldCity {
     const low = Math.max(this.view.top, ...[...this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button')].map((e) => e.getBoundingClientRect().bottom - r.top));
     this.hintEl.style.top = `${Math.round(low + 4)}px`;
     this.banner.style.top = `${Math.round(low + (this.hintEl.hidden ? 4 : 40))}px`;
+    // QA-O2-4: never over a button. Where there is no room under the top row (320 x 240 with safe
+    // edges) it goes over the heading (words only); if that is not clear either, it waits hidden.
+    if (this.hintEl.hidden) return;
+    const btns = [...this.el.querySelectorAll<HTMLElement>('.city-top button, .city-bottom button')].map((e) => e.getBoundingClientRect()).filter((b) => b.width > 0);
+    const clear = (): boolean => {
+      const b = this.hintEl.getBoundingClientRect();
+      return btns.every((q) => q.right <= b.left || b.right <= q.left || q.bottom <= b.top || b.bottom <= q.top);
+    };
+    this.hintEl.style.visibility = '';
+    if (clear()) return;
+    this.hintEl.style.top = `${Math.round(this.head.getBoundingClientRect().top - r.top)}px`;
+    if (!clear()) this.hintEl.style.visibility = 'hidden';
   }
 
   private showCard(id: string, name: string, body: HTMLElement[], small: HTMLElement[]): HTMLElement {
@@ -1202,6 +1214,7 @@ export class OgunCityScreen implements WorldCity {
     this.meterKey = '';
     this.fillMeter();
     this.measure();
+    if (!this.hintEl.hidden) this.placeHint();
     this.cam = this.clamp(this.cam);
     // The Bad road card takes its short-screen size when it opens: made again for the new size.
     if (this.open === 'badRoad') this.openBadRoad();

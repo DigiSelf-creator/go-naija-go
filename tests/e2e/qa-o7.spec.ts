@@ -114,12 +114,7 @@ async function fit(page: Page, name: string, found: string[], shot = false): Pro
       }
       for (let i = 0; i < l.buttons.length; i++)
         for (let j = i + 1; j < l.buttons.length; j++)
-          if (overlaps(l.buttons[i]!, l.buttons[j]!)) {
-            const m = `"${l.buttons[i]!.t}" overlaps "${l.buttons[j]!.t}"`;
-            // QA-O2-4 (known, shared with Lagos): the city's rows meet at 320 x 240 with 24 px edges; its own test.fail below.
-            if (/city/i.test(name) && size.width === 320 && safe === 24) test.info().annotations.push({ type: 'QA-O2-4', description: `${at}: ${m}` });
-            else bad(m);
-          }
+          if (overlaps(l.buttons[i]!, l.buttons[j]!)) bad(`"${l.buttons[i]!.t}" overlaps "${l.buttons[j]!.t}"`);
     }
   }
   await setSafe(page, 0);

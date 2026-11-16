@@ -6,8 +6,8 @@
  *   Lagos's part is never rewritten by opening Ogun;
  * - a broken states.ogun (number, text, list, null, odd fields): Ogun opens as new, Lagos is left alone;
  * - the play screens of an Ogun street and Pothole Hall at every size, with and without 24 px edges;
- * - QA-O2-4 (known, shared with Lagos): at 320 x 240 with 24 px edges the city's top and bottom rows
- *   meet (test.fail until fixed);
+ * - QA-O2-4 (fixed, shared with Lagos): at 320 x 240 with 24 px edges the city's top and bottom rows
+ *   do not meet;
  * - screen reader names of the new buttons (city rows, pins, boards, road stops, Travel places).
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -203,10 +203,9 @@ for (const level of ['ogun-1', 'ogun-2', 'ogun-3', 'ogun-hall']) {
   });
 }
 
-// ---------- QA-O2-4 (known, open) ----------
+// ---------- QA-O2-4 (fixed) ----------
 for (const where of ['lagos', 'ogun'] as const) {
-  test(`qa O7 QA-O2-4 (open bug, shared with Lagos): ${where}'s city at 320 x 240 with 24 px safe edges: the top and bottom button rows do not meet`, async ({ page }) => {
-    test.fail(true, 'QA-O2-4: at 320 x 240 with 24 px safe edges the city top row (chips, Sound, Settings) and bottom row (Challenge road, Travel, Hero, wheel) overlap');
+  test(`qa O7 QA-O2-4 (fixed, shared with Lagos): ${where}'s city at 320 x 240 with 24 px safe edges: the top and bottom button rows do not meet`, async ({ page }) => {
     const errors = errorsOf(page);
     await openWith(page, JSON.stringify({ v: 2, states: { lagos: { streets: STREETS, parcel: false, hall: HALL }, ogun: { arrived: true } }, city: { kobo: 500, power: 0, tech: 0, fixed: [], fixes: 0, hints: ['walk', 'bright', 'buka', 'collect', 'road'] }, where }), { 'gidi-busRide': 'false' });
     if (where === 'ogun') await toOgun(page);
@@ -229,6 +228,38 @@ for (const where of ['lagos', 'ogun'] as const) {
     test.info().annotations.push({ type: 'QA-O2-4', description: meets.join('; ') || 'none' });
     expect(errors).toEqual([]);
     expect(meets).toEqual([]);
+  });
+}
+
+for (const resized of [false, true]) {
+  test(`qa O7 QA-O2-4 (fixed): Ogun's first-visit hint at 320 x 240 with 24 px safe edges${resized ? ' (after a resize)' : ''} shows over no button`, async ({ page }) => {
+    const errors = errorsOf(page);
+    // Opened at that size (from Lagos by Travel), or opened big and then made small.
+    await openWith(page, JSON.stringify({ v: 2, states: { lagos: { streets: STREETS, parcel: false, hall: HALL }, ogun: { arrived: true } }, city: { kobo: 500, power: 0, tech: 0, fixed: [], fixes: 0, hints: ['walk', 'bright', 'buka', 'collect', 'road'] }, where: resized ? 'ogun' : 'lagos' }), { 'gidi-busRide': 'false' });
+    if (!resized) {
+      await page.setViewportSize({ width: 320, height: 240 });
+      await setSafe(page, 24);
+      await settle(page);
+    }
+    await toOgun(page);
+    if (resized) {
+      await page.setViewportSize({ width: 320, height: 240 });
+      await setSafe(page, 24);
+    }
+    await settle(page);
+    const hint = page.locator('.ogun-city .city-hint');
+    await expect(hint).toBeVisible();
+    const hb = (await hint.boundingBox())!;
+    const boxes = await page.locator('.ogun-city .city-top button:visible, .ogun-city .city-bottom button:visible').evaluateAll((els) =>
+      els.map((b) => {
+        const r = b.getBoundingClientRect();
+        return { t: (b.textContent ?? '').trim() || b.getAttribute('aria-label') || '?', x: r.x, y: r.y, w: r.width, h: r.height };
+      }),
+    );
+    const under = boxes.filter((b) => overlaps(b, { t: 'hint', x: hb.x, y: hb.y, w: hb.width, h: hb.height })).map((b) => b.t);
+    expect(under, 'buttons under the hint').toEqual([]);
+    expect(hb.y).toBeGreaterThanOrEqual(24 - 0.5);
+    expect(errors).toEqual([]);
   });
 }
 
