@@ -43,8 +43,6 @@ export const OTA = {
   palm: '#3f8f4a',
   palmDark: '#2d6b37',
   trunk: '#7b5a3a',
-  mud: '#2e1c10',
-  mudWet: '#4a2e1a',
   mudRim: '#8a5a36',
   shine: '#f3e6cf',
   sign: '#fff8e6',
@@ -491,62 +489,114 @@ export function drawOtaStall(g: G, x: number, topY: number, w: number, groundY =
 
 // ---------------------------------------------------------------- mud
 
-/** Mud's numbers: how far its wet top lifts over the road line, how deep it shows. */
-export const MUD = { lip: 3, depth: 34 } as const;
+/**
+ * Mud's numbers (OG-R33): it starts under the road's top edge band (`top`, so the edge runs on
+ * unbroken) and reaches `depth` down the road face: a flat stain, never a hole.
+ */
+export const MUD = { top: 5, depth: 25 } as const;
+
+/** Mud's own colours (OG-R33): a mid brown, lighter than any pothole (and the tar) in grey. */
+export const MUD_INK = {
+  fill: '#a8794d',
+  wet: '#946742',
+  edge: '#80583a',
+  clod: '#b48659',
+  clodEdge: '#6f4c30',
+  boot: '#6c4729',
+} as const;
+
+/** A boot print pressed in at (x, y), added to the current path: a sole and a heel, toe to the left. */
+function bootPrint(g: G, x: number, y: number): void {
+  g.roundRect(x - 6, y - 2.3, 8.5, 4.6, 2.2);
+  g.roundRect(x + 3.6, y - 2, 4, 4, 1.4);
+}
 
 /**
- * World space. A mud patch on the road from x to x + w (3.3). Not colour alone: shiny ripple
- * lines, puddle rings and old footprints. It reads in greyscale: much darker than the tar,
- * with light ripples and a pale splashed rim. still: the rings hold still.
+ * World space. A mud patch on the road from x to x + w (3.3, OG-R33). It lies level with the
+ * road: the road's top edge runs on unbroken above it, no rim, no inner wall, no depth. Not colour
+ * alone: lumpy ends, clods sitting on top of the road line, two or three boot prints already
+ * pressed in, and short glossy streaks (never rings: rings are the water pothole's). In grey it is
+ * lighter than the tar, so it never reads as a hole. still: the streaks hold still.
  */
 export function drawMud(g: G, x: number, w: number, groundY = GROUND_Y, time = 0, still = false): void {
+  if (!(w > 0) || !Number.isFinite(x)) return;
   const y = groundY;
-  const n = Math.max(3, Math.round(w / 20));
-  // Body: a soft, bumpy top just over the road line, a wavy bottom edge
-  g.fillStyle = OTA.mudRim;
+  const top = y + MUD.top;
+  const bot = y + MUD.depth;
+  const n = Math.max(3, Math.round(w / 22));
+  const h = (i: number): number => hash(x * 0.37 + i);
+  // Body: flat top just under the edge band, lumpy ends and a lumpy bottom edge
+  g.fillStyle = MUD_INK.fill;
+  g.strokeStyle = MUD_INK.edge;
+  g.lineWidth = 1.2;
+  g.lineJoin = 'round';
   g.beginPath();
-  g.moveTo(x - 6, y + 2);
-  for (let i = 0; i <= n; i++) g.lineTo(x + (i * w) / n, y - MUD.lip - (i % 2) * 1.5);
-  g.lineTo(x + w + 6, y + 2);
-  g.lineTo(x + w - 4, y + MUD.depth + 3);
-  g.lineTo(x + 4, y + MUD.depth + 3);
+  g.moveTo(x + 4, top);
+  g.lineTo(x + w - 4, top);
+  g.quadraticCurveTo(x + w + 6 + h(1) * 4, top + 6, x + w + 1, bot - 8);
+  g.quadraticCurveTo(x + w + 5, bot - 2, x + w - 6, bot - 1);
+  for (let i = n - 1; i >= 1; i--) {
+    const bx = x + (i * w) / n;
+    g.quadraticCurveTo(bx + w / n / 2, bot + 3 + h(i) * 3, bx, bot - 2 - h(i + 9) * 3);
+  }
+  g.quadraticCurveTo(x - 1, bot + 1, x - 2, bot - 7);
+  g.quadraticCurveTo(x - 7 - h(2) * 4, top + 6, x + 4, top);
   g.closePath();
   g.fill();
-  g.fillStyle = OTA.mud;
+  g.stroke();
+  // Wetter smears lying flat along the patch
+  g.fillStyle = MUD_INK.wet;
   g.beginPath();
-  g.moveTo(x - 2, y + 1);
-  for (let i = 0; i <= n; i++) g.lineTo(x + (i * w) / n, y - MUD.lip + 1.5 - (i % 2) * 1.5);
-  g.lineTo(x + w + 2, y + 1);
-  for (let i = n; i >= 0; i--) g.lineTo(x + (i * w) / n, y + MUD.depth - (i % 2) * 4);
-  g.closePath();
+  for (let i = 0; i < n - 1; i++) {
+    const cx = x + 10 + ((i + 0.5) * (w - 20)) / (n - 1);
+    const cy = top + 6 + (i % 2) * 7;
+    const rx = 6 + h(i + 3) * 6;
+    g.moveTo(cx + rx, cy);
+    g.ellipse(cx, cy, rx, 1.8, 0, 0, TAU);
+  }
   g.fill();
-  // A wetter band on top
-  g.fillStyle = OTA.mudWet;
-  g.fillRect(x + 2, y + 1, w - 4, 6);
-  // Shiny ripple lines
+  // Boot prints already pressed in before the hero comes (two; three on a wide patch)
+  g.fillStyle = MUD_INK.boot;
+  g.beginPath();
+  const boots = w >= 120 ? 3 : 2;
+  for (let i = 0; i < boots; i++) bootPrint(g, x + (w * (i + 0.6)) / (boots + 0.2), top + 5 + (i % 2) * 8);
+  g.fill();
+  // Clods sitting on top of the road line, and one by each lumpy end
+  g.fillStyle = MUD_INK.clod;
+  g.strokeStyle = MUD_INK.clodEdge;
+  g.lineWidth = 1;
+  g.beginPath();
+  const clods = Math.max(3, Math.round(w / 32));
+  for (let i = 0; i < clods; i++) {
+    const cx = x + 6 + ((i + h(i + 20) * 0.6) * (w - 12)) / clods;
+    const r = 3.6 + h(i + 30) * 2.4;
+    g.moveTo(cx - r, y);
+    g.ellipse(cx, y, r, r * 0.8, 0, Math.PI, TAU);
+    g.closePath();
+  }
+  for (const [cx, cy] of [[x - 4, top + 9], [x + w + 4, top + 12]] as const) {
+    g.moveTo(cx + 2.6, cy);
+    g.arc(cx, cy, 2.6, 0, TAU);
+  }
+  g.fill();
+  g.stroke();
+  // Shine: short glossy streaks, never closed rings. Moving, they glint in turn; still, steady.
   g.strokeStyle = OTA.shine;
   g.lineWidth = 1.4;
   g.lineCap = 'round';
-  g.beginPath();
-  for (let i = 0; i < n; i++) {
-    const rx = x + 8 + (i * (w - 16)) / n + hash(x + i) * 6;
-    const ry = y + 10 + (i % 3) * 7;
-    g.moveTo(rx, ry);
-    g.quadraticCurveTo(rx + 5, ry - 3, rx + 10, ry);
-  }
-  g.stroke();
-  // Puddle rings that slowly spread (two at a time)
-  for (let i = 0; i < 2; i++) {
-    const k = still ? 0.5 : (time * 0.5 + i * 0.5 + hash(x) ) % 1;
-    const cx = x + w * (0.3 + i * 0.4);
-    g.globalAlpha = 0.9 - k * 0.7;
+  const t = still || !Number.isFinite(time) ? 0 : time;
+  for (let set = 0; set < 2; set++) {
+    g.globalAlpha = still ? 0.85 : 0.55 + 0.4 * Math.sin(t * 2.2 + set * Math.PI + h(5) * 6);
     g.beginPath();
-    g.ellipse(cx, y + 18 + i * 6, 3 + k * 9, 1 + k * 2.6, 0, 0, TAU);
+    for (let i = set; i <= n; i += 2) {
+      const sx = x + 8 + (i * (w - 22)) / n + h(i + 40) * 6;
+      const sy = top + 4 + ((i * 5) % 13);
+      g.moveTo(sx, sy);
+      g.lineTo(sx + 4 + h(i + 50) * 5, sy - 0.8);
+    }
     g.stroke();
   }
   g.globalAlpha = 1;
-  // Old footprints across it
-  for (let px = x + 14; px < x + w - 12; px += 26) drawMudPrint(g, px, groundY, 0.55, (px - x) % 52 < 26);
 }
 
 /**
@@ -555,7 +605,7 @@ export function drawMud(g: G, x: number, w: number, groundY = GROUND_Y, time = 0
  */
 export function drawMudPrint(g: G, x: number, groundY = GROUND_Y, k = 0, up = false): void {
   if (!(k < 1)) return;
-  const y = groundY + (up ? 5 : 11);
+  const y = groundY + (up ? 9 : 16);
   g.globalAlpha = 1 - k;
   g.fillStyle = '#140b05';
   g.beginPath();
