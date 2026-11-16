@@ -17,9 +17,9 @@ import { GROUND_Y, drawRoad } from './street';
 import { drawWell } from './well';
 import { OGUN_WORDS } from '../screens/words';
 
-type Sag = typeof import('../worlds/ogun/sagamu');
+type Sag = typeof import('../worlds/ogun');
 type Abk = typeof import('../worlds/ogun/abeokuta');
-type Ota = typeof import('../worlds/ogun/ota');
+type Ota = typeof import('../worlds/ogun');
 let sag: Sag | null = null;
 let abk: Abk | null = null;
 let ota: Ota | null = null;
@@ -212,9 +212,9 @@ function page(g: CanvasRenderingContext2D, a: Sag, time: number, still: boolean)
 export function drawSagamuGallery(g: CanvasRenderingContext2D, viewW: number, viewH: number, time: number, still = false): void {
   if (!sag && !asked) {
     asked = true;
-    void import('../worlds/ogun/sagamu').then((m) => (sag = m));
+    void import('../worlds/ogun').then((m) => (sag = m));
     void import('../worlds/ogun/abeokuta').then((m) => (abk = m));
-    void import('../worlds/ogun/ota').then((m) => (ota = m));
+    void import('../worlds/ogun').then((m) => (ota = m));
   }
   g.save();
   g.fillStyle = '#fbf3df';

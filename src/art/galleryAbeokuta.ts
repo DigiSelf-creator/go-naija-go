@@ -21,7 +21,7 @@ import { drawRoomRope, ROOM_ROPE_BUCKET_Y } from './wellRoom';
 import { OGUN_WORDS } from '../screens/words';
 
 type Abk = typeof import('../worlds/ogun/abeokuta');
-type Ota = typeof import('../worlds/ogun/ota');
+type Ota = typeof import('../worlds/ogun');
 let abk: Abk | null = null;
 let ota: Ota | null = null;
 let asked = false;
@@ -255,7 +255,7 @@ export function drawAbeokutaGallery(g: CanvasRenderingContext2D, viewW: number, 
   if (!abk && !asked) {
     asked = true;
     void import('../worlds/ogun/abeokuta').then((m) => (abk = m));
-    void import('../worlds/ogun/ota').then((m) => (ota = m));
+    void import('../worlds/ogun').then((m) => (ota = m));
   }
   g.save();
   g.fillStyle = '#fbf3df';

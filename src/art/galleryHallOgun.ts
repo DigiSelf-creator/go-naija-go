@@ -14,8 +14,8 @@ import { drawHero, type HeroLook, type HeroPose } from './hero';
 import { INK } from './palette';
 import { OGUN_WORDS } from '../screens/words';
 
-type Hall = typeof import('../worlds/ogun/hall');
-type Sag = typeof import('../worlds/ogun/sagamu');
+type Hall = typeof import('../worlds/ogun');
+type Sag = typeof import('../worlds/ogun');
 let hall: Hall | null = null;
 let sag: Sag | null = null;
 let asked = false;
@@ -238,8 +238,8 @@ function page(g: G, a: Hall, s: Sag, time: number, still: boolean): void {
 export function drawHallOgunGallery(g: G, viewW: number, viewH: number, time: number, still = false): void {
   if (!hall && !asked) {
     asked = true;
-    void import('../worlds/ogun/hall').then((m) => (hall = m));
-    void import('../worlds/ogun/sagamu').then((m) => (sag = m));
+    void import('../worlds/ogun').then((m) => (hall = m));
+    void import('../worlds/ogun').then((m) => (sag = m));
   }
   g.save();
   g.fillStyle = '#fbf3df';

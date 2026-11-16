@@ -17,7 +17,7 @@ import { GROUND_Y, drawRoad } from './street';
 import { drawGateArch } from './ogunGate';
 import { OGUN_WORDS } from '../screens/words';
 
-type Ota = typeof import('../worlds/ogun/ota');
+type Ota = typeof import('../worlds/ogun');
 let ota: Ota | null = null;
 let asked = false;
 
@@ -189,7 +189,7 @@ function page(g: CanvasRenderingContext2D, o: Ota, time: number, still: boolean)
 export function drawOtaGallery(g: CanvasRenderingContext2D, viewW: number, viewH: number, time: number, still = false): void {
   if (!ota && !asked) {
     asked = true;
-    void import('../worlds/ogun/ota').then((m) => (ota = m));
+    void import('../worlds/ogun').then((m) => (ota = m));
   }
   g.save();
   g.fillStyle = '#fbf3df';

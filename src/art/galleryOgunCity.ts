@@ -245,11 +245,12 @@ function lanePage(g: G, time: number, still: boolean): void {
 export function drawOgunCityGallery(g: G, viewW: number, viewH: number, time: number, page: number, still = false): void {
   if (!asked) {
     asked = true;
-    void Promise.all([import('../worlds/ogun/city'), import('../worlds/ogun/places'), import('../worlds/ogun/road'), import('../worlds/ogun/expressway')]).then(([a, b, c, d]) => {
-      city = a;
-      places = b;
-      road = c;
-      xw = d;
+    // O6b: one module for all four (the Ogun part's city, road and lane use them too).
+    void import('../worlds/ogun').then((m) => {
+      city = m;
+      places = m;
+      road = m;
+      xw = m;
     });
   }
   g.fillStyle = '#f3ecdc';
