@@ -62,7 +62,7 @@ test('Ota by hand from Ogun\'s city: the arch, mud, ikokore, the bus stop, the b
   test.setTimeout(240_000);
   const errors = await openOgun(page);
   // OG-R37: before any street, the Bad road pin is a problem whose card says to run Ota.
-  await expect(ogunCity(page).locator('[data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
+  await expect(ogunCity(page).locator('.city-pin[data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
   await playOta(page);
   expect(await page.evaluate(() => window.__game!.skin)).toBe(true);
   expect(await page.evaluate(() => window.__game!.run.lives)).toBe(3);
@@ -135,7 +135,7 @@ test('Ota by hand from Ogun\'s city: the arch, mud, ikokore, the bus stop, the b
   await expect(ogunCity(page).locator('.city-banner')).toContainText('Mission complete!');
   await expect(ogunCity(page).locator('.city-banner')).toContainText(`You brought ${formatMoney(money)} home.`);
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await ogunCity(page).locator('[data-spot="badRoad"]').tap();
+  await ogunCity(page).locator('.city-pin[data-spot="badRoad"]').tap();
   await expect(page.getByRole('dialog', { name: 'Bad road' }).getByRole('button', { name: 'Run Abeokuta' })).toBeVisible();
   expect(await page.evaluate(() => window.__game!.skin)).toBe(false);
   expect(errors).toEqual([]);

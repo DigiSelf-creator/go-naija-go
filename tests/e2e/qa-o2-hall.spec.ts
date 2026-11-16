@@ -55,7 +55,7 @@ async function openOgun(page: Page, p: unknown, extra: Record<string, string> = 
 
 /** OG-R35, OG-R37: from Ogun's city, the Bad road card's "Go to Pothole Hall". */
 async function enterHall(page: Page): Promise<void> {
-  await ogunPlace(page).locator('[data-spot="badRoad"]').tap();
+  await ogunPlace(page).locator('.city-pin[data-spot="badRoad"]').tap();
   await page.getByRole('dialog', { name: 'Bad road' }).getByRole('button', { name: 'Go to Pothole Hall' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
   await expect.poll(() => page.evaluate(() => window.__game!.level.id)).toBe('ogun-hall');
@@ -116,7 +116,7 @@ test('qa O2 hall: from Sagamu\'s Street cleared card, "Go to Pothole Hall" opens
   test.setTimeout(300_000);
   const errors = errorsOf(page);
   await openOgun(page, save({ 1: { done: true, best: 300 }, 2: { done: true, best: 400 } }));
-  await ogunPlace(page).locator('[data-spot="badRoad"]').tap();
+  await ogunPlace(page).locator('.city-pin[data-spot="badRoad"]').tap();
   await page.getByRole('dialog', { name: 'Bad road' }).getByRole('button', { name: 'Run Sagamu' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);

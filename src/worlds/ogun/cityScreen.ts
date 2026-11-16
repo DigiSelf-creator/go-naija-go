@@ -189,6 +189,8 @@ export class OgunCityScreen implements WorldCity {
     this.pinLayer = h('div', { class: 'city-pins' });
     this.chips = h('div', { class: 'city-chips' });
     this.cardSpot = h('div', { class: 'city-card-spot', hidden: true });
+    // QA-O round: a card stays inside the phone's safe edges (inline here, so the first load's styles do not grow).
+    this.cardSpot.style.padding = 'max(8px, var(--safe-top)) max(8px, var(--safe-right)) max(8px, var(--safe-bottom)) max(8px, var(--safe-left))';
     this.hintEl = h('p', { class: 'city-hint', hidden: true, 'aria-live': 'polite' });
     this.banner = h('div', { class: 'city-banner', hidden: true, role: 'status' });
     this.say = h('p', { class: 'sr-only', 'aria-live': 'polite' });
@@ -1074,7 +1076,29 @@ export class OgunCityScreen implements WorldCity {
       if (!this.hooks.ignoreTap(e)) this.hooks.seeStop?.('badRoad');
     });
     const back = button(w.back, 'minor', () => this.closeCard());
-    this.showCard('badRoad', OGUN_SPOT_WORDS.badRoad, [h('h2', {}, o.line1), h('p', {}, n < 4 ? o.clear : o.toHall), go], [see, back]);
+    // The big button and the small ones share a row (wrapping when narrow), so the card fits 640 x 200 and 320 x 240.
+    const row = h('div', {}, go, see, back);
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-top:6px';
+    go.style.cssText = 'flex:1 1 9em;width:auto;margin:0';
+    const card = this.showCard('badRoad', OGUN_SPOT_WORDS.badRoad, [h('h2', {}, o.line1), h('p', {}, n < 4 ? o.clear : o.toHall), row], []);
+    card.querySelector('.minor-row')?.remove();
+    // A short screen (320 x 240, 640 x 200, with a notch's safe edges too): smaller words and gaps,
+    // buttons still 44 px, so every line and button shows with no scroll.
+    if (window.innerHeight <= 320) {
+      card.style.padding = '6px 10px';
+      const [h2, p] = [card.querySelector<HTMLElement>('h2'), card.querySelector<HTMLElement>('p')];
+      if (h2) h2.style.cssText = 'font-size:1rem;margin:0 0 2px;line-height:1.2';
+      if (p) p.style.cssText = 'font-size:0.85rem;margin:2px 0;line-height:1.2';
+      row.style.marginTop = '4px';
+      for (const b of [go, see, back]) {
+        b.style.minHeight = '44px';
+        b.style.padding = '4px 10px';
+      }
+      go.style.fontSize = '1rem';
+      go.style.flexBasis = '7em';
+      // Narrow too (320 x 240): "See the stop" goes (the city's Challenge road button is the same way there).
+      if (window.innerWidth < 400) see.remove();
+    }
   }
 
   /** W8: nothing in that bucket. */
@@ -1179,6 +1203,8 @@ export class OgunCityScreen implements WorldCity {
     this.fillMeter();
     this.measure();
     this.cam = this.clamp(this.cam);
+    // The Bad road card takes its short-screen size when it opens: made again for the new size.
+    if (this.open === 'badRoad') this.openBadRoad();
     this.requestDraw();
   };
 

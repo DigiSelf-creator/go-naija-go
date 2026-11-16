@@ -49,8 +49,8 @@ test('Pothole Hall from Ogun\'s city: carry three bags over King Pothole by the 
   const errors = await openOgun(page, true);
   // Sagamu done: the Bad road card says the hall is open and its button is the big one.
   const city = page.locator('.ogun-city');
-  await expect(city.locator('[data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
-  await city.locator('[data-spot="badRoad"]').tap();
+  await expect(city.locator('.city-pin[data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
+  await city.locator('.city-pin[data-spot="badRoad"]').tap();
   const card = page.getByRole('dialog', { name: 'Bad road' });
   await expect(card.getByText('King Pothole is blocking the gateway.')).toBeVisible();
   await expect(card.getByText('Go to Pothole Hall.')).toBeVisible();
@@ -127,7 +127,7 @@ test('Pothole Hall from Ogun\'s city: carry three bags over King Pothole by the 
   // fixed (no Bad road pin) and its built line plays once.
   await expect(page.locator('.ogun-city')).toBeVisible();
   await expect(page.locator('.ogun-city .city-banner')).toContainText('Mission complete!');
-  await expect(page.locator('.ogun-city [data-spot="badRoad"]')).toHaveCount(0);
+  await expect(page.locator('.ogun-city .city-pin[data-spot="badRoad"]')).toHaveCount(0);
   await expect(page.locator('.ogun-city .city-banner')).toContainText('The gateway is open. The road is smooth.', { timeout: 10_000 });
   expect(errors).toEqual([]);
 });

@@ -17,7 +17,7 @@ import { PAST_DOUBLE_TAP_MS, screenNow, waitOutTapLock } from './helpers';
 /** OG-R37: the Bad road pin's card in Ogun's city. */
 async function badRoadCard(page: Page) {
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await page.locator('.ogun-city [data-spot="badRoad"]').tap();
+  await page.locator('.ogun-city .city-pin[data-spot="badRoad"]').tap();
   const card = page.getByRole('dialog', { name: 'Bad road' });
   await expect(card).toBeVisible();
   return card;

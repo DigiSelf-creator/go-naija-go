@@ -253,7 +253,7 @@ test('qa O break: offline after the Ogun download, Ota plays from the phone with
   await expect.poll(() => screenNow(page), { timeout: 15_000 }).toBe('ogun');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   const before = asked.length;
-  await page.getByRole('dialog', { name: 'Ogun', exact: true }).locator('[data-spot="potholes"]').tap();
+  await page.getByRole('dialog', { name: 'Ogun', exact: true }).locator('.city-pin[data-spot="potholes"]').tap();
   await page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Ota' }).tap();
   await expect.poll(() => screenNow(page)).toBe('play');
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(5);

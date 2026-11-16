@@ -53,8 +53,8 @@ test('Pothole Hall won, then Ogun\'s city: buy with the one wallet, the Booming 
   // OG-R35: before the hall, Ogun's city is home; OG-R37: the Bad road pin shows the problem and its
   // card sends you to the hall (all three streets are cleared).
   await expect(page.locator('.ogun-city')).toBeVisible();
-  await expect(page.locator('.ogun-city [data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
-  await page.locator('.ogun-city [data-spot="badRoad"]').tap();
+  await expect(page.locator('.ogun-city .city-pin[data-spot="badRoad"]')).toHaveAttribute('aria-label', 'Bad road, problem');
+  await page.locator('.ogun-city .city-pin[data-spot="badRoad"]').tap();
   const bad = page.getByRole('dialog', { name: 'Bad road' });
   await expect(bad.getByText('King Pothole is blocking the gateway.')).toBeVisible();
   await expect(bad.getByText('Go to Pothole Hall.')).toBeVisible();
@@ -105,7 +105,7 @@ test('Pothole Hall won, then Ogun\'s city: buy with the one wallet, the Booming 
   // Pins: problem or ready, never colour alone (Bad road is fixed by the hall: no pin).
   await expect(city.locator('[data-spot="dryTaps"]')).toHaveAttribute('aria-label', 'Dry taps, ready to fix');
   await expect(city.locator('[data-spot="slowInternet"]')).toHaveAttribute('aria-label', 'Slow internet, problem');
-  await expect(city.locator('[data-spot="badRoad"]')).toHaveCount(0);
+  await expect(city.locator('.city-pin[data-spot="badRoad"]')).toHaveCount(0);
 
   // 3. Buy the adire market (₦6) from the one wallet: tap its board, the hero walks onto its mat and pays.
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);

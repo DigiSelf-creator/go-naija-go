@@ -65,7 +65,7 @@ test('qa O: Ota, Next street, Abeokuta, Next street, Sagamu by hand from Ogun\'s
   await page.getByRole('button', { name: 'Play' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await ogunCity(page).locator('[data-spot="potholes"]').tap();
+  await ogunCity(page).locator('.city-pin[data-spot="potholes"]').tap();
   await page.getByRole('dialog', { name: 'Potholes' }).getByRole('button', { name: 'Run Ota' }).tap();
 
   let wallet = 1000;
@@ -103,7 +103,7 @@ test('qa O: Ota, Next street, Abeokuta, Next street, Sagamu by hand from Ogun\'s
   await expect.poll(() => screenNow(page)).toBe('ogun');
   // O5b, OG-R37: Pothole Hall is open: the Bad road card's big button; the three streets stay open on the road.
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
-  await ogunCity(page).locator('[data-spot="badRoad"]').tap();
+  await ogunCity(page).locator('.city-pin[data-spot="badRoad"]').tap();
   const bad = page.getByRole('dialog', { name: 'Bad road' });
   await expect(bad.getByText('Go to Pothole Hall.')).toBeVisible();
   await expect(bad.getByRole('button', { name: 'Go to Pothole Hall' })).toHaveClass(/\bgo\b/);

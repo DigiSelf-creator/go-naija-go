@@ -83,7 +83,8 @@ async function buttonsFit(page: Page, at: string, safe = 0): Promise<void> {
     const out: string[] = [];
     const top = [...document.querySelectorAll<HTMLElement>('.travel-dim')].pop() ?? document.querySelector<HTMLElement>('.screen[data-ui]')!;
     for (const b of top.querySelectorAll<HTMLElement>('button')) {
-      if (b.getClientRects().length === 0) continue;
+      // OG-R35: Ogun's home is its city; its pins and signs move with the map (edge arrows: ogun-city-signs.spec).
+      if (b.getClientRects().length === 0 || b.closest('.city-stage')) continue;
       const x = b.getBoundingClientRect();
       if (x.y < safe - 0.5 || x.bottom > window.innerHeight - safe + 0.5) {
         out.push((b.textContent ?? '').trim());
@@ -104,7 +105,7 @@ async function buttonsFit(page: Page, at: string, safe = 0): Promise<void> {
       return x ? { y: x.y, h: x.height } : null;
     })(),
     b: [...([...document.querySelectorAll<HTMLElement>('.travel-dim')].pop() ?? document.querySelector<HTMLElement>('.screen[data-ui]')!).querySelectorAll<HTMLElement>('button')]
-      .filter((b) => b.getClientRects().length > 0 && getComputedStyle(b).visibility !== 'hidden')
+      .filter((b) => b.getClientRects().length > 0 && getComputedStyle(b).visibility !== 'hidden' && !b.closest('.city-stage'))
       .map((b) => {
         const x = b.getBoundingClientRect();
         return { t: (b.textContent ?? '').trim() || b.getAttribute('aria-label') || '?', x: x.x, y: x.y, w: x.width, h: x.height };
