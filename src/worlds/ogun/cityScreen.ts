@@ -475,19 +475,22 @@ export class OgunCityScreen implements WorldCity {
       return want;
     };
     const ctx = g ?? this.map.getContext('2d');
+    const at = (foot: Pt, r: Box): Box => ({ x: foot.x + r.x, y: foot.y + r.y, w: r.w, h: r.h });
     for (const b of this.boardEls.keys()) {
       const foot = this.toScreen({ x: OGUN_MATS[b].x, y: OGUN_MATS[b].y - MAT.h / 2 });
       const left = boardUnits(b, leftOn(this.shown, b));
-      const box0 = ctx ? priceBoardBox(ctx, foot.x, foot.y, boardOf(b), left, { done: this.boardDone(b) }) : { x: foot.x - 40, y: foot.y - 54, w: 80, h: 54 };
+      const done = this.boardDone(b);
+      const box0 = ctx ? at(foot, this.relBox(`b|${b}|${left}|${done}`, () => priceBoardBox(ctx, 0, 0, boardOf(b), left, { done }))) : { x: foot.x - 40, y: foot.y - 54, w: 80, h: 54 };
       const box = fit(box0, box0.w + 6);
       taken.push(box);
       this.boardBox.set(b, box);
     }
     for (const p of this.bubbleEls.keys()) {
-      const at = this.toScreen({ x: OGUN_PLACES[p].x, y: OGUN_PLACES[p].y - 50 });
+      const foot = this.toScreen({ x: OGUN_PLACES[p].x, y: OGUN_PLACES[p].y - 50 });
       const amount = this.st.trays[p] ?? 0;
       const text = WORDS.city.trayLabel(trayWords(amount));
-      const box0 = ctx ? trayBubbleBox(ctx, at.x, at.y, text, amount >= OGUN_TAX[p].cap) : { x: at.x - 50, y: at.y - 34, w: 100, h: 34 };
+      const full = amount >= OGUN_TAX[p].cap;
+      const box0 = ctx ? at(foot, this.relBox(`t|${text}|${full}`, () => trayBubbleBox(ctx, 0, 0, text, full))) : { x: foot.x - 50, y: foot.y - 34, w: 100, h: 34 };
       const box = fit(box0, box0.w + 6);
       taken.push(box);
       this.bubbleBox.set(p, box);
@@ -495,6 +498,39 @@ export class OgunCityScreen implements WorldCity {
     for (const [b, el] of this.boardEls) this.placeEl(el, this.boardBox.get(b));
     for (const [p, el] of this.bubbleEls) this.placeEl(el, this.bubbleBox.get(p));
   }
+  /** A board's or bubble's box round its foot (0, 0), measured once per words. */
+  private relBox(key: string, make: () => Box): Box {
+    let b = this.signRel.get(key);
+    if (!b) {
+      b = make();
+      this.signRel.set(key, b);
+    }
+    return b;
+  }
+  /**
+   * A board or bubble painted once at the screen's pixel size and copied each frame (a slow phone
+   * keeps its frame rate while the hero walks). `paint` draws it with its foot at (0, 0).
+   */
+  private sprite(g: CanvasRenderingContext2D, key: string, rel: Box, foot: Pt, dpr: number, paint: (c: CanvasRenderingContext2D) => void): void {
+    const k = `${key}|${dpr}`;
+    let img = this.sprites.get(k);
+    if (!img) {
+      if (this.sprites.size > 48) this.sprites.clear();
+      img = document.createElement('canvas');
+      img.width = Math.ceil((rel.w + 16) * dpr);
+      img.height = Math.ceil((rel.h + 16) * dpr);
+      const c = img.getContext('2d');
+      if (c) {
+        c.setTransform(dpr, 0, 0, dpr, (8 - rel.x) * dpr, (8 - rel.y) * dpr);
+        paint(c);
+      }
+      this.sprites.set(k, img);
+    }
+    g.drawImage(img, foot.x + rel.x - 8, foot.y + rel.y - 8, img.width / dpr, img.height / dpr);
+  }
+  private readonly signRel = new Map<string, Box>();
+  private readonly sprites = new Map<string, HTMLCanvasElement>();
+
   private placeEl(el: HTMLElement, b: Box | undefined): void {
     if (!b) return;
     const hide = b.x + b.w < 0 || b.y + b.h < 0 || b.x > this.view.w || b.y > this.view.h;
@@ -1048,13 +1084,22 @@ export class OgunCityScreen implements WorldCity {
     this.placeSigns(g);
     this.placePins();
     for (const [b, box] of this.boardBox) {
-      const foot = { x: box.x + box.w / 2, y: box.y + box.h };
+      const done = this.boardDone(b);
+      const left = boardUnits(b, leftOn(this.shown, b));
+      const rel = this.relBox(`b|${b}|${left}|${done}`, () => priceBoardBox(g, 0, 0, boardOf(b), left, { done }));
+      const foot = { x: box.x - rel.x, y: box.y - rel.y };
       const wob = this.wobble?.board === b && !still ? boardWobble(this.wobble.t) : 0;
-      drawPriceBoard(g, foot.x, foot.y - 2, boardOf(b), boardUnits(b, this.pay?.board === b ? leftOn(this.pay.before, b) - (this.pay.amount * this.pay.landed) / this.pay.pieces : leftOn(this.shown, b)), { done: this.boardDone(b), wobble: wob });
+      // While money flies the board counts down with it (drawn live); else its copy.
+      const units = this.pay?.board === b ? boardUnits(b, Math.round(leftOn(this.pay.before, b) - (this.pay.amount * this.pay.landed) / this.pay.pieces)) : left;
+      if (wob || units !== left) drawPriceBoard(g, foot.x, foot.y, boardOf(b), units, { done, wobble: wob });
+      else this.sprite(g, `b|${b}|${left}|${done}`, rel, foot, dpr, (c) => drawPriceBoard(c, 0, 0, boardOf(b), left, { done }));
     }
     for (const [p, box] of this.bubbleBox) {
       const amount = this.st.trays[p] ?? 0;
-      drawTrayBubble(g, box.x + box.w / 2, box.y + box.h, 'naira', WORDS.city.trayLabel(trayWords(amount)), amount >= OGUN_TAX[p].cap, 0);
+      const text = WORDS.city.trayLabel(trayWords(amount));
+      const full = amount >= OGUN_TAX[p].cap;
+      const rel = this.relBox(`t|${text}|${full}`, () => trayBubbleBox(g, 0, 0, text, full));
+      this.sprite(g, `t|${text}|${full}`, rel, { x: box.x - rel.x, y: box.y - rel.y }, dpr, (c) => drawTrayBubble(c, 0, 0, 'naira', text, full, 0));
     }
     const hero = this.toScreen({ x: this.hero.x, y: this.hero.y - WALKER.h });
     const pay = this.pay;

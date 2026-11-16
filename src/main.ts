@@ -1911,6 +1911,10 @@ function startGame(): void {
         subAlpha: Number((s.el.querySelector('.intro-sub') as HTMLElement | null)?.style.opacity || 0),
       };
     },
+    /** O6b: Ogun from above now (its draws, hero and test boxes), or null. */
+    get ogunCity() {
+      return menus.ogunScreen;
+    },
     get city() {
       // city.md (b): the camera, how many times the map was drawn, each pin's tap area (CSS px,
       // in the map), the open card and the saved buckets.
@@ -2178,6 +2182,8 @@ declare global {
         readonly sub: string;
         readonly subAlpha: number;
       } | null;
+      /** O6b: Ogun from above now, or null. */
+      readonly ogunCity: import('./worlds/ui').WorldCity | null;
       /** Lagos from above now, or null when it is not showing. */
       readonly city: {
         readonly cam: { readonly zoom: 'far' | 'near'; readonly x: number; readonly y: number };

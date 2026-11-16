@@ -712,6 +712,8 @@ export class Menus {
     });
     this.ogunScreen = screen;
     this.cleanup = () => screen.close();
+    // CO3: the road's chunk while the city sits idle, as from Lagos.
+    window.setTimeout(() => void preloadRoad().catch(() => undefined), 200);
     if (!arrived) {
       this.overlayNext = arrivalCard(() => {
         this.hooks.arrived();

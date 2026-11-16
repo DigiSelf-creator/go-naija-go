@@ -153,6 +153,9 @@ export type LaneStage = 'intro' | 'count' | 'play' | 'paused' | 'caught' | 'card
 
 export interface LaneTestHook {
   stage: LaneStage;
+  /** O6b: the lane file playing (lagos-lane, ogun-lane) and its theme. */
+  level: string;
+  theme: string;
   phase: string;
   dist: number;
   lane: number;
@@ -995,6 +998,8 @@ export class LaneSession {
     const s = this.sim;
     return {
       stage: this.stage,
+      level: this.lvl.id,
+      theme: this.lvl.theme,
       phase: s.phase,
       dist: s.dist,
       lane: s.lane,

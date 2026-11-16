@@ -4,9 +4,9 @@
  * big button now), and plays it with the keys (arrows and Space): carry the road mix bag, jump
  * over King Pothole three times, hop his gravel. The bot plays the plan in pothole-brain.ts (the
  * unit bot plays the same plan on the rules). Then the kind finish, the Win screen ("Ogun is
- * switched on!", "You got ₦15.", Take it home, Play again; no Challenge road until Ogun's city),
+ * switched on!", "You got ₦15.", Take it home, Play again, and from O6b Challenge road and the wheel),
  * the save under states.ogun.hall (Lagos and the streets as they were, the one wallet), and
- * Ogun's place after it. No page errors.
+ * Ogun's city after it (O6b; its Win screen gains Challenge road and the wheel). No page errors.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { keyPad } from './hall-play';
@@ -104,8 +104,8 @@ test('Pothole Hall from Ogun\'s place: carry three bags over King Pothole by the
   const kobo = await page.evaluate(() => window.__game!.run.kobo);
   const money = kobo * 10 + 1500;
   await expect(win.getByText(`You got ₦${money / 100}.`)).toBeVisible();
-  for (const b of ['Take it home', 'Play again']) await expect(win.getByRole('button', { name: b, exact: true })).toBeVisible();
-  await expect(win.getByRole('button', { name: 'Challenge road' })).toHaveCount(0);
+  // O6b: Ogun's Challenge road and the wheel, as Lagos's Win screen.
+  for (const b of ['Take it home', 'Play again', 'Challenge road', "See Nigeria's wheel"]) await expect(win.getByRole('button', { name: b, exact: true })).toBeVisible();
 
   // Saved: Ogun's hall won (the parcel used up), its streets and Lagos as they were; the one wallet.
   const s = await saved(page);
@@ -119,6 +119,7 @@ test('Pothole Hall from Ogun\'s place: carry three bags over King Pothole by the
   await waitOutTapLock(page);
   await win.getByRole('button', { name: 'Take it home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('ogun');
-  await expect(ogunPlace(page).getByText('The gateway is open! Ogun is switched on!')).toBeVisible();
+  // O6b: with the hall won, Ogun's place is Ogun's city.
+  await expect(page.locator('.ogun-city')).toBeVisible();
   expect(errors).toEqual([]);
 });
