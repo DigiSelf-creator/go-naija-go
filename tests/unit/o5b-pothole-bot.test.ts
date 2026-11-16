@@ -92,9 +92,8 @@ describe('ogun.md 5.4: three tries', () => {
         while (tries.length < 3 && !tries.some((t) => t.won)) tries.push(botTry({ gentle, lateSteps: late, seed: tries.length }));
         const said = tries.map((t, i) => `try ${i + 1}: won ${t.won} in ${t.time.toFixed(1)} s, lives ${t.lives}, falls ${t.falls}, hurts ${t.hits}, bags ${t.bags}`).join('; ');
         console.log(`Pothole bot ${gentle ? 'Gentle' : 'normal'}, late ${late}: ${said}`);
-        // A plan that acts 0.1 s late is only reported: it does not play like a person (it cannot
-        // see a jump coming), so it is no measure of the 3 tries; qa's first-timers are (O5c).
-        if (late <= 3) expect(tries.some((t) => t.won)).toBe(true);
+        // OG-R26: Gentle must hold up for a player 0.1 s late; normal mode too, on time or a little late.
+        if (gentle || late <= 3) expect(tries.some((t) => t.won)).toBe(true);
       });
     }
   }

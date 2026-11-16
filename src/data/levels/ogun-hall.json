@@ -12,7 +12,7 @@
   "rightLimit": 530,
   "boss": {
     "kind": "king-pothole",
-    "pit": { "width": 100, "track": [230, 400], "startX": 400, "dropZone": 40, "bumpGap": 10, "resumeAfterLand": 0.3 },
+    "pit": { "width": 100, "track": [230, 400], "startX": 400, "dropZone": 40, "bumpGap": 30, "resumeAfterLand": 0.3 },
     "bag": { "pile": [60, 90], "x": 80, "newAfter": 1.0 },
     "rollerX": 500,
     "lamps": 8,
@@ -27,6 +27,6 @@
     "gravel": { "speed": 80, "hop": 40, "hopEvery": 0.7, "w": 18, "h": 16 },
     "mud": { "near": 120, "far": 200, "notByHero": 40, "shadow": 0.6, "width": 60, "lasts": 4 },
     "fall": { "backTo": 50, "pitTo": 400 },
-    "gentle": { "slideScale": 0.8 }
+    "gentle": { "slideScale": 0.8, "gulp": 0.8 }
   }
 }

@@ -63,7 +63,8 @@ export interface PotholeData {
   gravel: { speed: number; w: number; h: number };
   mud: { near: number; far: number; notByHero: number; shadow: number; width: number; lasts: number };
   fall: { backTo: number; pitTo: number };
-  gentle: { slideScale: number };
+  /** Gentle mode: slide speeds times slideScale; a longer gulp (OG-R26). */
+  gentle: { slideScale: number; gulp: number };
 }
 
 /** Thrown when the hall file is not the shape the fight needs (the part then has no hall). */
@@ -136,7 +137,11 @@ export function parsePotholeHall(raw: unknown): PotholeData {
       lasts: num(mud['lasts'], 'boss.mud.lasts'),
     },
     fall: { backTo: num(fall['backTo'], 'boss.fall.backTo'), pitTo: num(fall['pitTo'], 'boss.fall.pitTo') },
-    gentle: { slideScale: num(gentle['slideScale'], 'boss.gentle.slideScale') },
+    gentle: {
+      slideScale: num(gentle['slideScale'], 'boss.gentle.slideScale'),
+      // OG-R26: Gentle's own gulp; left out, the normal one.
+      gulp: gentle['gulp'] === undefined ? num(b['gulp'], 'boss.gulp') : num(gentle['gulp'], 'boss.gentle.gulp'),
+    },
   };
   const [t0, t1] = d.pit.track;
   if (d.pit.startX < t0 || d.pit.startX > t1) throw new PotholeDataError('ogun-hall: boss.pit.startX should be on the track');
@@ -277,7 +282,12 @@ export class PotholeFight implements ArenaRules {
 
   /** 0 to 1 through the gulp before a throw, or -1 when none is coming. */
   get gulp(): number {
-    return this.gulpAt < 0 ? -1 : Math.min(1, (this.steps - this.gulpAt) / secs(this.data.gulp));
+    return this.gulpAt < 0 ? -1 : Math.min(1, (this.steps - this.gulpAt) / secs(this.gulpTime));
+  }
+
+  /** The gulp before each throw, s (OG-R26: longer in Gentle mode). */
+  get gulpTime(): number {
+    return this.run.gentle ? this.data.gentle.gulp : this.data.gulp;
   }
 
   /** What the next throw will be. */
@@ -481,7 +491,7 @@ export class PotholeFight implements ArenaRules {
       this.phase = this.hits;
       this.cue(ev, this.phase === 2 ? { say: OGUN_WORDS.hall.cross, ms: POTHOLE_RULES.hintMs } : {});
     }
-    if (this.gulpAt < 0 && s >= this.nextThrowAt - secs(d.gulp)) {
+    if (this.gulpAt < 0 && s >= this.nextThrowAt - secs(this.gulpTime)) {
       this.gulpAt = s;
       this.cue(ev, { sound: 'potGulp' });
     }
@@ -571,11 +581,10 @@ export class PotholeFight implements ArenaRules {
       run.dustOff = run.still ? 0 : RULES.dustOffSteps;
       if (run.dustOff === 0) run.hero.move = move;
       ev.push({ type: 'climbOut', kind: 'wide', x });
-    } else {
-      run.hero.x = d.fall.backTo;
-      this.moveTo(d.fall.pitTo);
-      this.dir = -1;
-    }
+    } else run.hero.x = d.fall.backTo;
+    // He goes back to the right end of his track, in Gentle mode too (OG-R24, OG-R26).
+    this.moveTo(d.fall.pitTo);
+    this.dir = -1;
     this.frozen = false;
     this.gulpAt = -1;
     this.nextThrowAt = Math.max(this.nextThrowAt, s + secs(this.phaseData.every));
