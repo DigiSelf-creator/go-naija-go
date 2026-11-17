@@ -2,6 +2,8 @@
 
 ## po note, 17 Nov 2026 (newest): slice O, Ogun, accepted with notes (b73f604)
 
+**Answered by Tp, 17 Nov ("Go with it"): 1 merge to the test link, yes; PERF-Q1 a; bubble read a. Added as decisions 83 and 84. Tp also chose picture style a (decision 85).**
+
 - **Accepted:** slice O, Ogun the Gateway State, on claude/serene-hopper-ydve2g at b73f604, after qa passed O7 (Lagos to the end of Ogun by touch) and the O7fix re-check (QA-O7-1, QA-O7-2, QA-O2-4). Verdict: **accept with notes.** Nothing must be fixed in the game before the test link.
 - **Waits for Tp:**
   1. **Merge slice O to the live test link** (decision 64: merging to the live link is Tp's call). Recommend: yes. The test link is for the team's testing (decision 39), and it is how the real-phone check in PERF-Q1 gets done.
