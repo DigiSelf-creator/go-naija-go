@@ -1103,7 +1103,7 @@ export function drawSagamuTraderStall(g: G, kind: SagamuTrader, x: number, groun
  * with bags waiting for buses (a teen with a backpack, an elder in a kaftan with glasses and a
  * box, a woman in a hijab and long dress, a man in isiagu, an elder in an etibo shirt); the
  * mechanic at the vulcanizer (plain shirt and trousers, no uniform); a child with a parent; a teen
- * in sport clothes; and three at the bus stop (a wheelchair user, a woman in anger cloth, an elder
+ * in sport clothes; and three at the bus stop (a wheelchair user, a woman in ankara, an elder
  * woman with a gele). The quarry workers are drawn small in the far layer. Never a held broom,
  * helmet or uniform. Look codes as folkLook.
  */

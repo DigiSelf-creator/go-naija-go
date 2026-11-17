@@ -200,7 +200,7 @@ function page(g: CanvasRenderingContext2D, a: Sag, time: number, still: boolean)
   // The cast of 16
   const cy2 = 672;
   frame(g, 12, cy2, 936, 120, '#eef0f8');
-  label(g, 'Sagamu cast (part 7): kola trader, kola buyer, garri trader, ikokore seller, porter, travellers, mechanic, man in isiagu, elder in etibo, child, teen, bus stop three (wheelchair, anger cloth, elder with gele)', 16, cy2 + 2, 10);
+  label(g, 'Sagamu cast (part 7): kola trader, kola buyer, garri trader, ikokore seller, porter, travellers, mechanic, man in isiagu, elder in etibo, child, teen, bus stop three (wheelchair, ankara, elder with gele)', 16, cy2 + 2, 10);
   a.SAGAMU_CAST.forEach((look, i) => {
     const fx = 40 + i * 56;
     const f: FolkFrame = i === 0 || i === 2 || i === 3 ? 'call' : i === 11 ? 'wave0' : 'stand';
