@@ -71,6 +71,48 @@ Order and what runs side by side:
 
 qa checks every CO row; po accepts.
 
+## Slice P: Picture style (decision 85; designer note docs/style.md)
+
+A richer picture style, all our own: chunky buttons and one building shading recipe first, then angled cities with bigger people and soft shadows, then everyday detail. The evening look waits (style.md part 7). Not to be mixed up with the store rows (ST0 to ST6): these ids start with ST-A to ST-D.
+
+Rules for the whole slice:
+- Everything follows docs/style.md: exact colours and numbers in part 1, limits in part 2, the qa checks in part 5.
+- Drawn once and reused. Nothing new is drawn per frame on streets: street frame draw calls equal or fewer than before, fps at 4x CPU equal or better. City drag at least 45 fps at 4x CPU; idle draws nothing; each bake under 50 ms per block at 4x CPU. No `shadowBlur`, canvas `filter` or CSS blur anywhere.
+- Budget (gzip): first load grows 16 KB at most and the Ogun part 9 KB at most for the whole slice, per phase as style.md 2.2. First load stays under 3 MB, Ogun under 150 KB.
+- Every button keeps its words, a 44 x 44 px tap area and text of 15 px or more, at all six sizes (320 x 240, 568 x 320, 640 x 200, 851 x 393, 1280 x 720, 1920 x 1080), with and without the 24 px safe area.
+- Each phase ends with qa, po and before and after screenshots for Tp (851 x 393 and 320 x 240) before the next phase starts. Merging to the live link stays Tp's call (decision 64).
+
+| # | id | owner | task | depends on | done when | size (gzip) |
+|---|----|-------|------|------------|-----------|-------------|
+| 1 | ST-A1 | art | Our own button icon set (style.md 1.2 disc table) as SVG in code, src/art/icons.ts; gallery page `?gallery=style-buttons`, plain and pressed, on and off | none: ready now | icons read at 26 px; our own; listed in docs/assets.md | 1.5 KB first load |
+| 2 | ST-A2 | gamedev | Button recipe as shared CSS and a `button()` helper with an icon; title, hero builder, pause, game over, cleared, win, mission complete, settings, wheel, travel, download and arrival cards, intro and bus ride Skip and Go, update banner button (hard lip only) | ST-A1 | style.md 1.2 numbers; 44 px tap areas at all six sizes; one green button per screen; spoken names unchanged (e2e pass); no soft shadow on anything animated | 1 KB first load |
+| 3 | ST-A3 | gamedev | City top and bottom rows and zoom in Lagos and Ogun; road screen buttons and stop card; run HUD counters as cream status chips (no bigger than today). Run pads, the HUD Pause and Sound buttons, the well and throw buttons stay (style.md 4.2) | ST-A1 | rows fit at all six sizes with the safe area; no pin, sign or edge arrow newly covered; street fps at 4x CPU not lower | 0.5 KB first load |
+| 4 | ST-A4 | qa | Phase 1 pass | ST-A2, ST-A3 | style.md part 5; greyscale shots of every changed screen; first load +3 KB at most | |
+| 5 | ST-A5 | po | Accept phase 1; Tp sees the screenshots | ST-A4 | note in docs/questions.md | |
+| 6 | ST-B1 | art | Shared shading helpers in src/art/shade.ts (`wall()`, `zincRoof()`, `flatRoof()`, `softShadow()`, `mix()`), warm ink in palette.ts; gallery page `?gallery=style-shading` | ST-A5 | numbers match style.md 1.3 and 1.5; helpers draw only into bake canvases | 1 KB first load |
+| 7 | ST-B2 | gamedev | Streets: shopfronts with the recipe, baked into cached strips with their soft shadow, in every Lagos and Ogun street, well rooms and both halls; street people take the warm outline and face recipe | ST-B1, SP-Q1 | frame draw calls equal or fewer, fps at 4x CPU equal or better on Alausa, Ota and Go-Slow Hall; strip memory under 4 MB a street; level tests and e2e pass; hero, kobo, food and hazards read as before | 1.5 KB first load, 1 KB Ogun |
+| 8 | ST-B3 | gamedev | Cities: the recipe on every Lagos and Ogun block, kiosk and stall, still top-down; warm outlines; zinc and concrete roofs in place of big grey | ST-B1 | bake under 50 ms a block at 4x CPU; drag at least 45 fps; idle draws nothing; tap areas unchanged; tired and bright still told apart without colour | 0.5 KB first load |
+| 9 | ST-B4 | qa | Phase 2 pass | ST-B2, ST-B3 | style.md part 5; first load +3 KB, Ogun +1 KB at most | |
+| 10 | ST-B5 | po | Accept phase 2; Tp sees the screenshots | ST-B4 | note in docs/questions.md | |
+| 11 | ST-C1 | designer | Angled city note in docs/city.md: how far fronts reach (40 percent of block depth at most), labels, signs, pins and edge arrows, people per zoom step | ST-B5 (may start during phase 2) | po checks the note | |
+| 12 | ST-C2 | art | Angled drawings of every Lagos and Ogun city block kind (tired and bright), places and pins; bigger people pieces (style.md 1.4); soft shadows; gallery page `?gallery=style-city` | ST-C1 | own buildings only; cloth shades, not umbrellas; dark-skin rules 2.3; bake under 50 ms a block at 4x CPU | 5 KB first load, 4 KB Ogun |
+| 13 | ST-C3 | gamedev | Lagos city in the angled view with people and shadows; tap areas, pins, labels, signs and edge arrows moved to match; the city walk still works | ST-C2 | every tap area hits its place at all six sizes and with the safe area; no label or sign covered; drawImage calls per frame not more than today; drag at least 45 fps at 4x CPU; idle draws nothing | 2 KB first load |
+| 14 | ST-C4 | gamedev | Ogun city the same, Booming meter included | ST-C3 | as ST-C3 for Ogun | 2 KB Ogun |
+| 15 | ST-C5 | qa | Phase 3 pass | ST-C3, ST-C4 | style.md part 5; faces of every skin tone at 320 x 240 and 640 x 200 and in greyscale; first load +7 KB, Ogun +6 KB at most | |
+| 16 | ST-C6 | po | Accept phase 3; Tp sees the screenshots | ST-C5 | note in docs/questions.md | |
+| 17 | ST-D1 | art | Everyday detail helpers (paving stones, rust, roof tanks, louvres, burglar-proof bars, poles and wires, a pot with steam, a goat, tufts, ground colours); gallery page `?gallery=style-detail` | ST-C6 | detail never darker than the wall foot; never inside a tap target | 1.5 KB first load |
+| 18 | ST-D2 | gamedev | Detail and far haze baked into both cities; far haze on every street's far backdrop row | ST-D1 | baked only; street frame draw calls not more than after phase 2; bake under 50 ms a block | 1.5 KB first load, 2 KB Ogun |
+| 19 | ST-D3 | qa | Phase 4 pass and the whole-slice size and speed check | ST-D2 | first load +16 KB and Ogun +9 KB at most for slice P; one Lagos street, one Ogun street and Pothole Hall frame times compared with before slice P | |
+| 20 | ST-D4 | po | Accept phase 4 and slice P | ST-D3 | note in docs/questions.md | |
+
+Question for Tp (style.md part 6), id SP-Q1: should ST-B2 also swap the old market umbrellas (Computer Village, the Sagamu kola market, the lane run) for flat cloth shades? Recommended: yes. ST-B2 waits for the answer only for the umbrella part.
+
+Order and what runs side by side:
+- ST-A1 can start now beside slice O; ST-A2 and ST-A3 fit in gamedev's gaps (one task at a time, slice O and the speed task from decision 83 first, unless Tp says otherwise).
+- Art runs one phase ahead: ST-B1 may be drawn while phase 1 is in qa, but no gamedev ST-B row starts before ST-A5.
+- ST-C3 before ST-C4: Lagos proves the angled view and its tap areas; Ogun reuses it.
+- The evening look is not in this slice.
+
 ## How a task moves
 
 designer note (docs/design.md) -> art -> gamedev -> qa passes -> po accepts -> pm marks done.
