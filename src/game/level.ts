@@ -12,8 +12,8 @@
 import { FALL_Y, GAIT, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
 import { FEATURE_NAMES, type Feature } from './features';
 
-/** S2.16 B1: the egret and the crow are birds by the rubbish (never hurt; they fly off). */
-export type HazardKind = 'goat' | 'tyre' | 'drum' | 'egret' | 'crow';
+/** S2.16 B1: the egret and the crow are birds by the rubbish (never hurt; they fly off). O4b: hopping gravel (Sagamu). */
+export type HazardKind = 'goat' | 'tyre' | 'drum' | 'egret' | 'crow' | 'gravel';
 export type BirdKind = 'egret' | 'crow';
 export const isBird = (k: HazardKind): k is BirdKind => k === 'egret' || k === 'crow';
 
@@ -78,9 +78,13 @@ export interface HallData {
   leftLimit: number;
   rightLimit: number;
 }
-export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu';
+/**
+ * O2b (ogun.md 4.1): ikokore, Ogun's own food: mud does not slow you for 12 s.
+ * O3b: ofada rice: cracks stay shut for 12 s.
+ */
+export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu' | 'ikokore' | 'ofada';
 /** S2.15: crates may hold fufu later (it needs a crate stamp from art); none do now. */
-export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu'>;
+export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu' | 'ikokore' | 'ofada'>;
 
 /** A crate hung over the road or a roof (S2.4): centre x, bottom edge y. */
 export interface CrateData {
@@ -88,6 +92,28 @@ export interface CrateData {
   bottomY: number;
   contents: CrateContents;
 }
+
+/** O2b (ogun.md 3.3): a mud patch on the road from x to x + w (80 to 200 wide). */
+export interface MudData {
+  x: number;
+  w: number;
+}
+/** ogun.md 3.3: a mud patch is 80 to 200 u wide. */
+export const MUD_WIDTH = { min: 80, max: 200 } as const;
+
+/** O3b (ogun.md 3.3): a rock step, x to x + w, its top h above the road (a one-way platform). */
+export interface RockData {
+  x: number;
+  w: number;
+  h: number;
+}
+/** O3b (ogun.md 3.3): a crack across the road from x to x + w (40 or 60) that opens into a pothole. */
+export interface CrackData {
+  x: number;
+  w: number;
+}
+/** ogun.md 3.3: a crack is a tap (40) or hold (60) pothole once open. */
+export const CRACK_WIDTHS: readonly number[] = [40, 60];
 
 /** A well (S2.5): entrance x, exit x, room file id. */
 export interface WellData {
@@ -123,8 +149,8 @@ export interface Level {
   koboSpacing: number;
   /** A hazard starts moving when it is this far ahead of the hero. */
   wakeDistance: number;
-  /** Rolling and walking speeds, u/s; birds: the egret's pacing speed (30 when left out), the crow hovers. */
-  hazardSpeeds: Record<'goat' | 'tyre' | 'drum', number> & Partial<Record<BirdKind, number>>;
+  /** Rolling and walking speeds, u/s; birds: the egret's pacing speed (30 when left out), the crow hovers; gravel 70 when left out. */
+  hazardSpeeds: Record<'goat' | 'tyre' | 'drum', number> & Partial<Record<BirdKind | 'gravel', number>>;
   /** Road spans as [startX, endX], for drawing. */
   ground: readonly (readonly [number, number])[];
   terrain: Terrain;
@@ -136,6 +162,16 @@ export interface Level {
   gutters: readonly GutterData[];
   /** S2.16 B1: rubbish piles (scenery, never solid) by x. */
   piles: readonly number[];
+  /** O2b (ogun.md 3.3): mud patches, left to right (none on most levels). */
+  mud: readonly MudData[];
+  /** O2b (ogun.md 1.4, 3.4): the gateway arch's x (Ota only), or null. */
+  arch: number | null;
+  /** O3b (ogun.md 3.3): rock steps (also in terrain.platforms, so they are roofs to the rules). */
+  rocks: readonly RockData[];
+  /** O3b: cracks, left to right (each opens into a pothole as the hero comes near). */
+  cracks: readonly CrackData[];
+  /** O3b: left lips of potholes drawn holding water (look only). */
+  waterPits: readonly number[];
   /** S2.16 B4: reaching this x turns the dash on (saved), or null. */
   dashFrom: number | null;
   /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
@@ -159,9 +195,9 @@ const WALL_GAP = 7;
 /** S2.6 street walk speed with roasted corn (the hall file has no speeds; it uses the streets'). */
 const CORN_WALK = 120;
 
-const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu'];
+const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu', 'ikokore', 'ofada'];
 const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', 'corn', 'garri', 'amala'];
-const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow'];
+const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow', 'gravel'];
 /** S2.16 B1: the egret paces its patch at 30 u/s; the crow hovers in place. */
 export const EGRET_SPEED = 30;
 
@@ -247,6 +283,27 @@ export function parseLevel(raw: unknown): Level {
   });
   const piles = (r['piles'] === undefined ? [] : list(r['piles'], 'piles')).map((x, i) => num(x, `piles[${i}]`));
   const dashFrom = r['dashFrom'] === undefined ? null : num(r['dashFrom'], 'dashFrom');
+  const mud: MudData[] = (r['mud'] === undefined ? [] : list(r['mud'], 'mud')).map((q, i) => {
+    const [x, w] = tuple(q, `mud[${i}]`, 2);
+    const m = { x: num(x, `mud[${i}][0]`), w: num(w, `mud[${i}][1]`) };
+    if (m.w < MUD_WIDTH.min || m.w > MUD_WIDTH.max) fail(`mud[${i}][1]`, `should be ${MUD_WIDTH.min} to ${MUD_WIDTH.max} wide`);
+    return m;
+  });
+  const arch = r['arch'] === undefined ? null : num(r['arch'], 'arch');
+  // O3b (ogun.md 3.8): rocks [x, width, height], cracks [x, width], waterPits [x].
+  const opt = (k: string): unknown[] => (r[k] === undefined ? [] : list(r[k], k));
+  const rocks: RockData[] = opt('rocks').map((q, i) => {
+    const [x, w, h] = tuple(q, `rocks[${i}]`, 3).map((v, j) => num(v, `rocks[${i}][${j}]`));
+    if (!(w! > 0 && h! > 0)) fail(`rocks[${i}]`, 'should have a width and height above 0');
+    return { x: x!, w: w!, h: h! };
+  });
+  const cracks: CrackData[] = opt('cracks').map((q, i) => {
+    const [x, w] = tuple(q, `cracks[${i}]`, 2).map((v, j) => num(v, `cracks[${i}][${j}]`));
+    if (!CRACK_WIDTHS.includes(w!)) fail(`cracks[${i}][1]`, `should be one of ${CRACK_WIDTHS.join(', ')}`);
+    return { x: x!, w: w! };
+  });
+  const waterPits = opt('waterPits').map((x, i) => num(x, `waterPits[${i}]`));
+  for (const k of rocks) platforms.push({ x: k.x, y: groundY - k.h, w: k.w });
 
   const crates: CrateData[] =
     r['crates'] === undefined && schema === 1
@@ -298,6 +355,7 @@ export function parseLevel(raw: unknown): Level {
       drum: speeds['drum'] === undefined ? tyreSpeed : num(speeds['drum'], 'hazardSpeeds.drum'),
       // S2.16 B1: only a street with birds names the egret's pacing speed.
       ...(speeds['egret'] === undefined ? {} : { egret: num(speeds['egret'], 'hazardSpeeds.egret') }),
+      ...(speeds['gravel'] === undefined ? {} : { gravel: num(speeds['gravel'], 'hazardSpeeds.gravel') }),
     },
     ground,
     terrain: { groundY, ground: spans, platforms, fallY: Math.max(FALL_Y, groundY + 120) },
@@ -306,6 +364,11 @@ export function parseLevel(raw: unknown): Level {
     hazards: hazards.sort((p, q) => p.x - q.x),
     gutters: gutters.sort((p, q) => p.x - q.x),
     piles,
+    mud: mud.sort((p, q) => p.x - q.x),
+    arch,
+    rocks,
+    cracks: cracks.sort((p, q) => p.x - q.x),
+    waterPits,
     dashFrom,
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
@@ -340,55 +403,59 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
   if (spawnX < hall.leftLimit || spawnX > hall.rightLimit) fail('spawnX', 'should be between leftLimit and rightLimit');
 
   const b = obj(r['boss'], 'boss');
-  const lights = list(b['lights'], 'boss.lights').map((l, i) => {
-    const [x, y, w] = tuple(l, `boss.lights[${i}]`, 3);
-    return { x: num(x, `boss.lights[${i}][0]`), y: num(y, `boss.lights[${i}][1]`), w: num(w, `boss.lights[${i}][2]`) };
-  });
-  const phases = list(b['phases'], 'boss.phases').map((ph, i) => {
-    const p = obj(ph, `boss.phases[${i}]`);
-    const pattern = list(p['pattern'], `boss.phases[${i}].pattern`).map((k, j) => oneOf(k, `boss.phases[${i}].pattern[${j}]`, THROW_KINDS));
-    if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
-    const every = num(p['every'], `boss.phases[${i}].every`);
-    if (every <= 0) fail(`boss.phases[${i}].every`, 'should be above 0');
-    const above0 = (k: string): number => {
-      const v = num(p[k], `boss.phases[${i}].${k}`);
-      return v > 0 ? v : fail(`boss.phases[${i}].${k}`, 'should be above 0');
+  // O5b: a boss with no go lights (King Pothole) has its own rules, read by its state's lazy part.
+  let boss: BossData | null = null;
+  if (b['lights'] !== undefined) {
+    const lights = list(b['lights'], 'boss.lights').map((l, i) => {
+      const [x, y, w] = tuple(l, `boss.lights[${i}]`, 3);
+      return { x: num(x, `boss.lights[${i}][0]`), y: num(y, `boss.lights[${i}][1]`), w: num(w, `boss.lights[${i}][2]`) };
+    });
+    const phases = list(b['phases'], 'boss.phases').map((ph, i) => {
+      const p = obj(ph, `boss.phases[${i}]`);
+      const pattern = list(p['pattern'], `boss.phases[${i}].pattern`).map((k, j) => oneOf(k, `boss.phases[${i}].pattern[${j}]`, THROW_KINDS));
+      if (pattern.length === 0) fail(`boss.phases[${i}].pattern`, 'should have at least one throw');
+      const every = num(p['every'], `boss.phases[${i}].every`);
+      if (every <= 0) fail(`boss.phases[${i}].every`, 'should be above 0');
+      const above0 = (k: string): number => {
+        const v = num(p[k], `boss.phases[${i}].${k}`);
+        return v > 0 ? v : fail(`boss.phases[${i}].${k}`, 'should be above 0');
+      };
+      return {
+        every,
+        speed: num(p['speed'], `boss.phases[${i}].speed`),
+        pattern,
+        bpm: num(p['bpm'], `boss.phases[${i}].bpm`),
+        lightAt: above0('lightAt'),
+        greenFor: above0('greenFor'),
+        darkFor: above0('darkFor'),
+      };
+    });
+    if (lights.length === 0) fail('boss.lights', 'should have at least one light');
+    if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
+    boss = {
+      kind: str(b['kind'], 'boss.kind'),
+      x: num(b['x'], 'boss.x'),
+      throwX: num(b['throwX'], 'boss.throwX'),
+      drainX: num(b['drainX'], 'boss.drainX'),
+      startDelay: num(b['startDelay'], 'boss.startDelay'),
+      lights,
+      breakAfterHit: num(b['breakAfterHit'], 'boss.breakAfterHit'),
+      phases,
+      honkY: num(b['honkY'], 'boss.honkY'),
+      highHonkY: num(b['highHonkY'], 'boss.highHonkY'),
+      honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
+      fufu: null,
     };
-    return {
-      every,
-      speed: num(p['speed'], `boss.phases[${i}].speed`),
-      pattern,
-      bpm: num(p['bpm'], `boss.phases[${i}].bpm`),
-      lightAt: above0('lightAt'),
-      greenFor: above0('greenFor'),
-      darkFor: above0('darkFor'),
-    };
-  });
-  if (lights.length === 0) fail('boss.lights', 'should have at least one light');
-  if (phases.length !== lights.length) fail('boss.phases', 'should have one phase per light');
-  const boss: BossData = {
-    kind: str(b['kind'], 'boss.kind'),
-    x: num(b['x'], 'boss.x'),
-    throwX: num(b['throwX'], 'boss.throwX'),
-    drainX: num(b['drainX'], 'boss.drainX'),
-    startDelay: num(b['startDelay'], 'boss.startDelay'),
-    lights,
-    breakAfterHit: num(b['breakAfterHit'], 'boss.breakAfterHit'),
-    phases,
-    honkY: num(b['honkY'], 'boss.honkY'),
-    highHonkY: num(b['highHonkY'], 'boss.highHonkY'),
-    honkSpeed: num(b['honkSpeed'], 'boss.honkSpeed'),
-    fufu: null,
-  };
-  if (b['fufu'] !== undefined) {
-    const f = obj(b['fufu'], 'boss.fufu');
-    const afterHit = num(f['afterHit'], 'boss.fufu.afterHit');
-    if (!Number.isInteger(afterHit) || afterHit < 1 || afterHit >= lights.length) fail('boss.fufu.afterHit', 'should be a hit number before the last');
-    const x = num(f['x'], 'boss.fufu.x');
-    if (x < hall.leftLimit || x > hall.rightLimit) fail('boss.fufu.x', 'should be between leftLimit and rightLimit');
-    boss.fufu = { x, afterHit };
+    if (b['fufu'] !== undefined) {
+      const f = obj(b['fufu'], 'boss.fufu');
+      const afterHit = num(f['afterHit'], 'boss.fufu.afterHit');
+      if (!Number.isInteger(afterHit) || afterHit < 1 || afterHit >= lights.length) fail('boss.fufu.afterHit', 'should be a hit number before the last');
+      const x = num(f['x'], 'boss.fufu.x');
+      if (x < hall.leftLimit || x > hall.rightLimit) fail('boss.fufu.x', 'should be between leftLimit and rightLimit');
+      boss.fufu = { x, afterHit };
+    }
+    if (boss.throwX <= hall.rightLimit) fail('boss.throwX', 'should be right of the cone line (rightLimit)');
   }
-  if (boss.throwX <= hall.rightLimit) fail('boss.throwX', 'should be right of the cone line (rightLimit)');
 
   // The floor runs past both walls: there are no pits in a hall.
   const floor: readonly [number, number] = [-200, width + 200];
@@ -418,6 +485,11 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     hazards: [],
     gutters: [],
     piles: [],
+    mud: [],
+    arch: null,
+    rocks: [],
+    cracks: [],
+    waterPits: [],
     dashFrom: null,
     hints: [],
     checkpoint: Infinity,

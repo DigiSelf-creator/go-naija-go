@@ -12,13 +12,14 @@ import type { HeroLook } from '../art/hero';
 import { ROOM } from '../art/wellRoom';
 import type { View } from '../engine/view';
 import { CastSheet, LayerSlot, drawBubbleAt, drawBusHeads, drawKekeHeads, drawOkadaBaked, drawWindowRow, screenRatio, type Rect } from './crowdDraw';
-import { CROWD, FrameWatch, HallCrowd, RoomKeeper, STREET_OF, StreetCrowd, crowdSpots, hallCast, streetCast, type Bubble, type CrowdEvent, type CrowdLook, type CrowdView, type FolkDraw } from './crowd';
+import { CROWD, FrameWatch, HallCrowd, RoomKeeper, STREET_OF, StreetCrowd, crowdSpots, hallCast, ownCast, streetCast, type Bubble, type CrowdEvent, type CrowdLook, type CrowdView, type FolkDraw, type StreetCast } from './crowd';
 import type { Level } from './level';
 import type { Run } from './run';
 
 type G = CanvasRenderingContext2D;
 export type CrowdSound = 'crowdCheer' | 'crowdCheerBig';
 
+const NONE: readonly never[] = [];
 /** The hall's sheet is baked at this person size: the door people's (HallCrowd.draw). */
 const HALL_BAKE_SIZE = 0.9;
 
@@ -38,6 +39,8 @@ export interface PeopleNow {
   clock: number;
   /** World units the picture is raised (Game.lift). */
   lift: number;
+  /** O2b: a later state's street brings its own cast (skin.ts), or null. */
+  cast: StreetCast | null;
 }
 
 export class GamePeople {
@@ -223,6 +226,22 @@ export class GamePeople {
     return this.streetSheet.bakeMs;
   }
 
+  /**
+   * O2b: the traders standing in the street now (x, their look, where their feet are), for a
+   * street look's stalls behind them. Empty while the people are off.
+   */
+  traders(): readonly { x: number; look: FolkLook; feetY: number }[] {
+    const st = this.on ? this.street : null;
+    if (!st) return NONE;
+    if (this.tradersOf !== st) {
+      this.tradersOf = st;
+      this.traderList = st.plan.stands.filter((p) => p.kind === 'trader').map((p) => ({ x: p.x, look: this.looks[p.look]!, feetY: st.groundY - CROWD.feetUp }));
+    }
+    return this.traderList;
+  }
+  private tradersOf: StreetCrowd | null = null;
+  private traderList: { x: number; look: FolkLook; feetY: number }[] = [];
+
   /** A new run (Game.begin / reset): fresh people; backing off is forgotten. */
   restart(): void {
     this.key = '';
@@ -236,7 +255,7 @@ export class GamePeople {
   private ensure(n: PeopleNow): void {
     const { level } = n;
     const hk = `${n.look.skin},${n.look.hair},${n.look.outfit}`;
-    const key = `${level.id}|${n.crowdLook}|${hk}`;
+    const key = `${level.id}|${n.crowdLook}|${hk}|${n.cast?.name ?? ''}`;
     if (key === this.key) return;
     this.key = key;
     this.street = null;
@@ -246,13 +265,19 @@ export class GamePeople {
       this.hall = new HallCrowd(level.groundY);
       return;
     }
+    const own = n.cast;
     const name = STREET_OF[level.id];
-    if (!name || !level.manual) return;
-    const cast = streetCast(name, n.look);
+    if ((!name && !own) || !level.manual) return;
+    const cast = own ? ownCast(own, n.look) : streetCast(name!, n.look);
     this.looks = cast.looks;
-    const plan = crowdSpots(level, n.crowdLook, cast.looks, cast.park);
+    const plan = own ? crowdSpots(level, n.crowdLook, cast.looks, cast.park, own.from) : crowdSpots(level, n.crowdLook, cast.looks, cast.park);
+    // O2b: a later state's people at their own spots (the travellers by the arch), if their look is in.
+    for (const e of own?.extras ?? []) {
+      const i = cast.looks.indexOf(e.look);
+      if (i >= 0) plan.stands.unshift({ x: e.x, look: i, kind: 'stand', flip: e.flip ?? false });
+    }
     this.walkLooks = new Set(plan.walkers.map((w) => w.look));
-    this.street = new StreetCrowd(plan, name, level.groundY, level);
+    this.street = new StreetCrowd(plan, name ?? 'alausa', level.groundY, level, own ? { cast: own, looks: cast.looks } : null);
     // 3 to 5 heads in a bus's windows: every skin tone across the street's cast.
     this.busLooks = [cast.looks[1], cast.looks[4], cast.looks[7], cast.looks[10], cast.looks[13]];
     this.passLooks = this.busLooks.slice(0, 4);
@@ -267,7 +292,7 @@ export class GamePeople {
     const run = n.run;
     const back = this.watch.level;
     this.keeper.still = n.still;
-    this.keeper.update(dt, events, run.room?.room.groundY ?? 300);
+    this.keeper.update(dt, events, run.room?.room.groundY ?? 300, n.cast?.keeper);
     if (this.hall && run.boss) {
       this.hall.still = n.still;
       this.hall.backOff = back;
@@ -439,8 +464,10 @@ export class GamePeople {
     if (!this.on) return;
     const room = n.run.room?.room;
     if (!room) return;
-    this.roomSheet.ready([STORE_KEEPER], view.scale, 'keeper');
-    const d: FolkDraw = { look: 0, frame: this.keeper.frame(), x: STORE_KEEPER_SPOT.x, y: room.groundY - CROWD.feetUp, flip: false, size: 1 };
+    // O3b: a later state's room has its own keeper (Ogun's in the Ijebu garri store).
+    const own = n.cast?.keeper;
+    this.roomSheet.ready([own?.look ?? STORE_KEEPER], view.scale, own ? 'keeper|own' : 'keeper');
+    const d: FolkDraw = { look: 0, frame: this.keeper.frame(), x: own?.x ?? STORE_KEEPER_SPOT.x, y: room.groundY - CROWD.feetUp, flip: false, size: 1 };
     this.roomSheet.draw(g, d);
     this.drawn = [d];
     this.seen = 1;

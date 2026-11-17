@@ -98,6 +98,8 @@ export async function dashByHand(page: Page, h: Hands): Promise<boolean> {
  */
 export async function playStreetByHand(page: Page, h: Hands, opts: HandBotOpts = {}) {
   const level = await page.evaluate(() => window.__game!.level);
+  // O3b: a crack opens into a pothole as the hero comes near: jump it as one (a shut one too).
+  const small = [...level.gaps, ...(level.cracks ?? [])];
   const btn = await buttonCentres(page);
   const stats = { presses: 0, lostAt: [] as number[], foods: new Set<string>(), maxSpeed: 0, bigPitJumps: [] as { x: number; speed: number }[] };
   const fellOnce = new Set<number>();
@@ -147,7 +149,7 @@ export async function playStreetByHand(page: Page, h: Hands, opts: HandBotOpts =
       }
       continue;
     }
-    const gap = big ?? level.gaps.find(([a, b]) => b - a < 160 && a - hero.x > -4 && a - hero.x < 32);
+    const gap = big ?? small.find(([a, b]) => b - a < 160 && a - hero.x > -4 && a - hero.x < 32);
     const hazard = s.r.hazards.find((z) => (z.mode === 'wait' || z.mode === 'move') && z.x - hero.x > 0 && z.x - hero.x < 80);
     const weeds = s.r.gutters.find((q) => q.state === 'weeds' && q.x - hero.x > 0 && q.x - hero.x < 30);
     if (gap || hazard || weeds) {

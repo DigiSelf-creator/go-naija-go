@@ -22,6 +22,8 @@ const KEY_GENTLE = 'gentle';
 const KEY_LANE_BUTTONS = 'laneButtons';
 /** S3f0 part 25: the lane run's "Tilt to steer" switch (decision 70). Only on or off: no angle is ever saved. */
 const KEY_TILT = 'tiltToSteer';
+/** O1b2: "Show the bus ride" (ogun.md 1.3), default on. */
+const KEY_BUS_RIDE = 'busRide';
 
 function isLookShape(v: unknown): v is HeroLook {
   if (typeof v !== 'object' || v === null) return false;
@@ -106,6 +108,8 @@ export interface Settings {
   buttonsInsteadOfSwipes: boolean;
   /** S3f0 part 25: "Tilt to steer" in the lane run (default off). */
   tiltToSteer: boolean;
+  /** O1b2: "Show the bus ride" between states after the first time (default on). */
+  busRide: boolean;
 }
 
 export function loadSettings(store: Store): Settings {
@@ -114,7 +118,8 @@ export function loadSettings(store: Store): Settings {
   const gentle = store.load(KEY_GENTLE, (v): v is boolean => typeof v === 'boolean');
   const buttons = store.load(KEY_LANE_BUTTONS, (v): v is boolean => typeof v === 'boolean');
   const tilt = store.load(KEY_TILT, (v): v is boolean => typeof v === 'boolean');
-  return { sound: sound ?? true, music: music ?? true, gentle: gentle ?? false, buttonsInsteadOfSwipes: buttons ?? false, tiltToSteer: tilt ?? false };
+  const ride = store.load(KEY_BUS_RIDE, (v): v is boolean => typeof v === 'boolean');
+  return { sound: sound ?? true, music: music ?? true, gentle: gentle ?? false, buttonsInsteadOfSwipes: buttons ?? false, tiltToSteer: tilt ?? false, busRide: ride ?? true };
 }
 
 export function saveSettings(store: Store, s: Settings): void {
@@ -123,4 +128,5 @@ export function saveSettings(store: Store, s: Settings): void {
   store.save(KEY_GENTLE, s.gentle);
   store.save(KEY_LANE_BUTTONS, s.buttonsInsteadOfSwipes);
   store.save(KEY_TILT, s.tiltToSteer);
+  store.save(KEY_BUS_RIDE, s.busRide);
 }

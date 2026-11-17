@@ -10,6 +10,15 @@ export const GAME_NAME = 'Gbese!';
 /** The title line (City choice 10, Tp 9 Nov 2026); the moving intro ends on the same words. */
 const TAGLINE = 'Build up Lagos. Get Nigeria working.';
 
+/**
+ * O1b1: when the Ogun part cannot load (src/worlds/load.ts). `noInternet` is ogun.md part 8's
+ * download card line; `broken` (a missing or damaged file) is gamedev's draft for designer to check.
+ */
+export const WORLD_PART_WORDS = {
+  noInternet: 'Ogun needs the internet once to download. Lagos still works with no internet.',
+  broken: 'Ogun could not open just now. Lagos still works. Try again later.',
+};
+
 export const WORDS = {
   title: {
     /** City choice 10 (Tp, 9 Nov 2026). */
@@ -206,6 +215,8 @@ export const WORDS = {
     soundOff: 'Sound: off',
     settings: 'Settings',
     road: 'Challenge road',
+    /** CO3: shown for a moment while the road's part opens (gamedev's words, for designer to check). */
+    roadOpening: 'Opening the road...',
     /** S3e0 part 7: the problem cards' small button. */
     seeStop: 'See the stop',
     hero: 'Hero',
@@ -508,6 +519,145 @@ export const WORDS = {
 } as const;
 
 /**
+ * O0a1: every Ogun word a player sees (docs/ogun.md parts 1, 3, 4, 5, 7 and 8; decisions 72 to
+ * 82). Kept apart from WORDS so gamedev can hook each screen up in its own task (O1b, O2b to
+ * O5b). "Ota" alone, never "Sango-Ota"; the rocks are never named; nothing religious.
+ * The city from above, its challenge road and the Expressway run (part 6) come with O6.
+ */
+export const OGUN_WORDS = {
+  /** Part 1.2: the Win screen after Go-Slow Hall gains a button and a new line. */
+  lagosWin: {
+    line: 'The road to Ogun is open. Ogun is the gateway to the rest of Nigeria.',
+    /** The big button after the first hall win. */
+    onToOgun: 'On to Ogun',
+    /** The small button after later hall wins. */
+    goToOgun: 'Go to Ogun',
+  },
+  /** Part 1.3 and 1.4: the bus ride and our own gateway arch. */
+  busRide: {
+    archFront: ['WELCOME TO OGUN', 'THE GATEWAY STATE'] as readonly string[],
+    archBack: 'SAFE JOURNEY',
+    skip: 'Skip',
+    /** The picture's spoken name, going in and going home. */
+    spokenIn: 'A yellow bus drives under the gateway arch into Ogun.',
+    spokenOut: 'A yellow bus drives back under the arch to Lagos.',
+    /** Settings switch (default on). */
+    settingOn: 'Show the bus ride: on',
+    settingOff: 'Show the bus ride: off',
+  },
+  /** Part 1.4: the arrival card, first visit only. */
+  arrival: {
+    heading: 'Welcome to Ogun, the Gateway State!',
+    line1: 'The road to the rest of Nigeria runs through here.',
+    line2: 'King Pothole has dug in at the gateway. Fix Ogun, and the way opens.',
+    go: "Let's go",
+  },
+  /** Part 8 and 9.2 (OG-R6): the web download card. The size is "about 130 KB" everywhere. */
+  download: {
+    line1: 'Ogun is ready to download (about 130 KB).',
+    line2: 'After this it plays with no internet.',
+    go: 'Download',
+    notNow: 'Not now',
+    /** While it downloads (not in the note: added so the card never sits blank). */
+    loading: 'Downloading Ogun...',
+    noNet: 'Ogun needs the internet once to download. Lagos still works with no internet.',
+    ok: 'OK',
+  },
+  /** Part 1.5: the Travel button and card. */
+  travel: {
+    button: 'Travel',
+    heading: 'Where to?',
+    lagos: 'Lagos',
+    ogun: 'Ogun',
+    here: 'You are here',
+    back: 'Back',
+    /** "Booming: 9 of 20", or "Booming: 20 of 20 ✓" once its cog turns. */
+    booming: (n: number, turning: boolean) => `Booming: ${n} of 20${turning ? ' ✓' : ''}`,
+    /** "Lagos. Booming 20 of 20. Cog turning." / "Ogun. Booming 4 of 20. You are here." */
+    spoken: (name: string, n: number, turning: boolean, here: boolean) =>
+      `${name}. Booming ${n} of 20.${turning ? ' Cog turning.' : ''}${here ? ' You are here.' : ''}`,
+  },
+  /** Part 1.2: the "To Ogun" stop on the Lagos challenge road, and its card. */
+  toOgun: {
+    stop: 'To Ogun',
+    open: 'Open',
+    /** Locked stop, line 3. */
+    lockedShort: 'Win Go-Slow Hall',
+    line: 'The road to Ogun is open.',
+    go: 'Go to Ogun',
+    locked: 'Win Go-Slow Hall to open the road to Ogun.',
+  },
+  /** Part 1.7: the wheel's rail lines and the "All names" list. */
+  wheel: {
+    lagosOnly: 'Win Go-Slow Hall to open the road to Ogun.',
+    ogunNext: 'Next: Ogun, the Gateway State.',
+    ogunTurning: 'Ogun is turning. Smooth out King Pothole to open the gateway.',
+    gatewayOpen: 'The gateway is open. More states are coming soon.',
+    /** In "All names", after the pennant (never colour alone). */
+    listNext: 'Ogun, next',
+  },
+  /** O6b: the Expressway's Pause card button (Lagos's says "Back to Lagos"). */
+  laneHome: 'Back to Ogun',
+  /** Part 1.8: Settings, under "Saved on this phone". */
+  saved: 'Your hero, Lagos and Ogun are saved on this phone.',
+  /** Part 3.1 (decision 76): the three streets, in order along the road from Lagos. */
+  streets: ['Ota', 'Abeokuta', 'Sagamu'] as readonly string[],
+  /** Part 8: Out of lives on an Ogun street (the Lagos card's words, with Ogun). */
+  gameOver: {
+    text: (kobo: number) => `You keep ${formatMoney(kobo)} for Ogun. The street is still here. Try again!`,
+    hallText: 'King Pothole is still blocking the gateway. Try again!',
+  },
+  /** Part 3: each street's hints, word for word as in its level file (35 characters or fewer). */
+  hints: {
+    ota: ['Mud! It slows you down.', 'Bus stop! Now you start here.', 'Big pit! Leave the mud, then run.', "Ikokore! Mud won't slow you now."],
+    abeokuta: [
+      'Rocks! Jump up from step to step.',
+      'Water pothole! Jump over it too.',
+      'Bus stop! Now you start here.',
+      'Crack! It opens up. Jump over it.',
+      'Ofada! Cracks stay shut now.',
+    ],
+    sagamu: ['Hopping gravel! Jump or bounce.', 'Two roads! Climb up, or stay low.', 'Bus stop! Now you start here.'],
+  } as Readonly<Record<'ota' | 'abeokuta' | 'sagamu', readonly string[]>>,
+  /** Toasts in the Ogun streets and the well room (parts 1.4, 3.7, 4.1). */
+  toast: {
+    /** As the hero passes under the arch on Ota (35 characters). */
+    arch: 'Welcome to Ogun, the Gateway State!',
+    ikokore: "Ikokore! Mud won't slow you for 12 seconds.",
+    ofada: 'Ofada rice! Cracks stay shut for 12 seconds.',
+    ikokoreWearingOff: 'Ikokore is wearing off!',
+    ofadaWearingOff: 'Ofada is wearing off!',
+    parcel: 'Ijebu garri parcel! Shield for the hall.',
+  },
+  /** HUD chips while a food works (icon, word, bar; never colour alone). */
+  hud: {
+    ikokore: (s: number) => `Ikokore ${s}`,
+    ofada: (s: number) => `Ofada ${s}`,
+  },
+  /** Street cleared, carrying the Ijebu garri parcel; the card's hall button. */
+  cleared: {
+    parcel: 'Your Ijebu garri parcel is saved for Pothole Hall.',
+    toHall: 'Go to Pothole Hall',
+  },
+  /**
+   * Part 5: Pothole Hall. Only what the first load shows; the hall's own words (and Ogun's
+   * bubbles, part 7) are in src/worlds/ogun/partWords.ts, in the lazy Ogun part (qa O2: size).
+   */
+  hall: {
+    name: 'Pothole Hall',
+    open: 'The gateway is open! Ogun is switched on!',
+  },
+  /** Part 5.5: the Win screen after Pothole Hall (the money line is the Lagos one). */
+  win: {
+    heading: 'Ogun is switched on!',
+    line: 'The road through the gateway is smooth. The way to the rest of Nigeria is open.',
+    takeHome: 'Take it home',
+    /** The money line, as Lagos's cards: "You got ₦15." */
+    money: (kobo: number) => `You got ${formatMoney(kobo)}.`,
+  },
+} as const;
+
+/**
  * S2.13 part 5: street hints whose words are not true in Gentle mode, and what they say there
  * instead (the bus stop is no longer where a fall puts you back).
  */
@@ -532,6 +682,15 @@ export const SHORT_TOAST: Readonly<Record<string, string>> = {
   'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
   'General Go-Slow is jamming the hall! Wait for the green light.': 'Go-Slow! Wait for the green light.',
   'PEEP! High honks fly high. Stay low on the floor.': 'PEEP! High honks: stay low.',
+  // O0a1: Ogun (docs/ogun.md parts 4 and 5).
+  "Ikokore! Mud won't slow you for 12 seconds.": "Ikokore! Mud won't slow you!",
+  'Ofada rice! Cracks stay shut for 12 seconds.': 'Ofada rice! Cracks stay shut!',
+  'Ijebu garri parcel! Shield for the hall.': 'Ijebu garri! Shield for the hall.',
+  'Your Ijebu garri parcel: the shield is on!': 'Ijebu garri parcel: shield on!',
+  'King Pothole is blocking the gateway!': 'King Pothole blocks the gateway!',
+  'Jump over King Pothole to drop it in.': 'Jump over him to drop it in.',
+  "He's cross! Two gravel lumps now. Jump them both.": 'Two gravel lumps now! Jump both.',
+  'The gateway is open! Ogun is switched on!': 'The gateway is open!',
 };
 
 /** The words a toast shows in a bar this wide (CSS px): the short words on a narrow bar. */

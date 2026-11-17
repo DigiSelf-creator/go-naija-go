@@ -103,13 +103,15 @@ test('the screen reader list in road order; Tab and arrow keys; Enter opens a ca
   await open(page, { v: 2, states: { lagos: { streets: { 1: { done: true, best: 870 } }, parcel: false } }, city: CITY, lane: { best: 840, goals: 1, runs: 1, hints: [] } });
   await toRoad(page);
   const list = road(page).getByRole('list', { name: 'Challenge road stops' });
-  await expect(list.getByRole('button')).toHaveText([/Alausa/, /Lane run/, /Computer Village/, /Ikeja/, /Go-Slow Hall/, /Ferry/]);
+  // O1b2: the "To Ogun" stop sits between the hall and the Ferry (ogun.md 1.2).
+  await expect(list.getByRole('button')).toHaveText([/Alausa/, /Lane run/, /Computer Village/, /Ikeja/, /Go-Slow Hall/, /To Ogun/, /Ferry/]);
   expect(await list.getByRole('button').evaluateAll((b) => b.map((x) => x.getAttribute('aria-label')))).toEqual([
     'Stop 1, Alausa. Done. Best 8 naira 70 kobo.',
     'Side road, Lane run. Done. Best 840 metres.',
     'Stop 2, Computer Village. Next. Ready to play.',
     'Stop 3, Ikeja. Locked. Finish Computer Village first.',
     'Stop 4, Go-Slow Hall. Locked. Finish Ikeja first.',
+    'To Ogun. Locked. Win Go-Slow Hall to open the road to Ogun.',
     'Ferry. Coming soon. Fixes to go: 5.',
   ]);
   await list.getByRole('button').first().focus();

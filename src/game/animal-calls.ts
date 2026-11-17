@@ -58,3 +58,20 @@ export class AnimalCalls {
     this.last = { meeh: -Infinity, hawk: -Infinity };
   }
 }
+
+/**
+ * OG-R15 (ogun.md part 11): the hopping gravel's "tk" plays only for a landing on screen, and two
+ * landings within 0.1 s of each other make one "tk". Times in seconds of play (Game.clock).
+ */
+export class TkGate {
+  private last = -Infinity;
+  static readonly gap = 0.1;
+
+  /** A gravel landed at world x; the screen shows camX to camX + viewW. True: play the "tk". */
+  due(x: number, camX: number, viewW: number, now: number): boolean {
+    if (!(x >= camX && x <= camX + viewW)) return false;
+    if (now - this.last < TkGate.gap - 1e-9) return false;
+    this.last = now;
+    return true;
+  }
+}

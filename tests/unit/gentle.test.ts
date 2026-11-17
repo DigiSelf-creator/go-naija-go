@@ -75,7 +75,7 @@ describe('S2.13 part 5: a fall in Gentle mode', () => {
       expect(run.hero.x).toBe(want);
       expect(run.hero.dir).toBe(1);
       expect(run.hero.vx).toBe(0);
-      expect(run.power).toEqual({ corn: 0, amala: 0, shield: false });
+      expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false });
       expect(run.safe).toBe(RULES.climbSafeSteps);
       expect(RULES.climbSafeSteps).toBe(Math.round(1.7 * 60));
       expect(WORDS.climbOut[kind].length).toBeLessThanOrEqual(35);

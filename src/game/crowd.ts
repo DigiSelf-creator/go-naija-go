@@ -100,6 +100,8 @@ export function clearZones(level: Level): Span[] {
   for (const c of level.coins) if (c.y > gy - 40) add(c.x - 20, c.x + 20);
   for (const f of level.foods) if (f.y > gy - 40) add(f.x - 20, f.x + 20);
   for (const q of level.gutters) add(q.x - 20, q.x + q.w + 20);
+  // O3b: a crack and its sign 120 u before it (it opens into a pothole).
+  for (const c of level.cracks) add(c.x - 150, c.x + c.w + 40);
   // The start fence, the checkpoint bus stop and the bus park have their own people (part 5).
   if (Number.isFinite(level.startWall)) add(level.startWall - 100, level.startWall + 110);
   add(level.checkpoint - 70, level.checkpoint + 170);
@@ -159,6 +161,34 @@ export const isTrader = (l: FolkLook): boolean => !!l.hold && TRADER_HOLDS.has(l
 export function withoutHero(looks: readonly FolkLook[], hero: HeroLike | null): FolkLook[] {
   const out = hero ? looks.filter((l) => !isHeroLook(l, hero)) : [...looks];
   return out.length ? out : [...looks.slice(0, 1)].map((l) => ({ ...l, skin: (l.skin + 1) % 7 }));
+}
+
+/**
+ * O2b: a later state's street people (its own cast and words), from the state's lazy part through
+ * its street look (skin.ts). The same rules as a Lagos street's people; only the looks and words
+ * are its own.
+ */
+export interface StreetCast {
+  /** For the seeds (the same people every try). */
+  readonly name: string;
+  readonly looks: readonly FolkLook[];
+  /** The counts start here (after the first screen). */
+  readonly from: number;
+  /** Traders' calls: each trader's own (callOf), else any of these. */
+  readonly calls: readonly string[];
+  readonly callOf?: (look: FolkLook) => string | undefined;
+  /** Greetings left of `to` use these lines (the welcome by the arch). */
+  readonly welcome?: { readonly to: number; readonly lines: Lines };
+  /** People who stand at their own spots (the travellers by the arch). */
+  readonly extras?: readonly { readonly x: number; readonly look: FolkLook; readonly flip?: boolean }[];
+  /** O3b: the street's well room keeper (his look, room x and words on the parcel), or the Lagos one. */
+  readonly keeper?: { readonly look: FolkLook; readonly x: number; readonly words: string };
+}
+
+/** O2b: a later state's cast, as streetCast (its looks then the bus park's, without the player's look). */
+export function ownCast(cast: StreetCast, hero: HeroLike | null): { looks: FolkLook[]; park: number } {
+  const own = withoutHero(cast.looks, hero);
+  return { looks: [...own, ...withoutHero(BUS_PARK_CROWD, hero)], park: own.length };
 }
 
 /** The street's cast: its 16 looks then the bus park's (both without the player's look). */
@@ -224,7 +254,8 @@ export function crowdSpots(level: Level, look: CrowdLook, looks: readonly FolkLo
     if (x === null) continue;
     const i = order[k % order.length]!;
     const l = looks[i]!;
-    const kind: SpotKind = isTrader(l) ? 'trader' : l.age === 'child' ? 'child' : l.age === 'elder' && k % 2 === 0 ? 'sit' : 'stand';
+    // O2b: a look on a stool (Ota's truck driver resting) always sits.
+    const kind: SpotKind = isTrader(l) ? 'trader' : l.age === 'child' ? 'child' : l.stool || (l.age === 'elder' && k % 2 === 0) ? 'sit' : 'stand';
     stands.push({ x, look: i, kind, flip: rand() < 0.5 });
   }
   // Every street has at least one trader calling when it has standing people and traders.
@@ -258,8 +289,7 @@ export function crowdSpots(level: Level, look: CrowdLook, looks: readonly FolkLo
       for (let k = stands.length - 1; k >= 0; k--) if (Math.abs(stands[k]!.x - mid) < 50) stands.splice(k, 1);
     }
   }
-  const street = STREET_OF[level.id] ?? 'alausa';
-  const nStop = street === 'alausa' ? 2 : 3;
+  const nStop = STREET_OF[level.id] === 'alausa' ? 2 : 3;
   const stop: Spot[] = Array.from({ length: nStop }, (_, k) => ({ x: level.checkpoint + 20 + k * 30, look: order[(k * 5 + 3) % order.length]!, kind: 'stand', flip: k % 2 === 1 }));
   const park: Spot[] = [];
   if (level.end) {
@@ -305,7 +335,7 @@ export function inZone(zones: readonly Span[], x: number, pad = 0): boolean {
 
 export type Lang = 'en' | 'pcm' | 'yo' | 'ha' | 'ig';
 export const LANGS: readonly Lang[] = ['en', 'pcm', 'yo', 'ha', 'ig'];
-type Lines = Readonly<Partial<Record<Lang, readonly string[]>>>;
+export type Lines = Readonly<Partial<Record<Lang, readonly string[]>>>;
 
 /** One line in an equal share of languages (decision 30): pick the language first, then the line. */
 export function pickLine(lines: Lines, rand: () => number): string {
@@ -413,6 +443,8 @@ export class StreetCrowd {
     readonly street: StreetName,
     readonly groundY: number,
     level: Level,
+    /** O2b: a later state's own cast and words (looks: the cast's looks by index). */
+    private readonly own: { cast: StreetCast; looks: readonly FolkLook[] } | null = null,
   ) {
     const p = (spot: Spot): Person => ({ spot, waveAt: -Infinity, callAt: -Infinity, cheerAt: -Infinity, cheerLen: 0, waveTill: -Infinity });
     this.people = plan.stands.map(p);
@@ -427,14 +459,22 @@ export class StreetCrowd {
   }
 
   /** Words for a cheer, a greeting or a trader's call. */
-  private line(kind: 'cheer' | 'greet' | 'trader' | 'bus'): string {
+  private line(kind: 'cheer' | 'greet' | 'trader' | 'bus', spot?: Spot): string {
     const F = WORDS.folk;
     if (kind === 'cheer') return pickLine(F.cheers, this.rand);
     if (kind === 'bus') return pickLine(F.bus, this.rand);
+    const own = this.own;
     if (kind === 'trader') {
-      const list = F.traders[this.street];
-      return list[Math.floor(this.rand() * list.length) % list.length]!;
+      // O2b: a later state's trader calls their own line (the words on their stall).
+      const mine = own && spot ? own.cast.callOf?.(own.looks[spot.look]!) : undefined;
+      if (mine) return mine;
+      const list = own ? own.cast.calls : F.traders[this.street];
+      return list[Math.floor(this.rand() * list.length) % list.length] ?? '';
     }
+    // O2b: by the arch, the welcome (Ota).
+    const w = own?.cast.welcome;
+    if (w && spot && spot.x < w.to) return pickLine(w.lines, this.rand);
+    if (own) return pickLine(F.greet, this.rand);
     // Morning greetings on Alausa as well as the any-time ones.
     const any = F.greet;
     if (this.street !== 'alausa' || this.rand() < 0.5) return pickLine(any, this.rand);
@@ -486,12 +526,12 @@ export class StreetCrowd {
         p.waveAt = t;
         if (p.spot.kind !== 'trader' && t - this.lastGreet >= CROWD.greetGap && !this.bubble) {
           this.lastGreet = t;
-          this.say(this.line('greet'), i, p.spot.x, this.groundY - CROWD.feetUp - 37);
+          this.say(this.line('greet', p.spot), i, p.spot.x, this.groundY - CROWD.feetUp - 37);
         }
       }
       if (p.spot.kind === 'trader' && t - p.callAt >= CROWD.callGap && !this.bubble && !near) {
         p.callAt = t;
-        this.say(this.line('trader'), i, p.spot.x, this.groundY - CROWD.feetUp - 37);
+        this.say(this.line('trader', p.spot), i, p.spot.x, this.groundY - CROWD.feetUp - 37);
       }
     }
     // Cleared problems: the 3 nearest people on screen cheer; at most one cheer every 4 s.
@@ -688,7 +728,7 @@ export class RoomKeeper {
   private clapAt = -Infinity;
   bubble: Bubble | null = null;
   still = false;
-  update(dt: number, events: readonly CrowdEvent[], groundY: number): void {
+  update(dt: number, events: readonly CrowdEvent[], groundY: number, own?: StreetCast['keeper']): void {
     this.time += dt;
     const t = this.time;
     if (this.bubble) {
@@ -699,7 +739,7 @@ export class RoomKeeper {
       if (e.type === 'room' || e.type === 'wellUp') this.waveAt = t;
       if (e.type === 'parcel') {
         this.clapAt = t;
-        this.bubble = { text: WORDS.folk.storeKeeper, x: STORE_KEEPER_SPOT.x + 4, y: groundY - CROWD.feetUp - 32, left: 2.4, who: 0 };
+        this.bubble = { text: own?.words ?? WORDS.folk.storeKeeper, x: (own?.x ?? STORE_KEEPER_SPOT.x) + 4, y: groundY - CROWD.feetUp - 32, left: 2.4, who: 0 };
       }
       if (e.type === 'hit' || e.type === 'fall') this.bubble = null;
     }

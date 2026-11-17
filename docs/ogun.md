@@ -2,7 +2,7 @@
 
 Owner: designer. Written for decisions 72 and 73: after General Go-Slow the next state comes, and it is Ogun, with King Pothole as its boss (brief "Worlds" item 2). Tp added on 15 Nov: **"Ogun is gateway state, remember."** So the Gateway State is the heart of this note: Ogun is the road and the gate out of Lagos to the rest of Nigeria, bad roads block that gate, and fixing Ogun opens the way on.
 
-This note is to Ogun what docs/city.md is to Lagos. It is the source for the O tasks in part 10. Where it gives a number or a word, it wins over older drafts (city.md part 3 "Ogun is ready to download (about 400 KB)" is replaced by part 9 here).
+This note is to Ogun what docs/city.md is to Lagos. It is the source for the O tasks in part 10. Where it gives a number or a word, it wins over older drafts (city.md part 3 once said "about 400 KB"; it now says "about 130 KB", from part 9 here).
 
 Sources: decisions 7, 13 to 19, 29 to 38, 42 to 48, 62, 64, 66 to 73; docs/city.md (parts 1 to 3, 5W, W3, W18); docs/design.md (S2.2 jump rules, S2.5 well, S2.6 streets, S2.7 hall, S2.8 saves and the wheel, S2.14, S2.15, S2.16, S3f0 lane run, S3e0 challenge road, "People everywhere"); src/data/levels/lagos-*.json.
 
@@ -79,7 +79,7 @@ Going from Ogun to Lagos plays the same ride the other way, under the arch's bac
 ### 1.7 Nigeria's wheel shows a second cog
 
 - **Ogun's cog** is not next to Lagos's on the wheel (the cogs go A to Z, and Nasarawa and Niger sit between), so it gets its own mark: while Ogun is open but its cog is not turning, the cog has a small pennant shape and the list says "Ogun, next" (never colour alone: the pennant and the word).
-- Ogun's cog turns at Ogun's first boom (20 points, as Lagos, decision 45 and city.md "It never ends").
+- Ogun's cog turns at Ogun's first boom (20 points, as Lagos, decision 45 and city.md "It never ends") or at the first Pothole Hall win, whichever comes first, as Lagos's does (OG-R35).
 - The rail's line changes (S2.8):
 
 | When | Old line | New line |
@@ -188,7 +188,7 @@ A player who finished Lagos knows every move. Ogun starts level with Lagos stree
 | New thing | walk, jump, crate, pit | roof crates, the well | the drum, secret well | **mud**, ikokore | **rock steps, cracks**, ofada | **hopping gravel, two roads** |
 | Big pits | 1 | 1 | 2 | 1 (after mud) | 1 | 2 (one after mud) |
 | Moving hazards | 8 | 11 | 14 | 6 | 5 | 10 |
-| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 7 cracks | 5 mud, 2 cracks |
+| Mud and cracks | 0 | 0 | 0 | 6 mud | 1 mud, 6 cracks (O0a2: 3.5 places 6) | 4 mud, 2 cracks (O0a3: 3.6 places 4) |
 | Hints | 15 | 4 | 2 | 4 | 5 | 3 |
 | Well | none | yes | yes, secret | none | yes | yes, on the low road |
 
@@ -197,7 +197,7 @@ A player who finished Lagos knows every move. Ogun starts level with Lagos stree
 ### 3.3 The new things (rules for gamedev and the level test)
 
 **Mud patch** (`mud`: [x, width], width 80 to 200; Ota first).
-- Dark brown, wet ground with shiny ripples, a few puddle rings and footprints that fill in behind the hero. Not colour alone: the ripples, the footprints, a soft "splosh" step sound and the hero's slower legs.
+- Wet brown ground lying level with the road (the road's top line runs on unbroken across it), with shiny streaks, clods on its edges and boot prints already pressed in, plus footprints that fill in behind the hero. Never a dark rim, a sunken look or closed ripple rings: those belong to potholes and water potholes (OG-R33). Not colour alone: the flat top, the clods and prints, a soft "splosh" step sound and the hero's slower legs.
 - On mud the hero's top speed is walk speed (90; 120 with corn). The run timer goes back to 0 on leaving the mud, so a run builds again. Jumps work as normal from walk speed. Mud never hurts.
 - Rules: mud ends at least 60 u before any pit lip (take-off is always on firm ground); no mud in the 160 u run-up of a big pit; no mud on a checkpoint, spawn, well or bus door ± 100 u; a big pit after mud gets at least 300 u of firm road (time to run again).
 - Ikokore: mud does not slow you while it works.
@@ -229,15 +229,17 @@ Length: spawn 80 to bus 11400 = 11320 u. 73 s at full run, about 96 s typical.
 |---|---|---|---|
 | Arrival | 80-900 | | The arch over the road at 200. Toast as the hero passes under: "Welcome to Ogun, the Gateway State!" Kobo at 300, 500, 700; kobo crate at 800 |
 | Potholes | 900-1900 | (refresher) | Tap 40 at 1100, hold 60 at 1450, wide 100 at 1800 (sign at 1680). Kobo over each |
-| Mud | 1900-3300 | **mud** | Hint 1980: "Mud! It slows you down. Walk through, then run again." Mud 2100, 120 wide, with kobo on it. Mud 2600, 160 wide. Tap pothole 40 at 2900 (a walking jump clears it) |
+| Mud | 1900-3300 | **mud** | Hint 1980: "Mud! It slows you down." Mud 2100, 120 wide, with kobo on it. Mud 2600, 160 wide. Tap pothole 40 at 2900 (a walking jump clears it) |
 | Roof and garri | 3300-4400 | | Roof at 3500 (60 high) with a kobo crate. Garri crate at 3900. Goat at 4200 to spend the shield on |
-| Bus stop | 4500 | | "Bus stop! If you fall, you start again here." |
-| Mud, then a big pit | 4500-5400 | mud before a pit | Hint 4630: "Get out of the mud, then run for the big pit." Mud 4700, 120 wide. Firm, clear road 4820 to 5150. Big pit 170 at 5150 (sign 5030, cones, kobo arc) |
+| Bus stop | 4500 | | Hint 4500: "Bus stop! Now you start here." (the Lagos words, which Gentle mode already swaps for "Bus stop! Halfway there.") |
+| Mud, then a big pit | 4500-5400 | mud before a pit | Hint 4630: "Big pit! Leave the mud, then run." Mud 4700, 120 wide. Firm, clear road 4820 to 5150. Big pit 170 at 5150 (sign 5030, cones, kobo arc) |
 | Ikokore | 5400-6900 | **ikokore** | Ikokore on the road at 5700. Hint 5640: "Ikokore! Mud won't slow you now." Mud 5900, 200 wide; goat 6350; mud 6550, 160 wide; tyre 6900 |
 | Corn | 7700-10436 | | Roasted corn on the road at 7700. Fast stretch to 9068 (no tyre, no gravel): roofs at 8000 and 8500 with kobo crates, tap pothole 40 at 8250, mud 8700, 120 wide. Second half: tyre 9300, tap pothole 40 at 9700 |
 | Fufu | 10100-11400 | | Pepper fufu on the road at 10100. Goat 10400, hold pothole 60 at 10700, tyre 11000. Bus door 11400 |
 
-Kobo: about 160 loose and 12 in crates (designer counts them in the level file). Well: none (the arrival street stays simple). Hints: 4 plus the arch toast.
+Kobo: 160 loose and 12 in crates (4 kobo crates: 800, 3510 on the roof, 8000 and 8500 on roofs). Well: none (the arrival street stays simple). Hints: 4 plus the arch toast (the toast is `OGUN_WORDS.toast.arch`, shown when the hero passes `arch`; it is not a hint line in the file).
+
+**Built (O0a1, 15 Nov):** src/data/levels/ogun-1.json. Pits as ground gaps: tap 1100, hold 1450, wide 1800, tap 2900, big 5150 (170), tap 8250, tap 9700, hold 10700. Roofs [3440, 240, 140], [7940, 245, 120], [8440, 245, 120]. End: bus door 11400, wall 11600. Every hint is 35 characters or fewer (S2.2 hint bar). Checked by tests/unit/street.test.ts (S2.6) and tests/unit/ogun-levels.test.ts (3.3 mud rules, ikokore, arch, words). Until gamedev adds the `ikokore` food kind (O2b), the S2.6 test reads the file without it and ogun-levels.test.ts checks it by the same food rules.
 
 ### 3.5 Street 2: Abeokuta (src/data/levels/ogun-2.json)
 
@@ -249,15 +251,26 @@ Length: spawn 80 to bus 11800 = 11720 u. 75 s at full run, about 100 s typical.
 |---|---|---|---|
 | Warm up | 80-1000 | | Kobo; kobo crate at 700 |
 | Rock steps | 1000-2400 | **rock steps** | Hint 1050: "Rocks! Jump up from step to step." Steps at 1200 (50 high), 1330 (100 high), 1460 (150 high), each 100 wide, kobo on top. Then one long rock ledge 1900 to 2200, 90 high, over a wide pothole 100 at 2000 (sign 1880): go over the rock or double jump the hole |
-| Water potholes | 2400-3300 | (look only) | Hint 2500: "Water in a pothole is still a pothole. Jump!" Tap 40 at 2600, hold 60 at 2900, both with water |
+| Water potholes | 2400-3300 | (look only) | Hint 2500: "Water pothole! Jump over it too." Tap 40 at 2600, hold 60 at 2900, both with water |
 | Well | 3300-3600 | | Entrance well at 3500 in a quiet yard between two stalls (no people within 120 u). Exit well at 4700 |
 | Goat and mud | 3600-4700 | | Pepper fufu at 3700. Goat 3900, mud 4200, 120 wide, tyre 4500 |
-| Bus stop | 4900 | | "Bus stop! If you fall, you start again here." |
-| Cracks | 4900-6600 | **cracks** | Hint 5030: "A crack! It opens when you come near. Jump over it." Crack 40 at 5250 alone, kobo over it. Crack 60 at 5700. Crack 40 at 6000. Clear road 6040 to 6400. Big pit 170 at 6400 (sign 6280) |
-| Ofada | 6900-8400 | **ofada** | Ofada on the road at 6900. Hint 6840: "Ofada! Cracks stay shut while it works." Crack 40 at 7300, goat 7600, crack 60 at 7900, crack 40 at 8300 |
+| Bus stop | 4900 | | "Bus stop! Now you start here." |
+| Cracks | 4900-6600 | **cracks** | Hint 5030: "Crack! It opens up. Jump over it." Crack 40 at 5250 alone, kobo over it. Crack 60 at 5700. Crack 40 at 6000. Clear road 6040 to 6400. Big pit 170 at 6400 (sign 6280) |
+| Ofada | 6900-8400 | **ofada** | Ofada on the road at 6900. Hint 6840: "Ofada! Cracks stay shut now." Crack 40 at 7300, goat 7600, crack 60 at 7900, crack 40 at 8300 |
 | Corn | 8900-11636 | | Corn crate at 8900. Fast stretch to 10268: roof at 9100 with a kobo crate, tap 40 at 9400, roof at 9700, tap 36 at 9950. Second half: tyre 10500, goat 10800, hold pothole 60 at 11200. Bus door 11800 |
 
 Kobo: about 150 loose and 12 in crates, plus 17 in the well room.
+
+**Built (O0a2, 15 Nov):** src/data/levels/ogun-2.json and src/data/levels/ogun-well.json. Pits as ground gaps: wide 100 at 2000 (under the ledge), water tap 40 at 2600, water hold 60 at 2900, big 170 at 6400, tap 40 at 9400, tap 36 at 9950, hold 60 at 11200. Rocks `[x, width, height]`: [1200, 100, 50], [1330, 100, 100], [1460, 100, 150], [1900, 300, 90]. Cracks: 5250 (40), 5700 (60), 6000 (40), 7300 (40), 7900 (60), 8300 (40). Roofs [9040, 245, 120] (kobo crate 9100) and [9640, 245, 120]. Kobo: 151 loose, 4 kobo crates (12), 17 in the room. End: bus door 11800, wall 12000. Checked by tests/unit/street.test.ts (S2.6, with rocks read as roofs) and tests/unit/ogun-levels.test.ts (3.3 mud, rocks, water and crack rules, ofada, the well room). Until gamedev reads `rocks`, `cracks` and the `ofada` food (O3b), the S2.6 test reads a copy that adds each rock as a platform and leaves ofada out; ogun-levels.test.ts treats each crack as a pit for the hazard, food, crate, mud and well distances.
+
+Gaps ruled in O0a2 (simplest fair choice, decision 64):
+- **Tyre and mud before the bus stop.** The table's tyre at 4500 sits 200 u from the exit well at 4700, but S2.6 wants no hazard within 400 u of an exit well. The tyre moves to 4250 and the mud to 4350 (120 wide, ending 230 u before the exit well). The order there is now goat 3900, tyre 4250, mud 4350.
+- **Six cracks, not seven.** 3.2 said 7, but the 3.5 table places 6. The file has the 6 placed; 3.2 now says 6.
+- **Twelve kobo in crates.** The table names two kobo crates (700 and the roof at 9100); two more on the road at 3200 and 10200 make the 12.
+- **The well room.** The table gives no layout, so it follows S2.5 with its own shelves: sacks at [110, 240, 90] (60 high), a plank shelf [240, 200, 90] (100 high) holding the parcel at (285, 176), sacks at [380, 250, 90] (50 high); 14 loose kobo and a kobo crate at 345 (17 in all); `giftIfCarried` 5 kobo centred on 285. The store keeper sits at the back wall at room x 60 to 100, as the Lagos keeper does (look only).
+- **No hint for the well.** Wells were taught in Lagos, so Abeokuta keeps its 5 hints and no well hint.
+- **Rocks are platforms.** A rock is one-way (land on top, pass up from below), its left end stands on the road, and it may reach over a pothole (the ledge at 1900). Steps less than 60 u apart climb from the step before; a lone rock climbs from the road.
+- **Crack spacing.** Each crack keeps at least 200 u of road from any other pit or crack and 60 u from the end of its stretch of road, so there is always firm road to land on before the next one opens.
 
 ### 3.6 Street 3: Sagamu (src/data/levels/ogun-3.json)
 
@@ -268,10 +281,10 @@ Length: spawn 80 to bus 12200 = 12120 u. 78 s at full run, about 105 s typical.
 | Part | x | Teaches | What is there |
 |---|---|---|---|
 | Warm up | 80-1000 | | Kola market stalls; kobo crates at 600 and 800 |
-| Gravel | 1000-2400 | **hopping gravel** | Hint 1100: "Hopping gravel! Jump over it, or land on it." Gravel 1500 alone. Gravel 2100 |
+| Gravel | 1000-2400 | **hopping gravel** | Hint 1100: "Hopping gravel! Jump or bounce." Gravel 1500 alone. Gravel 2100 |
 | Cracks and potholes | 2400-3600 | | Crack 40 at 2600, wide pothole 100 at 3000 (sign 2880), mud 3300, 120 wide |
-| Two roads | 3600-5300 | **two roads** | Hint 3650: "Two roads! Climb up, or stay low." Steps up at 3800 (60 high) and 3900 (120 high); deck 4000 to 4900, 140 high, with a kobo line and pepper fufu at 4600; steps down at 4950 (100) and 5050 (50). Low road: mud 4100, 160 wide; gravel 4450; secret entrance well at 4700 (only seen from the low road). Exit well 5300 |
-| Bus stop | 5500 | | "Bus stop! If you fall, you start again here." |
+| Two roads | 3600-5300 | **two roads** | Hint 3650: "Two roads! Climb up, or stay low." Steps up at 3800 (60 high) and 3900 (120 high); deck 4000 to 4900, 140 high, with a kobo line and pepper fufu at 4600; steps down at 4950 (100) and 5050 (50). Low road: mud 4100, 160 wide; gravel 4450; secret entrance well at 4700 (reached from the low road; seen from the deck too, OG-R34). Exit well 5300 |
+| Bus stop | 5500 | | "Bus stop! Now you start here." |
 | Big pit 1 | 5500-6400 | | Garri crate at 5700, clear road 5900 to 6200, big pit 170 at 6200 (sign 6080) |
 | Group | 6400-7400 | | Gravel 6600, goat 6850, tyre 7100, crack 40 at 7300 |
 | Big pit 2 | 7400-8500 | | Ikokore on the road at 7750. Mud 7900, 100 wide. Firm, clear road 8000 to 8300. Big pit 170 at 8300 (sign 8180) |
@@ -280,12 +293,21 @@ Length: spawn 80 to bus 12200 = 12120 u. 78 s at full run, about 105 s typical.
 
 Kobo: about 140 loose and 12 in crates, plus 17 in the well room.
 
+**Built (O0a3, 15 Nov):** src/data/levels/ogun-3.json (the well room is the shared ogun-well). Pits as ground gaps: wide 100 at 3000, big 170 at 6200, big 170 at 8300, tap 40 at 9300, wide 100 at 11800. Cracks: 2600 (40), 7300 (40). Mud: 3300 (120), 4100 (160), 7900 (100), 9900 (120). Gravel: 1500, 2100, 4450, 6600, 10400, 11500; goats 6850, 11300; tyres 7100, 10700. Platforms: steps up [3800, 240, 100] and [3900, 180, 100], deck [4000, 160, 900], steps down [4950, 200, 100] and [5050, 250, 100]; roofs [8940, 245, 120] and [9540, 245, 120] (kobo crate 9600). Pepper fufu on the deck at (4600, 132). Kobo: 141 loose, 4 kobo crates (12). End: bus door 12200, wall 12400. Checked by tests/unit/street.test.ts (S2.6, with gravel read as a tyre, since its placing rules are the tyre's) and tests/unit/ogun-levels.test.ts (3.3 mud, crack, gravel and two-roads rules).
+
+Gaps ruled in O0a3 (simplest fair choice, decision 64):
+- **Four mud patches, not five.** 3.2 said 5, but the 3.6 table places 4 (3300, 4100, 7900, 9900). The file has the 4 placed; 3.2 now says 4.
+- **Twelve kobo in crates.** The table names three kobo crates (600, 800, the roof at 9600); a fourth on the road at 2400, between the second gravel and the first crack, makes the 12.
+- **The deck and its steps are plain platforms**, not rocks: one-way, like the stall roofs, so they need no new field. Each step is 100 wide and touches the next; the deck has no gaps.
+- **The first gravel stands alone** with no other hazard closer than 600 u (the second gravel at 2100 is exactly 600 u on).
+- **No well hint.** The low-road well is a secret, as Ikeja's is.
+
 ### 3.7 The well room: the Ijebu garri store (src/data/levels/ogun-well.json)
 
 The same room rules as S2.5 (room, coins, going up), our own Ogun look: a cool store room under a compound, sacks and basins of garri, folded adire on a shelf, light falling through two holes in the ceiling. The gift is **the Ijebu garri parcel**: the same shield as Lagos's garri parcel (decision 18), for every Pothole Hall try until the hall is cleared. If the player already carries one, the room shows coins instead (`giftIfCarried`).
 
-- **The store keeper** (PE-R4's idea, Ogun's own person): an elder man in buba and sokoto with a soft fila, sitting on a low stool by the back wall, well away from the rope. He waves when the hero comes down; when the hero takes the parcel he claps and his bubble says **"For King Pothole. Go well!"**
-- Toast on taking it: "Ijebu garri parcel! The shield is on for King Pothole."
+- **The store keeper** (PE-R4's idea, Ogun's own person): an elder man in buba and sokoto with a soft fila, sitting on a low stool by the back wall, well away from the rope. He waves when the hero comes down; when the hero takes the parcel he claps and his bubble says **"For Pothole Hall. Go well!"**
+- Toast on taking it: "Ijebu garri parcel! Shield for the hall."
 
 ### 3.8 Level file fields (schema 2, plus)
 
@@ -312,13 +334,13 @@ The level test checks every new rule in 3.3 as well as the S2.6 list.
 
 | Food | Where from | Does | Lasts | Pickup words | Look (not colour alone) |
 |---|---|---|---|---|---|
-| **Ikokore** | Ijebu, Ogun | **Firm feet:** mud does not slow you; hopping gravel crumbles when you touch it, no hurt | 12 s | "Ikokore! Mud won't slow you: 12 s." | A small bowl of thick pottage with a spoon. HUD: bowl icon, the word "Ikokore", the bar |
-| **Ofada rice and sauce** | Ogun | **Steady road:** cracks do not open while it works, and the ones you pass stay shut for good | 12 s | "Ofada! Cracks stay shut: 12 s." | Rice and sauce on an open green leaf. HUD: leaf icon, "Ofada", the bar |
-| **Ijebu garri parcel** (not a new power) | Ijebu, Ogun | The well gift: the shield for Pothole Hall, as the Lagos parcel | until used | "Ijebu garri parcel! The shield is on for King Pothole." | A small cloth-tied sack |
+| **Ikokore** | Ijebu, Ogun | **Firm feet:** mud does not slow you; hopping gravel crumbles when you touch it, no hurt | 12 s | "Ikokore! Mud won't slow you for 12 seconds." | A small bowl of thick pottage with a spoon. HUD: bowl icon, the word "Ikokore", the bar |
+| **Ofada rice and sauce** | Ogun | **Steady road:** cracks do not open while it works, and the ones you pass stay shut for good | 12 s | "Ofada rice! Cracks stay shut for 12 seconds." | Rice and sauce on an open green leaf. HUD: leaf icon, "Ofada", the bar |
+| **Ijebu garri parcel** (not a new power) | Ijebu, Ogun | The well gift: the shield for Pothole Hall, as the Lagos parcel | until used | "Ijebu garri parcel! Shield for the hall." | A small cloth-tied sack |
 
 - Garri crates in Ogun are drawn as Ijebu garri (finer, paler grains) with the same shield and the same words.
 - Every Lagos food still works in Ogun: corn, garri, amala, pepper fufu.
-- Both new foods are 12 s with the last 3 s blinking (city.md 2D). The same food again restarts its timer; two different timed foods can work at once.
+- Both new foods are 12 s. The last 2 s warn, as every timed food does (OG-R10): the HUD chip and the hero blink, a soft tick each second (Sound on), and the toast "Ikokore is wearing off!" / "Ofada is wearing off!". The same food again restarts its timer; two different timed foods can work at once.
 - **Never fire.** No food shoots, burns or glows red-hot. Ofada and ikokore have steam only (rule 2, the fireball rule). No new throw food in Ogun.
 - In the lane run, ikokore and ofada do not appear in O1 (the lane run has no mud or cracks yet).
 
@@ -423,6 +445,17 @@ Nobody is hurt. The pothole just becomes a good road and has a nap.
 - Money line as Lagos: "You got ₦15."
 - Big button: "Take it home". Small: "Play again", "Challenge road".
 
+### 5.6 The hall file and the gaps it rules (O0a4)
+
+src/data/levels/ogun-hall.json keeps Go-Slow Hall's format (schema 2, `type: "hall"`, the same room numbers: width 560, floor 300, start 50, left wall 30) with right wall 530 and King Pothole's own `boss` block: `pit` (width 100, track 230 to 400, drop zone 40, bump gap 10, slides again 0.3 s after landing), `bag` (pile 60 to 90, bag at 80, a new one 1.0 s later), `phases` (the 5.4 table: every, slide, pattern, bpm), `gravel`, `mud`, `fall` and `gentle`. The game does not read this block yet; gamedev adds the reader in O5b. tests/unit/ogun-hall-lane.test.ts checks it.
+
+Gaps in 5.2 to 5.5, ruled the simplest fair way:
+- **Where he starts:** his middle at 400, the right end of his track, the farthest from the hero, sliding left. The same place he goes back to after a fall.
+- **"120 to 200 u from him"** is measured from his near lip (the one on the hero's side), so a mud patch never lands in his opening.
+- **Walls:** the whole 60 u patch lands inside the walls (its middle 60 to 500). If no spot is 120 to 200 u from his lip, inside the walls and 40 u or more from the hero (the hero at the pile while he is at the far-left end), that throw is a gravel lump instead. Mud never hurts, so this only keeps it fair and simple.
+- **His opening slides over a drying patch:** fine. The patch is floor; where his opening passes, you see the hole, and the patch shows again after him until it dries.
+- **Gravel when the hero is past him on the right landing:** it hops out of his right lip, toward the hero, and crumbles at the right wall.
+
 ---
 
 ## 6. Ogun's city from above
@@ -491,14 +524,20 @@ The same screen and rules as S3e0, with Ogun's own picture: a road that starts a
 | 2 | **Abeokuta** | Ota done | the adire yards | nothing (Naira home) |
 | 3 | **Sagamu** | Abeokuta done | the interchange | nothing |
 | 4 | **Pothole Hall** | Sagamu done | the hall picture | the gateway (₦15, first win switches Ogun on) |
-| end | **The way on** | never yet: "Coming soon" | the expressway north past the arch | cannot be played; line 3 "More of Nigeria" |
-| end, side | **Border market** | never yet: "Coming soon" | the market road | cannot be played; line 3 "Later" |
+| end | **The way on** | never yet: "Coming soon" | the expressway on past the arch (no compass word, decision 82, OG-R42) | cannot be played; line 3 "More of Nigeria" |
+| end, side | **Border market** | never yet: "Coming soon" | the market road | cannot be played; line 3 "More soon" (OG-R42) |
 
 The first screen of each run matches its spot, tired or bright (decision 48).
 
 ### 6.6 The Expressway run (the lane run in Ogun; src/data/levels/ogun-lane.json)
 
 The same rules, controls, tilt, Blackout, buckets, prizes and "Keep running" as S3f0. Our own new look: a wide expressway at dusk seen from behind, tipper trucks and tankers in the lanes (dark back windows, no drivers shown), danfos, road cones, palm trees and red-brown verges, far rocks and a quarry against the sky, the footbridge, and the bus stop goal under a small copy of the arch. The fixed first 600 m uses Ogun's own order of rows (designer writes it with the same fairness rules, S3f0 part 7). No new rule in the lane run for now.
+
+**The file (O0a4).** src/data/levels/ogun-lane.json, the same `type: "lane"` format as lagos-lane.json, name "Expressway", theme "expressway". Gaps ruled the simplest fair way:
+- **The same numbers as Lagos:** speeds, moves, Blackout, prize, pops, endless rules and the part 9 totals (Power 14, Tech 9, 86 coins). So S3f0's "three tries" Blackout table still holds, and one win still pays for any one Ogun fix (6.2).
+- **The same teaching:** the same nine hint keys at the same distances, with the same words (WORDS.lane.hints), and each thing still taught alone in the middle lane by 305 m. A hint is seen once per phone, so a player who ran the Lagos lane run sees none of them again; one who never did is taught here. The three warm-up bulbs stay at 152, 282 and 372 m in the only free lane.
+- **Ogun's own rows:** from 240 m on the rows are new, and the road holds more potholes (7, where Lagos has 3), never before the pothole hint at 288 m. 8 endless chunks of Ogun's own (tanker-wall, pothole-row, zigzag, middle-gap, slide-run, goat-crossing, crate-row, long-tipper).
+- **Tippers and tankers** are the `danfo` kind: the same size and rules. Art draws each one as a tipper truck, a tanker or a danfo (O6a), so no new kind and no new rule.
 
 ---
 
@@ -542,9 +581,9 @@ The five rules of "People everywhere" hold everywhere in Ogun (never in the way,
 |---|---|
 | Welcome (Ota, by the arch) | "Welcome!", "Ẹ káàbọ̀!" (Yoruba), "Barka da zuwa!" (Hausa), "Nnọọ!" (Igbo), "You don land!" (Pidgin) |
 | Greetings (any time) | as Lagos: "Hello!", "Sannu!", "Ndewo!", "Ẹ n lẹ́ o!", "How far?" |
-| Traders | Ota: "Ofada rice dey!", "Fresh bread!", "Credit here!" · Abeokuta: "Fine adire!", "New cloth!", "Ofada, hot!" · Sagamu: "Fresh kola!", "Garri Ijebu!", "Ikokore, hot!" |
+| Traders | Ota: "Ofada rice dey!", "Fresh bread!", "Recharge card dey!" · Abeokuta: "Fine adire!", "New cloth!", "Ofada, hot!" · Sagamu: "Fresh kola!", "Garri Ijebu!", "Ikokore, hot!" |
 | Cheers | as Lagos: "Well done!", "Ẹ kú iṣẹ́!", "Madalla!", "I meela!", "You do well!", "Oya, go!" |
-| The store keeper | "For King Pothole. Go well!" |
+| The store keeper | "For Pothole Hall. Go well!" |
 | Bus | "Bus don come!", "Safe trip!" |
 
 Plain spellings if a phone cannot show the marks: "E kaabo!", "Nnoo!".
@@ -557,20 +596,31 @@ Plain spellings if a phone cannot show the marks: "E kaabo!", "Nnoo!".
 
 | Screen | Who sees it | Its one job | Exact words |
 |---|---|---|---|
-| Go-Slow Hall Win (changed) | a player who just beat General Go-Slow | send them on to Ogun | "Lagos is switched on!" / "The road to Ogun is open. Ogun is the gateway to the rest of Nigeria." / big "On to Ogun" |
-| Bus ride | a player going between states | show the journey through the gateway | the arch: "WELCOME TO OGUN" / "THE GATEWAY STATE"; back: "SAFE JOURNEY"; "Skip" |
+| Go-Slow Hall Win (changed) | a player who just beat General Go-Slow | send them on to Ogun | "Lagos is switched on!" / "The road to Ogun is open. Ogun is the gateway to the rest of Nigeria." / first win: big "On to Ogun"; later wins: small "Go to Ogun" |
+| Bus ride | a player going between states | show the journey through the gateway | the arch: "WELCOME TO OGUN" / "THE GATEWAY STATE"; back: "SAFE JOURNEY"; "Skip". Settings switch: "Show the bus ride: on" / "Show the bus ride: off" |
 | Arrival card | first visit to Ogun | welcome, and say the goal | "Welcome to Ogun, the Gateway State!" / "The road to the rest of Nigeria runs through here." / "King Pothole has dug in at the gateway. Fix Ogun, and the way opens." / "Let's go" |
-| Download card (web only, 9.2) | a web player opening Ogun the first time without it saved | get Ogun onto the phone | "Ogun is ready to download (about 150 KB)." / "After this it plays with no internet." / "Download" / "Not now". No internet: "Ogun needs the internet once to download. Lagos still works with no internet." / "OK" |
-| Travel card | anyone with Ogun open | pick a state | "Where to?" / "Lagos" / "Ogun" / "You are here" / "Back" |
-| "To Ogun" stop card | Lagos challenge road | go to Ogun | open: "To Ogun" / "The road to Ogun is open." / "Go to Ogun"; locked: "Win Go-Slow Hall to open the road to Ogun." |
-| Pothole Hall Win | a player who beat King Pothole | celebrate the gateway | "Ogun is switched on!" / "The road through the gateway is smooth. The way to the rest of Nigeria is open." / "You got ₦15." / "Take it home" |
-| Street cleared | each Ogun street | as Lagos | "{Ota / Abeokuta / Sagamu} is moving again, thanks to you! You got {money}." |
-| Out of lives | as Lagos | as Lagos | "Out of lives" / "You keep {money} for Ogun. The street is still here. Try again!" Gentle offer as now |
+| Download card (web only, 9.2) | a web player opening Ogun the first time without it saved | get Ogun onto the phone | "Ogun is ready to download (about 130 KB)." / "After this it plays with no internet." / "Download" / "Not now". No internet: "Ogun needs the internet once to download. Lagos still works with no internet." / "OK" |
+| Travel card | anyone with Ogun open | pick a state | button "Travel"; card "Where to?" / "Lagos" / "Ogun" / "Booming: {n} of 20" (with " ✓" once its cog turns) / "You are here" / "Back" |
+| "To Ogun" stop card | Lagos challenge road | go to Ogun | stop: "To Ogun" / "Open", or locked "Win Go-Slow Hall"; card open: "The road to Ogun is open." / "Go to Ogun"; card locked: "Win Go-Slow Hall to open the road to Ogun." |
+| Ogun place (retired by Ogun's city, OG-R35; kept here until gamedev removes it) | anyone in Ogun | start the newest open street, or the hall | "Ogun" / "The Gateway State" / one line by progress: first "Ota is open. It is the first street on the road from Lagos."; after Ota "Ota is moving again. Abeokuta is open."; after Abeokuta "Abeokuta is moving again. Sagamu is open."; after Sagamu "Sagamu is moving again. Pothole Hall is open." (OG-R18, OG-R32); after the hall win "The gateway is open! Ogun is switched on!" (OG-R32, the finish toast's words). Buttons, newest big, the ones before it small: "Play Ota" / "Play Abeokuta" / "Play Sagamu" / "Go to Pothole Hall" (stays after the win). Also "Sound: on" / "Sound: off", "Settings", "Travel", "Nigeria's wheel" (QA-O-3) |
+| Ogun's city (walking) | anyone in Ogun, from the first visit (OG-R35) | walk to a problem, a board or a tray | Heading "Ogun". Chips and "Booming" bar as Lagos. Map's spoken name: "Ogun from above. Tap where you want to go." First hint (once): "Tap where you want to go. Walk onto a board to pay." (keys: "Use the arrow keys to walk. Walk onto a board to pay."). Boards: "New road" / "Adire market" / "Water pump" / "Lamps" / "Mast" / "Garri mill" / "Kola market". Spoken pins once fixed: "New road" / "Water on" / "Lamps on" / "Fast internet" / "The gateway", each "..., fixed". Bottom row as Lagos with "Travel" |
+| Ogun problem cards | a player who taps a pin | say what is wrong and how to earn for it | as 6.2: "Potholes here. Buses can't get through." / "Run Ota to earn Naira." / "Run Ota"; "The taps are dry. The pump needs Power." / "Run the Expressway to collect Power." / "Run the Expressway"; "Lamps are out on this road." / "Run the Expressway for Power."; "Slow internet here." / "Run the Expressway for Tech.". Bad road (OG-R37): "King Pothole is blocking the gateway." / before Sagamu is cleared "Clear Ota, Abeokuta and Sagamu to reach Pothole Hall." with big "Run {next street}"; after "Go to Pothole Hall." with big "Go to Pothole Hall" |
+| Ogun Not enough card | a player on a board without enough | say what is short and where to earn it | "You need {price} for this." / Naira: "Run Ota to earn more." with "Run Ota"; Power: "Run the Expressway to earn Power."; Tech: "Run the Expressway to earn Tech." (OG-R44), with "Run the Expressway" |
+| Ogun built lines (2 s) | a player who pays a board in full | watch it change | 6.2's lines; the hall's first win, back in the city: "The gateway is open. The road is smooth." |
+| Ogun tax | a player with a built place | collect | as 6.3 (W18 with Ogun's names); hint `taxOgun`: "Busy shops pay a small tax. Ogun uses it to fix more." |
+| Ogun boom card | first boom and each later mark | celebrate | "Ogun is booming!" / "New buildings are going up. More people are coming through the gateway, and they need more." / only if the cog was not already turning: "Ogun's cog is turning on Nigeria's wheel!" / "See Ogun" |
+| Back in Ogun after a run | a player coming home from an Ogun run | say what they brought | after a win: heading "Mission complete!" over "You brought {money} home." (Expressway: the same line naming Power and Tech too); after a loss or leaving early: the line only, no heading, and only if something was brought (OG-R39) |
+| Ogun challenge road | anyone in Ogun (OG-R35) | pick a run | as 6.5. Stops: "To Lagos" (card "The road back to Lagos." / "Go to Lagos"); "Ota" ("The gateway road from Lagos." or done "Ota is moving again." / "A win pays for the New road ({price})." while unbuilt, else "Earns Naira."); side road "Expressway" (the fix's line, e.g. "The taps are dry. The pump needs Power." / "A win pays for the Water pump (Power 10)."; all three done: "Water on, lamps on and fast internet here." / "Earns Naira, Power and Tech." / big "Run the Expressway"); "Abeokuta" ("The adire yards." / done "Abeokuta is moving again." / "Earns Naira."); "Sagamu" ("The interchange." / done "Sagamu is moving again." / "Earns Naira."); "Pothole Hall" (before the win "King Pothole is blocking the gateway." / "A win brings ₦15 and opens the gateway."; after "The gateway is open. Ogun is switched on." / "A win brings ₦15." (OG-R42); big "Go to Pothole Hall"); "The way on" ("The road to the rest of Nigeria is still being built." / "Coming soon" / line 3 "More of Nigeria"); "Border market" ("A busy market road." / "Coming soon" / line 3 "More soon"). Spoken, a coming-soon stop: "{name}. {line} Coming soon." Locked stops and buttons use Lagos's road words |
+| Expressway Pause | a player in the Expressway | leave early | Lagos's Pause with "Back to Ogun" in place of "Back to Lagos" |
+| Opening a part | anyone opening the road or Ogun | show it is working, never a blank card | "Opening the road..." / "Downloading Ogun...". It cannot open: "Ogun could not open just now. Lagos still works. Try again later." |
+| Pothole Hall Win | a player who beat King Pothole | celebrate the gateway | "Ogun is switched on!" / "The road through the gateway is smooth. The way to the rest of Nigeria is open." / "You got {money}." (₦15 for a full run) / big "Take it home"; small "Play again" |
+| Street cleared | each Ogun street | say well done, send them on | "Street cleared!" / "{Ota / Abeokuta / Sagamu} is moving again, thanks to you! You got {money}." / with the parcel: "Your Ijebu garri parcel is saved for Pothole Hall." / big "Take it home"; small "Next street" (Ota, Abeokuta) or "Go to Pothole Hall" (Sagamu), and "Play again" |
+| Out of lives | a player who lost every life in Ogun | try again | "Out of lives" / street: "You keep {money} for Ogun. The street is still here. Try again!"; hall: "King Pothole is still blocking the gateway. Try again!" / Gentle offer as Lagos (shown only while Gentle is off) / big "Play again"; small "Home" and "Challenge road" (the road is open from the first visit, OG-R35) |
 | Pause, Game over, title, hero builder | unchanged | | unchanged; the title line stays "Build up Lagos. Get Nigeria working." (decision 24) |
 
-Hints in the streets are listed in part 3. Every word is in words.ts so qa can search it.
+Hints in the streets are listed in part 3. Every word is in words.ts (`OGUN_WORDS`) so qa can search it.
 
-**Accessibility, for all of it:** every button at least 44 x 44 px (big buttons 56 px tall), 8 px apart; the Sound and Music switches work everywhere in Ogun; nothing means something by colour alone (mud has ripples and footprints, cracks a zigzag and a sign, gravel its lumpy shape and dust, the bag a "READY" tag, the hit counter cones with ticks, stops their icons and words); Gentle mode gives 5 lives, cracks open at 300 u and King Pothole's slide speeds drop by a fifth; reduced motion stills the bus ride, the arch's cog, the gateway glow and the finish; screen readers hear every card and the road list in order.
+**Accessibility, for all of it:** every button at least 44 x 44 px (big buttons 56 px tall), 8 px apart; the Sound and Music switches work everywhere in Ogun; nothing means something by colour alone (mud sits level with the road with clods and footprints and no rim, OG-R33; cracks a zigzag and a sign, gravel its lumpy shape and dust, the bag a "READY" tag, the hit counter cones with ticks, stops their icons and words); Gentle mode gives 5 lives, cracks open at 300 u and King Pothole's slide speeds drop by a fifth; reduced motion stills the bus ride, the arch's cog, the gateway glow and the finish; screen readers hear every card and the road list in order.
 
 ---
 
@@ -587,7 +637,7 @@ Everything stays drawn and made in code (decisions 33, 65). Ogun is one lazy par
 | Ogun's game code (mud, cracks, gravel, rocks, two roads, carrying, the boss, Ogun city places, Dry taps) | Ogun part | 20 KB |
 | Ogun's levels (3 streets, well, hall, lane) | Ogun part | 10 KB |
 | Ogun's tunes and sounds (code notes) | Ogun part | 6 KB |
-| **Ogun part in all** | | **about 130 KB, 150 KB at most** |
+| **Ogun part in all** | | **about 130 KB, 150 KB at most** (players are only ever told "about 130 KB": the card and OG-R6; 150 KB is the CI limit, never shown) |
 
 The first load stays well under 3 MB; the CI size check gets a second line for the Ogun part.
 
@@ -641,3 +691,38 @@ Order: O1 and O0a together; then O2, O3, O4 in order (each street teaches what t
 - **OG-R7.** The border market is a happy, busy market road ("BORDER MARKET" board), with no border post, gate, fence, customs or officers; a "Coming soon" stop for now.
 - **OG-R8.** Trays fill while you play anywhere in the game, and stop when full, as now.
 - **OG-R9.** The Win screen after Go-Slow Hall gains "On to Ogun", and the Lagos challenge road gains a "To Ogun" stop on a side road; the Ferry stays a Lagos stop.
+- **OG-R10.** Every timed food (corn, amala, ikokore, ofada and any later one) warns in its last 2 s, as Lagos is built and tested: blink, tick, toast. The blink and tick need no reading, and the problem coming back is never sudden (cracks still rumble 0.4 s, mud only slows). city.md 2D's "last 3 seconds" should read 2.
+- **OG-R11 (O4b, Sagamu build check).** Keep: the flyover look is found from platforms (a deck 600 u wide or more, steps within 60 u of its ends), no new level field; only Sagamu has a platform that wide, and if a later street needs a wide platform that is not a flyover, it gets a field then.
+- **OG-R12.** Keep: gravel drops into a pothole or open crack only when it lands over one, never mid-hop; its hop covers about 25 u (0.35 s at 70 u/s), less than the narrowest pothole (36), so it never hops one and a child never sees it cross a hole it should fall in.
+- **OG-R13.** Keep: landing on gravel allows 14 u of slack, not 6. The lump is small and bobs up to meet the feet, so 6 u would make a clean bounce feel like a hit to a 10-year-old; the hero must still be falling, and 14 is less than its 16 u height, so a walk into its side still hurts.
+- **OG-R14.** Keep: ikokore's touch-crumble gives no kobo; amala's smash gives +2 and fufu's knock +1, as for every hazard. Ikokore is a guard, like garri's shield (which pays nothing), and a plain bounce on gravel pays nothing either; paying for a touch would teach running into hazards. The crumble's dust and sound are the reward.
+- **OG-R15.** Change: the "tk" plays only for a gravel whose landing spot is on screen, and when two land within 0.1 s of each other only one "tk" plays. Gravel wakes 40 u past the right edge and hops on until well past the left edge, so as built a child hears clicks for lumps they cannot see; with two on screen the clicks would also double up. The on-screen tk stays: it is the cue that does not need sight or colour.
+- **OG-R16.** Keep: Gentle mode changes nothing for gravel. It is slow (70 u/s), small, one tap clears it and it shows its rhythm; Gentle already gives 5 lives and the tyre, its twin in placing, is not slowed either. Slowing it would only keep it in front of the hero longer.
+- **OG-R17.** Keep: the low road's wall under the deck is drawn over back-pavement people between x 4000 and 4900. People behind a wall is a real street sight; art should still avoid placing a person there so only their head pokes over the wall's top edge.
+- **OG-R18.** Words: keep "Play Sagamu" and place.abeokutaDone "Abeokuta is moving again. Sagamu is open." (the same shape as Ota's). Change place.sagamuDone to "Sagamu is moving again. Pothole Hall is coming soon." "Coming next" can read as "tap to go", but there is no button yet; "coming soon" matches the Abeokuta line it replaces. The O5b dev changes it to say the hall is open. Part 8's Ogun place row gains these three lines.
+- **OG-R19 (O5b, Pothole Hall build check).** Keep: the hero's "feet" for the bump rule are their box (7 u each side of x). Change the gap: `pit.bumpGap` 10 to 30 (5.3's "10 u" reads 30), see OG-R25.
+- **OG-R20.** Keep: the bag drops only while the hero is above the floor line, and a short jump that crosses his middle still counts the bag, then the hero falls in (a life, as any fall). The bag went in, so it counts; taking it back would feel like a cheat to a child. On the third bag he fills under the hero, so there is no fall.
+- **OG-R21.** Keep: a phase's slide speed and throws start when the 1.5 s break ends, and its first throw comes one `every` after the break, as in Go-Slow. The quiet spell gives time to walk back for the new bag.
+- **OG-R22.** Keep: mud lands 0.6 s after it is thrown, with the shadow shown the whole flight; the spot nearest 160 u from his near lip in 10 u steps; "40 u from the hero" from the patch middle to hero x. That keeps the 60 u patch 3 u clear of the hero's box, so a blob never lands on them, and it never hurts.
+- **OG-R23.** Keep: after a fall all throws pop, he goes straight back to 400, and the next throw is at least one `every` later. A 5.7 s slide back would be dead time. The jump should happen while the fall fades, so the child never sees him blink across.
+- **OG-R24.** Keep: in Gentle the hero climbs out 40 u left of his left lip. Change (see OG-R26): he then goes back to 400 as in normal mode, instead of staying beside the hero.
+- **OG-R25.** Change: a gravel lump must never appear on top of a standing hero. As built, he can slide up to 10 u from a hero who is waiting, and the lump's box reaches 19 u from his lip, so it comes out already touching them. That breaks "he never swallows a standing hero" as a 10-year-old feels it, and "never a hazard you cannot see coming". With `bumpGap` 30 there is 11 u of clear floor, so the lump is seen leaving his lip before it reaches the hero. A hero who walks right up to his lip themselves can still be hit; the gulp warns them, and they are about to jump him anyway. The same goes for Gentle.
+- **OG-R26.** The hall is too hard for Gentle: the bot acting 0.1 s late wins first try in normal mode but loses all three tries in Gentle (try 2: three falls in 7 s). The cause is the Gentle climb-out: he stays where he is, 40 u from the hero, so a slow player climbs out, steps or hops back in, and falls again. Gentle is for exactly that slow player. Change: (1) OG-R24, he goes back to 400 after a Gentle fall; (2) a Gentle gulp of 0.8 s (a new `boss.gentle.gulp`, normal stays 0.5); (3) the bot test expects a Gentle win in 3 tries at 6 steps late, not just a report. If it still fails, tune for Gentle only in 5.4's order (throws 2.8 / 2.4 / 2.0 s first).
+- **OG-R27.** Keep: first-try hints once per visit (each time you come into the hall, not once ever, so a player back after a week is reminded); "Jump over King Pothole to drop it in." waits until his start words are done, so two lines never fight for the hint bar.
+- **OG-R28.** Keep: "hmph" at most once a second; his bump shudder still shows every time, so the stop never needs sound.
+- **OG-R29.** Keep: door people cheer for 1 s on each bag ("Ehen!" then "Well done!"), walk in from 2.5 s of the finish and cheer at 4.5 s, as part 7. Hidden when people are switched off after a slow-phone fault is fine: the toast and cone ticks still say what happened.
+- **OG-R30.** Keep: 'bossWin' plays with "The gateway is open! Ogun is switched on!" at 4.5 s, as 5.5.
+- **OG-R31.** Keep: through the right doors at the finish, the arch shows its "SAFE JOURNEY" side. From inside Ogun looking out along the way on, the back is the side you would see, and "safe journey" is the right send-off for a road that now leads to the rest of Nigeria. The words must read the right way round (not mirrored) and the cog turns once it is lit.
+- **OG-R32.** Words, all keep: place.sagamuDone "Sagamu is moving again. Pothole Hall is open." (OG-R18's planned change); win.money "You got ₦15." (as Lagos); "Go to Pothole Hall" as the Ogun place button (part 8; the same shape as "Go to Go-Slow Hall"); "The gateway is open! Ogun is switched on!" as the Ogun place line after the win (part 8, and it matches the finish toast).
+- **OG-R33 (QA-O-3 a).** Change: mud is not clear enough. Its dark sunken patch has the pothole's outline, and its ripples are the same thing Abeokuta's water potholes show, so in greyscale "safe" and "fall in" look alike, and a child who learns to fear mud will also run into a water pothole thinking it is mud. Art changes mud, not potholes: (1) mud lies level with the road: the road's top edge runs straight across it, no dark rim, no inner wall, no depth shading; (2) its fill is a mid brown, clearly lighter than any pothole in greyscale (potholes stay the darkest thing on the road); (3) its edges are lumpy, with small clods sitting on top of the road, not cut into it; (4) 2 or 3 boot prints are pressed in from the start, not only after the hero walks; (5) shine is short glossy streaks, never closed rings (rings stay for water potholes). Potholes keep their dark outline, depth and warning sign; mud never gets a sign. qa checks Ota, Abeokuta and Sagamu at 320 x 240 in greyscale: mud and a pothole side by side must be told apart without the hero touching either.
+- **OG-R34 (QA-O-3 b).** Keep: Sagamu's low-road well and its bobbing ↓ arrow can be seen from the deck. In a side view the road under the deck is always on screen, and every entrance well shows its arrow (it is the cue that needs no colour). The secret is the way in, not the sight: a deck runner sees it, knows the low road hides something, and can walk back under the deck after the steps down (back-tracking is allowed on every street) or take the low road next try. That is a tease, not a giveaway. Still no hint, sign or person pointing at it; part 3.6's "only seen from the low road" now reads "reached from the low road".
+- **OG-R35 (O6b, city, road and Expressway check).** Change, before Ogun goes live: Ogun's city opens on the first visit (after the arrival card), as Lagos's city is home from the start, not only after Pothole Hall is won. The note already counts on it: 6.2's Bad road card, 6.4's "neither waits for the other", 1.7's "Ogun turning, King Pothole not beaten" line, the arrival card's "Fix Ogun, and the way opens" and decision 74 ("Fixing Ogun opens the way onward") all need the city before the hall, and part 8 named the place screen a stand-in "until Ogun's city, O6b". With the city last, a child plays four runs from a list and never sees Ogun change until the end, which breaks the earn-then-fix loop Lagos taught them. So: the place screen goes; "Take it home" and "Home" from any Ogun run land in Ogun's city; the challenge road is open from the first visit (stops locked as 6.5); the Potholes pin bobs on the first visit until it is tapped (W7 step 2). The cog keeps gamedev's rule: it turns at the first boom or the first hall win, whichever comes first, as Lagos's (1.7 now reads so).
+- **OG-R36.** Keep: every board shows at once (road, adire, pump, lamps, mast; the garri mill after the New road; the kola market after the first boom). W7's one board at a time teaches a first-timer, and Ogun opens only after Go-Slow Hall, so every Ogun player has paid boards in Lagos; Lagos itself shows the Lamps and Mast boards once the lane run is open, and the Expressway is always open. The first hint adds "Walk onto a board to pay." to remind them. Five boards at once needs edge arrows on small screens (OG-R43).
+- **OG-R37.** Keep: Bad road earns no Booming points (6.4's 24 points from 6 places; the hall's prize is the gateway). With OG-R35 its pin is real: the problem look until the first hall win, then fixed ("The gateway, fixed"). Card: "King Pothole is blocking the gateway." then, before Sagamu is cleared, "Clear Ota, Abeokuta and Sagamu to reach Pothole Hall." with a big "Run {next street}" button; after, "Go to Pothole Hall." with a big "Go to Pothole Hall". Back in the city after the first hall win, its built line plays: "The gateway is open. The road is smooth." and the gate and verge light.
+- **OG-R38.** Change, before live (decision 47: "each fix brightens its own block and the blocks next to it"): (1) each fix and place lights its own area and one block beside it: New road r2c0 + r2c1, Water pump water + motorPark (as built), Lamps interchange + r1c1 + r1c2, Mast r1c0 + r0c0, Adire market r0c1 + r0c2, Garri mill r1c3 + r0c3, Kola market r2c3 alone (it comes after the first boom, when the rest is lit); (2) each meter step lights the first block not yet bright, in an order from the middle outward (as Lagos's boom.ts STEP_ORDER), so a step is never spent on a lit block; (3) the first boom lights everything except the area of a problem not yet fixed (the water point, the interchange, r1c0 and, before the hall win, the gate), as Lagos's SPOT_BLOCK, so a child can still see what needs fixing. Gamedev picks the exact step order; qa checks no step lands on a lit block.
+- **OG-R39.** Keep the plain line, add the heading: after a win, "Mission complete!" over "You brought ₦X home." (W5's "win from somewhere else"); after a loss or leaving early, the line alone, and only if something was brought (as Lagos, LR-Q1). The player walks onto the board and pays themselves, and the 2 s built line and lighting are the "watch it change" moment. The bus pulling up can wait (OG-R43).
+- **OG-R40.** Change, can wait: neither lane run (Lagos's or the Expressway) fills any tray today, because the lane run has its own loop. W3 says places fill while "a challenge is running" and OG-R8 says "any run", so both lane runs should tick Lagos's and Ogun's trays in play time (not paused, tab in front). This is a W3 fix, not a change to how Lagos plays.
+- **OG-R41.** Keep for now: Pothole Hall's road card is a crop of the road picture, as long as the crop shows the hall's roof and its three cones whole in the card (qa checks at 320 x 240) and it is spoken "Pothole Hall, with its road cones." (the shape of Lagos's "Go-Slow Hall, with its traffic lights."). A drawn hall card is an art task that can wait.
+- **OG-R42.** Keep the stops, their order and what each win is for (6.5; decisions 45 and 69: Ota's win tops up to the New road's price while it is unbuilt; the Expressway's pays the pump, then the lamps, then the mast). Words change: Pothole Hall's lines follow Lagos's hall: before the win "King Pothole is blocking the gateway." / "A win brings ₦15 and opens the gateway." (not the wheel's "Ogun is turning..." line, which is untrue before a boom); after, "The gateway is open. Ogun is switched on." / "A win brings ₦15." (in place of "Play it again any time."). The way on: "The road to the rest of Nigeria is still being built." ("north" is too sure: decision 82 says North or East). Border market's road line: "A busy market road." (the status already says "Coming soon"; the city pin's card keeps "A busy market road. Coming soon."), line 3 "More soon" in place of "Later". A coming-soon stop is spoken "{name}. {line} Coming soon."
+- **OG-R43. The gaps.** Before Ogun goes live: (a) people walking in Ogun's city (reuse Lagos's city walkers with Ogun's cast, part 7; decision 72 says people everywhere makes every state better, and a city with nobody in it reads as empty, not proud); dyers, the water queue and mill trucks may stay in the still picture for now; (b) edge arrows and the short-stick fallback for boards and pins off a small screen (5W and W15, as Lagos), since five boards show at once (OG-R36). Can wait: (c) the border market's coming-soon pin on the map (the road already shows the stop; art's BORDER_PIN is ready); (d) the Mission complete bus pulling up (OG-R39 covers the words); (e) passengers waving from the danfo and tipper in the hall roll-out (part 7), an art touch.
+- **OG-R44. The new words.** Keep: "Water pump"; "Water on"; "Ogun from above. Tap where you want to go."; "Tap where you want to go. Walk onto a board to pay." and "Use the arrow keys to walk. Walk onto a board to pay."; "Run Ota to earn more."; "Ogun's cog is turning on Nigeria's wheel!" (shown only if the cog was not already turning, as Lagos); "Earns Naira." (the wallet is shared, decision 80, so no "for Ogun"; Lagos's "for Lagos" stays); "To Lagos" / "The road back to Lagos." / "Go to Lagos" (the mirror of "To Ogun"); "Run the Expressway"; "The gateway road from Lagos." / "The adire yards." / "The interchange."; "Back to Ogun"; "A busy market road. Coming soon." on the city pin. Change: "Water, lamps and internet are on." to "Water on, lamps on and fast internet here." (Lagos's "Lamps on and fast internet here."); "The gateway is open. Play it again any time." and "The road north..." and the border road line as OG-R42; the Not enough card's Power and Tech line from "Lane runs earn Power." to "Run the Expressway to earn Power." (and "...Tech."), since Ogun's lane run is called the Expressway everywhere else. Part 8 lists every Ogun city and road word.

@@ -29,6 +29,8 @@ export class CityLife {
   private quiet = 0;
   /** Writes so far (tests check the 10 s rule). */
   writes = 0;
+  /** O6b (OG-R8): other states' trays fill in the same play time (Ogun's StateCity). */
+  also: ((dt: number) => void) | null = null;
 
   constructor(private readonly store: CityLifeStore) {
     this.state = readCity(store.load());
@@ -49,6 +51,7 @@ export class CityLife {
 
   /** `dt` seconds of play: trays fill (in steps, up to their caps). Returns the places whose tray changed. */
   tick(dt: number): PlaceId[] {
+    this.also?.(dt);
     const { next, changed } = fillTrays(this.state, this.clock, dt);
     if (changed.length) {
       this.state = next;

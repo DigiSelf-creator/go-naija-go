@@ -6,7 +6,7 @@ import { registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { SplashScreen } from '@capacitor/splash-screen';
 import type { MenuScreen } from '../screens/menus';
-import { WORDS } from '../screens/words';
+import { OGUN_WORDS, WORDS } from '../screens/words';
 import { backStep, playMode, safeEdge, type BackLabels } from './back';
 import { LeaveAsk } from './leave-ask';
 
@@ -36,6 +36,8 @@ export interface NativeHooks {
   lane(): boolean;
   /** A hero is saved on this phone. */
   heroSaved(): boolean;
+  /** O1b2: a card shows over the screen (Travel, download, arrival). */
+  card?(): boolean;
   /** Pause the run and show Pause (does nothing outside a run). */
   pause(): void;
   /** Home to Lagos city from a run's card. */
@@ -63,6 +65,8 @@ const LABELS: BackLabels = {
   wheelBack: WORDS.wheel.back,
   takeHome: WORDS.cleared.takeHome,
   tiltNo: WORDS.lane.tiltOfferNo,
+  cardOut: [OGUN_WORDS.travel.back, OGUN_WORDS.download.notNow, OGUN_WORDS.download.ok, OGUN_WORDS.arrival.go],
+  rideSkip: OGUN_WORDS.busRide.skip,
 };
 
 /** Presses the first showing menu button with one of these labels. */
@@ -112,7 +116,7 @@ export function startNativeApp(hooks: NativeHooks): NativeApp {
 
   void App.addListener('backButton', () => {
     const step = backStep(
-      { askOpen: ask.open, sinceScreen: performance.now() - shownAt, screen: hooks.screen(), running: hooks.running(), hall: hooks.hall(), lane: hooks.lane(), heroSaved: hooks.heroSaved() },
+      { askOpen: ask.open, sinceScreen: performance.now() - shownAt, screen: hooks.screen(), running: hooks.running(), hall: hooks.hall(), lane: hooks.lane(), heroSaved: hooks.heroSaved(), card: hooks.card?.() === true },
       LABELS,
     );
     switch (step.kind) {

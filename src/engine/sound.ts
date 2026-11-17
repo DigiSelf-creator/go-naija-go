@@ -138,7 +138,28 @@ export type LaneSoundName =
   | 'laneBusStop'
   | 'laneCaught';
 
-export type SoundName = CoreSoundName | LaneSoundName;
+/**
+ * O2b, O3b, O4b: Ogun's street sounds. Their recipes live in the lazy Ogun part (ota.ts, abeokuta.ts,
+ * sagamu.ts: OTA_SOUNDS, ABEOKUTA_SOUNDS, SAGAMU_SOUNDS), which calls addSounds when it loads. Until then playing one is silent.
+ */
+export type OgunSoundName =
+  | 'mudStepA'
+  | 'mudStepB'
+  | 'crackRumble'
+  | 'gravelTk'
+  | 'gravelCrumble'
+  // O5b: Pothole Hall (art's POTHOLE_SOUNDS, added when the Ogun part loads)
+  | 'potPlop'
+  | 'potGulp'
+  | 'potHmph'
+  | 'potGiggle'
+  | 'potYawn'
+  | 'bagLift'
+  | 'coneTok'
+  | 'mudSplat'
+  | 'rollerToot';
+
+export type SoundName = CoreSoundName | LaneSoundName | OgunSoundName;
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum

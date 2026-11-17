@@ -20,6 +20,7 @@
  * The wheel is an SVG picture for the HTML wheel screen (aria-hidden): the screen gives screen
  * readers a list of every name with "working" or "not working yet" (S2.8).
  */
+import { cogPennantSvg } from './gateway';
 
 export interface WheelState {
   /** Save key under gidi-progress `states` (lower case, spaces as dashes). */
@@ -119,6 +120,8 @@ export const WHEEL_CSS =
 export interface WheelOptions {
   /** Turn the working cogs (default true). Off also when the player asks for reduced motion. */
   turn?: boolean;
+  /** State ids open but not turning yet (Ogun, docs/ogun.md 1.7): a pennant on the cog, never colour alone. */
+  next?: Iterable<string>;
 }
 
 /**
@@ -179,6 +182,12 @@ export function wheelSvg(working: Iterable<string> = [], opts: WheelOptions = {}
   });
   out.push(`<g fill="${C.cogGrey}" stroke="${C.cogGreyEdge}" stroke-width="1.2" stroke-linejoin="round">${grey.join('')}</g>`);
   out.push(...lit);
+  const next = new Set(opts.next ?? []);
+  WHEEL_STATES.forEach((st, i) => {
+    if (!next.has(st.id) || on.has(st.id)) return;
+    const { x, y } = cogCentre(i);
+    out.push(cogPennantSvg(x, y, (cogAngle(i) * 180) / Math.PI));
+  });
 
   // Names, pointing out from the middle. On the left half they are turned round so every
   // name reads left to right.

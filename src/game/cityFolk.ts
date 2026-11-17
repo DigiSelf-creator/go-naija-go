@@ -104,6 +104,22 @@ export function cityWalkerAt(w: CityWalker): Pt & { dx: number; dy: number } {
 }
 
 /**
+ * Where walkers go and how they get there: Lagos's blocks and walk grid by default. O6b2 (OG-R43 a):
+ * a later state's city gives its own (Ogun from the Ogun part, through the people's kit), so the
+ * walkers, their stops and waves are the same everywhere.
+ */
+export interface CityGround {
+  /** A door to walk from or to: a block's front, bright blocks 3 times as often (part 9). */
+  pick(bright: ReadonlySet<string>, r: () => number): Pt;
+  /** The way from a to b (b last), or empty when there is none. */
+  path(a: Pt, b: Pt): Pt[];
+}
+export const LAGOS_GROUND: CityGround = {
+  pick: (bright, r) => frontSpots(pickBlock(bright, r), 3)[Math.floor(r() * 3)]!,
+  path: findPath,
+};
+
+/**
  * The ambient walkers (part 9): each walks from one block's front to another's and, there, goes
  * in at a door while a new one comes out somewhere else. The same every visit (a fixed seed).
  * They are never solid: if the hero comes within 14 u a walker stops, steps aside and waves,
@@ -116,13 +132,14 @@ export class CityWalkers {
   constructor(
     /** Spots nobody stops near: pay mats, doors with trays, pins. */
     public keepClear: readonly Pt[] = [],
+    private readonly ground: CityGround = LAGOS_GROUND,
   ) {}
 
   private make(bright: ReadonlySet<string>, from?: Pt): CityWalker | null {
     const r = this.r;
-    const a = from ?? frontSpots(pickBlock(bright, r), 3)[Math.floor(r() * 3)]!;
-    const b = frontSpots(pickBlock(bright, r), 3)[Math.floor(r() * 3)]!;
-    const path = findPath(a, b);
+    const a = from ?? this.ground.pick(bright, r);
+    const b = this.ground.pick(bright, r);
+    const path = this.ground.path(a, b);
     if (!path.length) return null;
     const pts = [a, ...path];
     const len = pathLen(pts);

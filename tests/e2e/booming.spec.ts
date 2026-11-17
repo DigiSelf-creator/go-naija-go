@@ -57,7 +57,7 @@ async function sample(page: Page): Promise<void> {
           said: document.querySelector('.city-card > .sr-only[aria-live]')?.textContent ?? '',
           walkers: c.watch.walkers,
           danfo: c.watch.danfo,
-          pin: !!document.querySelector('[data-spot="potholes"]'),
+          pin: !!document.querySelector('.city-pin[data-spot="potholes"]'),
           card: document.querySelector('.city-problem h2')?.textContent ?? '',
         });
       }

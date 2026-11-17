@@ -6,12 +6,16 @@ import { describe, expect, it } from 'vitest';
 import lagos1 from '../../src/data/levels/lagos-1.json';
 import lagos2 from '../../src/data/levels/lagos-2.json';
 import lagos3 from '../../src/data/levels/lagos-3.json';
+import ogun1 from '../../src/data/levels/ogun-1.json';
+import ogun2 from '../../src/data/levels/ogun-2.json';
+import ogun3 from '../../src/data/levels/ogun-3.json';
 import lagosWell from '../../src/data/levels/lagos-well.json';
 import lagosHall from '../../src/data/levels/lagos-hall.json';
 import { LevelError, parseLevel, type Level } from '../../src/game/level';
 import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
 import { hintWords } from '../../src/screens/words';
 import { BUS_END, busEndAt } from '../../src/art/roadside';
+import { playableOgun } from './ogun-level-data';
 
 const DT = 1 / 60;
 const L1 = parseLevel(structuredClone(lagos1));
@@ -246,6 +250,12 @@ const STREETS = [
   { L: L1, bigPits: 1, dashGaps: 0, hints: 15 },
   { L: parseLevel(structuredClone(lagos2)), bigPits: 1, dashGaps: 1, hints: 7 },
   { L: parseLevel(structuredClone(lagos3)), bigPits: 2, dashGaps: 1, hints: 4 },
+  // ogun.md 3.4 (O0a1): Ota. Its own rules (mud, ikokore, the arch) are in ogun-levels.test.ts.
+  { L: parseLevel(playableOgun(ogun1)), bigPits: 1, dashGaps: 0, hints: 4 },
+  // ogun.md 3.5 (O0a2): Abeokuta. Rocks count as roofs here; cracks, water and ofada are in ogun-levels.test.ts.
+  { L: parseLevel(playableOgun(ogun2)), bigPits: 1, dashGaps: 0, hints: 5 },
+  // ogun.md 3.6 (O0a3): Sagamu. Gravel is read as a tyre here (same placing rules); its own rules are in ogun-levels.test.ts.
+  { L: parseLevel(playableOgun(ogun3)), bigPits: 2, dashGaps: 0, hints: 3 },
 ] as const;
 
 describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, dashGaps, hints }) => {
@@ -338,7 +348,8 @@ describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, dashGaps, hints
         expect(nearestPit(x), `well at ${x}`).toBeGreaterThanOrEqual(60);
       }
       expect(w.exitX).toBeLessThan(L.checkpoint);
-      expect(w.room).toBe('lagos-well');
+      // Each state has its own room: lagos-well, ogun-well (ogun.md 3.7).
+      expect(w.room).toBe(`${L.id.split('-')[0]}-well`);
       for (const z of L.hazards) expect(Math.abs(z.x - w.exitX), `${z.kind} at ${z.x}`).toBeGreaterThanOrEqual(400);
     }
   });

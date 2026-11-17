@@ -29,7 +29,7 @@ npm test        # run the quick tests
 npm run e2e     # play the built game in a pretend phone and check it works
 ```
 
-Other helpers: `npm run build` makes the files players get in `dist/`, and `npm run check-size` fails if the first load is 3 MB or more.
+Other helpers: `npm run build` makes the files players get in `dist/`, and `npm run check-size` fails if the first load is 3 MB or more, or if the Ogun part (`dist/worlds/ogun/`, loaded only when the player first goes to Ogun) is over 150 KB gzipped.
 
 ## Put it online (GitHub Pages)
 

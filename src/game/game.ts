@@ -33,6 +33,7 @@ import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type HazardState, type RunEve
 import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
 import type { GamePeople, PeopleNow } from './people';
+import type { SkinEvent, SkinNow, StreetSkin } from './skin';
 
 export { heroScreenX };
 /** Honk clouds fade over this last stretch before the hall's left wall, u. */
@@ -71,7 +72,9 @@ export type GameEvent =
   /** S2.16 B2: with amala, a foot met the ground (at most one every 0.18 s): the "dum" and the thump. */
   | { type: 'strongStep'; x: number; y: number }
   /** S2.16 B4: each 0.3 s of a dash on the ground, the fast soft footsteps. */
-  | { type: 'dashSteps' };
+  | { type: 'dashSteps' }
+  /** O2b (ogun.md 3.3): a foot met the mud (twice a run cycle): the "splosh", a print, a splash. */
+  | { type: 'mudStep'; x: number; y: number };
 
 /** S2.16 B4: the dash's fast footsteps sound this often, s. */
 export const DASH_STEPS_EVERY = 0.3;
@@ -168,6 +171,11 @@ export class Game {
    * Scenery only: they read the run and never change it (people.on = false gives the same run).
    */
   people: GamePeople | null = null;
+  /**
+   * O2b: a later state's street look from its lazy part (skin.ts), or null for the Lagos art.
+   * Set by main before a run starts. A fault in it turns it off; the run goes on.
+   */
+  skin: StreetSkin | null = null;
 
   constructor(public level: Level) {
     this.run = new Run(level);
@@ -220,7 +228,7 @@ export class Game {
    * try that starts with the garri shield on (S2.7). parcelSaved: the state already has a saved
    * parcel, so well rooms show 5 kobo instead (S2.5 gift rule 6).
    */
-  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash'> = {}): void {
+  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash' | 'arena'> = {}): void {
     this.level = level;
     this.run = new Run(this.level, { gentle, rooms: this.rooms, ...opts });
     this.newCamera();
@@ -231,6 +239,7 @@ export class Game {
     this.clearMoves();
     this.clearLooks();
     this.people?.restart();
+    this.skinDo((k) => k.restart?.());
     // A hall try with the parcel starts with the suit on: it clicks on at the start.
     if (this.run.power.shield) this.suitOnAt = this.clock;
   }
@@ -267,7 +276,50 @@ export class Game {
     n.still = this.still;
     n.clock = this.clock;
     n.lift = this.lift;
+    n.cast = this.skin?.cast ?? null;
     return n;
+  }
+
+  /** O2b: what the skin reads now (one object, filled again each call). */
+  private skinNow(L = 0, R = 0, H = 0): SkinNow {
+    const s = this.skinView;
+    s.level = this.level;
+    s.run = this.run;
+    s.camX = this.camX;
+    s.viewW = this.viewW;
+    s.L = L;
+    s.R = R;
+    s.H = H;
+    s.clock = this.clock;
+    s.still = this.still;
+    s.fixed = this.fixed;
+    s.people = this.people;
+    s.stride = this.stridePhase;
+    s.look = this.look;
+    return s;
+  }
+  private readonly skinView = {} as SkinNow;
+
+  /**
+   * O2b: runs a part of the skin. Like the people (part 11), a skin never stops the game: if it
+   * goes wrong it is switched off for the rest of the visit and the Lagos look stands in.
+   */
+  skinDo<T>(f: (k: StreetSkin) => T): T | undefined {
+    const k = this.skin;
+    if (!k) return undefined;
+    try {
+      return f(k);
+    } catch (err) {
+      this.skin = null;
+      console.warn('Street look switched off:', err);
+      return undefined;
+    }
+  }
+
+  /** A food on the road: the skin's own (ikokore, Ijebu garri), else the game's. */
+  private drawFoodNow(g: CanvasRenderingContext2D, kind: Level['foods'][number]['kind'], x: number, y: number, t: number): void {
+    if (this.skinDo((k) => k.food?.(g, kind, x, y, t))) return;
+    if (kind !== 'ikokore' && kind !== 'ofada') drawFood(g, kind, x, y, t);
   }
   /** One object, filled again each call (no garbage a step). */
   private readonly folkNow = {} as PeopleNow;
@@ -348,6 +400,7 @@ export class Game {
     else this.gait = 'run';
     this.animateStride(x0, vy0, air0, dt);
     events.push(...this.looks(shield0, phase0, events));
+    if (this.skin) this.skinDo((k) => k.hear?.(events as readonly SkinEvent[], this.skinNow()));
     if (events.some((e) => e.type === 'fall' || e.type === 'room' || e.type === 'wellBack')) this.clearMoves();
     if (this.run.below) {
       this.roomCamera(events.some((e) => e.type === 'room'), dt);
@@ -427,6 +480,8 @@ export class Game {
       this.stepAt = this.clock;
       out.push({ type: 'strongStep', x: h.x, y: h.y });
     }
+    // O2b (ogun.md 3.3): each foot that meets the mud goes "splosh" and leaves a print.
+    if (footDown && run.inMud) out.push({ type: 'mudStep', x: h.x, y: h.y });
     if (h.dash > 0 && h.grounded && this.clock - this.dashStepAt >= DASH_STEPS_EVERY - 1e-9) {
       this.dashStepAt = this.clock;
       out.push({ type: 'dashSteps' });
@@ -560,15 +615,23 @@ export class Game {
     // Screen space, parallax: the street's own look (its `theme`, art K1 backdrop.ts).
     const first = this.firstLook;
     const folk = this.peopleNow();
-    drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed, first, this.people?.riders(view, folk));
+    // O2b: a later state's street brings its own backdrop (skin.ts).
+    const skin = this.skin;
+    if (!skin || this.skinDo((k) => (k.backdrop(g, camX, W, t, H, gy, this.still), true)) === undefined) {
+      drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed, first, this.people?.riders(view, folk));
+    }
+    const sn = this.skin ? this.skinNow(L, R, H) : null;
     // S3g1b: an okada passing on the far road now and then.
     this.people?.drawOkada(g, view, folk);
 
     // World space.
     g.translate(-camX, 0);
     // S3g1b (PE-R1): the back pavement people, before the road and everything the hero can touch.
+    if (sn) this.skinDo((k) => k.back?.(g, sn));
     this.people?.drawBack(g, view, folk);
     drawRoad(g, camX, W, level.ground, gy, H, this.fixed);
+    // O2b: the skin's ground: mud and its prints, the gateway arch.
+    if (sn) this.skinDo((k) => k.ground?.(g, sn));
     if (first) drawFirstGround(g, first, camX, W, gy, H);
     // S2.15: potholes plugged with fufu, a pale patch level with the road.
     for (const p of run.plugged) if (p.b > L && p.a < R) drawFufuPlug(g, p.a, p.b, gy, H);
@@ -581,7 +644,10 @@ export class Game {
     // The well in use is drawn with the hero (going down); no arrow while Go down shows.
     if (level.manual) drawStreetBits(g, level, camX, W, L, R, H, t, { busy: run.well, noArrow: run.wellHere, still: this.still }, this.fixed);
     if (level.manual) this.people?.drawStartBus(g, view, folk);
-    for (const p of level.terrain.platforms) if (p.x + p.w > L && p.x < R) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
+    for (const p of level.terrain.platforms) {
+      if (p.x + p.w <= L || p.x >= R) continue;
+      if (!this.skinDo((k) => (k.stall ? (k.stall(g, p.x, p.y, p.w, gy), true) : false))) drawThemeStall(g, level.theme, p.x, p.y, p.w, gy);
+    }
     if (run.crates.length > 0) this.drawCrates(g, run.crates, camX, L, R, lift, true);
     const stop = level.checkpoint;
     if (stop + 160 > L && stop - 60 < R) drawBusStop(g, stop, run.checkpointReached, t, gy);
@@ -597,7 +663,7 @@ export class Game {
     if (end && busSeen) this.people?.drawAt(g, 'park', folk, view);
 
     for (const c of run.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
-    for (const f of run.foods) if (!f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, t);
+    for (const f of run.foods) if (!f.taken && f.x > L && f.x < R) this.drawFoodNow(g, f.kind, f.x, f.y, t);
     // S2.16 B5: the weeds never move (no time); tyres and drums roll across in front of them.
     for (const q of run.gutters) {
       if (q.x + q.w < L || q.x > R) continue;
@@ -608,6 +674,8 @@ export class Game {
       g.globalAlpha = 1 - fade; // the street end: hazards fade out
       for (const z of run.hazards) {
         if (z.mode === 'gone' || z.x < L || z.x > R) continue;
+        // O4b: a later state's own hazard (Sagamu's hopping gravel).
+        if (sn && this.skinDo((k) => k.hazard?.(g, z, sn))) continue;
         if (z.mode === 'eat') drawGoatEating(g, z.x, z.y, z.t / FUFU_RULES.eatSteps, z.face);
         else if (z.mode === 'knocked') {
           const k = z.t / FUFU_RULES.knockSteps;
@@ -649,6 +717,7 @@ export class Game {
     if (end && bus && busSeen && atBus) drawEndBus(g, end.x, bus, gy);
 
     this.drawEffects(g);
+    if (sn) this.skinDo((k) => k.front?.(g, sn));
     this.people?.drawBubble(g, view, folk, lift);
   }
 
@@ -661,8 +730,8 @@ export class Game {
    */
   private renderHall(g: CanvasRenderingContext2D, view: View): void {
     const { level, run } = this;
-    const boss = run.boss!;
-    const data = level.boss!;
+    const boss = run.boss;
+    const data = level.boss;
     const W = view.width;
     const lift = this.lift;
     const H = view.height + lift;
@@ -672,6 +741,21 @@ export class Game {
     const still = this.still;
     g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
     g.translate(-camX, 0);
+    const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
+    if (!boss || !data) {
+      // O5b: a later state's hall draws itself from its lazy part (Pothole Hall); hero() draws the
+      // hero (null while it blinks out) and the sparkles. If its look fails, the hero still shows.
+      const hero = (): HeroPose | null => {
+        const p = blinkOff ? null : this.drawHeroNow(g, false);
+        this.drawEffects(g);
+        return p;
+      };
+      if (!this.skinDo((k) => k.hall?.(g, this.skinNow(camX - MARGIN, camX + W + MARGIN, H), hero, view))) {
+        drawHall(g, camX, W, H, {});
+        hero();
+      }
+      return;
+    }
     const finish = boss.defeated ? hallFinishAt(boss.modeTime, still) : null;
     drawHall(g, camX, W, H, finish ? { ...finish, time: t, still } : { doors: hallDoors(boss.mode, boss.modeTime, still), time: t });
     data.lights.forEach((p, i) => {
@@ -687,7 +771,7 @@ export class Game {
     g.translate(shake, 0);
     drawBoss(g, data.x, gy, { mode: boss.mode, t: boss.modeTime, hits: boss.hits, time: still ? 0 : t, aim: boss.aim });
     g.translate(-shake, 0);
-    for (const f of run.foods) if (!f.taken) drawFood(g, f.kind, f.x, f.y, t);
+    for (const f of run.foods) if (!f.taken) this.drawFoodNow(g, f.kind, f.x, f.y, t);
     for (const th of boss.throws) {
       if (th.kind === 'tyre') {
         drawTyre(g, th.x, th.y, th.rot);
@@ -700,7 +784,6 @@ export class Game {
       g.globalAlpha = 1;
     }
     drawHallCones(g, finish?.cones ?? 0);
-    const blinkOff = run.safe > 0 && Math.floor(run.safe / 6) % 2 === 1;
     if (!blinkOff) this.drawHeroNow(g, false);
     this.drawBalls(g, run.balls, -Infinity, Infinity);
     this.drawEffects(g);
@@ -712,16 +795,14 @@ export class Game {
     drawHitCounter(g, W / 2, 66 + view.safe.top, boss.hits);
   }
 
-  /** The hero where it is now, in its pose (rope: holding the well rope). World space. */
-  private drawHeroNow(g: CanvasRenderingContext2D, rope: boolean): void {
+  /** The hero where it is now, in its pose (rope: holding the well rope). World space. Returns the pose. */
+  private drawHeroNow(g: CanvasRenderingContext2D, rope: boolean): HeroPose {
     const h = this.run.hero;
     const t = this.clock;
-    const boss = this.run.boss;
+    const beaten = this.run.beaten;
     const skid = rope ? 0 : this.skid;
     const walking = h.manual && h.grounded && this.gait === 'walk';
-    g.save();
-    g.translate(h.x, h.y);
-    this.heroSprites.draw(g, this.look, {
+    const pose: HeroPose = {
       phase: this.stridePhase,
       inAir: !rope && !h.grounded,
       vy: h.vy,
@@ -730,7 +811,7 @@ export class Game {
       glow: this.run.power.amala > 0,
       fast: this.run.power.corn > 0,
       ...this.powerPose(),
-      standing: this.idle || ((boss?.defeated ?? false) && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
+      standing: this.idle || (beaten && h.grounded) || (h.manual && h.grounded && h.vx === 0 && skid === 0),
       gait: walking ? 'walk' : 'run',
       skid,
       ...(rope ? { rope: true } : {}),
@@ -740,10 +821,14 @@ export class Game {
       // S2.15: one 0.15 s arm swing after a throw.
       ...(!rope && this.run.throwAge < THROW_TIME ? { throwing: this.run.throwAge / THROW_TIME } : {}),
       // Decision 60: a short wince just after a knock; a beam once the boss is beaten.
-      ...(t - this.hurtAt < HURT_FACE_TIME ? { face: 'hurt' as const } : (boss?.defeated ?? false) ? { face: 'win' as const } : {}),
+      ...(t - this.hurtAt < HURT_FACE_TIME ? { face: 'hurt' as const } : beaten ? { face: 'win' as const } : {}),
       time: t,
-    });
+    };
+    g.save();
+    g.translate(h.x, h.y);
+    this.heroSprites.draw(g, this.look, pose);
     g.restore();
+    return pose;
   }
 
   /** S2.15: the fufu balls flying, hopping, rolling, settling, and those a goat is eating. World space. */
@@ -817,15 +902,18 @@ export class Game {
     const h = run.hero;
     g.setTransform(view.scale, 0, 0, view.scale, 0, -lift * view.scale);
     g.translate(-camX, 0);
-    drawWellRoom(g, camX, W, calm, H);
-    for (const p of room.terrain.platforms) drawShelf(g, p.x, p.y, p.w);
+    // O3b: a later state's street brings its own room (Ogun's Ijebu garri store).
+    if (!this.skinDo((k) => k.room?.(g, room, camX, W, calm, H, this.still))) {
+      drawWellRoom(g, camX, W, calm, H);
+      for (const p of room.terrain.platforms) drawShelf(g, p.x, p.y, p.w);
+    }
     // S3g1b (PE-R4): the store keeper by the back wall, and feet passing over a light hole.
     const folk = this.peopleNow();
     this.people?.drawRoom(g, view, folk);
     for (const c of play.coins) if (!c.taken && c.x > L && c.x < R) drawKobo(g, c.x, c.y, t);
     if (play.crates.length > 0) this.drawCrates(g, play.crates, camX, L, R, lift, false);
     const gift = play.gift;
-    if (gift && !gift.taken) drawGarriParcel(g, gift.x, gift.y, calm);
+    if (gift && !gift.taken && !this.skinDo((k) => k.gift?.(g, gift.x, gift.y, calm))) drawGarriParcel(g, gift.x, gift.y, calm);
     // The bucket that brought the hero down: it lands, then is pulled back up (gone at once if still).
     if (run.phase === 'roomIn') drawRoomRope(g, room.entryX, h.y - 9, 0);
     else if (run.phase === 'room' && !this.still && run.wellSteps < WELL_RULES.bucketBackSteps) {
@@ -869,11 +957,12 @@ export class Game {
       if (c.x + 40 < L || c.x - 40 > R) continue;
       const opened = this.since(c.openStep);
       const lid = !c.open ? 0 : this.still || opened === undefined ? 1 : Math.min(1, opened / 0.15);
-      drawCrate(g, c.x, c.bottomY, { stamp: STAMP[c.contents], open: c.open, angle: this.crateAngle(c), lid });
+      const look = { open: c.open, angle: this.crateAngle(c), lid };
+      if (!this.skinDo((k) => k.crate?.(g, c, look))) drawCrate(g, c.x, c.bottomY, { stamp: STAMP[c.contents], ...look });
     }
     for (const c of crates) {
       const f = c.food;
-      if (f && !f.taken && f.x > L && f.x < R) drawFood(g, f.kind, f.x, f.y, f.landed ? t : 0);
+      if (f && !f.taken && f.x > L && f.x < R) this.drawFoodNow(g, f.kind, f.x, f.y, f.landed ? t : 0);
     }
     // The kobo: fan out of the top (0.35 s), then fly to the HUD counter (0.4 s).
     for (const c of crates) {

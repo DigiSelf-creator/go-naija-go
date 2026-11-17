@@ -214,8 +214,8 @@ describe('settings', () => {
   it('sound is on and gentle mode off by default; both are remembered', () => {
     const { storage } = fakeStorage();
     const store = createStore(() => storage);
-    expect(loadSettings(store)).toEqual({ sound: true, music: true, gentle: false, buttonsInsteadOfSwipes: false, tiltToSteer: false });
-    saveSettings(store, { sound: false, music: false, gentle: true, buttonsInsteadOfSwipes: true, tiltToSteer: true });
-    expect(loadSettings(createStore(() => storage))).toEqual({ sound: false, music: false, gentle: true, buttonsInsteadOfSwipes: true, tiltToSteer: true });
+    expect(loadSettings(store)).toEqual({ sound: true, music: true, gentle: false, buttonsInsteadOfSwipes: false, tiltToSteer: false, busRide: true });
+    saveSettings(store, { sound: false, music: false, gentle: true, buttonsInsteadOfSwipes: true, tiltToSteer: true, busRide: false });
+    expect(loadSettings(createStore(() => storage))).toEqual({ sound: false, music: false, gentle: true, buttonsInsteadOfSwipes: true, tiltToSteer: true, busRide: false });
   });
 });

@@ -398,10 +398,13 @@ test.describe('the HUD row and the well button on narrow phones (qa L3)', () => 
       // The hero stands still at the start (street 3 is walked by hand), so the HUD does not
       // change by itself: show every chip, the longest kobo count, and let the HUD fit again.
       await page.evaluate(() => {
-        for (const e of document.querySelectorAll<HTMLElement>('.hud-food')) e.hidden = false;
+        // The food slots in HUD order: garri (shield), corn (fast), amala (strong), then Ogun's
+        // ikokore and ofada (O2b, O3b), which a Lagos street never shows (qa O7: this test showed
+        // them too since O3b, an "Ofada 0" chip no player can see).
+        const plain = [...document.querySelectorAll<HTMLElement>('.hud-food:not(.hud-parcel):not(.hud-fufu)')];
+        for (const e of document.querySelectorAll<HTMLElement>('.hud-food')) e.hidden = plain.indexOf(e) >= 3;
         document.querySelector('.hud-kobo .hud-text')!.innerHTML = '<span class="hud-word">Kobo </span>999';
-        // The food slots in HUD order: garri (shield), corn (fast), amala (strong).
-        const [garri, corn, amala] = document.querySelectorAll<HTMLElement>('.hud-food:not(.hud-parcel) .hud-text');
+        const [garri, corn, amala] = plain.map((e) => e.querySelector<HTMLElement>('.hud-text'));
         garri!.innerHTML = '<span class="hud-word">Shield</span>';
         // The widest counts: corn and amala both start at 12 s.
         corn!.innerHTML = '<span class="hud-word">Fast </span>12';

@@ -6,3 +6,6 @@
  */
 export { GamePeople } from './people';
 export { CityPeople } from './cityPeople';
+/** O6b2 (OG-R43 a): the pieces a later state's city uses for its own walkers (Ogun's, from its part). */
+export { CityWalkers, cityWalkerAt, ambientCount, CITY_FOLK } from './cityFolk';
+export { CastSheet } from './crowdDraw';

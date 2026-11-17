@@ -10,7 +10,8 @@ import { BossFight, throwBox, type BossEvent } from './boss';
 import { CRATE_RULES, freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import { ballsOut, FUFU_RULES, stepBall, tossBall, type BallWorld, type FufuBall } from './fufu';
-import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type ThrowKind, type WellData } from './level';
+import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type MudData, type ThrowKind, type WellData } from './level';
+import type { SoundName } from '../engine/sound';
 import { pitKind, pitsOf, withBlocks, BIG_PIT, type Pit, type PitKind } from './pits';
 import { GENTLE_HINTS } from '../screens/words';
 import { freshRoom, roomWalls, WELL_RULES, type RoomData, type RoomPlay } from './well';
@@ -29,6 +30,27 @@ export const RULES = {
   /** Twice the first 6 s and 7 s after Tp's iPhone test: they wore off too fast. */
   cornSteps: secs(12),
   amalaSteps: secs(12),
+  /** O2b (ogun.md 4.1): ikokore's firm feet last 12 s, like every timed food. */
+  ikokoreSteps: secs(12),
+  /** O3b (ogun.md 4.1): ofada's steady road lasts 12 s. */
+  ofadaSteps: secs(12),
+  /**
+   * O3b (ogun.md 3.3): a crack rumbles open when the hero first comes this near its left lip
+   * (Gentle mode: farther), over this long (art's CRACK.openTime), and then it is a pothole.
+   */
+  crackReach: 240,
+  crackReachGentle: 300,
+  crackOpenSteps: secs(0.4),
+  /**
+   * O4b (ogun.md 3.3): hopping gravel hops 40 u high every 0.7 s, the first 0.35 s of each on
+   * the road, the last 0.35 s in the air (art's GRAVEL and gravelHop). It crumbles when landed on
+   * while rising too, so its stomp check is a little kinder than the others'.
+   */
+  gravelHop: 40,
+  gravelPeriodSteps: secs(0.7),
+  gravelAirSteps: secs(0.35),
+  gravelSpeed: 70,
+  gravelStompSlack: 14,
   /** Timed foods warn this long before they end. */
   warnSteps: secs(2),
   smashKobo: 2,
@@ -100,6 +122,8 @@ export const HAZARD_BOX: Record<HazardKind, { halfW: number; h: number }> = {
   /** S2.16 B1: the egret stands on the road; the crow's box bottom is 20 u above it (HazardState y). */
   egret: { halfW: 8, h: 28 },
   crow: { halfW: 11, h: 14 },
+  /** O4b: hopping gravel, 18 wide and 16 tall; its y is its bottom (the road minus its hop). */
+  gravel: { halfW: 9, h: 16 },
 };
 
 /** S2.16 B1: the crow's box bottom is this far above the road. */
@@ -165,9 +189,17 @@ export type RunEvent =
   /** Gentle mode (S2.13 part 5): back just before the pit fallen in, after the 'fall'. */
   | { type: 'climbOut'; kind: PitKind; x: number }
   | { type: 'checkpoint' }
-  | { type: 'wearingOff'; kind: 'corn' | 'amala' }
+  | { type: 'wearingOff'; kind: TimedFood }
   | { type: 'tick' }
-  | { type: 'powerEnd'; kind: 'corn' | 'amala' }
+  | { type: 'powerEnd'; kind: TimedFood }
+  /** O2b (ogun.md 1.4): the hero passed under the gateway arch (once a play). */
+  | { type: 'arch' }
+  /** O3b (ogun.md 3.3): a crack starts to rumble open (it is a pothole 0.4 s later). */
+  | { type: 'crackOpen'; x: number; w: number }
+  /** O4b (ogun.md 3.3): a hopping gravel lands on the road ("tk", a dust puff). */
+  | { type: 'gravelHop'; x: number }
+  /** O4b: a gravel crumbles into dust (bounced on, amala, ikokore). */
+  | { type: 'crumble'; x: number; y: number }
   | { type: 'gameOver' }
   /** S2.7: the hall fight starts (the boss words). With the parcel, 'parcelShield' comes first. */
   | { type: 'hallStart' }
@@ -214,6 +246,8 @@ export type RunEvent =
   | { type: 'dashEnd' }
   | { type: 'dashReady' }
   | { type: 'dashTired'; first: boolean }
+  /** O5b: a later state's hall (its lazy part) asks for a sound and, or, words on the hint bar. */
+  | { type: 'cue'; sound?: SoundName; say?: string; ms?: number }
   | CrateEvent
   | BossEvent;
 
@@ -237,7 +271,27 @@ export interface Power {
   corn: number;
   /** Steps of amala left. */
   amala: number;
+  /** O2b: steps of ikokore left (mud does not slow you). */
+  ikokore: number;
+  /** O3b: steps of ofada left (cracks stay shut). */
+  ofada: number;
   shield: boolean;
+}
+
+/** The foods that work for a time (they tick, warn and end). */
+export type TimedFood = 'corn' | 'amala' | 'ikokore' | 'ofada';
+const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore', 'ofada'];
+const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false };
+
+/**
+ * O3b (ogun.md 3.3): a crack in this play. shut: a line in the road; opening: rumbling since step
+ * `at` (still road); open: a pothole for the rest of the try; sealed: shut for good (ofada).
+ */
+export interface CrackState {
+  readonly x: number;
+  readonly w: number;
+  state: 'shut' | 'opening' | 'open' | 'sealed';
+  at: number;
 }
 
 /** How a run starts (all optional). */
@@ -255,6 +309,21 @@ export interface RunOptions {
   parcel?: boolean;
   /** S2.16 B4: the dash is already turned on (saved after street 2's dash hint). */
   dash?: boolean;
+  /** O5b: a hall whose boss lives in a later state's lazy part (King Pothole): its fight, made for this try. */
+  arena?: ((run: Run) => ArenaRules) | undefined;
+}
+
+/**
+ * O5b: a boss fight from a later state's lazy part (Ogun's King Pothole, ogun.md 5). It runs the
+ * whole hall step with the run's own helpers (moves, walls, hazards, hurts, falls), so the rules
+ * stay in that part and only this shape is in the first load.
+ */
+export interface ArenaRules {
+  /** Beaten: the kind finish plays (no pause, no hurts). */
+  readonly defeated: boolean;
+  /** The hall tune's tempo step now (0 to 2). */
+  readonly tempo: number;
+  step(run: Run, dt: number, ev: RunEvent[]): void;
 }
 
 export class Run {
@@ -271,7 +340,7 @@ export class Run {
   phase: RunPhase = 'run';
   spawnX: number;
   checkpointReached = false;
-  power: Power = { corn: 0, amala: 0, shield: false };
+  power: Power = { ...NO_POWER };
   /** Steps of blinking safety left. */
   safe = 0;
   /** Steps since the run started. */
@@ -283,6 +352,10 @@ export class Run {
   readonly crates: CrateState[];
   /** The fight (halls only). */
   boss: BossFight | null = null;
+  /** O5b: a later state's fight (halls only), or null. */
+  arena: ArenaRules | null = null;
+  /** O2b mud patches in this play (O5b: King Pothole's splats come and go). */
+  readonly mud: MudData[];
   /**
    * The level's road and roofs, plus the boss's light platforms (solid all fight long). Its own
    * copy: a pothole plugged with fufu becomes road here for the rest of this play (S2.15).
@@ -303,6 +376,12 @@ export class Run {
   dashOn: boolean;
   /** The "catch your breath" words showed in this play. */
   private tiredShown = false;
+  /** O3b: the cracks in this play (open ones stay open after a lost life). */
+  readonly cracks: CrackState[];
+  /** O2b: the arch's welcome showed in this play. */
+  private archShown = false;
+  /** O2b: the feet were in mud since they last stood on firm road (ogun.md 3.3: the run timer starts again on leaving it). */
+  private wasMud = false;
   /** Hints already shown in this play of the level (not again after a fall). */
   private readonly hintsShown = new Set<number>();
   /**
@@ -369,23 +448,25 @@ export class Run {
     // S2.16 B4 Gentle mode: cement blocks in every dash gap make it two 100 u potholes.
     if (this.gentle && !level.hall) this.terrain.ground = withBlocks(level.ground).map(([x0, x1]) => ({ x0, x1 }));
     this.gutters = level.gutters.map((q) => ({ x: q.x, w: q.w, state: 'weeds', t: 0 }));
+    this.cracks = level.cracks.map((c) => ({ x: c.x, w: c.w, state: 'shut', at: 0 }));
     this.dashOn = opts.dash ?? false;
     this.hero = this.newHero(level.spawnX);
     this.coins = level.coins.map((c) => ({ ...c, taken: false }));
     this.foods = level.foods.map((f) => ({ ...f, taken: false }));
     this.hazards = level.hazards.map((h) => freshHazard(h.kind, h.x, level.groundY));
     this.crates = featureOn('crates') ? freshCrates(level.crates) : [];
+    this.mud = [...level.mud];
     this.parcelShield = level.hall !== null && (opts.parcel ?? false);
-    if (level.hall && level.boss) {
+    if (level.hall) {
       // S2.7: the fight starts at once, the hero inside by the left door, standing, facing right.
       this.phase = 'arena';
       this.checkpointReached = true;
-      this.boss = new BossFight(level.boss, level.groundY);
-      if (this.parcelShield) {
-        this.power.shield = true; // one shield, never more (it is a yes or no, never a count)
-        this.pending.push({ type: 'parcelShield' });
-      } else {
-        this.pending.push({ type: 'hallStart' });
+      if (this.parcelShield) this.power.shield = true; // one shield, never more (it is a yes or no, never a count)
+      // O5b: a later state's fight says its own start words.
+      this.arena = opts.arena?.(this) ?? null;
+      if (level.boss) {
+        this.boss = new BossFight(level.boss, level.groundY);
+        this.pending.push({ type: this.parcelShield ? 'parcelShield' : 'hallStart' });
       }
     }
   }
@@ -393,6 +474,11 @@ export class Run {
   /** A hall: the fight is the whole level (S2.7). */
   get inHall(): boolean {
     return this.level.hall !== null;
+  }
+
+  /** The hall's boss is beaten (its kind finish plays). */
+  get beaten(): boolean {
+    return (this.boss ?? this.arena)?.defeated ?? false;
   }
 
   /** What well `i`'s room holds in this play (null before the first visit). For tests and drawing. */
@@ -411,12 +497,12 @@ export class Run {
    * finish after the third hit (po M4: they do nothing in the finish), nor on any end card.
    */
   get inPlay(): boolean {
-    if (this.phase === 'arena') return !this.boss?.defeated;
+    if (this.phase === 'arena') return !this.beaten;
     return this.phase === 'run' || this.phase === 'wellDown' || this.phase === 'roomIn' || this.phase === 'room' || this.phase === 'wellUp';
   }
 
   press(by: PressSource = 'tap'): ReturnType<typeof press> {
-    if (this.phase === 'arena' && this.boss?.defeated) return null; // the hero stands and watches the finish
+    if (this.phase === 'arena' && this.beaten) return null; // the hero stands and watches the finish
     if (this.phase !== 'run' && this.phase !== 'arena' && this.phase !== 'room') return null;
     if (this.dustOff > 0) return null; // dusting off after a Gentle mode climb-out (S2.13)
     const out = press(this.hero);
@@ -435,7 +521,7 @@ export class Run {
   steer(move: -1 | 0 | 1): void {
     if (!this.hero.manual) return;
     this.heldMove = move;
-    const free = (this.phase === 'run' && this.dustOff === 0) || this.phase === 'room' || (this.phase === 'arena' && !this.boss?.defeated);
+    const free = (this.phase === 'run' && this.dustOff === 0) || this.phase === 'room' || (this.phase === 'arena' && !this.beaten);
     steer(this.hero, free ? move : 0);
   }
 
@@ -447,7 +533,7 @@ export class Run {
   dash(dir: -1 | 1): boolean {
     const h = this.hero;
     if (!this.dashOn || this.phase !== 'run' || this.inHall || !h.manual || this.dustOff > 0) return false;
-    if (this.power.corn > 0 || h.move !== dir) return false;
+    if (this.power.corn > 0 || h.move !== dir || this.slowed) return false;
     if (resting(h)) {
       this.pending.push({ type: 'dashTired', first: !this.tiredShown });
       this.tiredShown = true;
@@ -497,6 +583,7 @@ export class Run {
     else h.speed = this.power.corn > 0 ? this.level.cornSpeed : this.level.runSpeed;
 
     if (h.dash > 0 && this.power.corn > 0) endDash(h); // corn is faster already
+    this.mudStep(h);
     const dash0 = h.dash > 0;
     const rest0 = resting(h);
     step(h, this.terrain, dt);
@@ -505,6 +592,7 @@ export class Run {
       return ev;
     }
     if (h.manual) this.walls();
+    if (this.wasMud) this.leftMud(h);
     if (dash0 && h.dash === 0) ev.push({ type: 'dashEnd' });
     if (rest0 && !resting(h)) ev.push({ type: 'dashReady' });
     // S2.16 B4: reaching street 2's dash hint turns the dash on (the game saves it).
@@ -549,6 +637,13 @@ export class Run {
       }
     });
 
+    // O2b (ogun.md 1.4): under the gateway arch, the welcome words (once a play).
+    const arch = this.level.arch;
+    if (arch !== null && !this.archShown && h.x >= arch) {
+      this.archShown = true;
+      ev.push({ type: 'arch' });
+    }
+    if (this.cracks.length > 0) this.stepCracks(ev);
     this.pickUps(ev);
     this.moveHazards(dt, ev);
     this.stepBalls(dt, ev);
@@ -755,7 +850,7 @@ export class Run {
   }
 
   /** The hero stays inside the start fence and the end wall (a hall: its left wall and the cone line); bumping one stops dead. */
-  private walls(): void {
+  walls(): void {
     const h = this.hero;
     const hall = this.level.hall;
     const lo = hall ? hall.leftLimit : this.level.startWall + RULES.wallGap;
@@ -812,8 +907,12 @@ export class Run {
    * still and cannot be hurt while the kind finish plays.
    */
   private arenaStep(dt: number, ev: RunEvent[]): RunEvent[] {
-    const boss = this.boss!;
+    const boss = this.boss;
     this.steps++;
+    if (!boss) {
+      this.arena?.step(this, dt, ev);
+      return ev;
+    }
     if (this.parcelShield && this.steps === RULES.parcelWordsSteps) ev.push({ type: 'hallStart' });
     this.tickPower(ev);
     const h = this.hero;
@@ -877,26 +976,117 @@ export class Run {
     }
   }
 
-  private newHero(x: number): Body {
+  newHero(x: number): Body {
     if (this.level.manual) return createWalker(x, this.terrain, { walk: this.level.walkSpeed, run: this.level.runSpeed });
     const b = createBody(x, this.terrain);
     b.speed = this.level.runSpeed;
     return b;
   }
 
-  private tickPower(ev: RunEvent[]): void {
-    for (const kind of ['corn', 'amala'] as const) {
+  // ---------- Mud (O2b, ogun.md 3.3) ----------
+
+  /** True when x is on a mud patch (its left edge to its right edge). */
+  mudAt(x: number): boolean {
+    for (const m of this.mud) if (x >= m.x && x <= m.x + m.w) return true;
+    return false;
+  }
+
+  /** The hero's feet are in mud now: on the road (not a roof or in the air) over a patch. */
+  get inMud(): boolean {
+    const h = this.hero;
+    return h.grounded && h.on === null && this.mud.length > 0 && this.mudAt(h.x);
+  }
+
+  /** In mud with no ikokore: top speed is walk speed (ogun.md 3.3). */
+  get slowed(): boolean {
+    return this.power.ikokore <= 0 && this.inMud;
+  }
+
+  /**
+   * ogun.md 3.3: on mud the top speed is walk speed (90; 120 with corn) and the run timer stays
+   * at 0, so a run builds again only after leaving it (walking off, or landing on firm road).
+   * Jumps work as normal; mud never hurts. A dash ends in mud. Ikokore: mud does not slow you.
+   */
+  mudStep(h: Body): void {
+    if (!h.manual || this.mud.length === 0) return;
+    if (this.slowed) {
+      h.gait = { walk: h.gait.walk, run: h.gait.walk };
+      h.runTime = 0;
+      if (h.dash > 0) endDash(h);
+      h.dashEase = false; // mud slows a dash as quickly as a run
+      this.wasMud = true;
+    } else if (this.wasMud && this.inMud) {
+      this.wasMud = false; // ikokore now, still in the mud: the run builds from here
+    }
+  }
+
+  /** After the move: feet on firm road (or a roof) again after mud, so the run builds from 0. */
+  leftMud(h: Body): void {
+    if (!this.wasMud || !h.grounded || this.inMud) return;
+    this.wasMud = false;
+    h.runTime = 0;
+  }
+
+  // ---------- Cracks and ofada (O3b, ogun.md 3.3, 4.1) ----------
+
+  /** The cracks open now, as pits. */
+  private openCracks(): Pit[] {
+    return this.cracks.filter((c) => c.state === 'open').map((c) => ({ a: c.x, b: c.x + c.w, w: c.w }));
+  }
+
+  /**
+   * A shut crack starts to open when the hero first comes within 240 u of its left lip (300 in
+   * Gentle mode); 0.4 s later it is a pothole, never while the hero stands over it. With ofada
+   * none opens, and one the hero reaches while it works stays shut for good. A crack the hero is
+   * already at when it comes in reach stays shut too (it never opens under the feet).
+   */
+  private stepCracks(ev: RunEvent[]): void {
+    const h = this.hero;
+    const reach = this.gentle ? RULES.crackReachGentle : RULES.crackReach;
+    for (const c of this.cracks) {
+      if (c.state === 'opening' && this.steps - c.at >= RULES.crackOpenSteps && !this.over(c)) {
+        c.state = 'open';
+        this.terrain = { ...this.terrain, ground: cutGround(this.terrain.ground, c.x, c.x + c.w) };
+      }
+      if (c.state !== 'shut' || c.x - h.x > reach) continue;
+      if (h.x + RULES.heroHalfW >= c.x) c.state = 'sealed';
+      else if (this.power.ofada <= 0) {
+        c.state = 'opening';
+        c.at = this.steps;
+        ev.push({ type: 'crackOpen', x: c.x, w: c.w });
+      }
+    }
+  }
+
+  /** The hero stands on the road over a crack. */
+  private over(c: CrackState): boolean {
+    const h = this.hero;
+    return h.grounded && h.on === null && h.x >= c.x - RULES.heroHalfW && h.x <= c.x + c.w + RULES.heroHalfW;
+  }
+
+  /** Ofada wore off: every shut crack within reach ahead stays shut for good (ogun.md 3.3). */
+  private sealAhead(): void {
+    const x = this.hero.x;
+    const reach = this.gentle ? RULES.crackReachGentle : RULES.crackReach;
+    for (const c of this.cracks) if (c.state === 'shut' && c.x - x <= reach && c.x + c.w >= x - RULES.heroHalfW) c.state = 'sealed';
+  }
+
+  tickPower(ev: RunEvent[]): void {
+    for (const kind of TIMED) {
       const left = this.power[kind];
       if (left <= 0) continue;
       const now = left - 1;
       this.power[kind] = now;
       if (now === RULES.warnSteps) ev.push({ type: 'wearingOff', kind });
       if (now > 0 && now <= RULES.warnSteps && now % STEPS_PER_SECOND === 0) ev.push({ type: 'tick' });
-      if (now === 0) ev.push({ type: 'powerEnd', kind });
+      if (now === 0) {
+        ev.push({ type: 'powerEnd', kind });
+        if (kind === 'ofada') this.sealAhead();
+      }
     }
   }
 
-  private heroBox(): { l: number; r: number; t: number; b: number } {
+  heroBox(): { l: number; r: number; t: number; b: number } {
     const h = this.hero;
     return { l: h.x - RULES.heroHalfW, r: h.x + RULES.heroHalfW, t: h.y - RULES.heroH, b: h.y };
   }
@@ -924,6 +1114,8 @@ export class Run {
         f.taken = true;
         if (f.kind === 'corn') this.power.corn = RULES.cornSteps;
         else if (f.kind === 'amala') this.power.amala = RULES.amalaSteps;
+        else if (f.kind === 'ikokore') this.power.ikokore = RULES.ikokoreSteps;
+        else if (f.kind === 'ofada') this.power.ofada = RULES.ofadaSteps;
         else if (f.kind === 'fufu') this.fufu = Math.min(FUFU_RULES.max, this.fufu + FUFU_RULES.give);
         else this.power.shield = true; // a second garri while shielded gives nothing extra
         ev.push({ type: 'food', kind: f.kind, x: f.x, y: f.y });
@@ -936,7 +1128,7 @@ export class Run {
   /** Throw can be pressed now: balls held, in play, not dusting off. */
   get canThrow(): boolean {
     if (this.fufu <= 0 || this.dustOff > 0) return false;
-    return this.phase === 'run' || (this.phase === 'arena' && !this.boss?.defeated);
+    return this.phase === 'run' || (this.phase === 'arena' && !this.beaten);
   }
 
   /**
@@ -970,7 +1162,7 @@ export class Run {
     const world: BallWorld = {
       terrain: this.terrain,
       groundY: this.level.groundY,
-      pits: pitsOf(this.level.ground).filter((p) => !this.plugged.some((q) => q.a === p.a)),
+      pits: [...pitsOf(this.level.ground), ...this.openCracks()].filter((p) => !this.plugged.some((q) => q.a === p.a)),
       hazards: this.hazards,
       hazardBox: HAZARD_BOX,
       crates: this.crates.map((c) => ({ l: c.x - CRATE_RULES.halfW, r: c.x + CRATE_RULES.halfW, t: c.bottomY - CRATE_RULES.h, b: c.bottomY })),
@@ -1042,7 +1234,7 @@ export class Run {
     this.balls = this.balls.filter((b) => b.mode !== 'gone');
   }
 
-  private moveHazards(dt: number, ev: RunEvent[]): void {
+  moveHazards(dt: number, ev: RunEvent[]): void {
     const { hazardSpeeds, groundY } = this.level;
     const terrain = this.terrain; // plugged potholes are road (S2.15)
     const heroX = this.hero.x;
@@ -1078,6 +1270,8 @@ export class Run {
             this.paceEgret(z, dt);
           } else if (z.kind === 'crow') {
             // Hovers in place over the pile: the box never moves.
+          } else if (z.kind === 'gravel') {
+            this.hopGravel(z, nx, ev);
           } else {
             z.x = nx;
             z.rot += (z.vx * dt) / 11;
@@ -1119,7 +1313,7 @@ export class Run {
     }
   }
 
-  private touchHazards(ev: RunEvent[]): void {
+  touchHazards(ev: RunEvent[]): void {
     const h = this.hero;
     const box = this.heroBox();
     for (const z of this.hazards) {
@@ -1132,8 +1326,9 @@ export class Run {
         this.touchBird(z, top, ev);
         continue;
       }
-      if (h.vy > 0 && h.prevY <= top + RULES.stompSlack) {
-        // Landed on it: bounce. The goat runs off unhurt; the tyre is knocked away.
+      const gravel = z.kind === 'gravel';
+      if (h.vy > 0 && h.prevY <= top + (gravel ? RULES.gravelStompSlack : RULES.stompSlack)) {
+        // Landed on it: bounce. The goat runs off unhurt; the tyre is knocked away; gravel crumbles.
         bounce(h);
         h.y = Math.min(h.y, top);
         this.knockAway(z);
@@ -1142,11 +1337,16 @@ export class Run {
         this.knockAway(z);
         this.kobo += RULES.smashKobo;
         ev.push({ type: 'smash', kind: z.kind, x: z.x, y: top });
+      } else if (gravel && this.power.ikokore > 0) {
+        // O4b (ogun.md 4.1): with ikokore's firm feet a touch crumbles it, no hurt.
+        this.knockAway(z);
       } else {
         // Decision 62: a goat bumped says "meeh" (once, as the bump lands, not every safe step).
         if (z.kind === 'goat' && this.safe <= 0) ev.push({ type: 'goatBump', x: z.x, y: top });
         this.hurt(ev);
+        continue;
       }
+      if (gravel) ev.push({ type: 'crumble', x: z.x, y: z.y });
     }
   }
 
@@ -1216,6 +1416,23 @@ export class Run {
     }
   }
 
+  /**
+   * O4b (ogun.md 3.3): one step of a hopping gravel: on to the left at its speed, on the road for
+   * the first half of each 0.7 s and in a 40 u arc for the second ("tk" as it lands). Landing
+   * over a pothole (or an open crack) it drops in, like a tyre.
+   */
+  private hopGravel(z: HazardState, nx: number, ev: RunEvent[]): void {
+    const P = RULES.gravelPeriodSteps;
+    const A = RULES.gravelAirSteps;
+    const gy = this.level.groundY;
+    z.x = nx;
+    const p = ++z.t % P;
+    const k = (p - (P - A)) / A;
+    z.y = k > 0 ? gy - RULES.gravelHop * 4 * k * (1 - k) : gy;
+    if (p === 0) ev.push({ type: 'gravelHop', x: z.x });
+    if (z.y >= gy && !groundAt(this.terrain, z.x)) z.mode = 'falling';
+  }
+
   private knockAway(z: HazardState): void {
     if (z.kind === 'goat') {
       z.mode = 'runAway';
@@ -1225,7 +1442,7 @@ export class Run {
     }
   }
 
-  private hurt(ev: RunEvent[]): void {
+  hurt(ev: RunEvent[]): void {
     if (this.safe > 0) return;
     if (this.power.shield) {
       this.power.shield = false;
@@ -1241,11 +1458,11 @@ export class Run {
     if (this.lives <= 0) this.gameOver(ev);
   }
 
-  private fall(ev: RunEvent[]): void {
+  fall(ev: RunEvent[]): void {
     this.lives--;
     ev.push({ type: 'fall' });
     // Food effects end on every fall, the last one too (so the HUD never shows a food at 0 lives).
-    this.power = { corn: 0, amala: 0, shield: false };
+    this.power = { ...NO_POWER };
     this.safe = 0;
     this.fufu = 0;
     this.balls = [];
@@ -1281,7 +1498,7 @@ export class Run {
   private pitAt(x: number): Pit | null {
     let best: Pit | null = null;
     let bestD = Infinity;
-    for (const p of pitsOf(this.gentle ? withBlocks(this.level.ground) : this.level.ground)) {
+    for (const p of [...pitsOf(this.gentle ? withBlocks(this.level.ground) : this.level.ground), ...this.openCracks()]) {
       if (this.plugged.some((q) => q.a === p.a)) continue; // a plugged pothole is road
       const d = x < p.a ? p.a - x : x > p.b ? x - p.b : 0;
       if (d < bestD) [best, bestD] = [p, d];
@@ -1292,11 +1509,24 @@ export class Run {
   private gameOver(ev: RunEvent[]): void {
     this.lives = 0;
     // Food effects end on every game over, a hit or a fall (the HUD never shows a food at 0 lives).
-    this.power = { corn: 0, amala: 0, shield: false };
+    this.power = { ...NO_POWER };
     this.fufu = 0;
     this.phase = 'over';
     ev.push({ type: 'gameOver' });
   }
+}
+
+/** The road spans with x0 to x1 taken out (a crack opened there). */
+function cutGround(ground: Terrain['ground'], x0: number, x1: number): Terrain['ground'] {
+  const out: Terrain['ground'][number][] = [];
+  for (const s of ground) {
+    if (s.x1 <= x0 || s.x0 >= x1) out.push(s);
+    else {
+      if (s.x0 < x0) out.push({ x0: s.x0, x1: x0 });
+      if (s.x1 > x1) out.push({ x0: x1, x1: s.x1 });
+    }
+  }
+  return out;
 }
 
 function freshHazard(kind: HazardKind, x: number, groundY: number): HazardState {
@@ -1307,6 +1537,7 @@ function freshHazard(kind: HazardKind, x: number, groundY: number): HazardState 
 function speedOf(speeds: Level['hazardSpeeds'], kind: HazardKind): number {
   if (kind === 'egret') return speeds.egret ?? EGRET_SPEED;
   if (kind === 'crow') return 0;
+  if (kind === 'gravel') return speeds.gravel ?? RULES.gravelSpeed;
   return speeds[kind];
 }
 

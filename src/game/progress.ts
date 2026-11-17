@@ -107,7 +107,9 @@ export function isProgressShape(v: unknown): v is Obj {
   if (v['v'] !== undefined && typeof v['v'] !== 'number') return false;
   const states = v['states'];
   if (!isObj(states)) return false;
-  for (const s of Object.values(states)) if (!isObj(s)) return false;
+  // O1b1 (ogun.md 1.8): a broken later state (not an object) reads as nothing done there and never
+  // costs Lagos its save. Lagos keeps the old rule.
+  if (states[LAGOS] !== undefined && !isObj(states[LAGOS])) return false;
   return true;
 }
 
@@ -205,12 +207,48 @@ export class Progress {
    * keeping everything else. Returns false if it could not be kept on the phone.
    */
   savePart(key: string, value: unknown): boolean {
+    return this.write((next) => {
+      next[key] = structuredClone(value);
+    });
+  }
+
+  /**
+   * O1b1: writes one field of one state's part (e.g. `states.ogun.arrived`), merged like savePart.
+   * A state part that is not an object (broken) is replaced by a fresh one here.
+   */
+  saveStatePart(id: string, key: string, value: unknown): boolean {
+    return this.write((next) => {
+      const states = next['states'] as Obj;
+      const st: Obj = isObj(states[id]) ? (states[id] as Obj) : {};
+      states[id] = st;
+      st[key] = structuredClone(value);
+    });
+  }
+
+  /**
+   * O1b1, decision 80: a later state's city in one write. Its own fixes, trays and Booming meter go
+   * to `states.<id>.city` (never the money); the wallet fields go into the top-level `city` part
+   * that every state shares, keeping Lagos's map there as it is.
+   */
+  saveStateCity(id: string, own: Obj, money: Obj): boolean {
+    return this.write((next) => {
+      const states = next['states'] as Obj;
+      const st: Obj = isObj(states[id]) ? (states[id] as Obj) : {};
+      states[id] = st;
+      st['city'] = structuredClone(own);
+      const shared: Obj = isObj(next['city']) ? (next['city'] as Obj) : {};
+      next['city'] = { ...shared, ...structuredClone(money) };
+    });
+  }
+
+  /** Merges a change into the newest readable copy on the phone and writes it. */
+  private write(change: (next: Obj) => void): boolean {
     const now = this.store.load<unknown>(KEY_PROGRESS);
     const base: Obj = now !== undefined && isProgressShape(now) ? migrate(now) : this.saved ? structuredClone(this.saved) : { v: PROGRESS_VERSION, states: {} };
     const next: Obj = structuredClone(base);
     if (typeof next['v'] !== 'number' || (next['v'] as number) < PROGRESS_VERSION) next['v'] = PROGRESS_VERSION;
     if (!isObj(next['states'])) next['states'] = {};
-    next[key] = structuredClone(value);
+    change(next);
     this.saved = next;
     return this.store.save(KEY_PROGRESS, next);
   }

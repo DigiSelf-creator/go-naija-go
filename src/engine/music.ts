@@ -305,6 +305,19 @@ export class Music {
     this.start(place, tempo, 0, wasPlaying ? FADE_OUT + QUIET : 0.05);
   }
 
+  /**
+   * O1b2: a one-off tune that is not one of the places (Ogun's welcome tune, from its lazy part).
+   * It plays once from the start, then stops; Pause and the Music switch silence it as any tune.
+   */
+  playTune(tune: Tune): void {
+    this.current = null;
+    this.pendingTempo = null;
+    this.paused = false;
+    this.resumeBar = 0;
+    if (!this.on) return;
+    this.startTune(tune, 0, 0, 0.05);
+  }
+
   /** Hall after a hit, or street 1 to 3: takes effect at the next bar line. */
   setTempo(tempo: number): void {
     if (!this.tune) {
@@ -366,9 +379,12 @@ export class Music {
   }
 
   private start(place: MusicPlace, tempo: number, bar: number, delay: number): void {
+    this.startTune(TUNES[place], tempo, bar, delay);
+  }
+
+  private startTune(tune: Tune, tempo: number, bar: number, delay: number): void {
     this.halt(FADE_OUT);
     const ac = this.ac;
-    const tune = TUNES[place];
     this.tune = tune;
     this.tempo = Math.min(Math.max(0, tempo), tune.bpm.length - 1);
     this.events = tuneEvents(tune, this.tempo);

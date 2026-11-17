@@ -1,0 +1,90 @@
+{
+  "schema": 2,
+  "type": "street",
+  "id": "ogun-2",
+  "state": "ogun",
+  "street": 2,
+  "name": "Abeokuta",
+  "theme": "adire",
+  "schemaNote": "See docs/ogun.md 3.3, 3.5 and 3.8 (and docs/design.md S2.6 for the rest). New fields: rocks: [x, width, height] our own granite ledges, one-way like stall roofs, never named (decision 77); cracks: [x, width] (40 or 60) that open into potholes as the hero comes near; waterPits: left lip x of potholes drawn holding water (look only); mud as on Ota. foods may hold \"ofada\". The well goes to the ogun-well room.",
+  "groundY": 300,
+  "walkSpeed": 90,
+  "runSpeed": 156,
+  "cornWalkSpeed": 120,
+  "cornSpeed": 228,
+  "spawnX": 80,
+  "startWall": 20,
+  "koboSpacing": 24,
+  "wakeDistance": 520,
+  "hazardSpeeds": { "goat": 36, "tyre": 60, "drum": 84 },
+  "ground": [
+    [-400, 2000], [2100, 2600], [2640, 2900], [2960, 6400],
+    [6570, 9400], [9440, 9950], [9986, 11200], [11260, 12300]
+  ],
+  "platforms": [
+    [9040, 245, 120],
+    [9640, 245, 120]
+  ],
+  "rocks": [
+    [1200, 100, 50],
+    [1330, 100, 100],
+    [1460, 100, 150],
+    [1900, 300, 90]
+  ],
+  "waterPits": [2600, 2900],
+  "mud": [
+    [4350, 120]
+  ],
+  "cracks": [
+    [5250, 40],
+    [5700, 60],
+    [6000, 40],
+    [7300, 40],
+    [7900, 60],
+    [8300, 40]
+  ],
+  "kobo": [
+    [300, 276, 5], [520, 276, 4], [800, 276, 4],
+    [1215, 226, 3], [1345, 176, 3], [1475, 126, 3], [1650, 276, 4],
+    [1920, 186, 10], [2300, 276, 4],
+    [2608, 236, 2], [2750, 276, 3], [2906, 216, 3], [3050, 276, 4], [3300, 276, 3],
+    [3600, 276, 3], [4050, 276, 3], [4360, 276, 5], [4600, 276, 3],
+    [5000, 276, 3], [5258, 236, 2], [5450, 276, 4], [5712, 216, 3], [5850, 276, 3],
+    [6008, 236, 2], [6100, 276, 4],
+    [6440, 170, 2], [6490, 120, 2], [6540, 170, 2],
+    [6700, 276, 4], [7100, 276, 4], [7308, 236, 2], [7450, 276, 3],
+    [7912, 216, 3], [8100, 276, 3], [8308, 236, 2], [8600, 276, 4],
+    [9050, 221, 2], [9140, 221, 1], [9408, 236, 2], [9655, 221, 4], [9956, 236, 2],
+    [10050, 276, 4], [10650, 276, 3], [11000, 276, 4], [11206, 216, 3], [11400, 276, 5]
+  ],
+  "foods": [
+    [3700, 272, "fufu"],
+    [6900, 272, "ofada"]
+  ],
+  "crates": [
+    [700, 204, "kobo"],
+    [3200, 204, "kobo"],
+    [8900, 204, "corn"],
+    [9100, 149, "kobo"],
+    [10200, 204, "kobo"]
+  ],
+  "hazards": [
+    ["goat", 3900],
+    ["tyre", 4250],
+    ["goat", 7600],
+    ["tyre", 10500],
+    ["goat", 10800]
+  ],
+  "wells": [
+    { "x": 3500, "exitX": 4700, "room": "ogun-well" }
+  ],
+  "hints": [
+    [1050, "Rocks! Jump up from step to step."],
+    [2500, "Water pothole! Jump over it too."],
+    [4900, "Bus stop! Now you start here."],
+    [5030, "Crack! It opens up. Jump over it."],
+    [6840, "Ofada! Cracks stay shut now."]
+  ],
+  "checkpoint": 4900,
+  "end": { "x": 11800, "wall": 12000 }
+}

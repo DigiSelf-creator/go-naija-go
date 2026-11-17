@@ -1,0 +1,32 @@
+{
+  "schema": 2,
+  "type": "hall",
+  "id": "ogun-hall",
+  "state": "ogun",
+  "name": "Pothole Hall",
+  "schemaNote": "See docs/ogun.md 5.2 to 5.5. Hall x runs 0 to width, floor at groundY. King Pothole is a pit `pit.width` wide whose middle slides between pit.track[0] and pit.track[1]; he freezes while the hero is in the air and slides again `resumeAfterLand` s after landing; he turns back `bumpGap` u before the feet of a hero on the floor. A bag dropped while the hero's middle is over the middle `dropZone` u of the pit, in the air, is a hit. phases[0] is before any hit; one phase per bag, so 3 bags win. Throws come from his near lip, each after a `gulp` warning. gentle.slideScale multiplies every slide speed in Gentle mode.",
+  "groundY": 300,
+  "width": 560,
+  "spawnX": 50,
+  "leftLimit": 30,
+  "rightLimit": 530,
+  "boss": {
+    "kind": "king-pothole",
+    "pit": { "width": 100, "track": [230, 400], "startX": 400, "dropZone": 40, "bumpGap": 30, "resumeAfterLand": 0.3 },
+    "bag": { "pile": [60, 90], "x": 80, "newAfter": 1.0 },
+    "rollerX": 500,
+    "lamps": 8,
+    "startDelay": 2.0,
+    "gulp": 0.5,
+    "breakAfterHit": 1.5,
+    "phases": [
+      { "every": 2.6, "slide": 30, "pattern": ["gravel"], "bpm": 126 },
+      { "every": 2.2, "slide": 40, "pattern": ["gravel", "mud"], "bpm": 132 },
+      { "every": 1.8, "slide": 55, "pattern": ["gravel", "gravel", "mud"], "bpm": 138 }
+    ],
+    "gravel": { "speed": 80, "hop": 40, "hopEvery": 0.7, "w": 18, "h": 16 },
+    "mud": { "near": 120, "far": 200, "notByHero": 40, "shadow": 0.6, "width": 60, "lasts": 4 },
+    "fall": { "backTo": 50, "pitTo": 400 },
+    "gentle": { "slideScale": 0.8, "gulp": 0.8, "every": [2.8, 2.4, 2.0] }
+  }
+}

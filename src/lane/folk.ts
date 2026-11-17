@@ -196,6 +196,8 @@ export class LaneFolk {
   /** Their places last frame, for qa: never in a lane. */
   drawn: { x: number; d: number }[] = [];
   private fronts = new Map<string, HTMLCanvasElement>();
+  /** O6b: another state's house fronts (Ogun's), in place of the two-storey Lagos ones. */
+  frontArt: ((g: G, o: { wall: number; windows: readonly [FrontWindow, FrontWindow]; door: 'open' | 'shut' }) => void) | null = null;
   private frontPpm = 0;
   private made = 0;
   private bridge = new Map<number, HTMLCanvasElement>();
@@ -226,7 +228,8 @@ export class LaneFolk {
       const g = c.getContext('2d')!;
       g.scale(k, k);
       g.translate(FRONT_TILE.w / 2 + 2, FRONT_TILE.h + 2);
-      drawTwoStorey(g, { wall, windows: FRONT_WINDOWS[kind], door: kind === 'glow' ? 'shut' : 'open', looks: [LANE_CAST[wall % LANE_CAST.length]!, LANE_CAST[(wall * 5 + 3) % LANE_CAST.length]!] });
+      if (this.frontArt) this.frontArt(g, { wall, windows: FRONT_WINDOWS[kind], door: kind === 'glow' ? 'shut' : 'open' });
+      else drawTwoStorey(g, { wall, windows: FRONT_WINDOWS[kind], door: kind === 'glow' ? 'shut' : 'open', looks: [LANE_CAST[wall % LANE_CAST.length]!, LANE_CAST[(wall * 5 + 3) % LANE_CAST.length]!] });
       this.fronts.set(key, c);
     }
     return c;

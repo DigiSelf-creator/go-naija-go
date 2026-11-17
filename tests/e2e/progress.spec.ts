@@ -220,19 +220,23 @@ test('the hall from its stop with a saved parcel, won: lives left, 1 of 37, the 
   await expect(won.getByText(`You cleared General Go-Slow with ${lives} ${lives === 1 ? 'life' : 'lives'} left.`)).toBeVisible();
   await expect(won.getByText("Lagos's cog is turning: 1 of 37.")).toBeVisible();
   await expect(won.getByText(/kobo/)).toHaveCount(0);
-  await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeFocused();
+  // O1b2: the first win's big button is "On to Ogun" (ogun.md 1.2); the wheel is a small one.
+  await expect(won.getByRole('button', { name: 'On to Ogun' })).toBeFocused();
   expect(await saved(page)).toMatchObject({ v: 2, states: { lagos: { hall: { done: true }, parcel: false } } }); // used up (po ruling d)
-  await checkCardFits(page, "See Nigeria's wheel", (at) => shotAt(page, `${at}-win`));
+  await checkCardFits(page, 'On to Ogun', (at) => shotAt(page, `${at}-win`));
   await shootBoth(page, 'win');
 
-  // Space presses the focused big button: the wheel opens, Lagos's cog turns.
+  // Space presses the focused button: the wheel opens, Lagos's cog turns.
   await waitOutTapLock(page);
+  await won.getByRole('button', { name: "See Nigeria's wheel" }).focus();
   await page.keyboard.press('Space');
   const wheel = page.getByRole('dialog', { name: "Nigeria's wheel" });
   await expect(wheel).toBeVisible();
   await expect(page.locator('.hud')).toBeHidden();
   await expect(wheel.getByText('1 of 37 cogs turning.').first()).toBeAttached();
-  await expect(wheel.getByText('More states are coming soon.').first()).toBeAttached();
+  // O1b2 (ogun.md 1.7): Ogun is open, its cog not turning: the rail says so, with the pennant.
+  await expect(wheel.getByText('Next: Ogun, the Gateway State.').first()).toBeAttached();
+  await expect(wheel.locator('.gdw-pennant')).toHaveCount(1);
   await expect(wheel.locator('.gdw-on[data-state="lagos"]')).toHaveCount(1);
   await expect(wheel.getByRole('listitem')).toHaveCount(37);
   await expect(wheel.getByRole('listitem').filter({ hasText: 'Lagos, working' })).toHaveCount(1);
@@ -475,7 +479,8 @@ test('a broken progress copy: Play opens Lagos, street 1 plays, nothing breaks, 
   await page.keyboard.press('Escape');
   await waitOutTapLock(page);
   await page.getByRole('button', { name: 'Challenge road', exact: true }).tap();
-  await expect(page.locator('.road-stop.locked')).toHaveCount(3);
+  // Computer Village, Ikeja, the hall, and (O1b2) the "To Ogun" stop.
+  await expect(page.locator('.road-stop.locked')).toHaveCount(4);
   await expect(page.locator('.road-stop.next')).toHaveAttribute('data-where', '0');
   expect(await page.evaluate(() => localStorage.getItem('gidi-progress'))).toBe('{"v":1,"states":[');
   expect(errors).toEqual([]);

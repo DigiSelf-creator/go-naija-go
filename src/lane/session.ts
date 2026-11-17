@@ -21,7 +21,7 @@ import { LaneButtons, SwipeReader, TILT_CALIBRATE_S, TILT_LOST_S, TiltReader, bu
 import { parseLane, type LaneLevel } from './level';
 import { NO_HAUL, addHaul, haulWords, lanePrize, subHaul, type Haul, type LaneSave } from './rewards';
 import { LaneSim, type LaneEvent, type LaneMove } from './sim';
-import { DARK_FROM, LaneView, WARN_UNDER, type HeroPose } from './view';
+import { DARK_FROM, LaneView, WARN_UNDER, type HeroPose, type LaneLook } from './view';
 import { FrameWatch } from '../game/crowd';
 import { drawBucketIcon } from '../art/city';
 import { cornCount } from '../game/music-cue';
@@ -134,6 +134,9 @@ export interface LaneHooks {
    * of corn, held while paused, the count in `box` (the hint bar's place). null: no corn now.
    */
   corn(c: { left: number; held: boolean; box: HintBarBox } | null): void;
+  /** O6b: another state's lane file (Ogun's Expressway, as JSON) and look; left out: Lagos's. */
+  level?: unknown;
+  laneLook?: LaneLook | null;
   /**
    * S3g1b (people everywhere part 12): the crowd murmur, while 5 or more people show and no
    * warning (a lamp's "tunk", the close hum) or the corn tune plays (PE-R6).
@@ -150,6 +153,9 @@ export type LaneStage = 'intro' | 'count' | 'play' | 'paused' | 'caught' | 'card
 
 export interface LaneTestHook {
   stage: LaneStage;
+  /** O6b: the lane file playing (lagos-lane, ogun-lane) and its theme. */
+  level: string;
+  theme: string;
   phase: string;
   dist: number;
   lane: number;
@@ -212,6 +218,8 @@ export function laneLevel(): LaneLevel {
 export class LaneSession {
   sim: LaneSim;
   readonly view = new LaneView();
+  /** The lane file this session plays (Lagos's, or a later state's from its part). */
+  private readonly lvl: LaneLevel;
   stage: LaneStage = 'off';
   /** Seconds left in "3, 2, 1". */
   private count = 0;
@@ -301,7 +309,10 @@ export class LaneSession {
 
   constructor(private readonly hooks: LaneHooks) {
     addLaneSounds();
-    this.sim = new LaneSim(laneLevel(), { gentle: hooks.gentle() });
+    this.lvl = hooks.level !== undefined ? parseLane(hooks.level) : laneLevel();
+    this.view.look = hooks.laneLook ?? null;
+    this.view.folk.frontArt = hooks.laneLook?.front ?? null;
+    this.sim = new LaneSim(this.lvl, { gentle: hooks.gentle() });
     this.loop = new FixedLoop({ update: (dt) => this.update(dt), render: (a) => this.render(a) });
     this.buttons = new LaneButtons(document.body, WORDS.lane.buttons, (m) => this.press(m));
     const pauseButton = button(WORDS.hud.pause, 'lane-pause', () => this.hooks.askPause(), { 'aria-label': WORDS.hud.pause });
@@ -483,7 +494,7 @@ export class LaneSession {
   /** From 0 m with the Blackout reset: "3, 2, 1", then go. Gentle mode counts from here (Q15). */
   start(): void {
     this.closeCard();
-    if (this.sim.gentle !== this.hooks.gentle()) this.sim = new LaneSim(laneLevel(), { gentle: this.hooks.gentle() });
+    if (this.sim.gentle !== this.hooks.gentle()) this.sim = new LaneSim(this.lvl, { gentle: this.hooks.gentle() });
     this.sim.reset();
     for (const k of Object.keys(this.tally) as (keyof typeof this.tally)[]) this.tally[k] = 0;
     this.banked = { ...NO_HAUL };
@@ -987,6 +998,8 @@ export class LaneSession {
     const s = this.sim;
     return {
       stage: this.stage,
+      level: this.lvl.id,
+      theme: this.lvl.theme,
       phase: s.phase,
       dist: s.dist,
       lane: s.lane,

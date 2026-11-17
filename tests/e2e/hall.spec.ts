@@ -98,11 +98,13 @@ async function checkWin(page: Page): Promise<void> {
   await expect(won.getByText(`You cleared General Go-Slow with ${r.lives} ${r.lives === 1 ? 'life' : 'lives'} left.`)).toBeVisible();
   await expect(won.getByText(/kobo/)).toHaveCount(0);
   await expect(won.getByText("Lagos's cog is turning: 1 of 37.")).toBeVisible();
-  await expect(won.getByText('More of Nigeria is coming soon.')).toBeVisible();
+  // O1b2 (ogun.md 1.2): the road to Ogun is open; the first win's big button is "On to Ogun".
+  await expect(won.getByText('The road to Ogun is open. Ogun is the gateway to the rest of Nigeria.')).toBeVisible();
+  await expect(won.getByText('More of Nigeria is coming soon.')).toHaveCount(0);
   await expect(won.getByText('Road cleared!')).toHaveCount(0);
   await expect(won.getByText(/wrong premise/)).toHaveCount(0);
   await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeVisible();
-  await expect(won.getByRole('button', { name: "See Nigeria's wheel" })).toBeFocused();
+  await expect(won.getByRole('button', { name: 'On to Ogun' })).toBeFocused();
   await expect(won.getByRole('button', { name: 'Play again' })).toBeVisible();
   await expect(won.getByRole('button', { name: 'Challenge road' })).toBeVisible();
   await expect(won.getByRole('button', { name: 'Home' })).toHaveCount(0);
