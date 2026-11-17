@@ -89,7 +89,7 @@ export const FOLK: readonly Folk[] = [
  * (back) away. `step` 0..1 moves the feet when walking; `happy` adds a smile and a skip.
  * `plate`: holding a plate of food in front.
  */
-export function drawFolk(g: CanvasRenderingContext2D, f: Folk, x: number, y: number, o: { step?: number; back?: boolean; plate?: boolean; happy?: boolean; turn?: -1 | 0 | 1 } = {}): void {
+export function drawFolk(g: CanvasRenderingContext2D, f: Folk, x: number, y: number, o: { step?: number; back?: boolean; plate?: boolean; happy?: boolean; turn?: -1 | 0 | 1; reach?: boolean } = {}): void {
   const s = f.small ? 0.85 : 1;
   const step = o.step === undefined || !Number.isFinite(o.step) ? -1 : o.step;
   const lift = step >= 0 ? Math.sin(step * TAU) : 0;
@@ -129,7 +129,11 @@ export function drawFolk(g: CanvasRenderingContext2D, f: Folk, x: number, y: num
     if (!o.back) drawPlate(g, 0, -7.6, 3.2);
   } else {
     line(g, f.top, 1.5, [-3.2, -10.8, -3.6 + lift * 0.5, -6.6]);
-    line(g, f.top, 1.5, [3.2, -10.8, 3.6 - lift * 0.5, -6.6]);
+    if (o.reach) {
+      // The near hand up and out, as if wiping a window behind
+      line(g, f.top, 1.5, [3.2, -10.8, 5.6, -14.2]);
+      disc(g, 5.9, -14.6, 0.8, f.skin);
+    } else line(g, f.top, 1.5, [3.2, -10.8, 3.6 - lift * 0.5, -6.6]);
   }
   // Head and hair
   const hy = -14;

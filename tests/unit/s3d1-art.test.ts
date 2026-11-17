@@ -197,6 +197,9 @@ describe('tired and bright Lagos (d2)', () => {
   });
 
   it('proud people of every kind draw cleanly and stay small, standing on their block', () => {
+    // No broom, held or sweeping (decision 75): the r0c1 woman wipes her shop window instead
+    expect(PROUD_KINDS as readonly string[]).not.toContain('sweeper');
+    expect(BLOCK_LIFE.r0c1?.proud).toBe('wiper');
     for (const k of PROUD_KINDS)
       for (let i = 0; i < 6; i++) {
         const r = boundsContext();
