@@ -24,7 +24,7 @@ import { MARKET_TILE_H, paintMarketTile } from './market';
 import { PARK_LAMPS, PARK_TILE_H, paintParkTile } from './buspark';
 import { FRESH_ROAD, GROUND_Y, SHOP_TILE_H, blitLayer, paintShopTile, type PixelLayer } from './street';
 import { drawFixedLook } from './fixedLook';
-import { INK } from './palette';
+import { INK, WHITE } from './palette';
 
 export type FirstStreet = 'alausa' | 'computerVillage' | 'ikeja';
 export type FirstLook = 'tired' | 'bright';
@@ -175,7 +175,7 @@ export function drawStreetSack(g: CanvasRenderingContext2D, x: number, y: number
 /** Proud townspeople at row size (about 36 units tall), standing still. */
 const FOLK_SCALE = 2.4;
 
-export type FirstFolkDoing = 'sweep' | 'repair' | 'read' | 'trade' | 'buy' | 'school' | 'stand';
+export type FirstFolkDoing = 'wipe' | 'repair' | 'read' | 'trade' | 'buy' | 'school' | 'stand';
 
 /** One townsperson standing at (x, y) (feet) doing something proud. `f` indexes FOLK (places.ts). */
 export function drawFirstFolk(g: CanvasRenderingContext2D, x: number, y: number, f: number, doing: FirstFolkDoing): void {
@@ -201,21 +201,14 @@ export function drawFirstFolk(g: CanvasRenderingContext2D, x: number, y: number,
   g.save();
   g.translate(x, y);
   g.scale(s, s);
-  drawFolk(g, folk, 0, 0, { turn: doing === 'read' ? 0 : 1, happy: doing === 'school' || doing === 'buy' });
+  drawFolk(g, folk, 0, 0, { turn: doing === 'read' ? 0 : 1, happy: doing === 'school' || doing === 'buy', reach: doing === 'wipe' });
   g.restore();
-  if (doing === 'sweep') {
-    // A broom in both hands, sweeping her own front
-    line(g, '#8a5d36', 2, [x + 6, y - 20, x + 18, y - 1]);
-    g.fillStyle = '#d9b86a';
-    g.beginPath();
-    g.moveTo(x + 15, y - 3);
-    g.lineTo(x + 25, y + 1);
-    g.lineTo(x + 13, y + 1);
-    g.closePath();
-    g.fill();
-    g.strokeStyle = '#a8844f';
-    g.lineWidth = 0.8;
-    g.stroke();
+  if (doing === 'wipe') {
+    // A cloth in her raised hand, wiping her own shop window clean (no broom: decision 75)
+    box(g, x + 12.5, y - 38.5, 6.5, 5.5, '#5aa9e6', 0.8, 1.2);
+    line(g, '#3b7fb8', 0.8, [x + 14, y - 34.5, x + 17, y - 37]);
+    line(g, WHITE, 1.2, [x + 21, y - 40, x + 24, y - 43]);
+    line(g, WHITE, 1.2, [x + 22, y - 35, x + 26.5, y - 39.5]);
   } else if (doing === 'read') {
     // By a small bus stop post (a yellow plate, no words), a newspaper held open: grey lines, no words
     g.fillStyle = '#5d6670';
@@ -285,7 +278,7 @@ const PLANS: Record<FirstStreet, Plan> = {
     // Glass of shops 0, 2, 4 and 5 (shops 1 and 3 are shuttered)
     windows: [0, 2, 4, 5].map((k) => [k * 124 + 54, -48, 56, 28] as const),
     sack: 560,
-    tired: { x: 296, f: 4, doing: 'sweep' },
+    tired: { x: 296, f: 4, doing: 'wipe' },
     bright: [
       { x: 236, f: 2, doing: 'trade' },
       { x: 340, f: 1, doing: 'school' },

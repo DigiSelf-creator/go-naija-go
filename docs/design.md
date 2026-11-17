@@ -2688,7 +2688,7 @@ The look eases back to the street's own look over the last 120 units of the stre
 - Walls mixed 50% toward warm sand `#c9b48c`, roofs a further 22% toward dusty brown `#9a8262`; 2 of every 3 windows warm brown `#5a4a3a` with no glint (the same rule as d2).
 - **2 of the first 4 shop fronts** with a roll-down shutter (brown-grey, 4 flat lines across).
 - **One neat tied sack and a box** at the kerb, waiting for collection, never within 100 units of a food stall.
-- **1 person** doing something proud, in the back layer, standing still: Alausa, a woman sweeping in front of her shop; Computer Village, a repairer at a small table with a phone; Ikeja, a man reading by the bus stop sign.
+- **1 person** doing something proud, in the back layer, standing still: Alausa, a woman wiping her own shop window with a cloth (no broom, decision 75); Computer Village, a repairer at a small table with a phone; Ikeja, a man reading by the bus stop sign.
 - **The spot's own mark:**
   - Alausa: 5 thin cracks on the road's front face (dark `#3a332a`, 1.5 units wide, 10 to 24 units long, three zig-zag strokes each), all between y 306 and 330, so they never touch the walking line at y 300 and never look like a gap. **Two cones** at 70% size, standing against a shop wall in the back layer, never on the road band, so they never read as the cones that mark a pit's lip.
   - Computer Village: our own phone mast behind the shop row with **1 of 4 bars** filled (4 rising boxes, 1 filled, 3 outlined), and 2 of 3 shop screens dark.
@@ -2856,7 +2856,7 @@ Each street has its own cast of about 16 looks (part 8), baked once (part 11). E
 
 **Alausa (street 1, morning, home):**
 - Walkers going to work: a woman in iro and buba with a gele and a handbag, a man in a shirt and trousers with a small bag, a teen with a school bag (plain uniform, no crest).
-- Standing: a woman sweeping her own front (S3e0's proud one), a man reading a paper by a door, a mother with a baby tied on her back in a wrapper, an elder in a kaftan and cap sitting on a bench outside a door.
+- Standing: a woman wiping her own shop window with a cloth (S3e0's proud one; no broom, decision 75), a man reading a paper by a door, a mother with a baby tied on her back in a wrapper, an elder in a kaftan and cap sitting on a bench outside a door.
 - Traders: an akara seller at a small pot and table (a steam puff), a bread seller with a tray on her head.
 - Children playing: two children with a small ball that bounces between them in place, never toward the road (never gold or yellow, so it never looks like a kobo); or two girls clapping and stepping a game of ten-ten.
 - Bus stop (checkpoint): 2 people waiting under the shelter.
@@ -3030,7 +3030,7 @@ The city already has standing people per block (`BLOCK_LIFE`) and walkers in the
 
 **art (S3g1a), from this note:**
 1. **The people kit** (src/art/folk.ts), our own look, matching the decision 60 shading at small size: bodies (slim, medium, round; child, teen, adult, elder; male and female), 7 skin tones, hair (low cut, afro, braids, cornrows, grey for elders) and headwear (gele, headscarf, hijab, fila, kaftan cap, babban riga cap), the 13 dress kinds of part 8 with our own patterns, a baby tied on a back, glasses, a wheelchair. Frames: stand, walk (4), wave (2), cheer (2), call, sit.
-2. **What they hold:** a handbag, a school bag, a backpack, a tray on the head (bread), a basin on the head (goods), a box on the head, a basket, a phone, a broom, a paper, a market bag, a wrapped plate and a takeaway pack, a small ball (never gold or yellow).
+2. **What they hold:** a handbag, a school bag, a backpack, a tray on the head (bread), a basin on the head (goods), a box on the head, a basket, a phone, a cleaning cloth, a paper, a market bag, a wrapped plate and a takeaway pack, a small ball (never gold or yellow); no broom (decision 75).
 3. **Traders' small stations:** the akara pot and table with steam, a phone case held up, an ankara roll over an arm, the tailor's machine (reuse the market art), the buka cook's pots (reuse buspark.ts).
 4. **The okada** (side on): a plain motorcycle, a rider in a plain one-colour helmet, a passenger with a bag; 2 wheel frames. **Keke riders:** a driver and two passengers for the existing keke.
 5. **Heads in bus windows:** heads and shoulders for the passing bus, the start fence bus and the bus park bus, still and with one arm waving.

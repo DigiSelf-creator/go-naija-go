@@ -113,7 +113,6 @@ export type FolkHold =
   | 'headBasket'
   | 'basket'
   | 'phone'
-  | 'broom'
   | 'paper'
   | 'marketBag'
   | 'plate'
@@ -121,7 +120,7 @@ export type FolkHold =
   | 'ball'
   | 'phoneCase'
   | 'ankaraRoll';
-export const FOLK_HOLDS = 'handbag schoolBag backpack breadTray basin box headBasket basket phone broom paper marketBag plate pack ball phoneCase ankaraRoll'.split(' ') as readonly FolkHold[];
+export const FOLK_HOLDS = 'handbag schoolBag backpack breadTray basin box headBasket basket phone paper marketBag plate pack ball phoneCase ankaraRoll'.split(' ') as readonly FolkHold[];
 
 export interface FolkLook {
   /** Index into FOLK_SKINS (0 to 6). */
@@ -390,7 +389,6 @@ function poseOf(look: FolkLook, frame: FolkFrame, R: Rig): Pose {
       p.na = { e: [0.8, 5.2], h: [-2.2, 7.2] };
       p.fa = mir(p.na);
     } else if (hold === 'pack' || hold === 'phoneCase') p.na = { e: [0.8, 5.4], h: [-1.0, 7.6] };
-    else if (hold === 'broom') p.na = { e: [0.9, 5.4], h: [1.8, 10.2] };
   }
   if (hold === 'ankaraRoll' && !seated) p.fa = { e: [-0.5, 5.6], h: [2.6, 6.4] };
   // A load on the head: the far hand steadies it whatever the near arm does
@@ -1463,15 +1461,6 @@ function heldFront(g: G, look: FolkLook, R: Rig, p: Pose, shY: number, headY: nu
       at(nx, ny, () => {
         part(g, () => g.rect(-1.1, -3.2, 2.4, 4), hold === 'phone' ? '#2a2a33' : look.b, { sh: 0.4, line: 0.9 });
         if (hold === 'phone') oval(g, 0.1, -1.6, 0.7, 1.2, '#7fd0f5');
-      });
-      handOver(nx, ny);
-      break;
-    case 'broom':
-      // A short palm broom held at the side, its bundle tied with a band
-      at(nx, ny, () => {
-        part(g, poly([-0.6, 0.6, 0.7, 0.6, 3.2, 9, -1.4, 9.4]), '#d9b86a', { sh: 0.6, line: 0.8 });
-        lines(g, '#a8863e', 0.4, [0, 2, 1.6, 8.8, -0.2, 2, -0.3, 9, 0.3, 2, 2.6, 8.8]);
-        lines(g, '#c0392b', 0.9, [-0.7, 2, 0.9, 2]);
       });
       handOver(nx, ny);
       break;
