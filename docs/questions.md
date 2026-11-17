@@ -1,5 +1,53 @@
 # Open questions for the product owner
 
+## po note, 17 Nov 2026 (newest): slice O, Ogun, accepted with notes (b73f604)
+
+- **Accepted:** slice O, Ogun the Gateway State, on claude/serene-hopper-ydve2g at b73f604, after qa passed O7 (Lagos to the end of Ogun by touch) and the O7fix re-check (QA-O7-1, QA-O7-2, QA-O2-4). Verdict: **accept with notes.** Nothing must be fixed in the game before the test link.
+- **Waits for Tp:**
+  1. **Merge slice O to the live test link** (decision 64: merging to the live link is Tp's call). Recommend: yes. The test link is for the team's testing (decision 39), and it is how the real-phone check in PERF-Q1 gets done.
+  2. **PERF-Q1, below.** Recommend **a**.
+  3. **A speaker reads Ogun's bubbles.** Plan O7 asks for "every bubble checked by a speaker". I found no sign a person who speaks Yoruba, Hausa, Igbo and Pidgin has read them yet; qa checked the words against the note. Recommend: Tp, or someone Tp trusts, reads the bubble lists in docs/ogun.md part 7 before the closed invited test (decision 41). Fine for the team's test link now.
+- **Small, reported in one line each (decision 64), for later rounds:** see "Later" in the acceptance just below.
+
+### PERF-Q1, for Tp: speed on a slow phone (brief Tech 4; ogun.md 9.2)
+
+The brief asks for 60 fps on a mid-range phone and "still playable at 30 on a cheap one". The team's own bar is 45 fps with the computer slowed 4 times (ogun.md 9.2, city.md part 3). On qa's test computer, slowed 4 times, Ogun's three streets and both boss halls run at 26 to 35 fps. Lagos's streets ran the same before Ogun was added (37.7 fps before, 38.1 now), so Ogun did not make anything slower. Ogun's city, the challenge road and the Expressway pass the 45 bar. This test computer has no graphics chip, so it runs slower than a real phone: in an earlier round it measured 29.3 fps on code that was not slow ("po acceptance, 10 Nov 2026: P1 and P2"). No one has played on a real cheap phone yet.
+- a) Merge Ogun to the test link now. Tp or a tester plays one Lagos street, one Ogun street and Pothole Hall on a real cheap Android phone (about ₦60,000 to ₦90,000, 2 to 3 GB of memory). If any of them drops below 30 fps or feels jerky, a speed task comes first, before more states and before the closed invited test (decision 41). *Best case:* real numbers before anyone spends days tuning for a test computer that may be wrong.
+- b) Hold Ogun off the test link until gamedev gets the streets and halls to 45 fps on the test computer. *Best case:* no slow build ever reaches a tester.
+- c) Change the team's bar from 45 to 30 fps at 4x slowdown. *Best case:* it matches the brief's own floor exactly.
+- **Recommended: a.** It is easy to undo, the test link reaches only the team, and the problem is older than Ogun, so b would block Ogun for a problem Lagos already has. c lowers the bar before we know what a real phone does. Blocks: nothing in slice O; it blocks the closed invited test until the real-phone check is done. Line for the lead once Tp confirms: "83. Ogun goes to the test link now. Before the closed invited test, one Lagos street, one Ogun street and Pothole Hall are played on a real cheap Android phone; under 30 fps there means a speed task comes first. (PERF-Q1, a; Tp)"
+
+## po acceptance, 17 Nov 2026: slice O, Ogun the Gateway State (b73f604)
+
+**Verdict: ACCEPT WITH NOTES.** Brief "Worlds" 2 (King Pothole) and Tech 3 ("each later world downloads only when reached"), decisions 72 to 82 and docs/ogun.md parts 1 to 9 are met.
+
+Reported (qa): O7 full pass, the whole journey from Lagos with Go-Slow Hall won to Ogun's boom, the Expressway and back by touch; words, sizes, saves, offline, screen reader, rules; the O7fix re-check passes QA-O7-1, QA-O7-2 and QA-O2-4 at six sizes with and without 24 px safe edges.
+Verified by po (b73f604, own build, preview on port 4401, phone 851 x 393 by touch):
+- **Size:** first load 884.0 KB of 3000 KB (brief Done when 5). Ogun part 79.0 KB gzip of 150 KB. The offline cache names no other site. No outside web address in src.
+- **Downloads only when reached (Tech 3, OG-R6):** nothing from worlds/ogun is fetched in Lagos, on the road or on the download card; it comes only after "Download".
+- **The journey:** Lagos road, "To Ogun" stop, "Go to Ogun", the download card word for word, the bus under our own arch ("WELCOME TO OGUN" / "THE GATEWAY STATE", a cog on top, adire-pattern posts: no real gantry, crest or emblem, decision 74), the arrival card word for word, Ogun's city with the first hint and the five boards. One wallet works (decision 80): Lagos's Power 18 and Tech 6 show the Water pump, Lamps and Mast as "Ready". The Bad road card says "King Pothole is blocking the gateway." / "Clear Ota, Abeokuta and Sagamu to reach Pothole Hall." with a big "Run Ota" (OG-R37).
+- **Offline:** with the network off, reload, Play: Ogun's city opens from the phone, with no errors.
+- **King Pothole (decision 78):** in the hall gallery he is a pothole with a crack face and three road cones, nothing else. His yard is a road works yard with a spade, wheelbarrow, barriers and a roller. He giggles, yawns and becomes a smooth road; nobody hits him. His lines ("Hmph!", "Oof... hm!", "Hee hee, that tickles!") are plain and kind.
+- **Streets (decisions 76, 77, 81):** Abeokuta has our own unnamed grey rocks, with no shrine, steps or carvings. Sagamu sells kola whole on market tables. Ikokore and ofada are Ogun's foods; the Ijebu garri parcel is the well gift. The casts mix every skin tone and dress from all parts of Nigeria, with no broom (decision 75), no uniform and no party colour.
+- **Never accept list:** no pipes, blocks, mushrooms, red caps or Nintendo look anywhere I looked. No real people, brands or party signs. Nothing mocks a tribe, faith, region or accent. No accounts, ads, trackers or photo access. The "wrong premise" line is not used (decision 50).
+
+Rulings on qa's open items:
+1. **Speed at 4x slowdown (26 to 35 fps in streets and halls):** not a reason to hold Ogun. It is not a regression (reported: Lagos 37.7 before, 38.1 now). It touches brief Tech 4, so it goes to Tp as PERF-Q1 above, recommend a. A real cheap-phone check is owed before the closed invited test.
+2. **QA-O7re-1 (Lagos's first-visit hint over "Nigeria's wheel" at 640 x 200 with 24 px edges, 4 s): later.** Older than Ogun, only at one rare size, gone in 4 s. Fix in the next polish round with the Ogun hint items below.
+3. Small notes, all **accepted as they are**, with these follow-ups:
+   - Bad road card's "See the stop": keep it. Every city problem card has it (S3e0 part 7), so leaving it out would be the odd one. Designer adds it to the "Ogun problem cards" row in ogun.md part 8 (doc only).
+   - Ogun's first hint over the Adire market board at 851 x 393 for about 5 s: later. The board is still reachable by walking, and the hint goes. Polish round: place the hint clear of boards, as was done for buttons.
+   - Parcel line only on Abeokuta's cleared card, not Sagamu's: keep. It is said when you get the parcel, the same as Lagos, and the parcel shows in the hall. Not worth a change.
+   - Ogun boom card at 640 x 200 with 24 px edges shows only the heading and "See Ogun" until scrolled: keep. The words can be read by scrolling (qa), and the size is rare.
+   - Ogun hint never seen at 640 x 200 with 24 px edges: later, with the hint item above. The map's spoken name still tells screen readers what to do.
+4. **Can-wait items, agreed, all later:** OG-R40 (lane runs fill trays), the border-market pin, the Mission-complete bus arrival, waving passengers, a drawn hall road card (OG-R41), Ogun's own street music. None is in the brief's Done when list.
+
+Later (small, decision 64; the lead reports each to Tp in one line):
+- The download card says "about 130 KB", but the Ogun part is 79 KB (gzip). Saying more than the real amount is safe for a player paying for data, but it should be true. Recommend "about 80 KB" when the size is checked again at the end of the next slice (designer, words.ts `download`).
+- "Anger cloth" in docs/assets.md, two code comments and the Sagamu gallery label (src/art/gallerySagamu.ts) should read "ankara". Players never see these words, but the team should name the cloth right.
+
+Not tested yet (open, not blocking the test link): a real cheap Android phone (PERF-Q1), a real screen reader on a phone, Ogun's sounds and music by ear, and a speaker's read of every bubble (item 3 in the note above).
+
 ## designer, 15 Nov 2026: Ogun, the Gateway State (decisions 72 and 73; docs/ogun.md)
 
 **Answered by Tp, 15 Nov: all seven recommended answers (OG-Q1 to OG-Q7, all a). Added as decisions 76 to 82.** The Ogun note is written in docs/ogun.md, built on the recommended answers below, so art can start O1a now and designer can write the level files once OG-Q1 is answered. Lines that change with a different answer are marked with the question's id in the note.
