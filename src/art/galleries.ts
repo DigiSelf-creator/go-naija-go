@@ -12,6 +12,7 @@
  *   ?gallery=ota | abeokuta | sagamu   each Ogun street's pieces (O2a, O3a, O4a)
  *   ?gallery=hall-ogun                 Pothole Hall and King Pothole (O5a)
  *   ?gallery=road, road2 … road8       the challenge road (S3e1a)
+ *   ?gallery=style-buttons             the button icons on their discs and the button recipe (ST-A1)
  *
  * &t=1.5 holds the time; &still=1 shows the reduced-motion look where a gallery has one.
  */
@@ -31,6 +32,7 @@ const GALLERIES: readonly { match: (v: string) => number | null; load: () => Pro
   { match: only('sagamu'), load: () => import('./gallerySagamu').then((m) => (g, w, h, t, _p, s) => m.drawSagamuGallery(g, w, h, t, s)) },
   { match: only('hall-ogun'), load: () => import('./galleryHallOgun').then((m) => (g, w, h, t, _p, s) => m.drawHallOgunGallery(g, w, h, t, s)) },
   { match: pages('road'), load: () => import('./galleryRoad').then((m) => (g, w, h, t, p) => m.drawRoadGallery(g, w, h, t, p)) },
+  { match: only('style-buttons'), load: () => import('./galleryStyleButtons').then((m) => (g, w, h) => m.drawStyleButtonsGallery(g, w, h)) },
   { match: (v) => Number(v) || 0, load: () => import('./gallery').then((m) => (g, w, h, t, p) => m.drawGallery(g, w, h, t, p)) },
 ];
 
