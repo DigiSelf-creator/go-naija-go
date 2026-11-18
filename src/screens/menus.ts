@@ -721,13 +721,21 @@ export class Menus {
     }, attrs, icon);
   }
 
-  private gentleSwitch(): HTMLButtonElement {
-    const sw = button(WORDS.title.gentle, 'minor gentle', (e) => {
+  /**
+   * The Gentle mode switch. It holds the full words and a short form (style.md 1.2 rule 4,
+   * "Short screens"); CSS shows only the short one on a screen 300 px tall or less. Its spoken
+   * name is always the full words; "(off)" / "(on)" follow either form.
+   */
+  private gentleSwitch(where: 'over' | 'settings'): HTMLButtonElement {
+    const t = WORDS.title;
+    const sw = button(t.gentle, 'minor gentle', (e) => {
       if (this.ignoreTap(e)) return;
       this.settings.gentle = !this.settings.gentle;
       saveSettings(this.store, this.settings);
       sw.setAttribute('aria-checked', String(this.settings.gentle));
-    }, { role: 'switch', 'aria-checked': String(this.settings.gentle) }, 'gentle');
+    }, { role: 'switch', 'aria-checked': String(this.settings.gentle), 'aria-label': t.gentle }, 'gentle');
+    const w = sw.querySelector('.w');
+    if (w) w.replaceChildren(h('span', { class: 'long' }, t.gentle), h('span', { class: 'short' }, where === 'over' ? t.gentleShortOver : t.gentleShortSettings));
     return sw;
   }
 
@@ -891,7 +899,7 @@ export class Menus {
       h('h2', {}, w.heading),
       h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
-      !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
+      !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
         this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
@@ -1176,7 +1184,7 @@ export class Menus {
         { class: 'settings-list' },
         this.soundSwitch(),
         this.musicSwitch(),
-        this.gentleSwitch(),
+        this.gentleSwitch('settings'),
         this.laneButtonsSwitch(),
         this.tiltRow('settings'),
         ogunOpen && this.busRideSwitch(),

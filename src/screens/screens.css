@@ -159,6 +159,19 @@
   content: ' (on) \2713';
   content: ' (on) \2713' / '';
 }
+/* style.md 1.2 rule 4, "Short screens": the switch holds its full words and a short form; a screen
+   300 px tall or less shows only the short one, at 15 px. Its spoken name (aria-label) stays full. */
+.minor.gentle .short {
+  display: none;
+}
+@media (max-height: 300px) {
+  .minor.gentle .long {
+    display: none;
+  }
+  .minor.gentle .short {
+    display: inline;
+  }
+}
 
 /* Hero builder (design.md S2.3 "Builder layout"). Sideways: two columns. Left: the live
    preview with the green button under it, always on screen. Right: heading, then the rows
@@ -379,7 +392,6 @@
   }
   .chip {
     padding: 4px 6px;
-    font-size: 0.82rem;
     font-weight: 400;
   }
   .chip[aria-pressed='true'] {
@@ -990,7 +1002,8 @@
   .event .minor {
     min-height: 44px;
     padding: 4px 10px;
-    font-size: 0.85rem;
+    white-space: normal;
+    line-height: 1.1;
   }
   .event .minor-row {
     margin-top: 6px;
@@ -1026,14 +1039,9 @@
   .event.over .gentle-row {
     flex-wrap: nowrap;
   }
-  /* ST-A2: no room for its "(off)" here; the plain edge and no tick say off. */
-  .event.over .gentle-row .minor.gentle:not([aria-checked='true'])::after {
-    content: none;
-  }
   .event.over .gentle-row .minor {
     flex: 0 1 50%;
     padding: 2px 8px;
-    font-size: 0.8rem;
     line-height: 1.15;
   }
   .event.over .actions {
@@ -1045,10 +1053,13 @@
   .event.over .actions .go {
     flex: 1 1 auto;
     width: auto;
+    min-width: 80px;
     margin: 0;
   }
   .event.over .actions .minor-row {
-    flex: none;
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
     margin: 0;
   }
 }
@@ -1728,7 +1739,6 @@
   .city-top-right .minor,
   .city-buttons .minor {
     padding: 4px 10px;
-    font-size: 0.85rem;
   }
   /* ST-A3: Sound and Settings keep their old room beside the place box at 320 px: tighter
      padding, and Sound's tick gives way (its words still say on or off, its edge is 3.5 px). */
@@ -1771,9 +1781,15 @@
   .settings-list .minor {
     min-height: 44px;
     padding: 4px 8px;
-    font-size: 0.85rem;
     line-height: 1.15;
     white-space: normal;
+  }
+}
+/* style.md 1.2 rule 4, short screens: less padding so 15 px words fit with no scroll at 480 x 200 and 640 x 200.
+   Two classes, so it wins over `.card:not(.hero-card)` (10px 12px) for screens 260 px tall or less. */
+@media (max-height: 260px) {
+  .card.settings-card {
+    padding: 4px 12px;
   }
 }
 
@@ -2267,7 +2283,6 @@ body.lane {
   .lane-card .gentle-row .minor {
     flex: 0 1 50%;
     padding: 2px 8px;
-    font-size: 0.8rem;
     line-height: 1.15;
     white-space: normal;
   }
@@ -2279,7 +2294,6 @@ body.lane {
     white-space: normal;
     line-height: 1.1;
     padding: 2px 6px;
-    font-size: 0.8rem;
   }
   .lane-pause-card .switches {
     flex-wrap: nowrap;
