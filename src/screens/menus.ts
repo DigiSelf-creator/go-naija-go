@@ -636,12 +636,6 @@ export class Menus {
   /** O6b: Ogun from above (the Lagos city's buttons; its challenge road is Ogun's). */
   private ogunCityCard(make: NonNullable<WorldPart['city']>, arrived: boolean): HTMLElement {
     const w = WORDS.city;
-    const sound = this.guarded(this.settings.sound ? w.soundOn : w.soundOff, 'minor', () => {
-      this.settings.sound = !this.settings.sound;
-      saveSettings(this.store, this.settings);
-      sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
-      this.hooks.soundChanged(this.settings.sound);
-    });
     const line = this.ogunLine;
     this.ogunLine = null;
     const v = this.hooks.states();
@@ -649,12 +643,12 @@ export class Menus {
       life: this.hooks.cityLife,
       own: this.hooks.ogunCity,
       look: () => this.look,
-      topRight: [sound, button(w.settings, 'minor', () => this.showSettings('ogun'))],
+      topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('ogun'), {}, 'settings')],
       bottom: [
-        button(w.road, 'minor two-line', () => this.showOgunRoad()),
+        button(w.road, 'minor two-line', () => this.showOgunRoad(), {}, 'road'),
         this.travelButton(),
-        button(w.hero, 'minor', (e) => this.show('builder', e)),
-        button(w.wheel, 'minor two-line', () => this.showWheel('ogun')),
+        button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('ogun'), {}, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runOgunSpot(spot, tapPoint(e)),
       seeStop: (spot) => this.showOgunRoad(spot === 'potholes' ? 'ota' : spot === 'badRoad' ? 'hall' : 'expressway', true),
@@ -1001,18 +995,8 @@ export class Menus {
 
   private roadWith(m: RoadModule): HTMLElement {
     const w = WORDS.city;
-    const sound = this.guarded('', 'minor road-sound', () => {
-      this.settings.sound = !this.settings.sound;
-      saveSettings(this.store, this.settings);
-      label();
-      this.hooks.soundChanged(this.settings.sound);
-    });
-    const label = (): void => {
-      const t = this.settings.sound ? w.soundOn : w.soundOff;
-      sound.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M1 6h3l4-4v12l-4-4H1z"/><path d="${this.settings.sound ? 'M10 5q2 3 0 6M12 3q4 5 0 10' : 'M10 5l5 6M15 5l-5 6'}" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>${t}</span>`;
-      sound.setAttribute('aria-label', t);
-    };
-    label();
+    const sound = this.soundSwitch(w);
+    sound.classList.add('road-sound');
     const ogun = this.roadOpen.plan !== undefined;
     const screen = m.roadScreen(
       {
@@ -1225,12 +1209,6 @@ export class Menus {
   /** city.md (b) Lagos from above, the home screen. */
   private cityCard(): HTMLElement {
     const w = WORDS.city;
-    const sound = this.guarded(this.settings.sound ? w.soundOn : w.soundOff, 'minor', () => {
-      this.settings.sound = !this.settings.sound;
-      saveSettings(this.store, this.settings);
-      sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
-      this.hooks.soundChanged(this.settings.sound);
-    });
     const mission = this.mission;
     this.mission = null;
     const screen = new CityScreen({
@@ -1241,13 +1219,13 @@ export class Menus {
       still: () => this.hooks.stillWanted(),
       touch: () => this.touchWords(),
       mission,
-      topRight: [sound, button(w.settings, 'minor', () => this.showSettings('city'))],
+      topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('city'), {}, 'settings')],
       bottom: [
-        button(w.road, 'minor two-line', () => this.showRoad()),
+        button(w.road, 'minor two-line', () => this.showRoad(), {}, 'road'),
         // O1b2 (ogun.md 1.2): "Travel" once Ogun is open.
         ...(this.hooks.states().ogun.open ? [this.travelButton()] : []),
-        button(w.hero, 'minor', (e) => this.show('builder', e)),
-        button(w.wheel, 'minor two-line', () => this.showWheel('city')),
+        button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('city'), {}, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
       // S3e0 part 7: the road, scrolled to that stop with its card open, "for" that card's fix.

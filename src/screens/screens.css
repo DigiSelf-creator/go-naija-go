@@ -518,14 +518,21 @@
   flex: none;
   flex-wrap: nowrap;
 }
+/* ST-A3: each counter is a cream status chip (style.md 1.2), no bigger than the old dark box:
+   the edge takes 2.5 px of its padding. The hard lip only (a food chip may blink). */
 .hud-left > span {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  box-sizing: border-box;
   min-height: 32px;
-  padding: 0 8px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.32);
+  padding: 0 5.5px;
+  border: 2.5px solid #3a2618;
+  border-radius: 999px;
+  background: #fff8e6;
+  box-shadow: 0 3px 0 #3a2618;
+  color: #3a2618;
+  text-shadow: none;
 }
 .hud-food[hidden] {
   display: none !important;
@@ -544,7 +551,7 @@
   gap: 6px;
 }
 .hud-tight .hud-left > span {
-  padding: 0 6px;
+  padding: 0 3.5px;
 }
 .hud-tight .hud-food {
   gap: 2px;
@@ -563,7 +570,7 @@
   gap: 6px;
 }
 .hud-tighter .hud-left > span {
-  padding: 0 4px;
+  padding: 0 1.5px;
 }
 .hud-tighter .hud-icon {
   width: 24px;
@@ -587,7 +594,11 @@
 .hud-tightest .hud-left > span {
   padding: 0 1px;
   gap: 1px;
+  border: 0;
   background: none;
+  box-shadow: none;
+  color: inherit;
+  text-shadow: inherit;
 }
 .hud-tightest .hud-icon {
   width: 20px;
@@ -620,8 +631,8 @@
   height: 18px;
 }
 .hud-icon {
-  width: 28px;
-  height: 28px;
+  width: 27px;
+  height: 27px;
 }
 .hud-btn {
   pointer-events: auto;
@@ -1575,9 +1586,13 @@
 }
 .screen .city-top h2 {
   margin: 0;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: rgba(255, 250, 240, 0.94);
+  padding: 3.5px 7.5px;
+  /* ST-A3: the place box, a status chip (style.md 1.2). */
+  border: 2.5px solid #3a2618;
+  border-radius: 14px;
+  background: #fff8e6;
+  color: #3a2618;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
   font-size: 1.1rem;
   line-height: 1.6;
   /* Words only: a tap here goes to the map below (an edge arrow may sit under it on a tiny screen). */
@@ -1592,21 +1607,37 @@
   min-width: 0;
   pointer-events: none;
 }
+/* ST-A3: the money, Power and Tech status chips (not buttons): the recipe, a 26 px disc. */
 .city-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 36px;
+  gap: 6px;
+  min-height: 34px;
   box-sizing: border-box;
-  padding: 2px 10px 2px 6px;
-  border: 2px solid #1d1a14;
-  border-radius: 18px;
-  background: #fffaf0;
+  padding: 3px 13px 3px 3px;
+  border: 2.5px solid #3a2618;
+  border-radius: 999px;
+  background: #fff8e6;
+  color: #3a2618;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
   font: bold 15px 'Trebuchet MS', Verdana, sans-serif;
   white-space: nowrap;
 }
 .city-chip svg {
   flex: none;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  padding: 2px;
+  border: 2px solid #3a2618;
+  border-radius: 50%;
+  background: #ffe066;
+}
+.chip-naira svg {
+  background: #f6c34a;
+}
+.chip-tech svg {
+  background: #7fd3c7;
 }
 .city-top-right {
   display: flex;
@@ -1668,12 +1699,17 @@
 @media (max-width: 640px), (max-height: 300px) {
   .screen .city-top h2 {
     font-size: 0.95rem;
-    padding: 4px 8px;
+    padding: 1.5px 5.5px;
   }
   .city-chip {
     min-height: 30px;
+    gap: 4px;
     font-size: 13px;
-    padding: 1px 8px 1px 4px;
+    padding: 1px 8px 1px 1px;
+  }
+  .city-chip svg {
+    width: 24px;
+    height: 24px;
   }
   /* qa F1: the heading and the top-right buttons on the first row, the three chips on one row
      under them, so no chip ever sits under Sound or Settings (320 x 240 with ₦1,250). */
@@ -1693,6 +1729,14 @@
   .city-buttons .minor {
     padding: 4px 10px;
     font-size: 0.85rem;
+  }
+  /* ST-A3: Sound and Settings keep their old room beside the place box at 320 px: tighter
+     padding, and Sound's tick gives way (its words still say on or off, its edge is 3.5 px). */
+  .city-top-right .minor {
+    padding: 4px 7px;
+  }
+  .city-top-right .minor[data-on='true']::after {
+    content: none;
   }
   .city-problem {
     padding: 8px 12px;
@@ -1841,7 +1885,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 4px 10px;
+  padding: 1.5px 7.5px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -1877,7 +1921,7 @@
 }
 @media (max-width: 640px), (max-height: 300px) {
   .screen .city-top h2.city-head {
-    padding: 3px 6px;
+    padding: 0.5px 3.5px;
     gap: 1px;
   }
   .city-head-row {
@@ -2493,21 +2537,10 @@ body.lane {
 .road-top .minor {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-}
-.road-top svg {
-  width: 16px;
-  height: 16px;
-  flex: none;
 }
 .road-ic {
   display: inline-flex;
   flex: none;
-}
-.road-top .road-ic {
-  width: 16px;
-  height: 16px;
 }
 .road-hint {
   position: absolute;
@@ -2826,8 +2859,14 @@ body.lane {
   }
 }
 @media (max-width: 360px) {
-  .road-sound span {
+  /* ST-A3: words kept; the discs give way and the heading takes two lines. */
+  .road-top .ic {
     display: none;
+  }
+  .screen .road-top h2 {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.1;
   }
 }
 /* S3e0 part 7: "Challenge road" and "Nigeria's wheel" may take two lines on a small screen. */

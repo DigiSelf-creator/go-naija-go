@@ -1,10 +1,11 @@
 /**
- * ST-A2 (docs/style.md 1.2): the button recipe in src/screens/screens.css. Pins the
- * numbers of the recipe, the one main green, and
+ * ST-A2 and ST-A3 (docs/style.md 1.2): the button recipe in src/screens/screens.css. Pins the
+ * numbers of the recipe, the one main green, the status chip discs (the ST-A1 disc colours), and
  * that nothing that slides, fades or blinks carries the soft part of the lip (rule 5).
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { ICON_DISC } from '../../src/art/icons';
 
 const CSS = readFileSync(new URL('../../src/screens/screens.css', import.meta.url), 'utf8');
 
@@ -52,13 +53,36 @@ describe('ST-A2 button recipe', () => {
     expect(rule(".minor[aria-checked='true']::after,\n.minor[data-on='true']::after")).toContain("content: '\\2713' / ''");
   });
 
-  it('nothing that moves or fades has the soft lip (update banner, the intro Go)', () => {
+  it('nothing that moves or fades has the soft lip (update banner, the intro Go, HUD chips)', () => {
     expect(rule('.update-btn')).toContain('box-shadow: 0 3px 0 #3a2618;');
     expect(rule('.intro-card.moving .intro-go')).toContain('box-shadow: 0 3px 0 #3a2618;');
-    for (const s of ['.update-btn', '.intro-card.moving .intro-go']) expect(rule(s), s).not.toContain(SOFT);
+    expect(rule('.hud-left > span')).toContain('box-shadow: 0 3px 0 #3a2618;');
+    for (const s of ['.update-btn', '.intro-card.moving .intro-go', '.hud-left > span']) expect(rule(s), s).not.toContain(SOFT);
   });
 
   it('no blur or filter added for the look (style.md 1.5)', () => {
     expect(CSS).not.toMatch(/filter:\s*blur|backdrop-filter/);
+  });
+});
+
+describe('ST-A3 status chips', () => {
+  it('the city chips: the recipe, a 26 px disc in the ST-A1 colours', () => {
+    const r = rule('.city-chip');
+    for (const d of ['min-height: 34px', 'padding: 3px 13px 3px 3px', 'border: 2.5px solid #3a2618', 'border-radius: 999px', 'background: #fff8e6', `box-shadow: ${LIP}`]) expect(r, d).toContain(d);
+    const disc = rule('.city-chip svg');
+    expect(disc).toContain('width: 26px');
+    expect(disc).toContain(`background: ${ICON_DISC.power}`);
+    expect(rule('.chip-naira svg')).toContain(`background: ${ICON_DISC.naira}`);
+    expect(rule('.chip-tech svg')).toContain(`background: ${ICON_DISC.tech}`);
+  });
+
+  it('the place box: 14 px corners, the warm edge and lip', () => {
+    const r = rule('.screen .city-top h2');
+    for (const d of ['border: 2.5px solid #3a2618', 'border-radius: 14px', 'background: #fff8e6', `box-shadow: ${LIP}`]) expect(r, d).toContain(d);
+  });
+
+  it('the run counters: cream chips no bigger than the old 32 px boxes', () => {
+    const r = rule('.hud-left > span');
+    for (const d of ['box-sizing: border-box', 'min-height: 32px', 'padding: 0 5.5px', 'border: 2.5px solid #3a2618', 'background: #fff8e6']) expect(r, d).toContain(d);
   });
 });
