@@ -191,10 +191,8 @@ async function openWith(page: Page, progress: object | null, url = './', intro =
 const done = (title: string) => {
   console.log(`== ${title}\nFAULTS (${rep.faults.length}):\n  ${rep.faults.join('\n  ')}\nBIG BUTTONS UNDER 52 PX (${rep.short.length}):\n  ${rep.short.join('\n  ')}`);
   test.info().annotations.push({ type: 'big under 52 px', description: rep.short.join(' | ') || 'none' });
-  // Open bugs with their own test.fail below: QA-ST-A4-1 (Travel card places), QA-ST-A4-2 (wheel at 320 x 240).
-  const known = (x: string) => / travel card .*: ".*(Booming|You are here).*" words 14\.4px/.test(x) || / wheel 320x240: "(All names|Back)" words 13px/.test(x);
-  test.info().annotations.push({ type: 'QA-ST-A4-1/2 (open)', description: rep.faults.filter(known).join(' | ') || 'none' });
-  const f = rep.faults.filter((x) => !known(x));
+  // QA-ST-A4-1 and -2 are fixed; any such fault now fails the run below.
+  const f = [...rep.faults];
   rep.faults.length = 0;
   rep.small.length = 0;
   rep.short.length = 0;
@@ -415,16 +413,14 @@ async function openCity(page: Page): Promise<void> {
   await waitOutTapLock(page);
 }
 
-test('qa ST-A4 QA-ST-A4-1 (open bug): the Travel card place buttons have 15 px words at every size', async ({ page }) => {
-  test.fail(true, 'QA-ST-A4-1: .travel-place keeps font 0.9rem (14.4 px) at every size; 15 px fits at 320x240, 480x200, 640x200 and 851x393 with no clip or scroll');
+test('qa ST-A4 QA-ST-A4-1 (fixed): the Travel card place buttons have 15 px words at every size', async ({ page }) => {
   await openCity(page);
   await page.getByRole('dialog', { name: 'Lagos', exact: true }).getByRole('button', { name: 'Travel' }).tap();
   await expect(page.locator('.travel-place').first()).toBeVisible();
   expect(await smallestWords(page, '.travel-place', SIZES)).toEqual([]);
 });
 
-test('qa ST-A4 QA-ST-A4-2 (open bug): Nigeria\'s wheel "All names" and "Back" have 15 px words at 320 x 240', async ({ page }) => {
-  test.fail(true, 'QA-ST-A4-2: .narrow-rail .wheel-buttons .minor sets font-size 13px; 15 px fits (80 x 44 buttons, no clip)');
+test('qa ST-A4 QA-ST-A4-2 (fixed): Nigeria\'s wheel "All names" and "Back" have 15 px words at 320 x 240', async ({ page }) => {
   await openCity(page);
   await page.getByRole('dialog', { name: 'Lagos', exact: true }).getByRole('button', { name: "Nigeria's wheel" }).tap();
   await expect(page.locator('.wheel-buttons .minor').first()).toBeVisible();

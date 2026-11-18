@@ -1192,7 +1192,7 @@
   flex: none;
   width: 100%;
   padding: 4px 2px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: bold;
   white-space: nowrap;
 }
@@ -2964,7 +2964,7 @@ body.lane {
   border-radius: 14px;
   background: #fff8e6;
   color: #3a2618;
-  font: 0.9rem 'Trebuchet MS', Verdana, sans-serif;
+  font: 15px 'Trebuchet MS', Verdana, sans-serif;
   box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
   cursor: pointer;
 }
