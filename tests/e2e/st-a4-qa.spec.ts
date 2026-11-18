@@ -325,3 +325,45 @@ test('qa ST-A4: lane Pause card', async ({ page }) => {
   done('lane pause');
   expect(errors).toEqual([]);
 });
+
+test('qa ST-A4 break: the shared Sound and Music switches hammered by touch and the phone turned mid-way agree with what is saved', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = errorsOf(page);
+  await openWith(page, DONE);
+  await expect.poll(() => screenNow(page)).toBe('title');
+  const state = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('button')].filter((b) => /^(Sound|Music): /.test(b.textContent ?? '')).map((b) => ({
+        words: (b.textContent ?? '').trim(),
+        on: b.dataset['on'],
+        tick: getComputedStyle(b, '::after').content.includes('✓'),
+        edge: parseFloat(getComputedStyle(b).borderTopWidth),
+        // A plain cream button beside it: the off edge (Chrome snaps 2.5 and 3.5 px to the screen's pixels).
+        plain: parseFloat(getComputedStyle(document.querySelector<HTMLElement>('button.minor:not([data-on]):not([role])')!).borderTopWidth),
+        discs: b.querySelectorAll('.ic').length,
+        sound: localStorage.getItem('gidi-sound'),
+        music: localStorage.getItem('gidi-music'),
+      })),
+    );
+  for (const [i, name] of ['Sound', 'Music'].entries()) {
+    const sw = page.getByRole('button', { name: new RegExp(`^${name}: (on|off)$`) });
+    const box = (await sw.boundingBox())!;
+    // 13 taps, 40 ms apart (most land inside the tap lock), the phone turned after the sixth.
+    for (let t = 0; t < 13; t++) {
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+      if (t === 5) await page.setViewportSize({ width: 393, height: 851 });
+      if (t === 6) await page.setViewportSize(PHONE);
+      await page.waitForTimeout(40);
+    }
+    await waitOutTapLock(page);
+    const s = (await state())[i]!;
+    const on = s.words.endsWith(': on');
+    expect(s.on, `${name}: data-on matches the words`).toBe(String(on));
+    expect(s.tick, `${name}: tick only when on`).toBe(on);
+    if (on) expect(s.edge, `${name}: on, a thicker edge`).toBeGreaterThan(s.plain);
+    else expect(s.edge, `${name}: off, the plain edge`).toBe(s.plain);
+    expect(s.discs, `${name}: one disc, not two`).toBe(1);
+    expect(i === 0 ? s.sound : s.music, `${name}: saved`).toBe(String(on));
+  }
+  expect(errors).toEqual([]);
+});
