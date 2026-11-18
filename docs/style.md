@@ -53,7 +53,7 @@ Rules that go with it:
 1. **Words always kept.** Every button shows its word next to its picture. The picture helps; the word says it. The only buttons without a word are zoom `+` and `−`, where the sign is the word; they keep their spoken names ("Zoom in", "Zoom out") and are round, 44 x 44 px.
 2. **One green button per screen**, the thing most players want next (Play, Go, Next street, Try again). Everything else is cream.
 3. **Never meaning by colour alone.** A switch that is on shows a tick and the word "on" and a 3.5 px outline; off shows the word "off" and the 2.5 px outline. A locked thing shows a lock picture and the word.
-4. **Text never shrinks below 15 px** on a button, at any of the six screen sizes. If a row is too long, the row wraps or the words go to their short form from words.ts (decided per screen in that screen's note); the picture never replaces the word.
+4. **Text never shrinks below 15 px** on a button, at any of the six screen sizes. This holds on very short screens too (320 x 240, 480 x 200, 640 x 200): there is no smaller size for them. If a row is too long, the row wraps, a button's words go onto two lines, or the words go to their short form from words.ts (decided per screen in that screen's note, and listed in "Short screens" below); the picture never replaces the word. A short form only changes what you see: the spoken name keeps the full words.
 5. **The soft part of the lip (`0 6px 8px`) never goes on anything that moves or fades.** Static buttons only. A banner that slides in (the update banner) uses the hard lip `0 3px 0` only.
 6. **Our own icons only**, drawn as small SVG in code by art, in warm ink on the disc. No emoji as icons (they look different on every phone).
 
@@ -74,6 +74,21 @@ Icon disc colours (one colour per job, the same everywhere):
 | Back, Close, Not now | `#ead9b5` | an arrow pointing left, a cross |
 | Try again | `#ffe066` | a round arrow |
 | Gentle mode | `#f9c6d3` | a heart |
+
+#### Short screens (rule 4, designer ruling 18 Nov 2026)
+
+Older short-screen rules in src/screens/screens.css (the ones for screens 300 px tall or less) made some button words 12.8 to 13.6 px so everything fit. Each screen was checked at 320 x 240, 480 x 200 and 640 x 200 with 15 px words. Every one fits at 15 px, so there is **no exception**: 15 px is the floor everywhere. Here is how each one fits.
+
+| Screen | Buttons | How 15 px fits on a short screen |
+|---|---|---|
+| Hero builder | the choice chips (Male, Female, Teen, Adult, Elder, Hair, Outfit) | Words stay as they are. At 320 x 240 the Age row may wrap: "Teen" and "Adult" on one line, "Elder" under them. The right side already scrolls, so this only adds one line. "Male or female" still fits one line. At 480 x 200 and 640 x 200 both rows fit one line. Do not squeeze the chips' side padding below 6 px to stop the wrap: the words then touch the pill's round ends. |
+| City (Lagos and Ogun) | top row (Sound, Settings) and bottom row (Challenge road, Hero, Nigeria's wheel) | Words stay as they are. "Challenge road" and "Nigeria's wheel" already sit on two lines at 320 x 240. Sound and Settings still clear the place box at 320 x 240, even with "Sound: off" (7 px apart). |
+| Game over (street, hall and lane run) | the Gentle mode switch | Short form **"Gentle mode"**, with its "(off)" shown again (rule 3: off says "off"). The sentence beside it already says "Gentle mode gives you 5 lives", so nothing is lost. The spoken name stays "Gentle mode: 5 lives instead of 3". The lane run's switch already says "Gentle mode: off" / "Gentle mode: on"; it only goes up to 15 px (two lines at 320 x 240 is fine). |
+| Game over, Pause, Win (every run card) | the small cream buttons ("Challenge road", "Home", "Take it home") | Words stay as they are; they may go onto two lines ("Challenge / road"). The green button stays at least 80 px wide so it is never the squeezed one. |
+| Settings | every switch and "Watch the story" | Short form **"Gentle mode: 5 lives"** for the Gentle mode switch, with "(off)" after it as now. The spoken name stays "Gentle mode: 5 lives instead of 3". The other words stay. On screens 260 px tall or less the card's top and bottom padding is 4 px (was 8), so the card does not scroll at 480 x 200 or 640 x 200. |
+| Lane run Pause | Keep playing, Start again, Back to Lagos / Back to Ogun, Sound, Music, Buttons instead of swipes | Words stay as they are. At 320 x 240 "Buttons instead of swipes: off" takes four short lines in its pill; the card still fits (about 190 px tall). |
+
+How a short form works: the button holds both the full words and the short words; on a short screen only the short words show. Its spoken name (`aria-label`) is always the full words, and the short words are the start of the full words, so a person using voice control can still say what they see.
 
 ### 1.3 The building shading recipe
 

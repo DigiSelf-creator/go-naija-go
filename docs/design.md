@@ -521,7 +521,7 @@ Order of rows: Male or female, Age, Skin, Hair, Outfit.
 
 - Landscape, screen 421 px tall or more: left column has the live preview (140 x 180) and under it the green button. Right column: heading, then the five rows. Fits without scrolling from about 700 x 421.
 - Landscape, 420 px tall or less: same two columns. Left: preview 104 to 120 px wide, button under it, always on screen. Right column scrolls up and down by itself; while more is below, its bottom 24 px fades to the panel colour and a scroll bar shows. Row labels sit above their chips.
-- 320 x 240: left column 104 px (preview 104 x 120, button 104 x 56, words on two lines); right column about 182 px wide: heading, then rows. Male or female and Age fit on one line each; Skin wraps to two lines; Hair and Outfit wrap. The panel scrolls; the button never does.
+- 320 x 240: left column 104 px (preview 104 x 120, button 104 x 56, words on two lines); right column about 182 px wide: heading, then rows. Chip words are 15 px (style.md 1.2 rule 4, "Short screens"). Male or female fits on one line; Age may wrap ("Teen" and "Adult", then "Elder" under them); Skin wraps to two lines; Hair and Outfit wrap. The panel scrolls; the button never does. At 480 x 200 and 640 x 200, Male or female and Age each fit one line.
 - Upright: as part 1 (preview on top, rows below, button at the bottom), scrolling if needed.
 - Targets: swatches 48 x 48, chips at least 44 tall, 8 px apart. The chosen chip has a thick dark ring and a tick (part 1).
 
@@ -1233,7 +1233,7 @@ Hint words (in the hint bar, 3.5 s, after every Gentle mode climb-out; all 35 ch
 - after a big pit: "Up you come! Run, then jump twice."
 - In Gentle mode the bus stop hint "Bus stop! Now you start here." is not true any more, so it says "Bus stop! Halfway there." instead.
 
-Words on screens (gamedev): street Game over offer "Want more tries? Gentle mode gives you 5 lives, and you climb out of holes."; the hall's offer stays "Want more tries? Gentle mode gives you 5 lives." The switch label stays "Gentle mode: 5 lives instead of 3" (Tp, R7 a: "lives" and "Gentle mode"; the layout is already tested at 320 px).
+Words on screens (gamedev): street Game over offer "Want more tries? Gentle mode gives you 5 lives, and you climb out of holes."; the hall's offer stays "Want more tries? Gentle mode gives you 5 lives." The switch label stays "Gentle mode: 5 lives instead of 3" (Tp, R7 a: "lives" and "Gentle mode"; the layout is already tested at 320 px). On a screen 300 px tall or less, the switch shows its short form "Gentle mode" with "(off)", at 15 px, and its spoken name stays "Gentle mode: 5 lives instead of 3" (style.md 1.2 rule 4, "Short screens", 18 Nov 2026). The offer beside it already says the 5 lives.
 
 Art: the "dust off" pose for every body (S2.3), facing right: a quick crouch, two pats on the knees, a small dust puff, then stand. Two frames are enough.
 
