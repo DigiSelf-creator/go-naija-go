@@ -3,12 +3,13 @@
  * 640 x 360, 320 x 240 and 640 x 200. Each button: inside the screen, apart from the others, its
  * words not cut off, 44 px tap size (52 px for a big .go), a visible focus ring, words that meet
  * 4.5 to 1, icon discs hidden from screen readers; switches say on or off in words; one green
- * button per screen. Words under the 15 px floor are listed (known open point, designer's short
- * screen notes) but do not fail. With QA_SHOTS=<folder> it saves colour and greyscale pictures;
+ * button per screen. Words never under 15 px, short screens too (style.md 1.2 rule 4, "Short
+ * screens", 18 Nov ruling: no exception); 480 x 200 is checked as well. With QA_SHOTS=<folder> it saves colour and greyscale pictures;
  * with QA_NAMES=<file> it writes each screen's spoken names, to compare with the base build.
  */
 import { appendFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { buttonCentres, hands, LEFT } from './hands';
 import { PAST_DOUBLE_TAP_MS, screenNow, waitOutTapLock } from './helpers';
 
 const SHOTS = process.env['QA_SHOTS'];
@@ -24,6 +25,7 @@ const SIZES = [
   { width: 640, height: 360 },
   { width: 320, height: 240 },
   { width: 640, height: 200 },
+  { width: 480, height: 200 },
 ] as const;
 const PHONE = SIZES[0];
 /** style.md 4.2: these stay as they are (and are not menu buttons). */
@@ -153,7 +155,7 @@ async function audit(page: Page, name: string, sizes: readonly { width: number; 
       if (!b.discsHidden) bad(`"${b.t}" has a picture not hidden from screen readers`);
       if (b.contrast !== null && b.contrast < 4.5) bad(`"${b.t}" contrast ${b.contrast.toFixed(2)}`);
       if (b.switchWords === '') bad(`switch "${b.t}" does not say on or off in words`);
-      if (b.font < 15 && b.font !== Infinity) rep.small.push(`${at}: "${b.t}" ${b.font}px`);
+      if (b.font < 14.95 && b.font !== Infinity) bad(`"${b.t}" words ${b.font}px, under 15`);
       if (b.green) greens++;
     }
     if (greens > 1) bad(`${greens} green buttons: ${l.buttons.filter((b) => b.green).map((b) => b.t).join(', ')}`);
@@ -187,10 +189,12 @@ async function openWith(page: Page, progress: object | null, url = './', intro =
   await page.reload();
 }
 const done = (title: string) => {
-  console.log(`== ${title}\nFAULTS (${rep.faults.length}):\n  ${rep.faults.join('\n  ')}\nUNDER 15 PX (${rep.small.length}, known open point):\n  ${rep.small.join('\n  ')}\nBIG BUTTONS UNDER 52 PX (${rep.short.length}):\n  ${rep.short.join('\n  ')}`);
+  console.log(`== ${title}\nFAULTS (${rep.faults.length}):\n  ${rep.faults.join('\n  ')}\nBIG BUTTONS UNDER 52 PX (${rep.short.length}):\n  ${rep.short.join('\n  ')}`);
   test.info().annotations.push({ type: 'big under 52 px', description: rep.short.join(' | ') || 'none' });
-  test.info().annotations.push({ type: 'under 15 px (known)', description: rep.small.join(' | ') || 'none' });
-  const f = [...rep.faults];
+  // Open bugs with their own test.fail below: QA-ST-A4-1 (Travel card places), QA-ST-A4-2 (wheel at 320 x 240).
+  const known = (x: string) => / travel card .*: ".*(Booming|You are here).*" words 14\.4px/.test(x) || / wheel 320x240: "(All names|Back)" words 13px/.test(x);
+  test.info().annotations.push({ type: 'QA-ST-A4-1/2 (open)', description: rep.faults.filter(known).join(' | ') || 'none' });
+  const f = rep.faults.filter((x) => !known(x));
   rep.faults.length = 0;
   rep.small.length = 0;
   rep.short.length = 0;
@@ -313,6 +317,31 @@ test('qa ST-A4: street Pause card and the run HUD counters', async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
+test('qa ST-A4: street Out of lives card, with the Gentle mode switch off and on', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = errorsOf(page);
+  await openWith(page, DONE, './?level=lagos-1');
+  await page.getByRole('button', { name: 'Play' }).tap();
+  await expect.poll(() => screenNow(page), { timeout: 20_000 }).toBe('play');
+  const h = hands(await page.context().newCDPSession(page));
+  const btn = await buttonCentres(page);
+  await h.down(LEFT, btn.forward.x, btn.forward.y);
+  const over = page.getByRole('dialog', { name: 'Out of lives' });
+  await expect(over).toBeVisible({ timeout: 120_000 });
+  await h.upAll();
+  await page.waitForTimeout(600);
+  await audit(page, 'out of lives');
+  // The switch on, at a short size: "(on)" and the tick; its spoken name keeps the full words.
+  await page.setViewportSize({ width: 320, height: 240 });
+  await waitOutTapLock(page);
+  const sw = over.getByRole('switch', { name: 'Gentle mode: 5 lives instead of 3' });
+  await sw.tap();
+  await expect(sw).toHaveAttribute('aria-checked', 'true');
+  await audit(page, 'out of lives gentle on', [{ width: 320, height: 240 }, { width: 640, height: 200 }]);
+  done('out of lives');
+  expect(errors).toEqual([]);
+});
+
 test('qa ST-A4: lane Pause card', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = errorsOf(page);
@@ -366,4 +395,38 @@ test('qa ST-A4 break: the shared Sound and Music switches hammered by touch and 
     expect(i === 0 ? s.sound : s.music, `${name}: saved`).toBe(String(on));
   }
   expect(errors).toEqual([]);
+});
+
+/** The smallest words on each of `sel`'s buttons, at each short size. */
+async function smallestWords(page: Page, sel: string, sizes: readonly { width: number; height: number }[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const size of sizes) {
+    await page.setViewportSize(size);
+    await settle(page);
+    const fonts = await page.locator(sel).evaluateAll((els) => els.map((b) => `${(b.textContent ?? '').trim().slice(0, 24)} ${getComputedStyle(b.querySelector('.w') ?? b).fontSize}`));
+    for (const f of fonts) if (parseFloat(f.split(' ').pop()!) < 14.95) out.push(`${size.width}x${size.height}: ${f}`);
+  }
+  return out;
+}
+async function openCity(page: Page): Promise<void> {
+  await openWith(page, { ...DONE, where: 'lagos' });
+  await page.getByRole('button', { name: 'Play' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('city');
+  await waitOutTapLock(page);
+}
+
+test('qa ST-A4 QA-ST-A4-1 (open bug): the Travel card place buttons have 15 px words at every size', async ({ page }) => {
+  test.fail(true, 'QA-ST-A4-1: .travel-place keeps font 0.9rem (14.4 px) at every size; 15 px fits at 320x240, 480x200, 640x200 and 851x393 with no clip or scroll');
+  await openCity(page);
+  await page.getByRole('dialog', { name: 'Lagos', exact: true }).getByRole('button', { name: 'Travel' }).tap();
+  await expect(page.locator('.travel-place').first()).toBeVisible();
+  expect(await smallestWords(page, '.travel-place', SIZES)).toEqual([]);
+});
+
+test('qa ST-A4 QA-ST-A4-2 (open bug): Nigeria\'s wheel "All names" and "Back" have 15 px words at 320 x 240', async ({ page }) => {
+  test.fail(true, 'QA-ST-A4-2: .narrow-rail .wheel-buttons .minor sets font-size 13px; 15 px fits (80 x 44 buttons, no clip)');
+  await openCity(page);
+  await page.getByRole('dialog', { name: 'Lagos', exact: true }).getByRole('button', { name: "Nigeria's wheel" }).tap();
+  await expect(page.locator('.wheel-buttons .minor').first()).toBeVisible();
+  expect(await smallestWords(page, '.wheel-buttons .minor', SIZES)).toEqual([]);
 });
