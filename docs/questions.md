@@ -1,5 +1,12 @@
 # Open questions for the product owner
 
+## po note, 18 Nov 2026 (newest): picture style phase 1, the new buttons, accepted (fc3a6d2)
+
+- **Accepted (ST-A5):** ST-A1 to ST-A4, the new button look from decision 85, on claude/serene-hopper-ydve2g at fc3a6d2, after qa passed ST-A4 and the lead's 15 px fix (fc3a6d2) passed its spec. Cream pill buttons with a dark edge and lip, an icon disc, one green main button per screen, switches with a tick and on/off words, words kept on every button, 15 px words at every size (style.md 1.2 rule 4). Icons are our own (gallery checked: no caps, pipes, blocks or mushrooms; nothing from another game). Reported: qa's pass. Verified by po: before and after screenshots of title, game over, settings and Lagos city at 851 x 393 and 320 x 240, and the icon gallery. Lagos city at 320 x 240: the Internet board was already half under the Hero button before this work, so nothing is newly covered.
+- **For Tp to look at (not blocking):** before and after shots of title, pause, game over, settings, HUD, road, road card and Lagos and Ogun city, at 851 x 393 and 320 x 240 (the lead holds them). Reported under decision 64: on short screens the Gentle mode switch shows "Gentle mode" (game over) or "Gentle mode: 5 lives" (Settings); the spoken name stays "Gentle mode: 5 lives instead of 3".
+- **Waits for Tp:** nothing new. Real-phone check stays under decision 83, before the closed test.
+- **Polish round (small, easy to undo):** 1) on short screens some main buttons are 44 to 48 px tall, not 52 (still above the 44 px floor); 2) Settings switches read two ways, "Sound: on" with a tick but "Gentle mode: 5 lives (off)" in brackets: one pattern for all would read easier; 3) the Internet board on Lagos city at 320 x 240 sits half under the Hero button (older than this work); 4) booming-qa:251 rarely flaky.
+
 ## po note, 17 Nov 2026 (newest): slice O, Ogun, accepted with notes (b73f604)
 
 **Answered by Tp, 17 Nov ("Go with it"): 1 merge to the test link, yes; PERF-Q1 a; bubble read a. Added as decisions 83 and 84. Tp also chose picture style a (decision 85).**
