@@ -10,6 +10,44 @@ export const SHORT_SIZES = [
   { width: 640, height: 200 },
 ] as const;
 
+/**
+ * style.md 1.2 rule 4: no button's words are under 15 px, short screens included. Returns every
+ * shown text in a shown button under `sel` with its font size (CSS px); `skip` leaves out buttons
+ * (by selector) that a note keeps smaller on purpose.
+ */
+export async function buttonWordSizes(page: Page, sel: string, skip = ''): Promise<{ text: string; px: number }[]> {
+  return page.evaluate(
+    ({ sel, skip }) => {
+      const out: { text: string; px: number }[] = [];
+      for (const root of document.querySelectorAll(sel)) {
+        if (root.getClientRects().length === 0) continue;
+        for (const b of root.querySelectorAll('button')) {
+          if (b.getClientRects().length === 0 || (skip && b.matches(skip))) continue;
+          const walk = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+          for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+            const text = (n.textContent ?? '').trim();
+            const el = n.parentElement!;
+            if (!text || el.getClientRects().length === 0 || getComputedStyle(el).visibility === 'hidden') continue;
+            out.push({ text, px: parseFloat(getComputedStyle(el).fontSize) });
+          }
+          // Words drawn by CSS (a switch's "(off)" / "(on)") are button words too.
+          const after = getComputedStyle(b, '::after');
+          if (after.content && after.content !== 'none' && after.content !== 'normal') out.push({ text: `${(b.textContent ?? '').trim()} ::after`, px: parseFloat(after.fontSize) });
+        }
+      }
+      return out;
+    },
+    { sel, skip },
+  );
+}
+
+/** Fails on any button words under 15 px under `sel` (style.md 1.2 rule 4). */
+export async function expectButtonWords15(page: Page, sel: string, at: string, skip = ''): Promise<void> {
+  const sizes = await buttonWordSizes(page, sel, skip);
+  expect(sizes.length, `${at}: some button words found`).toBeGreaterThan(0);
+  expect(sizes.filter((s) => s.px < 14.95).map((s) => `"${s.text}" ${s.px}px`), `${at}: button words at least 15 px`).toEqual([]);
+}
+
 /** Lays out the card now showing and returns what a check needs (CSS px). */
 export async function cardLayout(page: Page) {
   return page.evaluate(() => {
@@ -53,6 +91,7 @@ export async function checkCardFits(page: Page, big: string, shoot?: (name: stri
     const top = l.small[0]!.y;
     for (const b of l.small) expect(Math.abs(b.y - top), `${at}: "${b.text}" in one row with the others`).toBeLessThanOrEqual(1);
     expect(l.focused, `${at}: focus stays on the big button`).toBe(big);
+    await expectButtonWords15(page, '.screen .card', at);
     if (shoot) await shoot(at);
   }
   await page.setViewportSize(before);
