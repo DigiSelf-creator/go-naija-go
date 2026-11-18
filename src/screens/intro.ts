@@ -136,11 +136,11 @@ export class IntroScreen {
     const skip = button(w.skip, 'minor intro-skip', (e) => {
       if (this.opts.ignoreTap(e)) return;
       this.finish(true);
-    });
+    }, {}, 'skip');
     this.go = button(w.go, 'go intro-go', (e) => {
       if (this.opts.ignoreTap(e)) return;
       this.finish(false);
-    });
+    }, {}, 'go');
     this.el = h(
       'div',
       { class: 'card intro-card', role: 'dialog', 'aria-label': w.label },

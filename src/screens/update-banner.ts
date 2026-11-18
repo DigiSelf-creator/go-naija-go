@@ -1,4 +1,4 @@
-import { h } from './dom';
+import { disc, h } from './dom';
 import { WORDS } from './words';
 
 /** How long the banner takes to fade out (screens.css .update-banner); 0 with reduced motion. */
@@ -22,7 +22,7 @@ export class UpdateBanner {
   ) {
     // data-ui: a tap on it is never a jump.
     this.el = h('div', { class: 'update-banner', role: 'status', 'aria-live': 'polite', 'data-ui': true });
-    this.btn = h('button', { type: 'button', class: 'update-btn' }, WORDS.update.ready);
+    this.btn = h('button', { type: 'button', class: 'update-btn' }, disc('download'), WORDS.update.ready);
     this.btn.addEventListener('click', onTap);
     parent.append(this.el);
   }

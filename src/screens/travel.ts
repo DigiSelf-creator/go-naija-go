@@ -8,7 +8,6 @@
  * Each card sits on a dim layer over the screen it opened from; Escape (and Android back) is
  * the card's own way out.
  */
-import { gateIconSvg } from '../art/gateway';
 import { OGUN_WORDS, WORDS } from './words';
 import { button, h } from './dom';
 import type { StateId } from '../game/states';
@@ -83,7 +82,7 @@ export function travelCard(lines: readonly TravelLine[], pick: (id: StateId) => 
     { class: 'card narrow travel-card', role: 'dialog', 'aria-label': w.heading },
     h('h2', {}, w.heading),
     h('div', { class: 'travel-places' }, ...places),
-    h('div', { class: 'actions' }, button(w.back, 'minor', back)),
+    h('div', { class: 'actions' }, button(w.back, 'minor', back, {}, 'back')),
   );
   return layer(card, back);
 }
@@ -107,7 +106,7 @@ export function downloadCard(go: () => void, notNow: () => void): DownloadCard {
     card.dataset['step'] = s;
     if (s === 'ask') {
       body.replaceChildren(h('p', {}, w.line1), h('p', {}, w.line2));
-      row.replaceChildren(button(w.go, 'go', go), button(w.notNow, 'minor', notNow));
+      row.replaceChildren(button(w.go, 'go', go, {}, 'download'), button(w.notNow, 'minor', notNow, {}, 'back'));
     } else if (s === 'loading') {
       body.replaceChildren(h('p', { role: 'status' }, w.loading));
       row.replaceChildren();
@@ -136,14 +135,9 @@ export function arrivalCard(go: () => void): HTMLElement {
     h('h2', {}, w.heading),
     h('p', {}, w.line1),
     h('p', {}, w.line2),
-    h('div', { class: 'actions' }, button(w.go, 'go', go)),
+    h('div', { class: 'actions' }, button(w.go, 'go', go, {}, 'go')),
   );
   return layer(card, go);
-}
-
-/** The city's "Travel" button content: the small danfo icon and the word. */
-export function travelButtonHtml(): string {
-  return `${gateIconSvg('travel', 16, 'currentColor')}<span>${OGUN_WORDS.travel.button}</span>`;
 }
 
 /**
