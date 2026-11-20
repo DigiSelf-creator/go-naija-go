@@ -36,9 +36,11 @@ export const WORDS = {
     musicOn: 'Music: on',
     musicOff: 'Music: off',
     gentle: 'Gentle mode: 5 lives instead of 3',
-    /** style.md 1.2 rule 4 "Short screens": what the switch shows on a screen 300 px tall or less. Its spoken name stays `gentle`. */
+    /** style.md 1.2 rule 4 "Short screens": what the game over switch shows on a screen 300 px tall or less. Its spoken name stays `gentle`. */
     gentleShortOver: 'Gentle mode',
-    gentleShortSettings: 'Gentle mode: 5 lives',
+    /** Settings: the switch reads like Sound ("Sound: on" and a tick), at every size. Its spoken name stays `gentle`. */
+    gentleOff: 'Gentle mode: off',
+    gentleOn: 'Gentle mode: on',
     /** S2.2 How to play: touch words when the phone buttons show, else the key words. */
     howTo: 'Press the arrows to walk. Keep holding to run. Press Jump to jump. Press it again in the air to jump again. Hold it to jump higher.',
     howToKeys: 'Left and right arrows walk. Keep holding to run. Space jumps. Press it again in the air to jump again. Hold it to jump higher.',

@@ -2,7 +2,8 @@
  * ST-A follow-up (style.md 1.2 rule 4, "Short screens", designer ruling 18 Nov 2026): button
  * words are 15 px on short screens too (320 x 240, 480 x 200, 640 x 200). Settings, the hero
  * builder, the city rows, a street's game over and the lane run's Pause and caught cards.
- * The Gentle mode switch shows its short form there, with "(off)", and keeps its full spoken name.
+ * Game over's Gentle mode switch shows its short form there, with "(off)"; Settings' reads like Sound
+ * ("Gentle mode: off"). Both keep the full spoken name.
  * With ST_SHOTS=<folder> it saves pictures at 320 x 240 (st-a-15px-*.png).
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -44,7 +45,17 @@ async function expectShortGentle(page: Page, short: string, at: string): Promise
   expect(await sw.evaluate((b) => getComputedStyle(b, '::after').content), `${at}: off says off`).toContain('(off)');
 }
 
-test('Settings at each short size: 15 px words, no scroll, Gentle mode shows "Gentle mode: 5 lives (off)"', async ({ page }) => {
+/** Settings' Gentle mode switch (po polish note): "Gentle mode: off", or "Gentle mode: on" and a tick; the spoken name is full. */
+async function expectSettingsGentle(page: Page, on: boolean, at: string): Promise<void> {
+  const sw = page.getByRole('dialog', { name: 'Settings' }).getByRole('switch', { name: FULL, exact: true });
+  await expect(sw, at).toHaveText(on ? 'Gentle mode: on' : 'Gentle mode: off');
+  await expect(sw, at).toHaveAttribute('aria-checked', String(on));
+  const after = await sw.evaluate((b) => getComputedStyle(b, '::after').content);
+  if (on) expect(after, `${at}: on shows the tick`).toContain('\u2713');
+  else expect(after, `${at}: off shows no tick`).toBe('none');
+}
+
+test('Settings at each short size: 15 px words, no scroll, Gentle mode reads like Sound ("Gentle mode: off", a tick when on)', async ({ page }) => {
   await storySeen(page);
   await page.goto('./');
   await page.getByRole('button', { name: 'Settings' }).tap();
@@ -61,14 +72,17 @@ test('Settings at each short size: 15 px words, no scroll, Gentle mode shows "Ge
       expect(r.y + r.height, at).toBeLessThanOrEqual(size.height + 0.5);
     }
     await expectButtonWords15(page, '.settings-card', at);
-    await expectShortGentle(page, 'Gentle mode: 5 lives', at);
+    await expectSettingsGentle(page, false, at);
     await shoot(page, 'settings', at);
   }
-  // A taller screen shows the full words again.
+  // The same words on a taller screen; on, it says on and shows the tick, as Sound does.
   await page.setViewportSize({ width: 851, height: 393 });
   await settle(page);
-  await expect(page.getByRole('switch', { name: FULL }).locator('.long')).toBeVisible();
-  await expect(page.getByRole('switch', { name: FULL }).locator('.short')).toBeHidden();
+  await expectSettingsGentle(page, false, '851x393');
+  await page.getByRole('switch', { name: FULL, exact: true }).tap();
+  await expectSettingsGentle(page, true, '851x393 on');
+  await page.getByRole('switch', { name: FULL, exact: true }).tap();
+  await expectSettingsGentle(page, false, '851x393 off again');
 });
 
 test('the hero builder at each short size: chip words 15 px; Male or female on one line, Age too at 480 x 200 and 640 x 200', async ({ page }) => {

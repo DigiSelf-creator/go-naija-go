@@ -722,20 +722,27 @@ export class Menus {
   }
 
   /**
-   * The Gentle mode switch. It holds the full words and a short form (style.md 1.2 rule 4,
-   * "Short screens"); CSS shows only the short one on a screen 300 px tall or less. Its spoken
-   * name is always the full words; "(off)" / "(on)" follow either form.
+   * The Gentle mode switch. Its spoken name is always the full words. In Settings it reads like
+   * Sound: "Gentle mode: off", or "Gentle mode: on" and a tick (po polish note). On a game over it
+   * holds the full words and a short form (style.md 1.2 rule 4, "Short screens"); CSS shows only
+   * the short one on a screen 300 px tall or less, with "(off)" after either.
    */
   private gentleSwitch(where: 'over' | 'settings'): HTMLButtonElement {
     const t = WORDS.title;
-    const sw = button(t.gentle, 'minor gentle', (e) => {
+    const set = (): void => {
+      const on = this.settings.gentle;
+      if (where === 'settings') say(sw, on ? t.gentleOn : t.gentleOff);
+      sw.setAttribute('aria-checked', String(on));
+    };
+    const sw = button(t.gentle, where === 'settings' ? 'minor gentle-switch' : 'minor gentle', (e) => {
       if (this.ignoreTap(e)) return;
       this.settings.gentle = !this.settings.gentle;
       saveSettings(this.store, this.settings);
-      sw.setAttribute('aria-checked', String(this.settings.gentle));
+      set();
     }, { role: 'switch', 'aria-checked': String(this.settings.gentle), 'aria-label': t.gentle }, 'gentle');
     const w = sw.querySelector('.w');
-    if (w) w.replaceChildren(h('span', { class: 'long' }, t.gentle), h('span', { class: 'short' }, where === 'over' ? t.gentleShortOver : t.gentleShortSettings));
+    if (where === 'over' && w) w.replaceChildren(h('span', { class: 'long' }, t.gentle), h('span', { class: 'short' }, t.gentleShortOver));
+    set();
     return sw;
   }
 
