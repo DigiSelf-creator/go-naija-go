@@ -553,6 +553,9 @@ export class LaneSession {
       this.sayEl.textContent = this.hooks.buttonsOn() ? WORDS.lane.tiltSpokenButtons : WORDS.lane.tiltSpoken;
     }
     this.loop.resume();
+    // A tap or key that skips the look back lands between frames: show "3" now, so the
+    // count on screen always matches the stage (no frame with the stage at "count" and no number).
+    this.drawHud();
   }
 
   /**
