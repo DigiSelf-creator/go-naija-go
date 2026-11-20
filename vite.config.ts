@@ -4,8 +4,12 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
-/** Files the service worker must NOT fetch on install. Later worlds load only when reached. */
-const PRECACHE_SKIP = [/^sw\.js$/, /\.map$/, /^worlds\//, /^assets\/debug\//];
+/**
+ * Files the service worker must NOT fetch on install. Later worlds load only when reached.
+ * ST3: privacy.html is the store listing's privacy page (decision 56), a plain page on this site
+ * that the game never opens, so a player never downloads it with the game.
+ */
+const PRECACHE_SKIP = [/^sw\.js$/, /\.map$/, /^worlds\//, /^assets\/debug\//, /^privacy\.html$/];
 
 /**
  * qa O2: the debug art galleries (?gallery=…, src/art/galleries.ts and the gallery*.ts files it
