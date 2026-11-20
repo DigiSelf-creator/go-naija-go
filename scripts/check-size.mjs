@@ -12,6 +12,7 @@ const DIST = 'dist';
 const BUDGET = 3 * 1000 * 1000; // 3 MB
 const LATER = /^worlds\//; // later worlds load only when reached
 const DEBUG = /^assets\/debug\//; // debug galleries: fetched only by ?gallery= on the test link
+const SITE_PAGES = /^privacy\.html$/; // ST3: the store privacy page (decision 56), on the site but not in the game
 
 function walk(dir) {
   return readdirSync(dir).flatMap((n) => {
@@ -36,7 +37,7 @@ for (const f of files) {
   const size = statSync(f).size;
   if (LATER.test(rel)) later += size;
   else if (DEBUG.test(rel)) debug += size;
-  else first += size;
+  else if (!SITE_PAGES.test(rel)) first += size;
 }
 
 const kb = (n) => `${(n / 1000).toFixed(1)} KB`;
@@ -91,7 +92,7 @@ try {
   console.error('No dist/sw.js: the offline cache is missing.');
   process.exit(1);
 }
-const missing = rels.filter((r) => r !== 'sw.js' && !LATER.test(r) && !DEBUG.test(r) && !r.endsWith('.map') && !sw.includes(`"./${r}"`));
+const missing = rels.filter((r) => r !== 'sw.js' && !SITE_PAGES.test(r) && !LATER.test(r) && !DEBUG.test(r) && !r.endsWith('.map') && !sw.includes(`"./${r}"`));
 if (missing.length > 0) {
   console.error(`The offline cache (sw.js) misses: ${missing.join(', ')}`);
   process.exit(1);
@@ -105,6 +106,16 @@ if (!Array.isArray(precache)) {
 }
 const cachedGalleries = precache.filter((u) => DEBUG.test(u.replace(/^\.\//, '')) || /galler(y|ies)/i.test(u));
 const strayGalleries = rels.filter((r) => /galler(y|ies)[^/]*\.js$/i.test(r) && !DEBUG.test(r));
+// ST3: the privacy page is a site page, never part of the game's first-visit download.
+const cachedPages = precache.filter((u) => SITE_PAGES.test(u.replace(/^\.\//, '')));
+if (cachedPages.length > 0) {
+  console.error(`Site pages in the first-visit cache: ${cachedPages.join(', ')}`);
+  process.exit(1);
+}
+if (!rels.includes('privacy.html')) {
+  console.error('No dist/privacy.html: the store privacy page (decision 56) is missing.');
+  process.exit(1);
+}
 if (cachedGalleries.length > 0 || strayGalleries.length > 0) {
   console.error(`Debug galleries in the first-visit cache: ${[...cachedGalleries, ...strayGalleries].join(', ')}`);
   process.exit(1);
@@ -142,4 +153,5 @@ if (outside.length > 0) {
   console.error(`Built files point at other sites (nothing may load from the network):\n  ${outside.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Offline cache lists all ${rels.length - 1 - debugFiles.length} built files (debug galleries aside: ${debugFiles.length}, none cached); no other site is named.`);
+const sitePages = rels.filter((r) => SITE_PAGES.test(r)).length;
+console.log(`Offline cache lists all ${rels.length - 1 - debugFiles.length - sitePages} built files (debug galleries aside: ${debugFiles.length}, none cached; site pages not in the game: ${sitePages}); no other site is named.`);
