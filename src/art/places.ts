@@ -85,6 +85,23 @@ export const FOLK: readonly Folk[] = [
 ];
 
 /**
+ * The small gele's outline (x, y from the head's middle). It starts at the left brow, then each
+ * entry is one curve (control x, y, end x, y): up the left side, three soft pleats that climb to
+ * the right (the fan opens up and to one side), down the right side and back across the brow.
+ * Tall and leaning, with a scalloped top, so at city size it reads as tied cloth: never a round
+ * hat with a brim, never a crown with even points.
+ */
+export const GELE_START = [-3.0, -0.3] as const;
+export const GELE: readonly (readonly [number, number, number, number])[] = [
+  [-4.2, -2.0, -3.2, -3.6],
+  [-2.4, -5.0, -1.0, -4.5],
+  [-0.2, -6.4, 1.4, -5.9],
+  [3.0, -7.8, 4.6, -6.4],
+  [4.9, -3.4, 3.2, -0.4],
+  [0, -1.5, -3.0, -0.3],
+];
+
+/**
  * A small person standing at (x, y) (feet), about 15 units tall, facing the screen or
  * (back) away. `step` 0..1 moves the feet when walking; `happy` adds a smile and a skip.
  * `plate`: holding a plate of food in front.
@@ -142,15 +159,28 @@ export function drawFolk(g: CanvasRenderingContext2D, f: Folk, x: number, y: num
   g.fillStyle = f.headCol;
   g.beginPath();
   if (f.head === 'gele') {
-    g.moveTo(-3.6, hy - 0.4);
-    g.lineTo(-2.4, hy - 4.6);
-    g.lineTo(2.8, hy - 5);
-    g.lineTo(3.8, hy - 0.6);
-    g.closePath();
+    // A tied cloth wrap, not a hat: a band low on the brow that rises into soft pleats, the
+    // fan opening up to one side. Fold lines and a light stripe follow below.
+    g.moveTo(GELE_START[0], hy + GELE_START[1]);
+    for (const [qx, qy, x, y] of GELE) g.quadraticCurveTo(qx, hy + qy, x, hy + y);
   } else if (f.head === 'scarf') g.arc(0, hy - 0.2, 3, Math.PI * (o.back ? 0.7 : 1), Math.PI * (o.back ? 2.3 : 2));
   else if (f.head === 'afro') g.arc(0, hy - 0.6, 3.7, Math.PI, TAU);
   else g.arc(0, hy - 0.2, 2.8, Math.PI * (o.back ? 0.8 : 1.1), Math.PI * (o.back ? 2.2 : 1.9));
   g.fill();
+  if (f.head === 'gele') {
+    g.strokeStyle = INK;
+    g.lineWidth = 0.45;
+    g.stroke();
+    // The pleats (folds of the cloth) and a light woven stripe across the band
+    line(g, 'rgba(40,20,30,0.45)', 0.5, [-2.0, hy - 1.2, -1.0, hy - 4.3]);
+    line(g, 'rgba(40,20,30,0.45)', 0.5, [0.4, hy - 1.5, 1.4, hy - 5.7]);
+    g.beginPath();
+    g.moveTo(-3.2, hy - 1.3);
+    g.quadraticCurveTo(0, hy - 2.7, 3.6, hy - 1.5);
+    g.strokeStyle = 'rgba(255,248,230,0.75)';
+    g.lineWidth = 0.55;
+    g.stroke();
+  }
   if (f.head === 'braids') line(g, f.headCol, 0.9, [-2.4, hy, -2.6, hy + 4, 2.4, hy, 2.6, hy + 4]);
   if (!o.back) {
     const tx = (o.turn ?? 0) * 0.8;
