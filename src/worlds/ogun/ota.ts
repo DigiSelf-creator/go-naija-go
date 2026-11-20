@@ -865,7 +865,7 @@ export function drawOtaTraderStall(g: G, kind: OtaTrader, x: number, groundY = G
  * folkLook (src/art/folkCasts.ts). Never a held broom.
  */
 export const OTA_CAST: readonly FolkLook[] = (
-  '0amsl-lLL.l 5afmcSlDDDl 3afrcGaJCCl 6tmsl-mNL.b 2afrcSgHCHn 4afmuSgPFPd 1amsa-kSN.p 3ammlFbKOK.s ' +
+  '0amsl-lLL.l 5afmcSlDDDl 3afrcGaJCGl 6tmsl-mNL.b 2afrcSgHCHn 4afmuSgPFPd 1amsa-kSN.p 3ammlFbKOK.s ' +
   '0cfsp-kGF.. 5cmsl-kDN.. 1afmuHfQLQa 6ammlReNBNl 2tfsc-kIM.c 1emsgKdFEF.g 4amsl-hMC..w 6afsb-jMN.a'
 )
   .split(' ')

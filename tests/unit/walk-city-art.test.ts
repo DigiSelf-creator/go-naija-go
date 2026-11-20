@@ -29,7 +29,7 @@ import {
   trayBubbleBox,
   trayWords,
 } from '../../src/art/payspot';
-import { FOLK, MAMA_PUT, danfoTrip, drawFolk, drawMamaPut, drawMarketDanfo, drawMarketPlace, drawPlate, drawPorter } from '../../src/art/places';
+import { FOLK, GELE, GELE_START, MAMA_PUT, danfoTrip, drawFolk, drawMamaPut, drawMarketDanfo, drawMarketPlace, drawPlate, drawPorter } from '../../src/art/places';
 import { WALKER, WALKER_BOX, busArrivalHero, drawBusArrival, drawCityHero, drawWalkRing, walkDir, walkFrame, walkerSize, type WalkDir } from '../../src/art/walker';
 import { boundsContext } from './bounds-context';
 import { recorder } from './recorder';
@@ -219,5 +219,20 @@ describe('the working places', () => {
       clean((g) => drawFolk(g, f, 0, 0, { back: true }));
     });
     clean((g) => drawPlate(g, 0, 0));
+  });
+
+  it('the small gele reads as tied cloth, not a hard hat: taller than the head, leaning, a scalloped top', () => {
+    const pts = [GELE_START, ...GELE.map(([, , x, y]) => [x, y] as const)];
+    const top = Math.min(...pts.map(([, y]) => y));
+    // Rises well over the head (radius 2.7), not a low dome
+    expect(top).toBeLessThan(-6);
+    // The highest point is off to one side (the fan leans), not in the middle like a helmet
+    expect(Math.abs(pts.find(([, y]) => y === top)![0])).toBeGreaterThan(3);
+    // Three pleats climb to that side: each pleat top is higher than the one before
+    const pleats = GELE.slice(1, 4).map(([, , , y]) => y);
+    expect(pleats[1]!).toBeLessThan(pleats[0]!);
+    expect(pleats[2]!).toBeLessThan(pleats[1]!);
+    // Every gele in the small folk is a cloth colour, never plain safety yellow
+    for (const f of FOLK) if (f.head === 'gele') expect(f.headCol.toLowerCase()).not.toBe('#f2b300');
   });
 });

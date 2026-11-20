@@ -103,7 +103,7 @@ function frame(g: G, w: number, build: number, shade: () => void): number {
   return build >= 0.7 ? Math.min((build - 0.7) / 0.3, 1) : 0;
 }
 
-const DYER: Folk = { skin: '#4b2c1a', top: OG.indigo, bottom: OG.indigo, head: 'gele', headCol: '#f2b300', robe: true };
+const DYER: Folk = { skin: '#4b2c1a', top: OG.indigo, bottom: OG.indigo, head: 'gele', headCol: '#1aa39a', robe: true };
 const SELLER: Folk = { skin: '#a8693f', top: '#e9e1cf', bottom: OG.indigo, head: 'scarf', headCol: '#e0572b', robe: true };
 const BUYERS: readonly Folk[] = [
   { skin: '#d9a172', top: '#13703a', bottom: '#3b3f4a', head: 'short', headCol: '#1b1410' },

@@ -63,6 +63,10 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
 
+  // ST3: the store privacy page (decision 56) is a plain page on this site, not part of the game.
+  // Leave it to the network so it is never cached and never answered with the game's page.
+  if (/\/privacy\.html$/.test(new URL(req.url).pathname)) return;
+
   if (req.mode === 'navigate') {
     // The game is one page: always answer page loads with the cached index.html.
     event.respondWith(
