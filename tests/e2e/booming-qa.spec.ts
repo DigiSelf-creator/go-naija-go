@@ -258,10 +258,15 @@ test('S3d1 ruling 4 at 320 x 240, by touch: a tap on the uncovered part of each 
   const c = await city(page);
   const map = (await lagos(page).locator('.city-map').boundingBox())!;
   const covers: QBox[] = [...Object.values(c.boards), ...Object.values(c.bubbles), ...Object.values(c.pins)];
-  for (const e of await lagos(page).locator('.city-chip, .city-top h2, .city-top button, .city-bottom button').all()) {
-    const r = (await e.boundingBox())!;
-    covers.push({ x: r.x - map.x, y: r.y - map.y, w: r.width, h: r.height });
-  }
+  // One read of every shown row item at once: reading them one by one raced the chips, which are
+  // made again while the collected money lands, so a box could come back null (the old flake).
+  const rows = await lagos(page).locator('.city-chip, .city-top h2, .city-top button, .city-bottom button').evaluateAll((els) =>
+    els.filter((e) => e.getClientRects().length > 0).map((e) => {
+      const r = e.getBoundingClientRect();
+      return { x: r.x, y: r.y, w: r.width, h: r.height };
+    }),
+  );
+  for (const r of rows) covers.push({ x: r.x - map.x, y: r.y - map.y, w: r.w, h: r.h });
   const names: Record<string, string> = { goSlow: 'Go-slow', crowdedBuses: 'Crowded buses' };
   let tapped = 0;
   for (const [id, s] of Object.entries(c.watch.soon)) {

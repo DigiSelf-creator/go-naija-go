@@ -95,7 +95,7 @@ export interface DownloadCard {
   step(s: DownloadStep, message?: string): void;
 }
 
-/** "Ogun is ready to download (about 130 KB)." with Download / Not now; then Downloading..., or why it could not. */
+/** "Ogun is ready to download (about 80 KB)." with Download / Not now; then Downloading..., or why it could not. */
 export function downloadCard(go: () => void, notNow: () => void): DownloadCard {
   const w = OGUN_WORDS.download;
   const body = h('div', { class: 'travel-body', 'aria-live': 'polite' });

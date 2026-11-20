@@ -2,7 +2,7 @@
 
 Owner: designer. Written for decisions 72 and 73: after General Go-Slow the next state comes, and it is Ogun, with King Pothole as its boss (brief "Worlds" item 2). Tp added on 15 Nov: **"Ogun is gateway state, remember."** So the Gateway State is the heart of this note: Ogun is the road and the gate out of Lagos to the rest of Nigeria, bad roads block that gate, and fixing Ogun opens the way on.
 
-This note is to Ogun what docs/city.md is to Lagos. It is the source for the O tasks in part 10. Where it gives a number or a word, it wins over older drafts (city.md part 3 once said "about 400 KB"; it now says "about 130 KB", from part 9 here).
+This note is to Ogun what docs/city.md is to Lagos. It is the source for the O tasks in part 10. Where it gives a number or a word, it wins over older drafts (city.md part 3 once said "about 400 KB"; it now says "about 80 KB" (79 KB measured), from part 9 here).
 
 Sources: decisions 7, 13 to 19, 29 to 38, 42 to 48, 62, 64, 66 to 73; docs/city.md (parts 1 to 3, 5W, W3, W18); docs/design.md (S2.2 jump rules, S2.5 well, S2.6 streets, S2.7 hall, S2.8 saves and the wheel, S2.14, S2.15, S2.16, S3f0 lane run, S3e0 challenge road, "People everywhere"); src/data/levels/lagos-*.json.
 
@@ -599,7 +599,7 @@ Plain spellings if a phone cannot show the marks: "E kaabo!", "Nnoo!".
 | Go-Slow Hall Win (changed) | a player who just beat General Go-Slow | send them on to Ogun | "Lagos is switched on!" / "The road to Ogun is open. Ogun is the gateway to the rest of Nigeria." / first win: big "On to Ogun"; later wins: small "Go to Ogun" |
 | Bus ride | a player going between states | show the journey through the gateway | the arch: "WELCOME TO OGUN" / "THE GATEWAY STATE"; back: "SAFE JOURNEY"; "Skip". Settings switch: "Show the bus ride: on" / "Show the bus ride: off" |
 | Arrival card | first visit to Ogun | welcome, and say the goal | "Welcome to Ogun, the Gateway State!" / "The road to the rest of Nigeria runs through here." / "King Pothole has dug in at the gateway. Fix Ogun, and the way opens." / "Let's go" |
-| Download card (web only, 9.2) | a web player opening Ogun the first time without it saved | get Ogun onto the phone | "Ogun is ready to download (about 130 KB)." / "After this it plays with no internet." / "Download" / "Not now". No internet: "Ogun needs the internet once to download. Lagos still works with no internet." / "OK" |
+| Download card (web only, 9.2) | a web player opening Ogun the first time without it saved | get Ogun onto the phone | "Ogun is ready to download (about 80 KB)." / "After this it plays with no internet." / "Download" / "Not now". No internet: "Ogun needs the internet once to download. Lagos still works with no internet." / "OK" |
 | Travel card | anyone with Ogun open | pick a state | button "Travel"; card "Where to?" / "Lagos" / "Ogun" / "Booming: {n} of 20" (with " ✓" once its cog turns) / "You are here" / "Back" |
 | "To Ogun" stop card | Lagos challenge road | go to Ogun | stop: "To Ogun" / "Open", or locked "Win Go-Slow Hall"; card open: "The road to Ogun is open." / "Go to Ogun"; card locked: "Win Go-Slow Hall to open the road to Ogun." |
 | Ogun place (retired by Ogun's city, OG-R35; kept here until gamedev removes it) | anyone in Ogun | start the newest open street, or the hall | "Ogun" / "The Gateway State" / one line by progress: first "Ota is open. It is the first street on the road from Lagos."; after Ota "Ota is moving again. Abeokuta is open."; after Abeokuta "Abeokuta is moving again. Sagamu is open."; after Sagamu "Sagamu is moving again. Pothole Hall is open." (OG-R18, OG-R32); after the hall win "The gateway is open! Ogun is switched on!" (OG-R32, the finish toast's words). Buttons, newest big, the ones before it small: "Play Ota" / "Play Abeokuta" / "Play Sagamu" / "Go to Pothole Hall" (stays after the win). Also "Sound: on" / "Sound: off", "Settings", "Travel", "Nigeria's wheel" (QA-O-3) |
@@ -637,7 +637,7 @@ Everything stays drawn and made in code (decisions 33, 65). Ogun is one lazy par
 | Ogun's game code (mud, cracks, gravel, rocks, two roads, carrying, the boss, Ogun city places, Dry taps) | Ogun part | 20 KB |
 | Ogun's levels (3 streets, well, hall, lane) | Ogun part | 10 KB |
 | Ogun's tunes and sounds (code notes) | Ogun part | 6 KB |
-| **Ogun part in all** | | **about 130 KB, 150 KB at most** (players are only ever told "about 130 KB": the card and OG-R6; 150 KB is the CI limit, never shown) |
+| **Ogun part in all** | | **about 80 KB, 150 KB at most** (players are only ever told "about 80 KB": the card and OG-R6; 150 KB is the CI limit, never shown) |
 
 The first load stays well under 3 MB; the CI size check gets a second line for the Ogun part.
 
@@ -687,7 +687,7 @@ Order: O1 and O0a together; then O2, O3, O4 in order (each street teaches what t
 - **OG-R3.** The hall is "Pothole Hall", a road works yard, not a palace.
 - **OG-R4.** Garri roasting shows steam and a warm glow, never flames.
 - **OG-R5.** The quarry is far scenery: plain hard hats, no vests, no children, no blasting.
-- **OG-R6.** On the web, Ogun downloads (about 130 KB) the first time you go there, then plays offline; in the store app it is already inside.
+- **OG-R6.** On the web, Ogun downloads (about 80 KB) the first time you go there, then plays offline; in the store app it is already inside.
 - **OG-R7.** The border market is a happy, busy market road ("BORDER MARKET" board), with no border post, gate, fence, customs or officers; a "Coming soon" stop for now.
 - **OG-R8.** Trays fill while you play anywhere in the game, and stop when full, as now.
 - **OG-R9.** The Win screen after Go-Slow Hall gains "On to Ogun", and the Lagos challenge road gains a "To Ogun" stop on a side road; the Ferry stays a Lagos stop.

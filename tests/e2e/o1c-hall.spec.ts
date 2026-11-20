@@ -93,7 +93,7 @@ test('o1c: the hall won by touch; "On to Ogun" fits every size; the download car
   await waitOutTapLock(page);
   await won.getByRole('button', { name: 'On to Ogun' }).tap();
   const dl = page.locator('.download-card');
-  await expect(dl.getByText('Ogun is ready to download (about 130 KB).')).toBeVisible();
+  await expect(dl.getByText('Ogun is ready to download (about 80 KB).')).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/o1c-download-card.png` });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await dl.getByRole('button', { name: 'Download' }).tap();

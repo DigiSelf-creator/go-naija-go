@@ -1745,9 +1745,14 @@
     padding: 4px 10px;
   }
   /* ST-A3: Sound and Settings keep their old room beside the place box at 320 px: tighter
-     padding, and Sound's tick gives way (its words still say on or off, its edge is 3.5 px). */
+     padding, and Sound's tick gives way (its words still say on or off, its edge is 3.5 px).
+     Since their words went to 15 px (ST-A) they sit 4 px apart with 6 px side padding, so the
+     gap between the place box and Sound still takes a board or a bubble (walk-city-qa:241). */
+  .city-top-right {
+    gap: 4px;
+  }
   .city-top-right .minor {
-    padding: 4px 7px;
+    padding: 4px 6px;
   }
   .city-top-right .minor[data-on='true']::after {
     content: none;

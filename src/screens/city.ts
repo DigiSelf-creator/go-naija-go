@@ -2199,11 +2199,25 @@ export class CityScreen {
     // The bottom buttons (and zoom) are painted over the bar: it never sits behind one (qa recheck).
     const below = this.view.h - this.bottomCover - 0.5;
     const buttons = this.covers.filter((q) => q.y >= below);
+    // QA-O7re-1: on a very short screen the bottom row reaches up past "high". Then the hint sits
+    // in the bottom row itself, in the free stretch between its buttons nearest the middle.
+    const row = buttons.filter((q) => q.y + q.h > this.view.h - this.bottomCover / 2).sort((a, b) => a.x - b.x);
+    let gap: number | null = null;
+    for (let i = 0, from = 4; i <= row.length; i++) {
+      const to = i < row.length ? row[i]!.x - 4 : this.view.w - 4;
+      if (to - from >= w) {
+        const x = Math.round(Math.min(Math.max(mid, from), to - w));
+        if (gap === null || Math.abs(x - mid) < Math.abs(gap - mid)) gap = x;
+      }
+      if (i < row.length) from = Math.max(from, row[i]!.x + row[i]!.w + 4);
+    }
+    if (gap !== null) spots['gap'] = { x: gap, y: spots['foot'].y };
     const keep = this.hintSpot && spots[this.hintSpot] ? [this.hintSpot] : [];
-    const all = [...keep, 'high', 'low'].filter((k) => spots[k]);
+    const all = [...keep, 'high', 'low', 'gap'].filter((k) => spots[k]);
+    // QA-O7re-1: the first choice keeps clear of the bottom buttons too, not only the hero and signs.
     const pick =
-      all.find((k) => clear(spots[k]!, [heroBox, ...signs])) ??
-      [...keep, 'high', 'low', 'side', 'sideLow', 'row', 'foot'].find((k) => spots[k] && clear(spots[k]!, [heroBox, ...buttons])) ??
+      all.find((k) => clear(spots[k]!, [heroBox, ...signs, ...buttons])) ??
+      [...keep, 'high', 'low', 'gap', 'side', 'sideLow', 'row', 'foot'].find((k) => spots[k] && clear(spots[k]!, [heroBox, ...buttons])) ??
       null;
     const hide = pick === null ? 'hidden' : '';
     if (this.hintEl.style.visibility !== hide) this.hintEl.style.visibility = hide;

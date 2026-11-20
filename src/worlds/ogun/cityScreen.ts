@@ -55,6 +55,9 @@ import { OGUN_HOME, ogunNearest, ogunPath, ogunWalkable, type Pt } from './walk'
 import { OgunCityFolk } from './cityFolk';
 import { loadPeople, peopleKit } from '../../game/peopleLoad';
 
+/** Two boxes overlap (touching edges do not count). */
+const hits = (a: Box, b: Box): boolean => a.x < b.x + b.w - 0.5 && b.x < a.x + a.w - 0.5 && a.y < b.y + b.h - 0.5 && b.y < a.y + a.h - 0.5;
+
 /** Where each board's mat lies (map units, on walkable ground by its pin or place). */
 export const OGUN_MATS: Readonly<Record<OgunBoard, Pt>> = {
   potholes: { x: 101, y: 500 },
@@ -90,6 +93,8 @@ const MAP_DPR = 1.5;
 const MAP_DPR_MOVING = 1;
 /** W18: the tax explanation shows 4 to 8 s. */
 const TAX_HINT = 6;
+/** QA-POL-1: how long (s) a hint waits for a spot clear of the boards before it shows over them. */
+const HINT_WAIT = 1;
 
 const BUCKET_SOUND: Record<BucketKind, string> = { naira: 'payChink', power: 'payBulb', tech: 'payChip' };
 const DRAW_PLACE = { adire: drawAdireMarket, mill: drawGarriMill, kola: drawKolaMarket } as const;
@@ -537,7 +542,7 @@ export class OgunCityScreen implements WorldCity {
    */
   private placeSigns(g: CanvasRenderingContext2D | null): void {
     this.measureCovers();
-    const hard: Box[] = [...this.pins.map((p) => this.pinBox(p.spot, p.word)), ...this.covers];
+    const hard: Box[] = [...this.pins.map((p) => this.pinBox(p.spot, p.word)), ...this.covers, ...(this.hintWant ? [this.hintWant] : [])];
     const taken: Box[] = [];
     const vw = this.view.w;
     const vh = this.view.h;
@@ -644,7 +649,7 @@ export class OgunCityScreen implements WorldCity {
     }
     for (const [b, box] of this.boardBox) if (off(box) && !this.roomless.has(b)) want.push({ icon: OGUN_PRICES[b].bucket, at: { x: box.x + box.w / 2, y: box.y + box.h / 2 }, go: () => this.goPay(b), label: OGUN_CITY_WORDS.board[b] });
     for (const [p, box] of this.bubbleBox) if (off(box) && !this.roomless.has(p)) want.push({ icon: 'naira', at: { x: box.x + box.w / 2, y: box.y + box.h / 2 }, go: () => this.walkTo(OGUN_DOORS[p]), label: OGUN_CITY_WORDS.placeName[p] });
-    const avoid: Box[] = [...this.covers, ...[...this.boardBox.values(), ...this.bubbleBox.values()].filter(onView), ...this.pins.map((p) => this.pinBox(p.spot, p.word)).filter(onView)];
+    const avoid: Box[] = [...this.covers, ...(this.hintWant ? [this.hintWant] : []), ...[...this.boardBox.values(), ...this.bubbleBox.values()].filter(onView), ...this.pins.map((p) => this.pinBox(p.spot, p.word)).filter(onView)];
     this.arrowBox = [];
     while (this.arrowEls.length < want.length) {
       const el = button('', 'city-sign city-arrow', () => undefined, { 'aria-hidden': 'true', tabindex: '-1' });
@@ -998,28 +1003,57 @@ export class OgunCityScreen implements WorldCity {
     this.hintEl.hidden = !text;
     this.hintEl.textContent = text ?? '';
     this.hintUntil = this.time + secs;
-    if (text) this.placeHint();
+    this.hintWaited = 0;
+    this.placeHint();
   }
+  /**
+   * Where the hint may go, best first (QA-O2, QA-O2-4, polish round): under the whole top row
+   * (heading, chips, buttons), even where the map's own top is held at half the screen; else just
+   * above the bottom buttons; else over the heading (words only). Never over a button or the chips.
+   * Boards keep away from the first such spot when they can (placeSigns); fitHint then shows the
+   * hint on the first spot that covers no board or bubble either. With none clear it waits hidden
+   * for HINT_WAIT, then shows on its best spot over the boards (QA-POL-1: at 320 x 240 the boards
+   * fill the only free band, and a first-visit hint must still be seen).
+   */
   private placeHint(): void {
-    // QA-O2: under the whole top row (heading, chips, buttons), even where the map's own top is
-    // held at half the screen (320 x 240), so the hint never covers the chips.
     const r = this.el.getBoundingClientRect();
-    const low = Math.max(this.view.top, ...[...this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button')].map((e) => e.getBoundingClientRect().bottom - r.top));
-    this.hintEl.style.top = `${Math.round(low + 4)}px`;
-    this.banner.style.top = `${Math.round(low + (this.hintEl.hidden ? 4 : 40))}px`;
-    // QA-O2-4: never over a button. Where there is no room under the top row (320 x 240 with safe
-    // edges) it goes over the heading (words only); if that is not clear either, it waits hidden.
-    if (this.hintEl.hidden) return;
-    const btns = [...this.el.querySelectorAll<HTMLElement>('.city-top button, .city-bottom button')].map((e) => e.getBoundingClientRect()).filter((b) => b.width > 0);
-    const clear = (): boolean => {
-      const b = this.hintEl.getBoundingClientRect();
-      return btns.every((q) => q.right <= b.left || b.right <= q.left || q.bottom <= b.top || b.bottom <= q.top);
-    };
-    this.hintEl.style.visibility = '';
-    if (clear()) return;
-    this.hintEl.style.top = `${Math.round(this.head.getBoundingClientRect().top - r.top)}px`;
-    if (!clear()) this.hintEl.style.visibility = 'hidden';
+    const rel = (b: DOMRect): Box => ({ x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height });
+    const under = Math.max(this.view.top, ...[...this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button')].map((e) => e.getBoundingClientRect().bottom - r.top));
+    this.banner.style.top = `${Math.round(under + (this.hintEl.hidden ? 4 : 40))}px`;
+    const before = this.hintWant;
+    this.hintSpots = [];
+    this.hintWant = null;
+    if (!this.hintEl.hidden) {
+      const w = this.hintEl.offsetWidth;
+      const hh = this.hintEl.offsetHeight;
+      const hard = [...this.el.querySelectorAll<HTMLElement>('.city-top button, .city-bottom button, .city-chip')].map((e) => rel(e.getBoundingClientRect())).filter((b) => b.w > 0);
+      const lows = [...this.el.querySelectorAll<HTMLElement>('.city-bottom button')].map((e) => e.getBoundingClientRect()).filter((b) => b.width > 0).map((b) => b.top - r.top);
+      const x = Math.round((r.width - w) / 2);
+      const ys = [under + 4, Math.min(r.height, ...lows) - hh - 4, rel(this.head.getBoundingClientRect()).y].map(Math.round);
+      this.hintSpots = ys.map((y) => ({ x, y, w, h: hh })).filter((b) => b.y >= 0 && b.y + b.h <= r.height && !hard.some((q) => hits(q, b)));
+      this.hintWant = this.hintSpots[0] ?? null;
+    }
+    this.fitHint();
+    const b = this.hintWant;
+    if (before?.x !== b?.x || before?.y !== b?.y || before?.w !== b?.w || before?.h !== b?.h) this.requestDraw();
   }
+  /**
+   * Shows the hint on the first spot that covers no board or bubble; with none clear, hidden for
+   * now, and after HINT_WAIT on its best spot anyway (never over a button or a counter).
+   */
+  private fitHint(): void {
+    if (this.hintEl.hidden) return;
+    const signs: Box[] = [...this.boardBox.values(), ...this.bubbleBox.values(), ...this.arrowBox.map((a) => ({ x: a.x - a.tap / 2, y: a.y - a.tap / 2, w: a.tap, h: a.tap }))];
+    const spot = this.hintSpots.find((b) => !signs.some((q) => hits(q, b))) ?? (this.hintWaited >= HINT_WAIT ? this.hintWant : null);
+    const vis = spot ? '' : 'hidden';
+    if (this.hintEl.style.visibility !== vis) this.hintEl.style.visibility = vis;
+    if (spot && this.hintEl.style.top !== `${spot.y}px`) this.hintEl.style.top = `${spot.y}px`;
+  }
+  private hintSpots: Box[] = [];
+  /** How long the shown hint has waited hidden for a spot clear of the boards (QA-POL-1). */
+  private hintWaited = 0;
+  /** The hint's best spot while it shows: boards keep clear of it when they can (placeSigns). */
+  private hintWant: Box | null = null;
 
   private showCard(id: string, name: string, body: HTMLElement[], small: HTMLElement[]): HTMLElement {
     const card = h('div', { class: 'card narrow city-problem', role: 'dialog', 'aria-label': name, 'data-spot': id }, ...body, h('div', { class: 'minor-row' }, ...small));
@@ -1214,7 +1248,7 @@ export class OgunCityScreen implements WorldCity {
     this.meterKey = '';
     this.fillMeter();
     this.measure();
-    if (!this.hintEl.hidden) this.placeHint();
+    this.placeHint();
     this.cam = this.clamp(this.cam);
     // The Bad road card takes its short-screen size when it opens: made again for the new size.
     if (this.open === 'badRoad') this.openBadRoad();
@@ -1304,6 +1338,14 @@ export class OgunCityScreen implements WorldCity {
         this.lines.shift();
         this.showLine();
       }
+    }
+    // A hint waiting hidden for a clear spot (fitHint) keeps its time until it shows; after
+    // HINT_WAIT it shows over the boards (QA-POL-1), placed now: a still city draws nothing.
+    if (!this.hintEl.hidden && this.hintEl.style.visibility === 'hidden') {
+      this.hintUntil += dt;
+      const was = this.hintWaited;
+      this.hintWaited += dt;
+      if (was < HINT_WAIT && this.hintWaited >= HINT_WAIT) this.fitHint();
     }
     if (!this.hintEl.hidden && this.time >= this.hintUntil) this.setHint(null);
     // The camera follows the hero (eased; at once with reduced motion).
@@ -1468,6 +1510,7 @@ export class OgunCityScreen implements WorldCity {
       this.sprite(g, `t|${text}|${full}`, rel, { x: box.x - rel.x, y: box.y - rel.y }, dpr, (c) => drawTrayBubble(c, 0, 0, 'naira', text, full, 0));
     }
     this.drawArrows(g);
+    this.fitHint();
     const hero = this.toScreen({ x: this.hero.x, y: this.hero.y - WALKER.h });
     const pay = this.pay;
     if (pay) {

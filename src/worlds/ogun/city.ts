@@ -519,7 +519,7 @@ function waterPoint(g: G, look: SpotLook, bright: boolean): void {
   }
   // The queue: adults and teens with buckets, a child holding a parent's hand
   const Q: readonly Folk[] = [
-    { skin: '#4b2c1a', top: '#2f3f8f', bottom: '#2f3f8f', head: 'gele', headCol: '#f2b300', robe: true },
+    { skin: '#4b2c1a', top: '#2f3f8f', bottom: '#2f3f8f', head: 'gele', headCol: '#d6336c', robe: true },
     { skin: '#d9a172', top: '#e0572b', bottom: '#3b3f4a', head: 'short', headCol: '#1b1410', small: true },
     { skin: '#7a4a2a', top: '#13703a', bottom: '#13703a', head: 'scarf', headCol: '#e9e1cf', robe: true },
     { skin: '#a8693f', top: '#f4f4f4', bottom: '#5b3a22', head: 'short', headCol: '#1b1410' },

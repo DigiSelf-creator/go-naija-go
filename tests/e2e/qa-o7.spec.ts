@@ -203,7 +203,7 @@ test('qa O7: a new player\'s whole Ogun, by touch, from Lagos with Go-Slow Hall 
 
   // 2. The download card, word for word; Download; the bus ride under the arch; the arrival card.
   const dl = page.locator('.download-card');
-  await expect(dl.getByText('Ogun is ready to download (about 130 KB).')).toBeVisible();
+  await expect(dl.getByText('Ogun is ready to download (about 80 KB).')).toBeVisible();
   await expect(dl.getByText('After this it plays with no internet.')).toBeVisible();
   await expect(dl.getByRole('button', { name: 'Not now' })).toBeVisible();
   expect(ogunAsked).toEqual([]);

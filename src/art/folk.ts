@@ -1147,23 +1147,33 @@ function headwear(g: G, look: FolkLook, cx: number, cy: number, r: number, col: 
   const sheen = glowOf(col);
   switch (hw) {
     case 'gele': {
-      // A tall, proud head tie folded into a fan
+      // A tall, proud head tie: a band low on the brow that rises into soft pleats climbing to
+      // one side (the fan opens up and over), so even when small it reads as tied cloth, never
+      // a round hat with a brim.
       part(
         g,
         () => {
           g.moveTo(cx - r * 1.05, cy - 0.05 * r);
-          g.quadraticCurveTo(cx - r * 1.55, cy - r * 1.2, cx - r * 1.35, cy - r * 1.75);
-          g.quadraticCurveTo(cx - r * 0.5, cy - r * 2.45, cx + r * 0.35, cy - r * 2.05);
-          g.quadraticCurveTo(cx + r * 1.2, cy - r * 2.4, cx + r * 1.65, cy - r * 1.7);
-          g.quadraticCurveTo(cx + r * 1.5, cy - r * 0.8, cx + r * 1.0, cy - 0.3 * r);
+          g.quadraticCurveTo(cx - r * 1.55, cy - r * 0.8, cx - r * 1.25, cy - r * 1.45);
+          g.quadraticCurveTo(cx - r * 1.0, cy - r * 2.0, cx - r * 0.4, cy - r * 1.8);
+          g.quadraticCurveTo(cx, cy - r * 2.5, cx + r * 0.6, cy - r * 2.25);
+          g.quadraticCurveTo(cx + r * 1.3, cy - r * 2.75, cx + r * 1.8, cy - r * 2.3);
+          g.quadraticCurveTo(cx + r * 1.75, cy - r * 1.1, cx + r * 1.0, cy - 0.3 * r);
           g.quadraticCurveTo(cx, cy - 0.75 * r, cx - r * 1.05, cy - 0.05 * r);
           g.closePath();
         },
         col,
         { sh: 1.6 },
       );
-      lines(g, sheen, 0.6, [cx - r * 0.9, cy - r * 0.6, cx - r * 0.9, cy - r * 1.6, cx - r * 0.1, cy - r * 0.8, cx + r * 0.1, cy - r * 1.9, cx + r * 0.75, cy - r * 0.7, cx + r * 1.15, cy - r * 1.75]);
-      lines(g, deepOf(col), 0.6, [cx - r * 0.5, cy - r * 0.7, cx - r * 0.45, cy - r * 1.85, cx + r * 0.4, cy - r * 0.75, cx + r * 0.65, cy - r * 1.85]);
+      lines(g, sheen, 0.6, [cx - r * 0.95, cy - r * 0.5, cx - r * 1.0, cy - r * 1.4, cx - r * 0.1, cy - r * 0.85, cx + r * 0.1, cy - r * 2.0, cx + r * 0.8, cy - r * 0.65, cx + r * 1.35, cy - r * 2.3]);
+      lines(g, deepOf(col), 0.6, [cx - r * 0.6, cy - r * 0.7, cx - r * 0.4, cy - r * 1.75, cx + r * 0.35, cy - r * 0.75, cx + r * 0.6, cy - r * 2.15]);
+      // A woven stripe across the band, in the outfit's second colour
+      g.beginPath();
+      g.moveTo(cx - r * 1.1, cy - r * 0.4);
+      g.quadraticCurveTo(cx, cy - r * 1.0, cx + r * 1.15, cy - r * 0.6);
+      g.strokeStyle = look.b === col ? sheen : look.b;
+      g.lineWidth = 0.8;
+      g.stroke();
       break;
     }
     case 'headscarf': {

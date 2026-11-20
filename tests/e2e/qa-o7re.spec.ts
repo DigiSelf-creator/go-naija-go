@@ -237,10 +237,8 @@ for (const where of ['lagos', 'ogun'] as const) {
       }
     console.log(`== ${where} city\nFAULTS:\n  ${rep.faults.join('\n  ')}\nHINT:\n  ${hintNotes.join('\n  ')}`);
     test.info().annotations.push({ type: 'hint', description: hintNotes.join(' | ') });
-    // QA-O7re-1 (open, low, Lagos only, older than O7fix): its own test.fail below.
-    const known = (f: string) => where === 'lagos' && /^640x200 safe24: hint over /.test(f);
-    test.info().annotations.push({ type: 'QA-O7re-1 (known)', description: rep.faults.filter(known).join(' | ') || 'none' });
-    expect(rep.faults.filter((f) => !known(f))).toEqual([]);
+    // QA-O7re-1 (fixed): no size is let off, 640 x 200 with safe edges included.
+    expect(rep.faults).toEqual([]);
     expect(errors).toEqual([]);
   });
 
@@ -349,8 +347,7 @@ for (const where of ['lagos', 'ogun'] as const) {
   });
 }
 
-test('qa O7re QA-O7re-1 (open bug, Lagos): the first-visit hint at 640 x 200 with 24 px safe edges sits over no bottom-row button', async ({ page }) => {
-  test.fail(true, 'QA-O7re-1: Lagos\'s hint picks its "high" spot clear of the hero and signs only, so at 640 x 200 with 24 px edges it lies over "Nigeria\'s wheel"');
+test('qa O7re QA-O7re-1 (fixed, Lagos): the first-visit hint at 640 x 200 with 24 px safe edges sits over no bottom-row button', async ({ page }) => {
   await openWith(page, { v: 2, states: {}, city: { kobo: 0, power: 0, tech: 0, fixed: [], fixes: 0, hints: [] } });
   await page.setViewportSize({ width: 640, height: 200 });
   await setSafe(page, 24);
