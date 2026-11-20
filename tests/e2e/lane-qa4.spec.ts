@@ -168,7 +168,9 @@ for (const [w, hgt] of [
       window.__lane!.setGap(20);
       window.__lane!.warp(48);
     });
-    for (let i = 0; i < 25; i++) {
+    // The cones are at 70 m: 22 m from 48 m at about 9.4 m/s is 2.3 s, and a busy computer
+    // runs fewer checks in that time. So wait by the clock (up to 8 s), not by a count of checks.
+    for (const until = Date.now() + 8000; Date.now() < until; ) {
       bad.push(...(await overlaps()));
       if ((await hook(page))!.change) break;
       await page.waitForTimeout(80);

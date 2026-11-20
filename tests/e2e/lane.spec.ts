@@ -42,10 +42,23 @@ test('the lane run loads only when it opens, then counts "3, 2, 1" and runs', as
   await page.goto(LANE_URL);
   await page.waitForLoadState('load');
   expect(scripts.some((u) => /\/session-[^/]*\.js$/.test(u))).toBe(false);
+  // Each number shows only 0.6 s, after the 2 s look back: a poll from here (its gaps grow to 1 s)
+  // can step right over "3". So the page writes down every count it shows, on every frame.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { __counts: string[] }).__counts = seen;
+    const look = (): void => {
+      const c = window.__lane?.count ?? '';
+      if (c && seen[seen.length - 1] !== c) seen.push(c);
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  });
   await startRun(page);
   await expect.poll(() => scripts.some((u) => /\/session-[^/]*\.js$/.test(u))).toBe(true);
-  await expect.poll(async () => (await lane(page))?.count, { timeout: 15_000 }).toBe('3');
-  await expect.poll(async () => (await lane(page))?.stage).toBe('play');
+  await expect.poll(async () => (await lane(page))?.stage, { timeout: 15_000 }).toBe('play');
+  const counts = await page.evaluate(() => (window as unknown as { __counts: string[] }).__counts);
+  expect(counts.slice(0, 3)).toEqual(['3', '2', '1']);
   const d0 = (await lane(page))!.dist;
   await expect.poll(async () => (await lane(page))!.dist).toBeGreaterThan(d0 + 5);
   const l = (await lane(page))!;
