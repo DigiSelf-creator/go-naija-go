@@ -44,7 +44,7 @@ Character counts below were checked by script (spaces count). Upper limits: Play
 Plain text, no web links (the description must not send people elsewhere). Line breaks as shown. About 2,400 characters of the 4,000 allowed. The dashes are plain hyphens so both stores show them the same.
 
 ```
-Nigeria's Wheel keeps everything moving. But the Stoppers want it stuck: traffic, potholes, power cuts and slow internet. You are the Wheel Hero. Run, jump and fix your way across Nigeria.
+Nigeria's Wheel keeps everything moving. But the Stoppers want it stuck: traffic, potholes, power cuts and slow internet. You are the Wheel Hero. Run, jump and fix your way through Lagos and Ogun.
 
 MAKE A HERO WHO LOOKS LIKE YOU
 Pick male or female, teen, adult or elder, your skin tone, your hair (low cut, afro, braids, gele and more) and your outfit (ankara, agbada, kaftan, school uniform and more). Your hero runs every street and every boss fight.
@@ -52,7 +52,7 @@ Pick male or female, teen, adult or elder, your skin tone, your hair (low cut, a
 RUN THE STREETS OF LAGOS
 - Alausa, Computer Village and Ikeja, each with its own sights, sellers and shouts.
 - Jump potholes, open gutters and rolling drums. Hop over tyres and goats (the goats are never hurt, they just trot off).
-- Knock crates from below and find a hidden well with a secret room.
+- Bump market crates for kobo and food, and find a hidden well with a bonus room.
 
 THEN CROSS INTO OGUN
 - Ota, Abeokuta and Sagamu, each with something new: sticky mud, rock steps, cracks in the road and hopping gravel.
@@ -83,11 +83,11 @@ MADE FOR EVERYONE
 NO ADS. NO ACCOUNTS. NOTHING COLLECTED.
 Your hero and your progress are saved on this phone only. No trackers, no ads, no sign-up, and no internet needed to play. The Naira in the game is pretend money: there is nothing to buy.
 
-Every picture, sound and tune in Gbese! is our own. More of Nigeria is on the way.
+Every picture, sound and tune in Gbese! is our own.
 ```
 
 Notes for po:
-- "More of Nigeria is on the way." is a plain hope, not a promise of a date or a place. Cut it if po wants nothing about later.
+- po (20 Nov): "More of Nigeria is on the way." was cut, and "across Nigeria" became "through Lagos and Ogun", so the text promises nothing that is not built. "Knock crates from below" became "Bump market crates", so the line reads as our own market crates (decision 11).
 - "Water in the taps" is Ogun's "Dry taps" fix (ogun.md 6). "Lamps that come on" and "fast internet" are Lagos fixes (city.md).
 - "Garri, sugar and groundnut" is the store spelling of the game's "Garri, sugar and epa (groundnut)": the store reader may not know "epa". The game keeps its own words.
 - Before upload, gamedev reads this list against the build: if anything here is cut or renamed in the game, this text changes too.
