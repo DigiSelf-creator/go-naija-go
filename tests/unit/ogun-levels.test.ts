@@ -400,8 +400,8 @@ describe('Ogun words (O0a1)', () => {
     }
   });
 
-  it('one download size everywhere: about 130 KB (OG-R6)', () => {
-    expect(OGUN_WORDS.download.line1).toBe('Ogun is ready to download (about 130 KB).');
+  it('one download size everywhere: about 80 KB (OG-R6)', () => {
+    expect(OGUN_WORDS.download.line1).toBe('Ogun is ready to download (about 80 KB).');
   });
 
   it('keeps decisions 76 and 77: "Ota", never "Sango"; the rock is never named; nothing religious', () => {

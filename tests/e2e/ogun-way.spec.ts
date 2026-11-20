@@ -109,7 +109,7 @@ test.describe('on the web, before the Ogun part is on the phone', () => {
     await lagos(page).getByRole('button', { name: 'Travel' }).tap();
     await travelCard(page).locator('[data-state="ogun"]').tap();
     const dl = page.locator('.download-card');
-    await expect(dl.getByText('Ogun is ready to download (about 130 KB).')).toBeVisible();
+    await expect(dl.getByText('Ogun is ready to download (about 80 KB).')).toBeVisible();
     await expect(dl.getByText('After this it plays with no internet.')).toBeVisible();
     await expect(dl.getByRole('button', { name: 'Download' })).toBeFocused();
     await dl.getByRole('button', { name: 'Not now' }).tap();

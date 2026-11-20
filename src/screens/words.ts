@@ -555,9 +555,9 @@ export const OGUN_WORDS = {
     line2: 'King Pothole has dug in at the gateway. Fix Ogun, and the way opens.',
     go: "Let's go",
   },
-  /** Part 8 and 9.2 (OG-R6): the web download card. The size is "about 130 KB" everywhere. */
+  /** Part 8 and 9.2 (OG-R6): the web download card. The size is "about 80 KB" everywhere. */
   download: {
-    line1: 'Ogun is ready to download (about 130 KB).',
+    line1: 'Ogun is ready to download (about 80 KB).',
     line2: 'After this it plays with no internet.',
     go: 'Download',
     notNow: 'Not now',
