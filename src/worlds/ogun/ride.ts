@@ -50,7 +50,7 @@ export function busRide(o: RideOptions): { el: HTMLElement; close(): void } {
   const skip = button(o.skip, 'minor ride-skip', (e) => {
     e.stopPropagation();
     end();
-  });
+  }, {}, 'skip');
   const el = h('div', { class: 'ride-screen', 'data-ride': o.toLagos ? 'out' : 'in' }, pic, skip);
   const tune = (): void => {
     if (tuned) return;

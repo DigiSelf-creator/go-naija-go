@@ -55,18 +55,66 @@
   font-size: 0.85rem;
   color: #5d574b;
 }
+/* ST-A2 (style.md 1.2), the button recipe: a cream pill with a warm ink edge and lip; the one
+   main action is green. Pressed: down 3 px onto its lip, no transition. */
+.go,
+.minor,
+.chip {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 14px;
+  border: 2.5px solid #3a2618;
+  border-radius: 999px;
+  background: #fff8e6;
+  color: #3a2618;
+  font: 800 15px 'Trebuchet MS', Verdana, sans-serif;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
+  cursor: pointer;
+}
+.go:active,
+.minor:active,
+.chip:active,
+.swatch:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #3a2618;
+}
 .go {
   display: block;
   width: 100%;
   min-height: 52px;
   margin: 8px 0 4px;
-  border: 0;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font: bold 1.15rem 'Trebuchet MS', Verdana, sans-serif;
+  padding: 4px 16px;
+  font-size: 16px;
   background: #0e7a3e;
   color: #fff;
-  cursor: pointer;
+  text-shadow: 0 1.5px 0 rgba(0, 0, 0, 0.35);
+}
+/* The icon disc (dom.ts disc()): 30 px, 36 px on the big button; the icon 70 percent of it. */
+.ic {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  margin: -4px 8px -4px -10px;
+  vertical-align: middle;
+  border: 2px solid #3a2618;
+  border-radius: 50%;
+  color: #3a2618;
+  flex: none;
+}
+.ic svg {
+  width: 21px;
+  height: 21px;
+}
+.go .ic {
+  width: 36px;
+  height: 36px;
+  margin-left: -12px;
+}
+.go .ic svg {
+  width: 25px;
+  height: 25px;
 }
 .minor-row {
   display: flex;
@@ -74,25 +122,55 @@
   gap: 8px;
   margin-top: 6px;
 }
-.minor {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 6px 14px;
-  border: 2px solid #d8cfbd;
-  border-radius: 12px;
-  background: #fff;
-  color: #1d1a14;
-  font: 0.95rem 'Trebuchet MS', Verdana, sans-serif;
-  cursor: pointer;
+/* A switch: on is a tick and a 3.5 px edge, off the plain edge; its words say on or off. */
+.minor[aria-checked='true'],
+.minor[data-on='true'] {
+  border-width: 3.5px;
 }
-.minor[aria-checked='true'] {
-  border: 3px solid #1d1a14;
-  background: #ddf0e3;
+.minor[aria-checked='true']::after,
+.minor[data-on='true']::after {
+  content: '\2713';
+  content: '\2713' / ''; /* the tick is a picture: not read out, aria-checked says it */
+  margin-left: 4px;
+  color: #0e7a3e;
 }
-.minor[aria-checked='true']::before {
-  content: '\2713  ';
-  content: '\2713  ' / ''; /* the tick is a picture: not read out, aria-pressed says it */
-  font-weight: bold;
+/* Short screens (320 x 240, 640 x 200): the words keep the room, the discs give way. */
+@media (max-height: 300px) {
+  .ic {
+    display: none;
+  }
+  /* The city's Travel keeps a small bus, as it always had (its row is laid out with it). */
+  .travel-button .ic {
+    display: inline-grid;
+    width: 20px;
+    height: 20px;
+    margin: -4px 4px -4px -4px;
+  }
+  .travel-button .ic svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+.minor.gentle::after {
+  content: ' (off)';
+  content: ' (off)' / '';
+}
+.minor.gentle[aria-checked='true']::after {
+  content: ' (on) \2713';
+  content: ' (on) \2713' / '';
+}
+/* style.md 1.2 rule 4, "Short screens": the switch holds its full words and a short form; a screen
+   300 px tall or less shows only the short one, at 15 px. Its spoken name (aria-label) stays full. */
+.minor.gentle .short {
+  display: none;
+}
+@media (max-height: 300px) {
+  .minor.gentle .long {
+    display: none;
+  }
+  .minor.gentle .short {
+    display: inline;
+  }
 }
 
 /* Hero builder (design.md S2.3 "Builder layout"). Sideways: two columns. Left: the live
@@ -215,13 +293,13 @@
   height: 48px;
   padding: 0;
   border-radius: 50%;
-  border: 3px solid #fffaf0;
-  box-shadow: 0 0 0 1px #c9bfa9;
+  border: 2.5px solid #3a2618;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
   cursor: pointer;
 }
 .swatch[aria-pressed='true'] {
-  border: 4px solid #1d1a14;
-  box-shadow: 0 0 0 2px #fffaf0, 0 0 0 4px #1d1a14;
+  border: 4px solid #3a2618;
+  box-shadow: 0 0 0 2px #fffaf0, 0 0 0 4px #3a2618;
 }
 .swatch[aria-pressed='true']::after {
   content: '\2713';
@@ -233,21 +311,8 @@
   font: bold 22px Verdana, sans-serif;
   text-shadow: 0 0 3px #000, 0 0 2px #000;
 }
-.chip {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 4px 14px;
-  border: 2px solid #d8cfbd;
-  border-radius: 999px;
-  background: #fff;
-  color: #1d1a14;
-  font: 0.95rem 'Trebuchet MS', Verdana, sans-serif;
-  cursor: pointer;
-}
 .chip[aria-pressed='true'] {
-  border: 3px solid #1d1a14;
-  background: #ddf0e3;
-  font-weight: bold;
+  border-width: 3.5px;
 }
 .chip[aria-pressed='true']::before {
   content: '\2713  ';
@@ -256,7 +321,8 @@
 .chip:focus-visible,
 .swatch:focus-visible,
 .go:focus-visible,
-.minor:focus-visible {
+.minor:focus-visible,
+.travel-place:focus-visible {
   outline: 3px solid #2b59c3;
   outline-offset: 2px;
 }
@@ -326,7 +392,10 @@
   }
   .chip {
     padding: 4px 6px;
-    font-size: 0.82rem;
+    font-weight: 400;
+  }
+  .chip[aria-pressed='true'] {
+    font-weight: 800;
   }
   .chip[aria-pressed='true']::before {
     content: '\2713';
@@ -461,14 +530,21 @@
   flex: none;
   flex-wrap: nowrap;
 }
+/* ST-A3: each counter is a cream status chip (style.md 1.2), no bigger than the old dark box:
+   the edge takes 2.5 px of its padding. The hard lip only (a food chip may blink). */
 .hud-left > span {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  box-sizing: border-box;
   min-height: 32px;
-  padding: 0 8px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.32);
+  padding: 0 5.5px;
+  border: 2.5px solid #3a2618;
+  border-radius: 999px;
+  background: #fff8e6;
+  box-shadow: 0 3px 0 #3a2618;
+  color: #3a2618;
+  text-shadow: none;
 }
 .hud-food[hidden] {
   display: none !important;
@@ -487,7 +563,7 @@
   gap: 6px;
 }
 .hud-tight .hud-left > span {
-  padding: 0 6px;
+  padding: 0 3.5px;
 }
 .hud-tight .hud-food {
   gap: 2px;
@@ -506,7 +582,7 @@
   gap: 6px;
 }
 .hud-tighter .hud-left > span {
-  padding: 0 4px;
+  padding: 0 1.5px;
 }
 .hud-tighter .hud-icon {
   width: 24px;
@@ -530,7 +606,11 @@
 .hud-tightest .hud-left > span {
   padding: 0 1px;
   gap: 1px;
+  border: 0;
   background: none;
+  box-shadow: none;
+  color: inherit;
+  text-shadow: inherit;
 }
 .hud-tightest .hud-icon {
   width: 20px;
@@ -563,8 +643,8 @@
   height: 18px;
 }
 .hud-icon {
-  width: 28px;
-  height: 28px;
+  width: 27px;
+  height: 27px;
 }
 .hud-btn {
   pointer-events: auto;
@@ -646,7 +726,9 @@
   }
 }
 .go.secondary {
-  background: #5d574b;
+  background: #fff8e6;
+  color: #3a2618;
+  text-shadow: none;
 }
 .screen .stack {
   display: grid;
@@ -843,10 +925,7 @@
 .music-switch {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-}
-.music-switch svg {
-  flex: none;
+  justify-content: center;
 }
 .music-switch .off {
   display: none;
@@ -923,7 +1002,8 @@
   .event .minor {
     min-height: 44px;
     padding: 4px 10px;
-    font-size: 0.85rem;
+    white-space: normal;
+    line-height: 1.1;
   }
   .event .minor-row {
     margin-top: 6px;
@@ -950,7 +1030,7 @@
   }
   /* The boom card's only button: a ring the card's colour hides the words scrolled under it. */
   .city-problem > .go:has(+ .minor-row:empty) {
-    box-shadow: 0 0 0 8px #fffaf0;
+    box-shadow: 0 3px 0 #3a2618, 0 0 0 8px #fffaf0;
   }
 }
 /* Short screens, game over: the gentle offer beside its switch, and "Play again", "Streets" and
@@ -962,7 +1042,6 @@
   .event.over .gentle-row .minor {
     flex: 0 1 50%;
     padding: 2px 8px;
-    font-size: 0.8rem;
     line-height: 1.15;
   }
   .event.over .actions {
@@ -974,10 +1053,13 @@
   .event.over .actions .go {
     flex: 1 1 auto;
     width: auto;
+    min-width: 80px;
     margin: 0;
   }
   .event.over .actions .minor-row {
-    flex: none;
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
     margin: 0;
   }
 }
@@ -990,13 +1072,17 @@
     align-items: stretch;
     margin-top: 6px;
   }
+  /* style.md 1.2 rule 4: at 15 px the small buttons may take two lines; the green one keeps 80 px. */
   .event .actions .go {
     flex: 1 1 auto;
     width: auto;
+    min-width: 80px;
     margin: 0;
   }
   .event .actions .minor-row {
-    flex: none;
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
     margin: 0;
   }
   .pause-grid {
@@ -1106,7 +1192,7 @@
   flex: none;
   width: 100%;
   padding: 4px 2px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: bold;
   white-space: nowrap;
 }
@@ -1278,7 +1364,6 @@
   top: max(8px, var(--safe-top));
   right: max(8px, var(--safe-right));
   z-index: 2;
-  background: rgba(255, 255, 255, 0.92);
 }
 @media (max-height: 280px) {
   .screen .intro-caption {
@@ -1367,6 +1452,10 @@
   margin: 0;
   padding: 0 8px;
   animation: intro-fade-in 0.3s ease-out both;
+  box-shadow: 0 3px 0 #3a2618; /* it fades in: the hard lip only (style.md 1.2 rule 5) */
+}
+.intro-card.moving .intro-go .ic {
+  display: none;
 }
 @media (max-width: 399px), (max-height: 279px) {
   .intro-card {
@@ -1512,9 +1601,13 @@
 }
 .screen .city-top h2 {
   margin: 0;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: rgba(255, 250, 240, 0.94);
+  padding: 3.5px 7.5px;
+  /* ST-A3: the place box, a status chip (style.md 1.2). */
+  border: 2.5px solid #3a2618;
+  border-radius: 14px;
+  background: #fff8e6;
+  color: #3a2618;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
   font-size: 1.1rem;
   line-height: 1.6;
   /* Words only: a tap here goes to the map below (an edge arrow may sit under it on a tiny screen). */
@@ -1529,21 +1622,37 @@
   min-width: 0;
   pointer-events: none;
 }
+/* ST-A3: the money, Power and Tech status chips (not buttons): the recipe, a 26 px disc. */
 .city-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 36px;
+  gap: 6px;
+  min-height: 34px;
   box-sizing: border-box;
-  padding: 2px 10px 2px 6px;
-  border: 2px solid #1d1a14;
-  border-radius: 18px;
-  background: #fffaf0;
+  padding: 3px 13px 3px 3px;
+  border: 2.5px solid #3a2618;
+  border-radius: 999px;
+  background: #fff8e6;
+  color: #3a2618;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
   font: bold 15px 'Trebuchet MS', Verdana, sans-serif;
   white-space: nowrap;
 }
 .city-chip svg {
   flex: none;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  padding: 2px;
+  border: 2px solid #3a2618;
+  border-radius: 50%;
+  background: #ffe066;
+}
+.chip-naira svg {
+  background: #f6c34a;
+}
+.chip-tech svg {
+  background: #7fd3c7;
 }
 .city-top-right {
   display: flex;
@@ -1605,12 +1714,17 @@
 @media (max-width: 640px), (max-height: 300px) {
   .screen .city-top h2 {
     font-size: 0.95rem;
-    padding: 4px 8px;
+    padding: 1.5px 5.5px;
   }
   .city-chip {
     min-height: 30px;
+    gap: 4px;
     font-size: 13px;
-    padding: 1px 8px 1px 4px;
+    padding: 1px 8px 1px 1px;
+  }
+  .city-chip svg {
+    width: 24px;
+    height: 24px;
   }
   /* qa F1: the heading and the top-right buttons on the first row, the three chips on one row
      under them, so no chip ever sits under Sound or Settings (320 x 240 with ₦1,250). */
@@ -1629,7 +1743,14 @@
   .city-top-right .minor,
   .city-buttons .minor {
     padding: 4px 10px;
-    font-size: 0.85rem;
+  }
+  /* ST-A3: Sound and Settings keep their old room beside the place box at 320 px: tighter
+     padding, and Sound's tick gives way (its words still say on or off, its edge is 3.5 px). */
+  .city-top-right .minor {
+    padding: 4px 7px;
+  }
+  .city-top-right .minor[data-on='true']::after {
+    content: none;
   }
   .city-problem {
     padding: 8px 12px;
@@ -1664,9 +1785,15 @@
   .settings-list .minor {
     min-height: 44px;
     padding: 4px 8px;
-    font-size: 0.85rem;
     line-height: 1.15;
     white-space: normal;
+  }
+}
+/* style.md 1.2 rule 4, short screens: less padding so 15 px words fit with no scroll at 480 x 200 and 640 x 200.
+   Two classes, so it wins over `.card:not(.hero-card)` (10px 12px) for screens 260 px tall or less. */
+@media (max-height: 260px) {
+  .card.settings-card {
+    padding: 4px 12px;
   }
 }
 
@@ -1778,7 +1905,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 4px 10px;
+  padding: 1.5px 7.5px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -1814,7 +1941,7 @@
 }
 @media (max-width: 640px), (max-height: 300px) {
   .screen .city-top h2.city-head {
-    padding: 3px 6px;
+    padding: 0.5px 3.5px;
     gap: 1px;
   }
   .city-head-row {
@@ -1921,19 +2048,20 @@
   max-width: 100%;
   min-height: 44px;
   margin: 0;
-  padding: 6px 14px;
-  border: 2px solid #1d1a14;
-  border-radius: 12px;
-  background: #f2b300;
-  color: #1d1a14;
-  font: bold 15px/1.2 'Trebuchet MS', Verdana, sans-serif;
+  padding: 4px 14px;
+  border: 2.5px solid #3a2618;
+  border-radius: 999px;
+  background: #fff8e6;
+  color: #3a2618;
+  font: 800 15px/1.2 'Trebuchet MS', Verdana, sans-serif;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  /* ST-A2: it slides in, so the hard lip only (style.md 1.2 rule 5). */
+  box-shadow: 0 3px 0 #3a2618;
   touch-action: manipulation;
 }
 .update-btn:focus-visible {
-  outline: 3px solid #fff;
+  outline: 3px solid #2b59c3;
   outline-offset: 2px;
 }
 body.has-update .screen:not(.full) {
@@ -2159,7 +2287,6 @@ body.lane {
   .lane-card .gentle-row .minor {
     flex: 0 1 50%;
     padding: 2px 8px;
-    font-size: 0.8rem;
     line-height: 1.15;
     white-space: normal;
   }
@@ -2171,7 +2298,6 @@ body.lane {
     white-space: normal;
     line-height: 1.1;
     padding: 2px 6px;
-    font-size: 0.8rem;
   }
   .lane-pause-card .switches {
     flex-wrap: nowrap;
@@ -2429,21 +2555,10 @@ body.lane {
 .road-top .minor {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-}
-.road-top svg {
-  width: 16px;
-  height: 16px;
-  flex: none;
 }
 .road-ic {
   display: inline-flex;
   flex: none;
-}
-.road-top .road-ic {
-  width: 16px;
-  height: 16px;
 }
 .road-hint {
   position: absolute;
@@ -2762,8 +2877,14 @@ body.lane {
   }
 }
 @media (max-width: 360px) {
-  .road-sound span {
+  /* ST-A3: words kept; the discs give way and the heading takes two lines. */
+  .road-top .ic {
     display: none;
+  }
+  .screen .road-top h2 {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.1;
   }
 }
 /* S3e0 part 7: "Challenge road" and "Nigeria's wheel" may take two lines on a small screen. */
@@ -2838,15 +2959,22 @@ body.lane {
   min-width: 140px;
   min-height: 72px;
   padding: 6px 10px;
-  border: 2px solid #d8cfbd;
-  border-radius: 12px;
-  background: #fff;
-  color: #1d1a14;
-  font: 0.9rem 'Trebuchet MS', Verdana, sans-serif;
+  /* ST-A2: a place box (style.md 1.2): cream, the warm ink edge and lip, 14 px corners. */
+  border: 2.5px solid #3a2618;
+  border-radius: 14px;
+  background: #fff8e6;
+  color: #3a2618;
+  font: 15px 'Trebuchet MS', Verdana, sans-serif;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
   cursor: pointer;
 }
+.travel-place:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #3a2618;
+}
+/* Where you are: the 3.5 px edge; its words say "You are here" (never colour alone). */
 .travel-place.here {
-  border-color: #0e7a3e;
+  border-width: 3.5px;
 }
 .travel-name {
   font-weight: bold;
@@ -2861,11 +2989,6 @@ body.lane {
 }
 .travel-cog.on svg {
   color: #0e7a3e;
-}
-.travel-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 .settings-saved {
   margin: 8px 0 0;

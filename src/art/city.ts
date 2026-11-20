@@ -55,6 +55,7 @@ import {
   type BlockLife,
 } from './bright';
 import { CAR_COLOURS, CREAM, INK, KOBO, KOBO_DARK, KOBO_SHINE, SHOP_WALLS, WHITE } from './palette';
+import { iconSvg } from './icons';
 
 export { drawCityFolk } from './bright';
 
@@ -1323,12 +1324,10 @@ export function drawBucketIcon(g: CanvasRenderingContext2D, kind: BucketKind, x:
   g.restore();
 }
 
-/** The same bucket icons as SVG markup (24 x 24) for HTML chips and cards. */
+/**
+ * The bucket icons as SVG markup (24 x 24) for the HTML chips: since ST-A3 the button icon set's
+ * own (src/art/icons.ts), which the chip's CSS puts on its disc (style.md 1.2, status chip).
+ */
 export function bucketIconSvg(kind: BucketKind): string {
-  const open = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 24 24" width="24" height="24" aria-hidden="true" focusable="false">';
-  if (kind === 'naira')
-    return `${open}<circle r="11" fill="${KOBO_DARK}"/><circle cy="-0.8" r="10" fill="${KOBO}"/><circle cx="-3.5" cy="-4.5" r="2.2" fill="${KOBO_SHINE}"/><path d="M-4 5V-6L4 5V-6" fill="none" stroke="${KOBO_DARK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M-7-2H7M-7 1.5H7" stroke="${KOBO_DARK}" stroke-width="1.4" stroke-linecap="round"/></svg>`;
-  if (kind === 'power')
-    return `${open}<circle cy="-3" r="11" fill="#ffe27a" fill-opacity=".45"/><circle cy="-3" r="8" fill="#fff3b0" stroke="${INK}" stroke-width="1.4"/><rect x="-4" y="5" width="8" height="6" fill="#9aa3ad" stroke="${INK}" stroke-width="1.2"/><path d="M1.5-10L-3.5-2H0L-1.5 4L3.5-4.5H0Z" fill="#f4a62a" stroke="${INK}" stroke-linejoin="round"/></svg>`;
-  return `${open}<path d="M-11 0H11M-11 4H11M-11 8H11M-4-4V12M0-4V12M4-4V12" stroke="${INK}" stroke-width="1.4" stroke-linecap="round"/><rect x="-7" y="-2" width="14" height="12" fill="#2f5d8a" stroke="${INK}" stroke-width="1.4"/><rect x="-3.5" y="1.5" width="7" height="5" fill="#7fd6ff"/><g fill="#22a85a" stroke="${INK}" stroke-width=".8"><rect x="-6" y="-7" width="3" height="2.5"/><rect x="-1.5" y="-9.5" width="3" height="5"/><rect x="3" y="-12" width="3" height="7.5"/></g></svg>`;
+  return iconSvg(kind);
 }

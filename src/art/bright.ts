@@ -4,7 +4,7 @@
  *
  * Tired, never bad: warm faded colours (never grey or blue), some shops not open yet, one neat
  * tied sack and a box waiting by the kerb (never spilled, never near food). Every block has
- * someone doing something proud in both looks (sweeping, opening a shutter, setting out goods,
+ * someone doing something proud in both looks (wiping a shop window, opening a shutter, setting out goods,
  * reading on a bench, at a sewing machine). No broken glass, no writing on walls, no one
  * begging, no stray animals, no flies or smell lines. All our own shapes, in map units.
  *
@@ -113,8 +113,8 @@ export function fadeColour(hex: string, k: number = TIRED_MIX, to: string = TIRE
 // ---------- The d2 table ----------
 
 /** What the proud person on each block is doing (tired and bright). */
-export type ProudKind = 'trader' | 'sweeper' | 'reader' | 'opener' | 'tailor' | 'setter' | 'schoolgirl' | 'repairer' | 'basket' | 'waiter' | 'newspaper';
-export const PROUD_KINDS: readonly ProudKind[] = ['trader', 'sweeper', 'reader', 'opener', 'tailor', 'setter', 'schoolgirl', 'repairer', 'basket', 'waiter', 'newspaper'];
+export type ProudKind = 'trader' | 'wiper' | 'reader' | 'opener' | 'tailor' | 'setter' | 'schoolgirl' | 'repairer' | 'basket' | 'waiter' | 'newspaper';
+export const PROUD_KINDS: readonly ProudKind[] = ['trader', 'wiper', 'reader', 'opener', 'tailor', 'setter', 'schoolgirl', 'repairer', 'basket', 'waiter', 'newspaper'];
 
 /** The one thing a bright block adds beyond goods and people. */
 export type BrightExtra = 'plants' | 'fruit' | 'pitch' | 'washing' | 'goods' | 'flats' | 'screens' | 'lamps' | 'umbrellas';
@@ -138,7 +138,7 @@ export interface BlockLife {
 /** d2, block by block (ids as CITY_BLOCKS). */
 export const BLOCK_LIFE: Readonly<Record<string, BlockLife>> = {
   r0c0: { fronts: 3, shutters: 2, sacks: 1, proud: 'trader', open: 1, tiredPeople: 1, people: 4, extra: 'plants' },
-  r0c1: { fronts: 2, shutters: 1, sacks: 1, proud: 'sweeper', open: 0, tiredPeople: 1, people: 4, extra: 'fruit' },
+  r0c1: { fronts: 2, shutters: 1, sacks: 1, proud: 'wiper', open: 0, tiredPeople: 1, people: 4, extra: 'fruit' },
   r0c2: { fronts: 1, shutters: 0, sacks: 0, proud: 'reader', open: 0, tiredPeople: 1, people: 3, extra: 'pitch' },
   r0c3: { fronts: 3, shutters: 2, sacks: 1, proud: 'opener', open: 2, tiredPeople: 1, people: 4, extra: 'washing' },
   r1c0: { fronts: 3, shutters: 2, sacks: 1, proud: 'tailor', open: 0, tiredPeople: 1, people: 4, extra: 'goods' },
@@ -227,17 +227,13 @@ export function drawProudFolk(g: CanvasRenderingContext2D, x: number, y: number,
       for (let k = 0; k < 4; k++) disc(g, x - 5 + k * 3.3, y - 3.6, 1.3, k % 2 ? '#2f9a3a' : '#d8342a');
       break;
     }
-    case 'sweeper': {
-      // A broom in both hands, sweeping her own front
+    case 'wiper': {
+      // Wiping her own shop window with a cloth (no broom: decision 75)
+      rect(g, x + 2, y - 13, 7, 5, '#bfe6f5', INK, 0.4);
+      line(g, WHITE, 0.6, [x + 6.5, y - 12, x + 8, y - 10.5]);
       drawCityFolk(g, x, y, i);
-      line(g, '#8a5d36', 1, [x + 2, y - 5, x + 7, y + 0.5]);
-      g.fillStyle = '#d9b86a';
-      g.beginPath();
-      g.moveTo(x + 5.5, y - 0.5);
-      g.lineTo(x + 10, y + 1.2);
-      g.lineTo(x + 8, y + 2.2);
-      g.closePath();
-      g.fill();
+      line(g, TOPS[Math.abs(i) % TOPS.length]!, 1, [x + 1.8, y - 5, x + 3.6, y - 9]);
+      rect(g, x + 3, y - 11, 2.4, 2.2, '#5aa9e6', INK, 0.3);
       break;
     }
     case 'reader': {

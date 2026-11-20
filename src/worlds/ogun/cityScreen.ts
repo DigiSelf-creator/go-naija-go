@@ -1052,7 +1052,7 @@ export class OgunCityScreen implements WorldCity {
       this.placePins();
     }
     const c = OGUN_CITY_WORDS.cards[spot];
-    const back = button(w.back, 'minor', () => this.closeCard());
+    const back = button(w.back, 'minor', () => this.closeCard(), {}, 'back');
     const run = (big: boolean): HTMLButtonElement =>
       button(c.go, big ? 'go' : 'minor', (e) => {
         if (!this.hooks.ignoreTap(e)) this.hooks.run(spot, e);
@@ -1065,7 +1065,7 @@ export class OgunCityScreen implements WorldCity {
       });
     const see = button(w.seeStop, 'minor', (e) => {
       if (!this.hooks.ignoreTap(e)) this.hooks.seeStop?.(spot);
-    });
+    }, {}, 'pin');
     const bucket = OGUN_PRICES[spot].bucket;
     const some = (bucket === 'naira' ? this.wallet.kobo : bucket === 'power' ? this.wallet.power : this.wallet.tech) > 0;
     const shown = ogunBoards(this.st).includes(spot);
@@ -1086,8 +1086,8 @@ export class OgunCityScreen implements WorldCity {
     });
     const see = button(w.seeStop, 'minor', (e) => {
       if (!this.hooks.ignoreTap(e)) this.hooks.seeStop?.('badRoad');
-    });
-    const back = button(w.back, 'minor', () => this.closeCard());
+    }, {}, 'pin');
+    const back = button(w.back, 'minor', () => this.closeCard(), {}, 'back');
     // The big button and the small ones share a row (wrapping when narrow), so the card fits 640 x 200 and 320 x 240.
     const row = h('div', {}, go, see, back);
     row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-top:6px';
@@ -1117,7 +1117,7 @@ export class OgunCityScreen implements WorldCity {
   private showNotEnough(b: OgunBoard): void {
     const w = WORDS.city;
     const bucket = OGUN_PRICES[b].bucket;
-    const back = button(w.back, 'minor', () => this.closeCard());
+    const back = button(w.back, 'minor', () => this.closeCard(), {}, 'back');
     const spot: OgunFixId = bucket === 'naira' ? 'potholes' : bucket === 'power' ? 'dryTaps' : 'slowInternet';
     const go = button(OGUN_CITY_WORDS.cards[spot].go, 'go', (e) => {
       if (!this.hooks.ignoreTap(e)) this.hooks.run(spot, e);

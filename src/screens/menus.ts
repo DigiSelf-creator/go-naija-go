@@ -5,7 +5,6 @@
  * canvas; one screen shows at a time.
  */
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
-import { MUSIC_SVG } from '../art/musicIcon';
 import { WHEEL_STATES, wheelSvg } from '../art/wheel';
 import { readSafeArea } from '../engine/view';
 import {
@@ -29,7 +28,7 @@ import type { TiltAccess } from '../game/tilt';
 import type { SoundName } from '../engine/sound';
 import { CityScreen, type CitySound, type Mission } from './city';
 import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
-import { button, h } from './dom';
+import { button, h, say, type IconName } from './dom';
 import { wheelFit } from './streets';
 import type { PlanStop, RoadOpen, RoadView, StopInfo } from './road';
 import { GAME_NAME, OGUN_WORDS, WORDS, WORLD_PART_WORDS } from './words';
@@ -39,7 +38,7 @@ import type { WorldCity, WorldUi } from '../worlds/ui';
 import type { StateCity } from '../game/states';
 import type { Tune } from '../art/tunes';
 import { gateIconSvg } from '../art/gateway';
-import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelButtonHtml, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
+import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
 import { isNativeApp } from '../native/is-native';
 
 export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ride' | 'ogun' | null;
@@ -304,8 +303,8 @@ export class Menus {
     saveSettings(this.store, this.settings);
     const w = WORDS.title;
     for (const sw of this.layer.querySelectorAll<HTMLElement>('.music-switch')) {
-      const label = sw.querySelector('span');
-      if (label) label.textContent = this.settings.music ? w.musicOn : w.musicOff;
+      say(sw, this.settings.music ? w.musicOn : w.musicOff);
+      sw.dataset['on'] = String(this.settings.music);
       sw.classList.toggle('is-off', !this.settings.music);
     }
     this.hooks.musicChanged(this.settings.music);
@@ -604,9 +603,7 @@ export class Menus {
 
   /** The city's (and Ogun's) "Travel" button, with its small danfo icon. */
   private travelButton(): HTMLButtonElement {
-    const b = this.guarded('', 'minor travel-button', () => this.openTravel());
-    b.innerHTML = travelButtonHtml();
-    return b;
+    return this.guarded(OGUN_WORDS.travel.button, 'minor travel-button', () => this.openTravel(), {}, 'travel');
   }
 
   /** ogun.md 1.3: the bus ride through the gateway. */
@@ -639,12 +636,6 @@ export class Menus {
   /** O6b: Ogun from above (the Lagos city's buttons; its challenge road is Ogun's). */
   private ogunCityCard(make: NonNullable<WorldPart['city']>, arrived: boolean): HTMLElement {
     const w = WORDS.city;
-    const sound = this.guarded(this.settings.sound ? w.soundOn : w.soundOff, 'minor', () => {
-      this.settings.sound = !this.settings.sound;
-      saveSettings(this.store, this.settings);
-      sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
-      this.hooks.soundChanged(this.settings.sound);
-    });
     const line = this.ogunLine;
     this.ogunLine = null;
     const v = this.hooks.states();
@@ -652,12 +643,12 @@ export class Menus {
       life: this.hooks.cityLife,
       own: this.hooks.ogunCity,
       look: () => this.look,
-      topRight: [sound, button(w.settings, 'minor', () => this.showSettings('ogun'))],
+      topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('ogun'), {}, 'settings')],
       bottom: [
-        button(w.road, 'minor two-line', () => this.showOgunRoad()),
+        button(w.road, 'minor two-line', () => this.showOgunRoad(), {}, 'road'),
         this.travelButton(),
-        button(w.hero, 'minor', (e) => this.show('builder', e)),
-        button(w.wheel, 'minor two-line', () => this.showWheel('ogun')),
+        button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('ogun'), {}, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runOgunSpot(spot, tapPoint(e)),
       seeStop: (spot) => this.showOgunRoad(spot === 'potholes' ? 'ota' : spot === 'badRoad' ? 'hall' : 'expressway', true),
@@ -720,23 +711,31 @@ export class Menus {
   }
 
   /** A button whose taps go through ignoreTap first. */
-  private guarded(label: string, cls: string, onTap: (e: MouseEvent) => void, attrs: Record<string, string> = {}): HTMLButtonElement {
+  private guarded(label: string, cls: string, onTap: (e: MouseEvent) => void, attrs: Record<string, string> = {}, icon?: IconName): HTMLButtonElement {
     return button(label, cls, (e) => {
       if (this.ignoreTap(e)) return;
       const at = tapPoint(e);
       this.lastTap = at ? { ...at, t: performance.now() } : null;
       onTap(e);
       this.lastTap = null;
-    }, attrs);
+    }, attrs, icon);
   }
 
-  private gentleSwitch(): HTMLButtonElement {
-    const sw = button(WORDS.title.gentle, 'minor gentle', (e) => {
+  /**
+   * The Gentle mode switch. It holds the full words and a short form (style.md 1.2 rule 4,
+   * "Short screens"); CSS shows only the short one on a screen 300 px tall or less. Its spoken
+   * name is always the full words; "(off)" / "(on)" follow either form.
+   */
+  private gentleSwitch(where: 'over' | 'settings'): HTMLButtonElement {
+    const t = WORDS.title;
+    const sw = button(t.gentle, 'minor gentle', (e) => {
       if (this.ignoreTap(e)) return;
       this.settings.gentle = !this.settings.gentle;
       saveSettings(this.store, this.settings);
       sw.setAttribute('aria-checked', String(this.settings.gentle));
-    }, { role: 'switch', 'aria-checked': String(this.settings.gentle) });
+    }, { role: 'switch', 'aria-checked': String(this.settings.gentle), 'aria-label': t.gentle }, 'gentle');
+    const w = sw.querySelector('.w');
+    if (w) w.replaceChildren(h('span', { class: 'long' }, t.gentle), h('span', { class: 'short' }, where === 'over' ? t.gentleShortOver : t.gentleShortSettings));
     return sw;
   }
 
@@ -812,25 +811,27 @@ export class Menus {
     }
   }
 
-  /** "Sound: on" / "Sound: off" (title and pause). */
-  private soundSwitch(): HTMLButtonElement {
-    const w = WORDS.title;
-    const sw = this.guarded(this.settings.sound ? w.soundOn : w.soundOff, 'minor', () => {
+  /** "Sound: on" / "Sound: off" (title, pause, the cities and the road), its speaker and tick (ST-A2). */
+  private soundSwitch(w: { soundOn: string; soundOff: string } = WORDS.title): HTMLButtonElement {
+    const set = (): void => {
+      const on = this.settings.sound;
+      say(sw, on ? w.soundOn : w.soundOff, on ? 'sound' : 'soundOff');
+      sw.dataset['on'] = String(on);
+    };
+    const sw = this.guarded('', 'minor', () => {
       this.settings.sound = !this.settings.sound;
       saveSettings(this.store, this.settings);
-      sw.textContent = this.settings.sound ? w.soundOn : w.soundOff;
+      set();
       this.hooks.soundChanged(this.settings.sound);
-    });
+    }, {}, 'sound');
+    set();
     return sw;
   }
 
   /** "Music: on" / "Music: off" with the note icon (title and pause). */
   private musicSwitch(): HTMLButtonElement {
     const w = WORDS.title;
-    const label = h('span', {}, this.settings.music ? w.musicOn : w.musicOff);
-    const sw = this.guarded('', 'minor music-switch', () => this.toggleMusic());
-    sw.innerHTML = MUSIC_SVG;
-    sw.append(label);
+    const sw = this.guarded(this.settings.music ? w.musicOn : w.musicOff, 'minor music-switch', () => this.toggleMusic(), { 'data-on': String(this.settings.music) }, 'musicOff');
     sw.classList.toggle('is-off', !this.settings.music);
     return sw;
   }
@@ -842,9 +843,9 @@ export class Menus {
     const sw = this.guarded(label(), 'minor', () => {
       this.settings.busRide = !this.settings.busRide;
       saveSettings(this.store, this.settings);
-      sw.textContent = label();
+      say(sw, label());
       sw.setAttribute('aria-checked', String(this.settings.busRide));
-    }, { role: 'switch', 'aria-checked': String(this.settings.busRide) });
+    }, { role: 'switch', 'aria-checked': String(this.settings.busRide) }, 'travel');
     return sw;
   }
 
@@ -861,9 +862,9 @@ export class Menus {
         h(
           'div',
           { class: 'pause-grid' },
-          this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
-          this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
-          this.guarded(this.ogunRun ? OGUN_WORDS.laneHome : WORDS.lane.pauseHome, 'minor', () => this.hooks.leave('city')),
+          this.guarded(w.keepPlaying, 'go', () => this.hooks.resume(), {}, 'play'),
+          this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+          this.guarded(this.ogunRun ? OGUN_WORDS.laneHome : WORDS.lane.pauseHome, 'minor', () => this.hooks.leave('city'), {}, 'home'),
         ),
         h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch(), this.laneButtonsSwitch()),
         this.tiltRow('pause'),
@@ -876,10 +877,10 @@ export class Menus {
       h(
         'div',
         { class: 'pause-grid' },
-        this.guarded(w.keepPlaying, 'go', () => this.hooks.resume()),
-        this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
-        this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
+        this.guarded(w.keepPlaying, 'go', () => this.hooks.resume(), {}, 'play'),
+        this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+        this.guarded(w.home, 'minor', () => this.hooks.leave('city'), {}, 'home'),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
     );
@@ -898,11 +899,11 @@ export class Menus {
       h('h2', {}, w.heading),
       h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
-      !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch()),
+      !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
       this.actions(
-        this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e))),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
-        this.guarded(w.home, 'minor', () => this.hooks.leave('city')),
+        this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+        this.guarded(w.home, 'minor', () => this.hooks.leave('city'), {}, 'home'),
       ),
     );
   }
@@ -920,17 +921,17 @@ export class Menus {
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
       // O2b: from Ogun it goes home to Ogun's city; O3b: Ota's card goes on to Abeokuta.
       this.actions(
-        this.guarded(w.takeHome, 'go', () => this.hooks.takeHome()),
+        this.guarded(w.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'),
         ...(c.ogun
           ? [
-              ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)))] : []),
-              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-              this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+              ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),
+              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+              this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
             ]
           : [
-              this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e))),
-              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-              this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
+              this.guarded(c.last ? w.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next'),
+              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+              this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
             ]),
       ),
     );
@@ -950,10 +951,10 @@ export class Menus {
         h('p', {}, OGUN_WORDS.win.money(this.summary.kobo)),
         // O6b: the Challenge road (Ogun's) and the wheel, as Lagos's Win screen.
         this.actions(
-          this.guarded(o.takeHome, 'go', () => this.hooks.takeHome()),
-          this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))),
-          this.guarded(w.road, 'minor', () => this.hooks.leave('road')),
-          this.guarded(w.wheel, 'minor', () => this.hooks.leave('wheel')),
+          this.guarded(o.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'),
+          this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+          this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+          this.guarded(w.wheel, 'minor', () => this.hooks.leave('wheel'), {}, 'wheel'),
         ),
       );
     }
@@ -962,9 +963,9 @@ export class Menus {
     // O1b2 (ogun.md 1.2): the road to Ogun is open. The first win's big button is "On to Ogun";
     // after later wins a small "Go to Ogun" stays.
     const first = this.summary.firstHall === true;
-    const toOgun = this.guarded(first ? o.onToOgun : o.goToOgun, first ? 'go' : 'minor', () => this.hooks.leave('ogun'));
-    const wheel = this.guarded(w.wheel, first ? 'minor' : 'go', () => this.hooks.leave('wheel'));
-    const small = [this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e))), this.guarded(w.road, 'minor', () => this.hooks.leave('road'))];
+    const toOgun = this.guarded(first ? o.onToOgun : o.goToOgun, first ? 'go' : 'minor', () => this.hooks.leave('ogun'), {}, 'travel');
+    const wheel = this.guarded(w.wheel, first ? 'minor' : 'go', () => this.hooks.leave('wheel'), {}, 'wheel');
+    const small = [this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'), this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road')];
     return h(
       'div',
       { class: 'card narrow event', role: 'dialog', 'aria-label': w.heading },
@@ -1002,18 +1003,8 @@ export class Menus {
 
   private roadWith(m: RoadModule): HTMLElement {
     const w = WORDS.city;
-    const sound = this.guarded('', 'minor road-sound', () => {
-      this.settings.sound = !this.settings.sound;
-      saveSettings(this.store, this.settings);
-      label();
-      this.hooks.soundChanged(this.settings.sound);
-    });
-    const label = (): void => {
-      const t = this.settings.sound ? w.soundOn : w.soundOff;
-      sound.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M1 6h3l4-4v12l-4-4H1z"/><path d="${this.settings.sound ? 'M10 5q2 3 0 6M12 3q4 5 0 10' : 'M10 5l5 6M15 5l-5 6'}" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>${t}</span>`;
-      sound.setAttribute('aria-label', t);
-    };
-    label();
+    const sound = this.soundSwitch(w);
+    sound.classList.add('road-sound');
     const ogun = this.roadOpen.plan !== undefined;
     const screen = m.roadScreen(
       {
@@ -1079,7 +1070,7 @@ export class Menus {
       }),
     );
     const listSpot = h('div', { class: 'names-spot sr-only' }, list);
-    const allNames = button(w.allNames, 'minor', () => openList());
+    const allNames = button(w.allNames, 'minor', () => openList(), {}, 'wheel');
     const rail = h(
       'div',
       { class: 'wheel-rail' },
@@ -1088,7 +1079,7 @@ export class Menus {
       h('p', { class: 'wide-only' }, h('b', {}, w.count(n)), ' ', moreLine),
       h('p', { class: 'narrow-only count', 'aria-hidden': 'true' }, h('b', {}, w.countShort(n)), h('span', {}, w.cogsTurning)),
       listSpot,
-      h('div', { class: 'wheel-buttons' }, allNames, button(w.back, 'minor', () => this.show(this.wheelBack))),
+      h('div', { class: 'wheel-buttons' }, allNames, button(w.back, 'minor', () => this.show(this.wheelBack), {}, 'back')),
     );
 
     const heading = h('h2', { tabindex: '-1' }, w.listHeading);
@@ -1097,7 +1088,7 @@ export class Menus {
     const panel = h(
       'div',
       { class: 'names-panel' },
-      h('div', { class: 'names-top' }, heading, button(w.close, 'minor', () => closeList())),
+      h('div', { class: 'names-top' }, heading, button(w.close, 'minor', () => closeList(), {}, 'close')),
       h('div', { class: 'names-wrap' }, box, bar),
     );
     const card = h('div', { class: 'card wheel-card', role: 'dialog', 'aria-label': w.heading }, pic, rail, panel);
@@ -1165,15 +1156,15 @@ export class Menus {
               if (isOldSave(this.store)) this.show('builder', this.screen === 'intro' ? undefined : e);
               else this.hooks.start(this.screen === 'intro' ? null : at);
             }, e);
-          })
-        : button(w.makeHero, 'go', (e) => this.showIntro('makeHero', (by) => this.show('builder', by), e)),
+          }, {}, 'play')
+        : button(w.makeHero, 'go', (e) => this.showIntro('makeHero', (by) => this.show('builder', by), e), {}, 'hero'),
       h(
         'div',
         { class: 'minor-row' },
-        saved && button(w.changeHero, 'minor', (e) => this.show('builder', e)),
-        button(w.wheel, 'minor', () => this.showWheel('title')),
+        saved && button(w.changeHero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
+        button(w.wheel, 'minor', () => this.showWheel('title'), {}, 'wheel'),
         button(w.credits, 'minor', () => this.show('credits')),
-        button(w.settings, 'minor', () => this.showSettings('title')),
+        button(w.settings, 'minor', () => this.showSettings('title'), {}, 'settings'),
         this.soundSwitch(),
         this.musicSwitch(),
       ),
@@ -1193,12 +1184,12 @@ export class Menus {
         { class: 'settings-list' },
         this.soundSwitch(),
         this.musicSwitch(),
-        this.gentleSwitch(),
+        this.gentleSwitch('settings'),
         this.laneButtonsSwitch(),
         this.tiltRow('settings'),
         ogunOpen && this.busRideSwitch(),
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
-        button(w.back, 'go', () => this.show(this.settingsBack)),
+        button(w.back, 'go', () => this.show(this.settingsBack), {}, 'back'),
       ),
       ogunOpen && h('p', { class: 'small settings-saved' }, OGUN_WORDS.saved),
     );
@@ -1226,12 +1217,6 @@ export class Menus {
   /** city.md (b) Lagos from above, the home screen. */
   private cityCard(): HTMLElement {
     const w = WORDS.city;
-    const sound = this.guarded(this.settings.sound ? w.soundOn : w.soundOff, 'minor', () => {
-      this.settings.sound = !this.settings.sound;
-      saveSettings(this.store, this.settings);
-      sound.textContent = this.settings.sound ? w.soundOn : w.soundOff;
-      this.hooks.soundChanged(this.settings.sound);
-    });
     const mission = this.mission;
     this.mission = null;
     const screen = new CityScreen({
@@ -1242,13 +1227,13 @@ export class Menus {
       still: () => this.hooks.stillWanted(),
       touch: () => this.touchWords(),
       mission,
-      topRight: [sound, button(w.settings, 'minor', () => this.showSettings('city'))],
+      topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('city'), {}, 'settings')],
       bottom: [
-        button(w.road, 'minor two-line', () => this.showRoad()),
+        button(w.road, 'minor two-line', () => this.showRoad(), {}, 'road'),
         // O1b2 (ogun.md 1.2): "Travel" once Ogun is open.
         ...(this.hooks.states().ogun.open ? [this.travelButton()] : []),
-        button(w.hero, 'minor', (e) => this.show('builder', e)),
-        button(w.wheel, 'minor two-line', () => this.showWheel('city')),
+        button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('city'), {}, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
       // S3e0 part 7: the road, scrolled to that stop with its card open, "for" that card's fix.
@@ -1323,7 +1308,7 @@ export class Menus {
       // Starting keeps the look shown, even if nothing was tapped, and always saves body and age.
       this.look = saveLook(this.store, this.look);
       this.hooks.start(tapPoint(e));
-    });
+    }, {}, 'play');
 
     const card = h(
       'div',
@@ -1399,7 +1384,7 @@ export class Menus {
       { class: 'card narrow', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       ...w.lines.map((l) => h('p', {}, l)),
-      button(w.back, 'go', () => this.show('title')),
+      button(w.back, 'go', () => this.show('title'), {}, 'back'),
     );
   }
 }

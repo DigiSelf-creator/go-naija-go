@@ -78,8 +78,10 @@ for (const vp of [
           await expect(d.getByRole('button', { name, exact: true }), `${bodyName} ${ageName}: ${name}`).toHaveAttribute('aria-pressed', 'true');
         }
         expect(await look(page)).toEqual({ skin: 2, hair: HAIR.indexOf(hair), outfit: OUTFIT.indexOf(outfit), body, age });
-        // Male or female and Age each sit on one line.
+        // Male or female sits on one line everywhere; Age too, except at 320 x 240, where its
+        // 15 px chips may wrap ("Elder" under "Teen" and "Adult"; design.md S2.3, style.md 1.2 rule 4).
         for (const row of ['Male or female', 'Age']) {
+          if (row === 'Age' && vp.width === 320 && vp.height === 240) continue;
           const ys = await d.getByRole('group', { name: row, exact: true }).locator('button').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().y)));
           expect(new Set(ys).size, `${row} on one line`).toBe(1);
         }

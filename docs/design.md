@@ -521,7 +521,7 @@ Order of rows: Male or female, Age, Skin, Hair, Outfit.
 
 - Landscape, screen 421 px tall or more: left column has the live preview (140 x 180) and under it the green button. Right column: heading, then the five rows. Fits without scrolling from about 700 x 421.
 - Landscape, 420 px tall or less: same two columns. Left: preview 104 to 120 px wide, button under it, always on screen. Right column scrolls up and down by itself; while more is below, its bottom 24 px fades to the panel colour and a scroll bar shows. Row labels sit above their chips.
-- 320 x 240: left column 104 px (preview 104 x 120, button 104 x 56, words on two lines); right column about 182 px wide: heading, then rows. Male or female and Age fit on one line each; Skin wraps to two lines; Hair and Outfit wrap. The panel scrolls; the button never does.
+- 320 x 240: left column 104 px (preview 104 x 120, button 104 x 56, words on two lines); right column about 182 px wide: heading, then rows. Chip words are 15 px (style.md 1.2 rule 4, "Short screens"). Male or female fits on one line; Age may wrap ("Teen" and "Adult", then "Elder" under them); Skin wraps to two lines; Hair and Outfit wrap. The panel scrolls; the button never does. At 480 x 200 and 640 x 200, Male or female and Age each fit one line.
 - Upright: as part 1 (preview on top, rows below, button at the bottom), scrolling if needed.
 - Targets: swatches 48 x 48, chips at least 44 tall, 8 px apart. The chosen chip has a thick dark ring and a tick (part 1).
 
@@ -1233,7 +1233,7 @@ Hint words (in the hint bar, 3.5 s, after every Gentle mode climb-out; all 35 ch
 - after a big pit: "Up you come! Run, then jump twice."
 - In Gentle mode the bus stop hint "Bus stop! Now you start here." is not true any more, so it says "Bus stop! Halfway there." instead.
 
-Words on screens (gamedev): street Game over offer "Want more tries? Gentle mode gives you 5 lives, and you climb out of holes."; the hall's offer stays "Want more tries? Gentle mode gives you 5 lives." The switch label stays "Gentle mode: 5 lives instead of 3" (Tp, R7 a: "lives" and "Gentle mode"; the layout is already tested at 320 px).
+Words on screens (gamedev): street Game over offer "Want more tries? Gentle mode gives you 5 lives, and you climb out of holes."; the hall's offer stays "Want more tries? Gentle mode gives you 5 lives." The switch label stays "Gentle mode: 5 lives instead of 3" (Tp, R7 a: "lives" and "Gentle mode"; the layout is already tested at 320 px). On a screen 300 px tall or less, the switch shows its short form "Gentle mode" with "(off)", at 15 px, and its spoken name stays "Gentle mode: 5 lives instead of 3" (style.md 1.2 rule 4, "Short screens", 18 Nov 2026). The offer beside it already says the 5 lives.
 
 Art: the "dust off" pose for every body (S2.3), facing right: a quick crouch, two pats on the knees, a small dust puff, then stand. Two frames are enough.
 
@@ -2688,7 +2688,7 @@ The look eases back to the street's own look over the last 120 units of the stre
 - Walls mixed 50% toward warm sand `#c9b48c`, roofs a further 22% toward dusty brown `#9a8262`; 2 of every 3 windows warm brown `#5a4a3a` with no glint (the same rule as d2).
 - **2 of the first 4 shop fronts** with a roll-down shutter (brown-grey, 4 flat lines across).
 - **One neat tied sack and a box** at the kerb, waiting for collection, never within 100 units of a food stall.
-- **1 person** doing something proud, in the back layer, standing still: Alausa, a woman sweeping in front of her shop; Computer Village, a repairer at a small table with a phone; Ikeja, a man reading by the bus stop sign.
+- **1 person** doing something proud, in the back layer, standing still: Alausa, a woman wiping her own shop window with a cloth (no broom, decision 75); Computer Village, a repairer at a small table with a phone; Ikeja, a man reading by the bus stop sign.
 - **The spot's own mark:**
   - Alausa: 5 thin cracks on the road's front face (dark `#3a332a`, 1.5 units wide, 10 to 24 units long, three zig-zag strokes each), all between y 306 and 330, so they never touch the walking line at y 300 and never look like a gap. **Two cones** at 70% size, standing against a shop wall in the back layer, never on the road band, so they never read as the cones that mark a pit's lip.
   - Computer Village: our own phone mast behind the shop row with **1 of 4 bars** filled (4 rising boxes, 1 filled, 3 outlined), and 2 of 3 shop screens dark.
@@ -2856,7 +2856,7 @@ Each street has its own cast of about 16 looks (part 8), baked once (part 11). E
 
 **Alausa (street 1, morning, home):**
 - Walkers going to work: a woman in iro and buba with a gele and a handbag, a man in a shirt and trousers with a small bag, a teen with a school bag (plain uniform, no crest).
-- Standing: a woman sweeping her own front (S3e0's proud one), a man reading a paper by a door, a mother with a baby tied on her back in a wrapper, an elder in a kaftan and cap sitting on a bench outside a door.
+- Standing: a woman wiping her own shop window with a cloth (S3e0's proud one; no broom, decision 75), a man reading a paper by a door, a mother with a baby tied on her back in a wrapper, an elder in a kaftan and cap sitting on a bench outside a door.
 - Traders: an akara seller at a small pot and table (a steam puff), a bread seller with a tray on her head.
 - Children playing: two children with a small ball that bounces between them in place, never toward the road (never gold or yellow, so it never looks like a kobo); or two girls clapping and stepping a game of ten-ten.
 - Bus stop (checkpoint): 2 people waiting under the shelter.
@@ -3030,7 +3030,7 @@ The city already has standing people per block (`BLOCK_LIFE`) and walkers in the
 
 **art (S3g1a), from this note:**
 1. **The people kit** (src/art/folk.ts), our own look, matching the decision 60 shading at small size: bodies (slim, medium, round; child, teen, adult, elder; male and female), 7 skin tones, hair (low cut, afro, braids, cornrows, grey for elders) and headwear (gele, headscarf, hijab, fila, kaftan cap, babban riga cap), the 13 dress kinds of part 8 with our own patterns, a baby tied on a back, glasses, a wheelchair. Frames: stand, walk (4), wave (2), cheer (2), call, sit.
-2. **What they hold:** a handbag, a school bag, a backpack, a tray on the head (bread), a basin on the head (goods), a box on the head, a basket, a phone, a broom, a paper, a market bag, a wrapped plate and a takeaway pack, a small ball (never gold or yellow).
+2. **What they hold:** a handbag, a school bag, a backpack, a tray on the head (bread), a basin on the head (goods), a box on the head, a basket, a phone, a cleaning cloth, a paper, a market bag, a wrapped plate and a takeaway pack, a small ball (never gold or yellow); no broom (decision 75).
 3. **Traders' small stations:** the akara pot and table with steam, a phone case held up, an ankara roll over an arm, the tailor's machine (reuse the market art), the buka cook's pots (reuse buspark.ts).
 4. **The okada** (side on): a plain motorcycle, a rider in a plain one-colour helmet, a passenger with a bag; 2 wheel frames. **Keke riders:** a driver and two passengers for the existing keke.
 5. **Heads in bus windows:** heads and shoulders for the passing bus, the start fence bus and the bus park bus, still and with one arm waving.

@@ -1220,11 +1220,11 @@ export class CityScreen {
 
   openCard(spot: SpotId): void {
     const w = WORDS.city;
-    const back = button(w.back, 'minor', () => this.closeCard());
+    const back = button(w.back, 'minor', () => this.closeCard(), {}, 'back');
     const see = (): HTMLButtonElement =>
       button(w.seeStop, 'minor', (e) => {
         if (!this.hooks.ignoreTap(e)) this.hooks.seeStop?.(spot);
-      });
+      }, {}, 'pin');
     const st = this.life.state;
     let body: HTMLElement[];
     if (this.looks[spot] === 'fixed') {
@@ -1273,7 +1273,7 @@ export class CityScreen {
   /** d8: a coming-soon pin's card. */
   private openSoon(id: SoonId): void {
     const w = WORDS.city;
-    const back = button(w.back, 'minor', () => this.closeCard());
+    const back = button(w.back, 'minor', () => this.closeCard(), {}, 'back');
     this.showCard(null, SOON_WORDS[id], [h('h2', {}, SOON_WORDS[id]), h('p', {}, w.soon[id]), h('p', { class: 'city-soon' }, w.soon.line)], [back]);
     this.onClose = () => this.soonPins.find((p) => p.id === id)?.el.focus({ preventScroll: true });
     back.focus({ preventScroll: true });
@@ -1292,7 +1292,7 @@ export class CityScreen {
   private showNotEnough(b: BuildId): void {
     const w = WORDS.city;
     const bucket = bucketOf(b);
-    const back = button(w.back, 'minor', () => this.closeCard());
+    const back = button(w.back, 'minor', () => this.closeCard(), {}, 'back');
     const body: HTMLElement[] = [h('p', { class: 'city-need' }, w.need(priceText(bucket, leftOf(this.life.state, b))))];
     if (bucket === 'naira') {
       body.push(

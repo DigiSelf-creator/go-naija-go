@@ -384,8 +384,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
   const left = arrow(-1);
   const right = arrow(1);
   const wrap = h('div', { class: 'road-wrap' }, scroller, left, right);
-  const home = button('', 'minor road-home', () => hooks.home());
-  home.innerHTML = `${ic('house')}<span>${w.home}</span>`;
+  const home = button(w.home, 'minor road-home', () => hooks.home(), {}, 'home');
   const hint = h('p', { class: 'road-hint', hidden: true, 'aria-live': 'polite' });
   const spot = h('div', { class: 'road-dim', hidden: true });
   const el = h('div', { class: 'card road-screen', role: 'region', 'aria-label': w.heading }, h('div', { class: 'road-top' }, home, h('h2', {}, w.heading), hooks.soundButton), hint, wrap, spot);
@@ -460,7 +459,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
   function openCard(st: PlanStop): void {
     const back = button(w.back, 'minor', (e) => {
       if (!soon(e)) closeCard();
-    });
+    }, {}, 'back');
     const go = st.go
       ? button(st.go, 'go', (e) => {
           if (soon(e)) return;
@@ -469,7 +468,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
           if (st.id === 'ogun' || plan) closeCard();
           if (plan) plan.play(st, e);
           else hooks.play(st as StopInfo, e);
-        })
+        }, {}, 'go')
       : null;
     let picEl: HTMLElement;
     if (plan) picEl = h('canvas', { class: 'road-card-pic', role: 'img', 'aria-label': st.pic ?? w.pic(st.name) });

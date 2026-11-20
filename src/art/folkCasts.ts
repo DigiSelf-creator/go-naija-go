@@ -14,12 +14,16 @@ const BODIES: readonly FolkBody[] = ['slim', 'medium', 'round'];
 export const FOLK_HAIRS: readonly FolkHair[] = ['lowcut', 'afro', 'braids', 'cornrows', 'grey', 'puffs', 'bun'];
 export const FOLK_HEADWEAR: readonly FolkHeadwear[] = ['none', 'gele', 'headscarf', 'hijab', 'fila', 'kaftanCap', 'rigaCap', 'helmet'];
 
+/** Held-thing letters in FOLK_HOLDS order; j (the broom, decision 75) is retired so old codes keep their meaning. */
+const HOLD_LETTERS = 'abcdefghiklmnopq';
+
 /**
  * Reads a look written as a short code, one letter a field:
  * skin (0 to 6), age (c t a e), sex (m f), body (s m r), hair (l a c b g p u: low cut, afro,
  * braids, cornrows, grey, puffs, bun), headwear (- G S H F K R M: none, gele, headscarf, hijab,
  * fila, kaftan cap, riga cap, helmet), dress (a to n: FOLK_DRESSES then sport), cloth a, cloth b,
- * headwear colour (A to T in FOLK_CLOTH, or .), held thing (a to q in FOLK_HOLDS, or .), then
+ * headwear colour (A to T in FOLK_CLOTH, or .), held thing (a to q in FOLK_HOLDS, or .; j is
+ * retired, it was the broom: decision 75), then
  * any of g (glasses), y (baby), d (beard), w (wheelchair), s (stool).
  */
 export function folkLook(code: string): FolkLook {
@@ -37,7 +41,7 @@ export function folkLook(code: string): FolkLook {
     b: cloth(8),
   };
   if (ch(9) !== '.') l.h = cloth(9);
-  const hold = FOLK_HOLDS[code.charCodeAt(10) - 97];
+  const hold = FOLK_HOLDS[HOLD_LETTERS.indexOf(ch(10))];
   if (hold) l.hold = hold;
   const f = code.slice(11);
   if (f.includes('g')) l.glasses = true;
@@ -60,7 +64,7 @@ export const STORE_KEEPER_SPOT = { x: 80, y: 292 } as const;
  * these with the street's seed and skips the player's own look (isHeroLook).
  */
 export const STREET_CASTS: Record<'alausa' | 'village' | 'ikeja', readonly FolkLook[]> = {
-  // Walkers to work (one with a basin, not a broom: a held broom can read as a party sign; Tp), the sweeper, the reader, a mother with a baby, an elder, the bread seller, children with a ball
+  // Walkers to work (one with a basin, not a broom: a held broom can read as a party sign; Tp), a shop keeper, the reader, a mother with a baby, an elder, the bread seller, children with a ball
   alausa: cast('2afmcGaABAa 4amsl-lIM.kg 0tfsp-mNJ.b 3afrcSgCHDe 6emsgKdFON.d 5afmuSgGCE.y 1afrcSaPDDn 4afmlSgQAAd 2cmsl-mNB.o 5cfsp-kRB.. 0efmgGaECE.g 1ammlFbDFD.w 6tmsb-kCB.i 3amrl-iNJ.. 5amsa-jFB.c 6afsa-kAB.l'),
   // Buyers with phones, a porter with a basin, traders with a phone case and cloth, the pepper seller, a student
   village: cast('3amsl-kBC.i 1afrcSgCGGe 5afmuHfHFQl 0tmsl-lRM.cg 2amml-kAB.p 6afrcGaDCCq 4afmbSgPHHh 3amrl-hJM.. 1afsa-kEB.. 0emmgReINF.d 5cfsp-mNH.b 2amma-lNM..w 6tfsc-jCA.i 4efrgSgIEC. 5amsb-bKO.f 2cmsl-kCB..'),

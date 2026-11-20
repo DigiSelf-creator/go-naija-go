@@ -193,6 +193,12 @@ describe('the people kit (S3g1a)', () => {
     expect(folkLook('4efrgSgICE.s')).toEqual({ skin: 4, age: 'elder', sex: 'f', body: 'round', hair: 'grey', head: 'headscarf', dress: 'wrapperBlouse', a: '#5aa9e6', b: '#f2b300', h: '#7d3c98', stool: true });
     expect(folkLook('2cmsl-mNB.o').hold).toBe('ball');
     expect(folkLook('0tmsl-lRM.cg')).toMatchObject({ hold: 'backpack', glasses: true, dress: 'shirtTrousers' });
+    // No broom (decision 75): j is retired and reads as nothing; the letters after it keep their meaning
+    expect(FOLK_HOLDS as readonly string[]).not.toContain('broom');
+    expect(folkLook('2amsl-kAB.j').hold).toBeUndefined();
+    expect(folkLook('2amsl-kAB.i').hold).toBe('phone');
+    expect(folkLook('2amsl-kAB.k').hold).toBe('paper');
+    expect(folkLook('2amsl-kAB.q').hold).toBe('ankaraRoll');
   });
 
   it('finds the big bus windows', () => {
