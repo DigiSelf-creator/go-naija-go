@@ -93,6 +93,8 @@ const MAP_DPR = 1.5;
 const MAP_DPR_MOVING = 1;
 /** W18: the tax explanation shows 4 to 8 s. */
 const TAX_HINT = 6;
+/** QA-POL-1: how long (s) a hint waits for a spot clear of the boards before it shows over them. */
+const HINT_WAIT = 1;
 
 const BUCKET_SOUND: Record<BucketKind, string> = { naira: 'payChink', power: 'payBulb', tech: 'payChip' };
 const DRAW_PLACE = { adire: drawAdireMarket, mill: drawGarriMill, kola: drawKolaMarket } as const;
@@ -1001,6 +1003,7 @@ export class OgunCityScreen implements WorldCity {
     this.hintEl.hidden = !text;
     this.hintEl.textContent = text ?? '';
     this.hintUntil = this.time + secs;
+    this.hintWaited = 0;
     this.placeHint();
   }
   /**
@@ -1008,7 +1011,9 @@ export class OgunCityScreen implements WorldCity {
    * (heading, chips, buttons), even where the map's own top is held at half the screen; else just
    * above the bottom buttons; else over the heading (words only). Never over a button or the chips.
    * Boards keep away from the first such spot when they can (placeSigns); fitHint then shows the
-   * hint on the first spot that covers no board or bubble either, or hides it until one is clear.
+   * hint on the first spot that covers no board or bubble either. With none clear it waits hidden
+   * for HINT_WAIT, then shows on its best spot over the boards (QA-POL-1: at 320 x 240 the boards
+   * fill the only free band, and a first-visit hint must still be seen).
    */
   private placeHint(): void {
     const r = this.el.getBoundingClientRect();
@@ -1032,16 +1037,21 @@ export class OgunCityScreen implements WorldCity {
     const b = this.hintWant;
     if (before?.x !== b?.x || before?.y !== b?.y || before?.w !== b?.w || before?.h !== b?.h) this.requestDraw();
   }
-  /** Shows the hint on the first spot that covers no board or bubble; with none clear, hidden for now. */
+  /**
+   * Shows the hint on the first spot that covers no board or bubble; with none clear, hidden for
+   * now, and after HINT_WAIT on its best spot anyway (never over a button or a counter).
+   */
   private fitHint(): void {
     if (this.hintEl.hidden) return;
     const signs: Box[] = [...this.boardBox.values(), ...this.bubbleBox.values(), ...this.arrowBox.map((a) => ({ x: a.x - a.tap / 2, y: a.y - a.tap / 2, w: a.tap, h: a.tap }))];
-    const spot = this.hintSpots.find((b) => !signs.some((q) => hits(q, b))) ?? null;
+    const spot = this.hintSpots.find((b) => !signs.some((q) => hits(q, b))) ?? (this.hintWaited >= HINT_WAIT ? this.hintWant : null);
     const vis = spot ? '' : 'hidden';
     if (this.hintEl.style.visibility !== vis) this.hintEl.style.visibility = vis;
     if (spot && this.hintEl.style.top !== `${spot.y}px`) this.hintEl.style.top = `${spot.y}px`;
   }
   private hintSpots: Box[] = [];
+  /** How long the shown hint has waited hidden for a spot clear of the boards (QA-POL-1). */
+  private hintWaited = 0;
   /** The hint's best spot while it shows: boards keep clear of it when they can (placeSigns). */
   private hintWant: Box | null = null;
 
@@ -1329,8 +1339,14 @@ export class OgunCityScreen implements WorldCity {
         this.showLine();
       }
     }
-    // A hint waiting hidden for a clear spot (fitHint) keeps its time until it shows.
-    if (!this.hintEl.hidden && this.hintEl.style.visibility === 'hidden') this.hintUntil += dt;
+    // A hint waiting hidden for a clear spot (fitHint) keeps its time until it shows; after
+    // HINT_WAIT it shows over the boards (QA-POL-1), placed now: a still city draws nothing.
+    if (!this.hintEl.hidden && this.hintEl.style.visibility === 'hidden') {
+      this.hintUntil += dt;
+      const was = this.hintWaited;
+      this.hintWaited += dt;
+      if (was < HINT_WAIT && this.hintWaited >= HINT_WAIT) this.fitHint();
+    }
     if (!this.hintEl.hidden && this.time >= this.hintUntil) this.setHint(null);
     // The camera follows the hero (eased; at once with reduced motion).
     const want = this.centreOn(this.hero, this.cam.zoom);

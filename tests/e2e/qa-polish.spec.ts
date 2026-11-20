@@ -37,8 +37,7 @@ test('Ogun first visit, upright 360 x 640: the walk hint shows at once', async (
   await expect.poll(() => hintShown(page)).toBe(true);
 });
 
-test('QA-POL-1 (open): Ogun first visit at 320 x 240: the walk hint shows once the hero has walked about', async ({ page }) => {
-  test.fail(true, 'QA-POL-1: at 320 x 240 the hint waits for a spot clear of boards that never opens, so it is never seen');
+test('QA-POL-1 (fixed): Ogun first visit at 320 x 240: the walk hint shows once the hero has walked about', async ({ page }) => {
   test.setTimeout(90_000);
   await openFreshOgun(page, { width: 320, height: 240 });
   let seen = await hintShown(page);
