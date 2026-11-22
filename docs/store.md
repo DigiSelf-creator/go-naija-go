@@ -244,14 +244,12 @@ Swap-in if po prefers: the challenge road (the stops before and after their fix)
 
 Rules for the pictures: the HUD may show (it is the real game); no debug lines; captions in plain words, our own font look, never colour alone to carry meaning; no phone frames that copy a real phone maker's look; no real place's logo or sign.
 
-## 10. Still to give (Tp)
+## 10. Tp's answers (decision 87, Tp 22 Nov)
 
-The stores ask for these. We must not invent them.
-
-1. **Contact email** for both listings (Play shows it to everyone; Apple shows it to reviewers). Tp's own, kept apart from any employer (decision 40).
-2. **Support URL** (Apple needs one). Recommend: the privacy page link until there is a support page, with the contact email on the listing. Tp to agree.
-3. **Developer name** shown under the app (part 1).
-4. **Price**: free, nothing to buy (as the description says). Tp confirms.
-5. **Countries**: recommend all countries where both stores sell. Tp confirms.
-6. **Apple age rating**: recommend the honest 4+ that Apple works out, not a hand-raised 9+. Children generally, about 5 and up, is who we make it for (decision 86); the store rating is what is in it.
-7. **Play age groups**: tick every group from "5 and under" up (decision 86), which brings Play's Families rules; we already meet them.
+1. **Contact email**: a new email made only for Gbese!, kept apart from Tp's own inbox and any employer (decisions 40, 87). Tp makes it and types it into the store pages; it is never put in this repo or the chat.
+2. **Support URL**: the privacy page link, https://digiself-creator.github.io/go-naija-go/privacy.html, until there is a support page.
+3. **Developer name**: CoachNaz.
+4. **Price**: free, nothing to buy.
+5. **Countries**: every country where both stores sell.
+6. **Apple age rating**: the honest 4+ that Apple works out; not raised by hand.
+7. **Play age groups**: every group from "5 and under" up (decision 86); Play's Families rules apply and we already meet them.
