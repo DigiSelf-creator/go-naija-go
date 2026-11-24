@@ -117,6 +117,17 @@ export class Hud {
   }
   private readonly parcelIcon: HTMLCanvasElement;
 
+  /** MS3b: a quick mission's goal chip, after the counters (screens.css puts it under the row on a tall screen). */
+  setChip(el: HTMLElement): void {
+    if (el.parentElement !== this.root) this.root.insertBefore(el, this.root.lastElementChild);
+    this.fit(true);
+  }
+
+  /** The chip's size changed: fit the row again. */
+  refit(): void {
+    this.fit(true);
+  }
+
   show(on: boolean): void {
     this.root.hidden = !on;
     if (on) this.fit(true);

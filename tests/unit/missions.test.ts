@@ -21,7 +21,7 @@ import { FUFU_RULES } from '../../src/game/fufu';
 import { parseLevel, type Level } from '../../src/game/level';
 import { pitsOf } from '../../src/game/pits';
 import { RULES, Run, type RunEvent } from '../../src/game/run';
-import { LANE, MissionBook, MissionGo, STAR_KOBO, coinStars, helpFor, mergeMissions, placeToPlay, readMissions, type MissionDef } from '../../src/game/missions';
+import { LANE, MissionBook, MissionGo, STAR_KOBO, coinStars, helpFor, placeToPlay, readMissions, type MissionDef } from '../../src/game/missions';
 import { lagosMissions, withCoins } from '../../src/screens/missions';
 import { WORDS } from '../../src/screens/words';
 import { OGUN_MISSIONS } from '../../src/worlds/ogun/missions';
@@ -227,7 +227,7 @@ describe('stars: kept, paid once, saved (parts 1 and 3)', () => {
     const c = new MissionGo(d, 3, book, () => undefined);
     expect(c.found()).toBe(1);
     expect(book.stars(d.id)).toBe(2);
-    expect(new MissionBook(createStore(p.get)).save.found[d.id]).toEqual([2, 3]);
+    expect(new MissionBook(createStore(p.get)).save.found).toEqual({ 'lagos-wells-2': 1, 'lagos-wells-3': 1 });
     // Ikeja's help: after two goes there without its well.
     const d2 = { ...d, id: 'x' };
     new MissionGo(d2, 3, book, () => undefined);
@@ -239,9 +239,9 @@ describe('stars: kept, paid once, saved (parts 1 and 3)', () => {
   });
 
   it('merge never lowers anything; a broken copy reads as no stars and is left alone until a star fills', () => {
-    const a = readMissions({ v: 1, stars: { x: 2 }, best: { x: 50 }, found: { w: [2] } });
-    const b = readMissions({ stars: { x: 1, y: 1 }, best: { x: 80 }, found: { w: [3, 'z'] }, helper: { lagos: true } });
-    expect(mergeMissions(a, b)).toEqual({ stars: { x: 2, y: 1 }, best: { x: 80 }, tries: {}, found: { w: [2, 3] }, helper: { lagos: true } });
+    const a = { v: 1, stars: { x: 2 }, best: { x: 50 }, found: { 'w-2': 1 } };
+    const b = { stars: { x: 1, y: 1, z: 'no', q: -3 }, best: { x: 80 }, found: { 'w-3': 1 }, helper: { lagos: 1 }, tries: 'junk' };
+    expect(readMissions(a, b)).toEqual({ stars: { x: 2, y: 1 }, best: { x: 80 }, tries: {}, found: { 'w-2': 1, 'w-3': 1 }, helper: { lagos: 1 } });
     expect(readMissions('junk')).toEqual(emptySave());
     const p = phone();
     p.data.set('gidi-missions', '{broken');

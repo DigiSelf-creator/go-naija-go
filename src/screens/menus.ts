@@ -40,6 +40,10 @@ import type { Tune } from '../art/tunes';
 import { gateIconSvg } from '../art/gateway';
 import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
 import { isNativeApp } from '../native/is-native';
+import type { BoardView } from './missionBoard';
+import { BOARD_KIT } from './missions';
+import { starSvg } from '../art/star';
+import type { MissionDef } from '../game/missions';
 
 export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ride' | 'ogun' | null;
 
@@ -67,6 +71,17 @@ export function preloadRoad(): Promise<RoadModule> {
     },
   );
   return roadLoading;
+}
+
+/** MS3b: the Missions board and cards are their own chunk too (missionBoard.ts), fetched while the city is idle. */
+type BoardModule = typeof import('./missionBoard');
+let boardLoading: Promise<BoardModule> | null = null;
+export function preloadBoard(): Promise<BoardModule> {
+  boardLoading ??= import('./missionBoard').catch((err: unknown) => {
+    boardLoading = null;
+    throw err;
+  });
+  return boardLoading;
 }
 
 /**
@@ -178,6 +193,12 @@ export interface MenuHooks {
   playOgunStop(stop: PlanStop, at: TapPoint | null): void;
   /** O6b: what Ogun's challenge road reads. */
   ogunRoadView(): WorldRoadView;
+  /** MS3b: a state's Missions board (null: no Missions button yet). */
+  missions?(state: StateId): Omit<BoardView, 'play' | 'close' | 'still'> | null;
+  /** MS3b: a mission card's Play. */
+  playMission?(d: MissionDef, at: TapPoint | null): void;
+  /** MS3c: every star of the state is won and its card has not shown yet (true once: it is saved as shown). */
+  everyDue?(state: StateId): boolean;
 }
 
 /** What the game over and win screens show. */
@@ -190,6 +211,8 @@ export interface RunSummary {
   firstHall?: boolean;
   /** O2b: lost on an Ogun street: "You keep {money} for Ogun..."; Challenge road goes to Ogun's (OG-R35). */
   ogun?: boolean;
+  /** MS3b: "You got a star!" (stars won in this go of a mission), or null. */
+  stars?: string | null;
 }
 
 /** What the Street cleared screen shows (S2.10). */
@@ -205,6 +228,8 @@ export interface ClearedSummary {
   ogun?: boolean;
   /** O3b: an Ogun street with the next one built (Ota to Abeokuta): "Next street". */
   ogunNext?: boolean;
+  /** MS3b: "You got a star!", or null. */
+  stars?: string | null;
 }
 
 export class Menus {
@@ -601,6 +626,47 @@ export class Menus {
     );
   }
 
+  /** MS3b: "Missions", first in the city's bottom row once the state has missions to show. */
+  private missionsButton(state: StateId): HTMLButtonElement[] {
+    if (!this.hooks.missions?.(state)) return [];
+    const b = this.guarded(WORDS.missions.button, 'minor ms-button', () => this.openMissions(state), {}, 'settings');
+    // The star stands in the icon disc (art's star, MS2, replaces starSvg).
+    const disc = b.querySelector<HTMLElement>('.ic');
+    if (disc) disc.innerHTML = starSvg(true, 20);
+    return [b];
+  }
+
+  /** MS3b: the Missions board over the city (its chunk is usually in already: preloadBoard). */
+  private openMissions(state: StateId): void {
+    const from = this.screen;
+    void preloadBoard().then(({ missionBoard }) => {
+      const v = this.hooks.missions?.(state);
+      if (!v || this.screen !== from || this.overlay) return;
+      this.openOverlay(
+        missionBoard({
+          ...v,
+          still: this.hooks.stillWanted(),
+          play: (d, e) => {
+            this.closeOverlay();
+            this.hooks.playMission?.(d, tapPoint(e));
+          },
+          close: () => this.closeOverlay(),
+        }, BOARD_KIT),
+      );
+    }, () => undefined);
+  }
+
+  /** MS3c: "Every Lagos star!" once, over the city, with the highlife sting. */
+  private everyNext(state: StateId): void {
+    // Every city visit fetches the board's chunk while idle (it is small); the card waits for it.
+    const from = this.screen;
+    void preloadBoard().then(({ everyCard }) => {
+      if (this.screen !== from || this.overlay || !this.hooks.everyDue?.(state)) return;
+      this.openOverlay(everyCard(state === 'ogun' ? OGUN_WORDS.travel.ogun : OGUN_WORDS.travel.lagos, () => this.closeOverlay(), BOARD_KIT));
+      this.hooks.playSound('sting');
+    }, () => undefined);
+  }
+
   /** The city's (and Ogun's) "Travel" button, with its small danfo icon. */
   private travelButton(): HTMLButtonElement {
     return this.guarded(OGUN_WORDS.travel.button, 'minor travel-button', () => this.openTravel(), {}, 'travel');
@@ -645,6 +711,7 @@ export class Menus {
       look: () => this.look,
       topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('ogun'), {}, 'settings')],
       bottom: [
+        ...this.missionsButton('ogun'),
         button(w.road, 'minor two-line', () => this.showOgunRoad(), {}, 'road'),
         this.travelButton(),
         button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
@@ -674,7 +741,7 @@ export class Menus {
         this.hooks.arrived();
         this.closeOverlay();
       });
-    }
+    } else this.everyNext('ogun');
     return screen.el;
   }
 
@@ -904,6 +971,7 @@ export class Menus {
       'div',
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
+      this.summary.stars && h('p', { class: 'ms-line' }, this.summary.stars),
       h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
@@ -923,6 +991,7 @@ export class Menus {
       'div',
       { class: 'card narrow event', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
+      c.stars && h('p', { class: 'ms-line' }, c.stars),
       h('p', {}, w.text(c.name, c.kobo)),
       c.parcel && h('p', { class: 'parcel-line' }, c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
@@ -1236,6 +1305,7 @@ export class Menus {
       mission,
       topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('city'), {}, 'settings')],
       bottom: [
+        ...this.missionsButton('lagos'),
         button(w.road, 'minor two-line', () => this.showRoad(), {}, 'road'),
         // O1b2 (ogun.md 1.2): "Travel" once Ogun is open.
         ...(this.hooks.states().ogun.open ? [this.travelButton()] : []),
@@ -1250,6 +1320,7 @@ export class Menus {
     });
     this.cityScreen = screen;
     this.cleanup = () => screen.close();
+    this.everyNext('lagos');
     // CO3: fetch the road's chunk while the city sits idle, so the road opens at once.
     const idle = (window as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 200));
     idle(() => void preloadRoad().catch(() => undefined));

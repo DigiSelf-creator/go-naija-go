@@ -1,0 +1,144 @@
+/* MS3b: the Missions board and a mission's card (missionBoard.ts), loaded with its chunk. */
+/* They sit on the Travel card's dim layer; tiles are place boxes (style.md 1.2), at least 56 px
+   tall, 8 px apart. */
+.ms-card {
+  max-width: 640px;
+}
+.ms-head h2,
+.ms-mhead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.screen .ms-head p {
+  margin: 0 0 6px;
+}
+.ms-helper {
+  font-weight: 800;
+}
+.ms-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 8px;
+}
+.ms-tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  min-height: 56px;
+  padding: 4px 10px;
+  border: 2.5px solid #3a2618;
+  border-radius: 14px;
+  background: #fff8e6;
+  color: #3a2618;
+  font: 800 15px 'Trebuchet MS', Verdana, sans-serif;
+  text-align: left;
+  box-shadow: 0 3px 0 #3a2618, 0 6px 8px rgba(58, 38, 24, 0.22);
+  cursor: pointer;
+}
+.ms-tile:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #3a2618;
+}
+.ms-tile .ms-pic {
+  grid-row: span 2;
+}
+.ms-words {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.ms-words small {
+  font-size: 15px;
+  font-weight: 400;
+}
+.ms-tile .ms-stars {
+  grid-column: 2;
+}
+/* The next mission to try: it glows and bobs gently (no bob with reduced motion; the glow stays).
+   A tile that moves keeps the hard lip only (style.md 1.2 rule 5). */
+.ms-tile.next {
+  border-width: 3.5px;
+  box-shadow: 0 3px 0 #3a2618, 0 0 0 4px #ffe066;
+  animation: ms-bob 1.6s ease-in-out infinite;
+}
+.ms-tile.next.still {
+  animation: none;
+}
+@keyframes ms-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.ms-tile.locked {
+  border-style: dashed;
+  background: #ecebe7;
+  box-shadow: none;
+  color: #4f493f;
+  cursor: default;
+}
+.ms-lock {
+  width: 32px;
+  height: 32px;
+}
+.ms-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+.screen .ms-foot p {
+  margin: 0;
+  font-weight: 800;
+}
+.ms-goal {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 4px 0;
+}
+.ms-goal-star {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font: 800 15px 'Trebuchet MS', Verdana, sans-serif;
+}
+.ms-help {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ms-tile.next {
+    animation: none;
+  }
+}
+
+/* Short screens: two or three tiles a row; the heading, its line and the count tight. */
+@media (max-height: 320px) {
+  .ms-tiles {
+    grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  }
+  .ms-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 8px;
+  }
+  .ms-tile {
+    padding: 2px 6px;
+    column-gap: 6px;
+  }
+  .ms-words small {
+    display: none;
+  }
+  .ms-foot {
+    margin-top: 6px;
+  }
+  .ms-goal {
+    margin: 0;
+  }
+}

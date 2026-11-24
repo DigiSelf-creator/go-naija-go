@@ -22,7 +22,7 @@ import { WELL } from './art/well';
 import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { hasSavedLook, loadLook } from './game/save';
-import { KEY_DASH, LAGOS, Progress, streetRecord, switchedOn } from './game/progress';
+import { KEY_DASH, LAGOS, Progress, streetOpen, streetRecord, switchedOn } from './game/progress';
 import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, canFix, isBuilt, leftOf, winPrize, withHint, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
 import { OGUN, OGUN_TRAYS, StateCity, arrived, openStates, statePart, stateOpen, stateProgress, wallet, whereNow } from './game/states';
@@ -51,6 +51,9 @@ import type { NativeApp } from './native/app';
 import type { LaneSession } from './lane/session';
 import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul, type LaneSave } from './lane/rewards';
 import { TILT_APP_ASKS_AGAIN, TiltAccess } from './game/tilt';
+import { LANE, MissionBook, MissionGo, STAR_KOBO, placeToPlay, type MissionDef } from './game/missions';
+import { MissionChip, lagosMissions, withCoins } from './screens/missions';
+import type { GameEvent } from './game/game';
 
 const el = document.getElementById('game');
 if (!(el instanceof HTMLCanvasElement)) throw new Error('Missing #game canvas');
@@ -437,7 +440,10 @@ function startGame(): void {
     // O5b: Pothole Hall's fight and tune come from the Ogun part (the parcel is Ogun's own).
     const ogHall = og && where === 'hall' ? worlds.get(OGUN)?.hall : undefined;
     TUNES.hall = ogHall?.tune ?? lagosHallTune;
-    game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' ? { parcel: own.parcel, arena: ogHall?.arena } : { parcelSaved: own.parcel, dash: dashSaved() });
+    // MS3c: in Garri for the mill the room always gives the parcel (still one saved at most: progress.ts).
+    game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' ? { parcel: own.parcel, arena: ogHall?.arena } : { parcelSaved: own.parcel && missionPlay?.goal !== 'garri', dash: dashSaved() });
+    beginGo(og ? og.n : typeof where === 'number' ? where + 1 : -1);
+    hud.setChip(chip.el);
     // S2.8: once Lagos (or Ogun, for its streets) is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(own);
     // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
@@ -474,6 +480,13 @@ function startGame(): void {
     // ("Take it home", a lane run won) puts "Mission complete!" over the line.
     const fromOgun = ogunPlay !== null || (lane !== null && laneOgun);
     const ogunAt = lane ? 'expressway' : ogunPlay ? (['ota', 'abeokuta', 'sagamu', 'hall'][ogunPlay.n - 1] ?? null) : null;
+    // MS3c: back home after a star in a helper's mission, the helper says thank you (once it is built).
+    const go = missionGo;
+    const built = fromOgun ? ((ogunCity.own['built'] as unknown[] | undefined) ?? []).includes('mill') : cityLife.state.built.includes('buka');
+    const thanks = go && go.won > 0 && go.def.thanks && built ? go.def.thanks : null;
+    endGo();
+    missionPlay = null;
+    if (thanks && to === 'city' && !fromOgun) mission = mission ? { ...mission, after: mission.after ? `${thanks} ${mission.after}` : thanks } : { build: null, kobo: 0, plain: true, line: thanks };
     closeLane();
     ogunPlay = null;
     ogunFor = null;
@@ -492,7 +505,8 @@ function startGame(): void {
     game.reset(startLevel);
     // OG-R39: Out of lives keeps the money (paid home at once): Home says so, with no heading.
     const lostLine = !mission && ogunAt !== 'expressway' && paidHome && brought > 0 ? WORDS.city.mission.brought(formatMoney(brought)) : null;
-    if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : lostLine, ogunAt, mission !== null && mission.plain !== true);
+    const ogunLine = mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : lostLine;
+    if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, thanks ? (ogunLine ? `${ogunLine} ${thanks}` : thanks) : ogunLine, ogunAt, mission !== null && mission.plain !== true);
     else if (to === 'wheel') {
       menus.showWheel(fromOgun ? 'ogun' : 'city');
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
@@ -621,6 +635,16 @@ function startGame(): void {
             return { bucket: laneFor === 'lamps' ? 'power' : 'tech', left: leftOf(cityLife.state, laneFor) };
           },
           setGentle: (on) => menus.setGentle(on),
+          // MS3b: the goal chip in the top row; Power or Tech as it comes; the end cards' star line.
+          missionChip: chip.el,
+          started: () => beginGo(LANE),
+          gained: (power, tech) => {
+            const go = missionGo;
+            if (!go) return;
+            go.count(go.def.goal === 'chips' ? tech : go.def.goal === 'bulbs' ? power : 0);
+            chip.update();
+          },
+          starLine,
           // OG-R39: a win says "Mission complete!" over the line; a loss says the line only if something came home.
           home: (r) => (ogun ? leave('city', r.won || r.haul.kobo > 0 || r.haul.power > 0 || r.haul.tech > 0 ? { build: null, kobo: r.haul.kobo, plain: !r.won, line: WORDS.lane.broughtHome(haulWords(r.haul)) } : null) : laneHome(r.won, r.haul)),
           changed: () => {
@@ -729,6 +753,81 @@ function startGame(): void {
   let paidHome = false;
   /** O1b2: this hall win is the first one (set at the third hit, before it is saved). */
   let firstHallWin = false;
+  // ---------------------------------------------------------------- MS3: quick missions
+  /** The `gidi-missions` save (docs/missions.md part 3). */
+  const book = new MissionBook(store);
+  /** Lagos's five; coin catch's stars from Alausa's level file (the unit test checks the same). */
+  const lagosDefs = withCoins(lagosMissions(), (n) => streets[n - 1]?.coins.length ?? 0);
+  let ogunDefsMade: MissionDef[] | null = null;
+  /** Ogun's five, from its part once it has loaded (coin catch's stars from ogun-1.json). */
+  const ogunDefs = (): MissionDef[] => {
+    if (ogunDefsMade) return ogunDefsMade;
+    const part = worlds.get(OGUN);
+    if (!part?.missions) return [];
+    const coinsAt = (n: number): number => {
+      try {
+        return parseLevel(part.levels[`ogun-${n}`]).coins.length;
+      } catch {
+        return 0;
+      }
+    };
+    return (ogunDefsMade = withCoins(part.missions.list, coinsAt));
+  };
+  const defsOf = (state: string): MissionDef[] => (state === OGUN ? ogunDefs() : lagosDefs);
+  /** The mission chosen on its card: it carries on through Play again, ends on leaving the run. */
+  let missionPlay: MissionDef | null = null;
+  /** This go at it (a new one at each start), or null. */
+  let missionGo: MissionGo | null = null;
+  const chip = new MissionChip();
+  const ownIcon = (d: MissionDef) => (d.state === OGUN ? worlds.get(OGUN)?.missions?.icon : undefined);
+  /** MS3a: a go starts at `place` (a street number, or LANE): the chip shows its goal. */
+  function beginGo(place: number): void {
+    missionGo?.end();
+    const d = missionPlay;
+    missionGo = d
+      ? new MissionGo(d, place, book, (n, total) => {
+          // MS-R2, MS-R3: kept the moment it fills, ₦2 each the first time (saved at once).
+          cityLife.set(addKobo(cityLife.state, n * STAR_KOBO), true);
+          starKobo += n * STAR_KOBO;
+          sound.play('checkpoint');
+          toast.show(WORDS.missions.star, 1000);
+          chip.star(total, d.stars.length);
+        })
+      : null;
+    starKobo = 0;
+    chip.set(missionGo, d ? book.stars(d.id) : 0, d ? ownIcon(d) : undefined);
+  }
+  /** Money from this go's new stars (already in the wallet), for the "You brought ... home" line. */
+  let starKobo = 0;
+  /** The go is over or left: its best is kept; the chip goes. */
+  function endGo(): void {
+    missionGo?.end();
+    missionGo = null;
+    chip.set(null, 0);
+  }
+  /** "You got a star!" for the end cards, or null when this go won none. */
+  const starLine = (): string | null => (missionGo && missionGo.won > 0 ? WORDS.missions.got(missionGo.won, missionGo.stars, missionGo.def.stars.length) : null);
+  /** The run's events that a mission counts (part 7: kobo, food, goatEat, room, busBoard, fufuPlug, crumble). */
+  function feedGo(e: GameEvent): void {
+    const go = missionGo;
+    if (!go) return;
+    const goal = go.def.goal;
+    if (goal === 'coins') go.count(game.run.kobo);
+    else if (goal === 'foods' && e.type === 'food') go.food(e.kind);
+    else if ((goal === 'goats' && e.type === 'goatEat') || (goal === 'potholes' && e.type === 'fufuPlug') || (goal === 'gravel' && e.type === 'crumble')) go.add();
+    else if ((goal === 'wells' && e.type === 'room') || (goal === 'garri' && e.type === 'busBoard' && game.run.parcel)) go.found();
+    chip.update();
+  }
+  /** A mission card's Play: its place (the first not done, for the wells and the garri). */
+  function playMission(d: MissionDef, at: TapPoint | null): void {
+    const ogun = d.state === OGUN;
+    const place = placeToPlay(d, book.save, (n) => n === LANE || streetOpen(progress.state(ogun ? OGUN : LAGOS), n));
+    if (place === null) return;
+    missionPlay = d;
+    if (place === LANE) startLane(null, ogun);
+    else if (ogun) ogunRun(at, place);
+    else lagosRun(at, (place - 1) as Where);
+  }
   /** (c) Money from a run goes home to Lagos at once, saved. */
   function payHome(kobo: number): void {
     if (paidHome) return;
@@ -786,6 +885,8 @@ function startGame(): void {
     restart: (at) => (lane ? startLane() : startRun(at)),
     next: (at) => {
       missionFor = null;
+      endGo();
+      missionPlay = null;
       // O3b, O4b: Ota's card goes on to Abeokuta, Abeokuta's to Sagamu.
       if (ogunPlay) {
         // O5b: Sagamu's card goes on to Pothole Hall.
@@ -887,6 +988,22 @@ function startGame(): void {
         ogunRun(at, n === 3 ? OGUN_HALL : n + 1);
         ogunFor = stop.forFix;
       }
+    },
+    // MS3b: the Missions board, shown once Lagos has had its first Mission complete (Ogun: always).
+    missions: (state) => {
+      const ogun = state === OGUN;
+      if (!ogun && cityLife.state.fixed.length === 0) return null;
+      const defs = defsOf(state);
+      if (defs.length === 0) return null;
+      const p = progress.state(ogun ? OGUN : LAGOS);
+      return { state, defs, save: book.save, open: (n: number) => n === LANE || streetOpen(p, n), ...(ogun && worlds.get(OGUN)?.missions?.icon ? { own: worlds.get(OGUN)!.missions!.icon! } : {}) };
+    },
+    playMission: (d, at) => playMission(d, at),
+    everyDue: (state) => {
+      const [n, of] = book.total(defsOf(state));
+      if (!of || book.save.helper[state] || n < of) return false;
+      book.put({ helper: { [state]: 1 } }, true);
+      return true;
     },
     ogunRoadView: () => {
       const l = readLane(statePart(progress.raw, OGUN)['lane']);
@@ -1154,7 +1271,9 @@ function startGame(): void {
         toast.hide();
         // (c) Losing keeps it all (Tp, question 2): the coins go home to the one wallet (decision 80).
         payHome(game.run.kobo * KOBO_PER_COIN);
-        menus.showGameOver({ kobo: game.run.kobo * KOBO_PER_COIN, lives: 0, hall: game.run.inHall, ogun: ogunPlay !== null });
+        // MS-R3: a star won in this go is kept, and the card says so.
+        missionGo?.end();
+        menus.showGameOver({ kobo: game.run.kobo * KOBO_PER_COIN, lives: 0, hall: game.run.inHall, ogun: ogunPlay !== null, stars: starLine() });
         break;
       case 'parcelShield':
         // S2.7 t = 0 with a parcel: the shield is on; the boss words follow.
@@ -1224,7 +1343,9 @@ function startGame(): void {
           parcel: game.run.parcel,
           ogun: ogunPlay !== null,
           ogunNext: ogunPlay !== null && ogunPlay.n <= OGUN_BUILT,
+          stars: starLine(),
         });
+        missionGo?.end();
         break;
       case 'bossThrow':
         if (e.kind === 'honk') sound.play('honk');
@@ -1286,6 +1407,7 @@ function startGame(): void {
         firstHallWin = false;
         break;
     }
+    feedGo(e);
     // The well room, back up, a hall hit: the tune follows (cheap when nothing changed).
     if (e.type === 'room' || e.type === 'wellBack' || e.type === 'bossHit' || e.type === 'bossDefeat' || e.type === 'cue') syncMusic();
   };

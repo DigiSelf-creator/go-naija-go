@@ -142,6 +142,14 @@ export interface LaneHooks {
    * warning (a lamp's "tunk", the close hum) or the corn tune plays (PE-R6).
    */
   murmur?(on: boolean): void;
+  /** MS3b: a quick mission's goal chip, shown in the top row beside the chips (null: none). */
+  missionChip?: HTMLElement | null;
+  /** MS3b: the Power and Tech this run has gained so far (pickups and bursts), after each pickup. */
+  gained?(power: number, tech: number): void;
+  /** MS3b: a run starts (the first, Run again, Start again): a new go at the mission. */
+  started?(): void;
+  /** MS3b: "You got a star!" on the bus stop and caught cards, or null. */
+  starLine?(): string | null;
 }
 
 /** The size the flying pickups are drawn at (CSS px). */
@@ -340,7 +348,7 @@ export class LaneSession {
     this.hud = h(
       'div',
       { class: 'lane-hud', 'data-ui': true },
-      h('div', { class: 'lane-row' }, h('div', { class: 'lane-chips' }, ...this.chipEls), h('div', { class: 'lane-buttons-top' }, this.soundButton, pauseButton)),
+      h('div', { class: 'lane-row' }, h('div', { class: 'lane-chips' }, ...this.chipEls), hooks.missionChip ?? null, h('div', { class: 'lane-buttons-top' }, this.soundButton, pauseButton)),
       h('div', { class: 'lane-row2' }, this.leftEl, (this.rightEl = h('div', { class: 'lane-right' }, this.toGo, this.bestEl))),
       this.hintEl,
       this.sayEl,
@@ -494,6 +502,7 @@ export class LaneSession {
   /** From 0 m with the Blackout reset: "3, 2, 1", then go. Gentle mode counts from here (Q15). */
   start(): void {
     this.closeCard();
+    this.hooks.started?.();
     if (this.sim.gentle !== this.hooks.gentle()) this.sim = new LaneSim(this.lvl, { gentle: this.hooks.gentle() });
     this.sim.reset();
     for (const k of Object.keys(this.tally) as (keyof typeof this.tally)[]) this.tally[k] = 0;
@@ -826,6 +835,7 @@ export class LaneSession {
     }
     const s = LANE_SOUNDS[name];
     if (s) this.hooks.sound(s);
+    if (e.type === 'pickup' || e.type === 'burst' || e.type === 'goat') this.hooks.gained?.(this.sim.power, this.sim.tech);
   }
 
   /** Part 9: what a burst or a goat pops out flies straight to its chip. */
@@ -940,7 +950,7 @@ export class LaneSession {
     const got = haulWords(this.haul);
     this.showCard(
       w.goalHeading,
-      [w.got(got)],
+      [this.hooks.starLine?.() ?? null, w.got(got)],
       button(w.takeHome, 'go', () => this.takeHome()),
       button(w.keepRunning, 'minor', () => this.keepRunning()),
     );
@@ -960,7 +970,7 @@ export class LaneSession {
     if (won) {
       this.showCard(
         w.caughtAt(m),
-        [w.winSafe(got), this.save.best > this.bestAtStart && this.save.best === m ? w.newBest(m) : null],
+        [this.hooks.starLine?.() ?? null, w.winSafe(got), this.save.best > this.bestAtStart && this.save.best === m ? w.newBest(m) : null],
         button(w.takeHome, 'go', () => this.takeHome()),
         button(w.runAgain, 'minor', () => this.runAgain()),
       );
@@ -978,7 +988,7 @@ export class LaneSession {
     }
     this.showCard(
       w.caught,
-      [w.keepAll(got), w.stopWas(Math.max(1, Math.ceil(s.level.goal - s.dist))), gentle],
+      [this.hooks.starLine?.() ?? null, w.keepAll(got), w.stopWas(Math.max(1, Math.ceil(s.level.goal - s.dist))), gentle],
       button(w.runAgain, 'go', () => this.runAgain()),
       button(w.takeHome, 'minor', () => this.takeHome()),
     );

@@ -3085,3 +3085,92 @@ body.lane {
     padding: 4px 10px;
   }
 }
+
+/* MS3b: quick missions (docs/missions.md part 2): the stars, goal pictures, end card line and the
+   run's goal chip. The board's own styles load with it (missionBoard.css). */
+.ms-stars {
+  display: inline-flex;
+  gap: 2px;
+  line-height: 0;
+}
+.ms-pic {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  color: #3a2618;
+}
+.screen .ms-line {
+  font-weight: 800;
+}
+/* The run's goal chip: a cream status chip (the ST-A3 look). On a tall screen it sits under the
+   HUD's top row; on a short one in the row's free space (the HUD steps tighter round it). */
+.ms-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 0 7px 0 4px;
+  border: 2.5px solid #3a2618;
+  border-radius: 999px;
+  background: #fff8e6;
+  box-shadow: 0 3px 0 #3a2618;
+  color: #3a2618;
+  font: bold 15px 'Trebuchet MS', Verdana, sans-serif;
+  text-shadow: none;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ms-chip[hidden] {
+  display: none;
+}
+.ms-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.ms-food {
+  position: relative;
+  opacity: 0.45;
+}
+.ms-food.got {
+  opacity: 1;
+}
+.ms-food.got::after {
+  content: '\2713';
+  position: absolute;
+  right: -3px;
+  bottom: -4px;
+  font-size: 13px;
+  color: #0e7a3e;
+}
+@media (min-height: 330px) {
+  .hud > .ms-chip {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: max(10px, var(--safe-left));
+  }
+}
+.hud-tighter .ms-chip .ms-stars,
+.hud-tightest .ms-chip .ms-stars {
+  display: none;
+}
+@media (max-width: 560px) {
+  .lane-row .ms-chip .ms-stars {
+    display: none;
+  }
+}
+.ms-stars .pop {
+  animation: ms-pop 0.3s ease-out;
+}
+@keyframes ms-pop {
+  50% {
+    transform: scale(1.3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ms-stars .pop {
+    animation: none;
+  }
+}

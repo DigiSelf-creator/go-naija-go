@@ -5,10 +5,10 @@
  *
  * Saved on the phone under `gidi-missions`, its own key (part 3):
  *   { "v": 1, "stars": { "lagos-coins": 2 }, "best": { "lagos-coins": 112 },
- *     "tries": { "lagos-wells-3": 2 }, "found": { "lagos-wells": [2] }, "helper": { "lagos": true } }
- * `found` holds which places a one-star-each mission (the wells, the garri) has been done at,
- * by street number. Merged, never overwritten; nothing goes down. A broken copy reads as no
- * stars and is left alone until a star fills (the progress.ts rule).
+ *     "tries": { "lagos-wells-3": 2 }, "found": { "lagos-wells-2": 1 }, "helper": { "lagos": 1 } }
+ * `found` marks each place a one-star-each mission (the wells, the garri) was done at, by street
+ * number. Merged, never overwritten: every number only goes up. A broken copy reads as no stars
+ * and is left alone until a star fills (the progress.ts rule).
  */
 import type { FoodKind } from './level';
 import type { Store } from '../storage';
@@ -49,102 +49,63 @@ export interface MissionDef {
 export const perPlace = (d: MissionDef): boolean => d.goal === 'wells' || d.goal === 'garri';
 
 /** The coin stars: 40, 65 and 85 percent of the street's laid coins, each rounded down to a 5. */
-export function coinStars(coins: number): number[] {
-  return [0.4, 0.65, 0.85].map((f) => Math.floor((coins * f) / 5) * 5);
-}
+export const coinStars = (coins: number): number[] => [0.4, 0.65, 0.85].map((f) => Math.floor((coins * f) / 5) * 5);
 
-export interface MissionSave {
-  stars: Record<string, number>;
-  best: Record<string, number>;
-  tries: Record<string, number>;
-  found: Record<string, number[]>;
-  helper: Record<string, boolean>;
-}
+const PARTS = ['stars', 'best', 'tries', 'found', 'helper'] as const;
+export type MissionSave = Record<(typeof PARTS)[number], Record<string, number>>;
 
-const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-const whole = (n: unknown): number => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0);
-function counts(v: unknown): Record<string, number> {
-  const out: Record<string, number> = {};
-  if (isObj(v)) for (const [k, n] of Object.entries(v)) if (whole(n) > 0) out[k] = whole(n);
+/** The save read leniently (anything odd counts as nothing), or merged with more: every number the higher one. */
+export function readMissions(...vs: unknown[]): MissionSave {
+  const out = {} as MissionSave;
+  for (const k of PARTS) {
+    const o: Record<string, number> = (out[k] = {});
+    for (const v of vs) {
+      const part = (v as Record<string, unknown> | null)?.[k];
+      if (typeof part !== 'object' || part === null) continue;
+      for (const [id, n] of Object.entries(part)) if (typeof n === 'number' && n >= 1) o[id] = Math.max(o[id] ?? 0, Math.floor(n));
+    }
+  }
   return out;
 }
 
-export const emptyMissions = (): MissionSave => ({ stars: {}, best: {}, tries: {}, found: {}, helper: {} });
-
-/** The save read leniently: anything odd counts as nothing. */
-export function readMissions(v: unknown): MissionSave {
-  if (!isObj(v)) return emptyMissions();
-  const found: Record<string, number[]> = {};
-  if (isObj(v['found'])) {
-    for (const [k, l] of Object.entries(v['found'])) {
-      const ns = Array.isArray(l) ? [...new Set(l.map(whole).filter((n) => n > 0))].sort() : [];
-      if (ns.length) found[k] = ns;
-    }
-  }
-  const helper: Record<string, boolean> = {};
-  if (isObj(v['helper'])) for (const [k, b] of Object.entries(v['helper'])) if (b === true) helper[k] = true;
-  return { stars: counts(v['stars']), best: counts(v['best']), tries: counts(v['tries']), found, helper };
-}
-
-/** Both saves at once: the higher of every number, every place found, every helper card. */
-export function mergeMissions(a: MissionSave, b: MissionSave): MissionSave {
-  const top = (x: Record<string, number>, y: Record<string, number>): Record<string, number> => {
-    const o = { ...x };
-    for (const [k, n] of Object.entries(y)) o[k] = Math.max(o[k] ?? 0, n);
-    return o;
-  };
-  const found = { ...a.found };
-  for (const [k, l] of Object.entries(b.found)) found[k] = [...new Set([...(found[k] ?? []), ...l])].sort();
-  return { stars: top(a.stars, b.stars), best: top(a.best, b.best), tries: top(a.tries, b.tries), found, helper: { ...a.helper, ...b.helper } };
-}
-
-/** Stars won for a count (or for the places found, or the foods picked up). */
+/** Stars won for a count (or the places found, or the foods picked up). */
 export const starsFor = (d: MissionDef, have: number): number => d.stars.filter((t) => have >= t).length;
 
 /** The `gidi-missions` save, kept in memory while the game runs. */
 export class MissionBook {
-  private data: MissionSave;
+  save: MissionSave;
   /** Something is saved there that cannot be read: left alone until a star fills. */
   private broken: boolean;
 
   constructor(private readonly store: Store) {
     const raw = store.load<unknown>(KEY_MISSIONS);
-    this.broken = store.has(KEY_MISSIONS) && !isObj(raw);
-    this.data = readMissions(raw);
-  }
-
-  get save(): Readonly<MissionSave> {
-    return this.data;
+    this.broken = store.has(KEY_MISSIONS) && (typeof raw !== 'object' || raw === null);
+    this.save = readMissions(raw);
   }
 
   stars(id: string): number {
-    return this.data.stars[id] ?? 0;
+    return this.save.stars[id] ?? 0;
   }
 
-  /** Stars won in a state's missions. */
-  total(defs: readonly MissionDef[]): number {
-    return defs.reduce((n, d) => n + Math.min(d.stars.length, this.stars(d.id)), 0);
+  /** Stars won in a state's missions, and how many it has. */
+  total(defs: readonly MissionDef[]): [number, number] {
+    return [defs.reduce((n, d) => n + Math.min(d.stars.length, this.stars(d.id)), 0), defs.reduce((n, d) => n + d.stars.length, 0)];
   }
 
-  /**
-   * Merges `more` in and writes it (merge with the phone's copy, never lower). `star`: a star
-   * just filled, so a broken copy is replaced now.
-   */
+  /** Merges `more` in and writes it over the phone's copy, never lower. `star`: a broken copy is replaced now. */
   put(more: Partial<MissionSave>, star = false): void {
-    this.data = mergeMissions(this.data, { ...emptyMissions(), ...more });
+    this.save = readMissions(this.save, more);
     if (this.broken && !star) return;
-    const now = this.store.load<unknown>(KEY_MISSIONS);
-    const merged = this.broken ? this.data : mergeMissions(readMissions(now), this.data);
+    if (!this.broken) this.save = readMissions(this.store.load<unknown>(KEY_MISSIONS), this.save);
     this.broken = false;
-    this.data = merged;
-    this.store.save(KEY_MISSIONS, { v: 1, ...merged });
+    this.store.save(KEY_MISSIONS, { v: 1, ...this.save });
   }
 }
 
 /**
- * One go at a mission (a street or lane run started from its card, Play again included).
- * Fed by the run's events; says how many stars filled just now (each is saved and paid at once
- * by `onStars`, so a lost life, game over or leaving keeps it).
+ * One go at a mission (a street or lane run started from its card, Play again included). Fed by
+ * the run's events; each star that fills is saved and paid at once by `onStars`, so a lost
+ * life, game over or leaving keeps it.
  */
 export class MissionGo {
   /** The count this go (coins, goats, potholes, gravel, bulbs or chips). */
@@ -161,36 +122,30 @@ export class MissionGo {
     /** The street number (or LANE) played. */
     readonly place: number,
     private readonly book: MissionBook,
-    /** New stars filled: `n` of them, `total` now. Saves and pays (₦2 each) at once. */
+    /** `n` new stars filled, `total` now: save and pay. */
     private readonly onStars: (n: number, total: number) => void,
   ) {
-    const k = this.triesKey;
+    const k = `${def.id}-${place}`;
     book.put({ tries: { [k]: (book.save.tries[k] ?? 0) + 1 } });
-  }
-
-  private get triesKey(): string {
-    return `${this.def.id}-${this.place}`;
   }
 
   /** The stars this go has reached, with what was saved before. */
   get stars(): number {
     const d = this.def;
-    if (perPlace(d)) return new Set([...(this.book.save.found[d.id] ?? []), ...(this.done ? [this.place] : [])]).size;
-    return starsFor(d, d.goal === 'foods' ? this.foods.size : this.have);
+    if (perPlace(d)) return d.at.filter((n) => (n === this.place && this.done) || this.book.save.found[`${d.id}-${n}`]).length;
+    return starsFor(d, this.shown);
+  }
+
+  /** The count as the chip shows it. */
+  get shown(): number {
+    return perPlace(this.def) ? +this.done : this.def.foods ? this.foods.size : this.have;
   }
 
   /** The next star's number for the chip ("12 / 60"), or null once every star is won. */
   get next(): number | null {
     const d = this.def;
     if (perPlace(d)) return this.done ? null : 1;
-    const saved = Math.min(this.book.stars(d.id), d.stars.length);
-    const now = this.stars;
-    return d.stars[Math.max(saved, now)] ?? null;
-  }
-
-  /** The count as the chip shows it. */
-  get shown(): number {
-    return perPlace(this.def) ? (this.done ? 1 : 0) : this.def.goal === 'foods' ? this.foods.size : this.have;
+    return d.stars[Math.max(this.book.stars(d.id), this.stars)] ?? null;
   }
 
   /** A count that only grows (coins: the run's coins; the lane: Power or Tech so far). */
@@ -217,37 +172,32 @@ export class MissionGo {
     return this.check();
   }
 
-  /** Saves new stars (with the places found) and pays for them; returns how many. */
+  /** Saves new stars (with the place found) and pays for them; returns how many. */
   private check(): number {
     const d = this.def;
     const now = Math.min(this.stars, d.stars.length);
-    const before = this.book.stars(d.id);
-    if (now <= before) return 0;
-    this.book.put({ stars: { [d.id]: now }, ...(perPlace(d) && this.done ? { found: { [d.id]: [this.place] } } : {}) }, true);
-    this.won += now - before;
-    this.onStars(now - before, now);
-    return now - before;
+    const n = now - this.book.stars(d.id);
+    if (n <= 0) return 0;
+    this.book.put({ stars: { [d.id]: now }, found: this.done ? { [`${d.id}-${this.place}`]: 1 } : {} }, true);
+    this.won += n;
+    this.onStars(n, now);
+    return n;
   }
 
   /** The go is over (or left): its best is kept. */
   end(): void {
-    const d = this.def;
-    if (perPlace(d) || this.shown <= 0) return;
-    const best = this.book.save.best[d.id] ?? 0;
-    if (this.shown > best) this.book.put({ best: { [d.id]: this.shown } });
+    if (!perPlace(this.def) && this.shown > (this.book.save.best[this.def.id] ?? 0)) this.book.put({ best: { [this.def.id]: this.shown } });
   }
 }
 
 /** The help line for a per-place mission's place, after two goes there without it (part 1). */
-export function helpFor(d: MissionDef, save: Readonly<MissionSave>, place: number): string | null {
-  const i = d.at.indexOf(place);
-  if (!d.help || i < 0 || (save.found[d.id] ?? []).includes(place)) return null;
-  return (save.tries[`${d.id}-${place}`] ?? 0) >= 2 ? (d.help[i] ?? null) : null;
+export function helpFor(d: MissionDef, save: MissionSave, place: number): string | null {
+  const k = `${d.id}-${place}`;
+  return d.help && !save.found[k] && (save.tries[k] ?? 0) >= 2 ? (d.help[d.at.indexOf(place)] ?? null) : null;
 }
 
-/** Where a mission's Play goes: the first place not done yet (per place), else its first. */
-export function placeToPlay(d: MissionDef, save: Readonly<MissionSave>, open: (n: number) => boolean): number | null {
+/** Where a mission's Play goes: its first open place (per place: the first not done yet), or null. */
+export function placeToPlay(d: MissionDef, save: MissionSave, open: (n: number) => boolean): number | null {
   const ok = d.at.filter(open);
-  if (perPlace(d)) return ok.find((n) => !(save.found[d.id] ?? []).includes(n)) ?? ok[0] ?? null;
-  return ok[0] ?? null;
+  return ok.find((n) => !perPlace(d) || !save.found[`${d.id}-${n}`]) ?? ok[0] ?? null;
 }
