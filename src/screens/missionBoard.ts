@@ -1,14 +1,23 @@
 /**
  * MS3b: the Missions board, a mission's card and the "Every Lagos star!" card (docs/missions.md
  * part 2). Its own chunk, like the road (CO3): menus.ts fetches it while the city sits idle, and
- * the service worker keeps it, so it opens offline. What it needs from the first load comes in
- * `kit` (an import would split those modules out of the first load's main file).
+ * the service worker keeps it, so it opens offline. Everything else a mission needs comes with
+ * it (qa MS4: the first load stays light): the save, a go's count, Lagos's five, the goal
+ * pictures, the run's chip and their words. A mission is only played from its card, so they are
+ * always in by then.
  */
 import './missionBoard.css';
 import { iconSvg } from '../art/icons';
-import type { MissionDef, MissionSave } from '../game/missions';
-import type { OwnIcon, BoardKit } from './missions';
+import { starSvg } from '../art/star';
+import { helpFor, perPlace, type MissionDef, type MissionSave } from '../game/missions';
+import { button, h } from './dom';
+import { goalPic, type OwnIcon } from './missions';
+import { layer } from './travel';
 import { BOARD_WORDS as W } from './boardWords';
+
+export { MissionBook, MissionGo, STAR_KOBO, placeToPlay } from '../game/missions';
+export { MissionChip, lagosMissions, useArt, withCoins } from './missions';
+export { BOARD_WORDS } from './boardWords';
 
 export interface BoardView {
   /** The state's name for the helper card ("Lagos"). */
@@ -27,7 +36,7 @@ export interface BoardView {
 const wonOf = (d: MissionDef, save: Readonly<MissionSave>): number => Math.min(d.stars.length, save.stars[d.id] ?? 0);
 
 /** The Missions board (a card on a dim layer); a tile opens that mission's card in its place. */
-export function missionBoard(v: BoardView, { h, button, layer, goalPic, starSvg, helpFor, perPlace }: BoardKit): HTMLElement {
+export function missionBoard(v: BoardView): HTMLElement {
   const starRow = (of: number, won: number, px: number): HTMLElement => {
     const row = h('span', { class: 'ms-stars', 'aria-hidden': 'true' });
     row.innerHTML = Array.from({ length: of }, (_, i) => starSvg(i < won, px)).join('');
@@ -100,7 +109,7 @@ export function missionBoard(v: BoardView, { h, button, layer, goalPic, starSvg,
 }
 
 /** "Every Lagos star!" / "You are a Lagos star helper." / OK (part 2). */
-export function everyCard(state: string, ok: () => void, { h, button, layer, starSvg }: BoardKit): HTMLElement {
+export function everyCard(state: string, ok: () => void): HTMLElement {
   const head = h('h2', {}, W.every(state));
   head.insertAdjacentHTML('afterbegin', starSvg(true, 30));
   return layer(h('div', { class: 'card narrow travel-card ms-card', role: 'dialog', 'aria-label': W.every(state) }, head, h('p', {}, W.everyLine(state)), h('div', { class: 'actions' }, button(W.ok, 'go', ok, {}, 'go'))), ok);

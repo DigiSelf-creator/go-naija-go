@@ -42,7 +42,6 @@ import { gateIconSvg } from '../art/gateway';
 import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
 import { isNativeApp } from '../native/is-native';
 import type { BoardView } from './missionBoard';
-import type { BoardKit } from './missions';
 import { starSvg } from '../art/star';
 import type { MissionDef } from '../game/missions';
 
@@ -74,16 +73,25 @@ export function preloadRoad(): Promise<RoadModule> {
   return roadLoading;
 }
 
-/** MS3b: the Missions board and cards are their own chunk too (missionBoard.ts), fetched while the city is idle. */
-type BoardModule = typeof import('./missionBoard');
+/**
+ * MS3b: the Missions board and cards are their own chunk too (missionBoard.ts), fetched while the
+ * city is idle; with them comes all a mission needs in the run (qa MS4: the first load stays light).
+ */
+export type BoardModule = typeof import('./missionBoard');
+let boardModule: BoardModule | null = null;
 let boardLoading: Promise<BoardModule> | null = null;
 export function preloadBoard(): Promise<BoardModule> {
-  boardLoading ??= import('./missionBoard').catch((err: unknown) => {
-    boardLoading = null;
-    throw err;
-  });
+  boardLoading ??= import('./missionBoard').then(
+    (m) => (boardModule = m),
+    (err: unknown) => {
+      boardLoading = null;
+      throw err;
+    },
+  );
   return boardLoading;
 }
+/** The board's chunk once it is in (every then on preloadBoard sees it), else null. */
+export const boardNow = (): BoardModule | null => boardModule;
 
 /**
  * The second tap of a double tap lands about where the first one did, very soon after.
@@ -194,18 +202,14 @@ export interface MenuHooks {
   playOgunStop(stop: PlanStop, at: TapPoint | null): void;
   /** O6b: what Ogun's challenge road reads. */
   ogunRoadView(): WorldRoadView;
-  /** MS3b: a state's Missions board (null: no Missions button yet). */
+  /** MS3b: the state has a Missions button (Lagos once its first Mission is complete). */
+  hasMissions?(state: StateId): boolean;
+  /** MS3b: a state's Missions board, once the board's chunk is in (null: none yet). */
   missions?(state: StateId): Omit<BoardView, 'play' | 'close' | 'still'> | null;
   /** MS3b: a mission card's Play. */
   playMission?(d: MissionDef, at: TapPoint | null): void;
   /** MS3c: every star of the state is won and its card has not shown yet (true once: it is saved as shown). */
   everyDue?(state: StateId): boolean;
-  /**
-   * MS3b: what the board's chunk takes from the first load (screens/missions.ts BOARD_KIT). Passed
-   * in, not imported: road.ts imports menus.ts, so an import here would pull the goal pictures' art
-   * into a file of its own.
-   */
-  missionKit?: BoardKit;
 }
 
 /** What the game over and win screens show. */
@@ -639,7 +643,7 @@ export class Menus {
 
   /** MS3b: "Missions", first in the city's bottom row once the state has missions to show. */
   private missionsButton(state: StateId): HTMLButtonElement[] {
-    if (!this.hooks.missionKit || !this.hooks.missions?.(state)) return [];
+    if (!this.hooks.hasMissions?.(state)) return [];
     const b = this.guarded(WORDS.missions.button, 'minor ms-button', () => this.openMissions(state), {}, 'settings');
     // The star stands in the icon disc (art's star, MS2, replaces starSvg).
     const disc = b.querySelector<HTMLElement>('.ic');
@@ -681,7 +685,7 @@ export class Menus {
             this.hooks.playMission?.(d, tapPoint(e));
           },
           close: () => this.closeOverlay(),
-        }, this.hooks.missionKit!),
+        }),
       );
     }, () => undefined);
   }
@@ -692,7 +696,7 @@ export class Menus {
     const from = this.screen;
     void preloadBoard().then(({ everyCard }) => {
       if (this.screen !== from || this.overlay || !this.hooks.everyDue?.(state)) return;
-      this.openOverlay(everyCard(state === 'ogun' ? OGUN_WORDS.travel.ogun : OGUN_WORDS.travel.lagos, () => this.closeOverlay(), this.hooks.missionKit!));
+      this.openOverlay(everyCard(state === 'ogun' ? OGUN_WORDS.travel.ogun : OGUN_WORDS.travel.lagos, () => this.closeOverlay()));
       this.hooks.playSound('sting');
     }, () => undefined);
   }

@@ -20,6 +20,9 @@ import { STEPS_PER_SECOND, type RunPhase } from './game/run';
 import { parseRoom } from './game/well';
 import { WELL } from './art/well';
 import { ROOM_ROPE_BUCKET_Y } from './art/wellRoom';
+import { drawFufuIcon } from './art/fufu';
+import { drawGoat } from './art/hazards';
+import { drawFoodIcon, drawKobo } from './art/items';
 import { WELL_UP_KEYS, pauseKeyAction } from './engine/input';
 import { hasSavedLook, loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetOpen, streetRecord, switchedOn } from './game/progress';
@@ -33,7 +36,7 @@ import { KOBO_PER_COIN, formatMoney } from './game/money';
 import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
 import { CornCount, Hud, Toast } from './screens/hud';
 import { OGUN_WORDS, WORDS, WORLD_PART_WORDS, hintWords } from './screens/words';
-import { Menus, isSecondTap, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
+import { Menus, boardNow, isSecondTap, type BoardModule, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
 import type { StopId } from './screens/road';
 import { h } from './screens/dom';
@@ -51,8 +54,10 @@ import type { NativeApp } from './native/app';
 import type { LaneSession } from './lane/session';
 import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul, type LaneSave } from './lane/rewards';
 import { TILT_APP_ASKS_AGAIN, TiltAccess } from './game/tilt';
-import { LANE, MissionBook, MissionGo, STAR_KOBO, placeToPlay, type MissionDef } from './game/missions';
-import { BOARD_KIT, MissionChip, lagosMissions, withCoins } from './screens/missions';
+import type { MissionBook, MissionDef, MissionGo } from './game/missions';
+import type { MissionChip } from './screens/missions';
+/** A mission's place for the state's lane run (game/missions.ts LANE: that file loads with the board). */
+const LANE: (typeof import('./game/missions'))['LANE'] = 0;
 import type { GameEvent } from './game/game';
 
 const el = document.getElementById('game');
@@ -443,7 +448,8 @@ function startGame(): void {
     // MS3c: in Garri for the mill the room always gives the parcel (still one saved at most: progress.ts).
     game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' ? { parcel: own.parcel, arena: ogHall?.arena } : { parcelSaved: own.parcel && missionPlay?.goal !== 'garri', dash: dashSaved() });
     beginGo(og ? og.n : typeof where === 'number' ? where + 1 : -1);
-    hud.setChip(chip.el);
+    const mk = ms();
+    if (mk) hud.setChip(mk.chip.el);
     // S2.8: once Lagos (or Ogun, for its streets) is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(own);
     // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
@@ -653,13 +659,13 @@ function startGame(): void {
           },
           setGentle: (on) => menus.setGentle(on),
           // MS3b: the goal chip in the top row; Power or Tech as it comes; the end cards' star line.
-          missionChip: chip.el,
+          missionChip: ms()?.chip.el ?? null,
           started: () => beginGo(LANE),
           gained: (power, tech) => {
             const go = missionGo;
             if (!go) return;
             go.count(go.def.goal === 'chips' ? tech : go.def.goal === 'bulbs' ? power : 0);
-            chip.update();
+            msMade?.chip.update();
           },
           starLine,
           // OG-R39: a win says "Mission complete!" over the line; a loss says the line only if something came home.
@@ -771,13 +777,22 @@ function startGame(): void {
   /** O1b2: this hall win is the first one (set at the third hit, before it is saved). */
   let firstHallWin = false;
   // ---------------------------------------------------------------- MS3: quick missions
-  /** The `gidi-missions` save (docs/missions.md part 3). */
-  const book = new MissionBook(store);
-  /** Lagos's five; coin catch's stars from Alausa's level file (the unit test checks the same). */
-  const lagosDefs = withCoins(lagosMissions(), (n) => streets[n - 1]?.coins.length ?? 0);
+  /**
+   * qa MS4: all a mission needs comes with the board's chunk (menus.ts preloadBoard, fetched while
+   * the city sits idle), not the first load. Made once it is in: the `gidi-missions` save
+   * (docs/missions.md part 3), Lagos's five (coin catch's stars from Alausa's level file; the unit
+   * test checks the same) and the run's goal chip. A mission is only played from its card.
+   */
+  let msMade: { m: BoardModule; book: MissionBook; lagosDefs: MissionDef[]; chip: MissionChip } | null = null;
+  function ms(): typeof msMade {
+    const m = msMade ? null : boardNow();
+    if (m) m.useArt({ kobo: drawKobo, food: drawFoodIcon, fufu: drawFufuIcon, goat: drawGoat });
+    if (m) msMade = { m, book: new m.MissionBook(store), lagosDefs: m.withCoins(m.lagosMissions(), (n) => streets[n - 1]?.coins.length ?? 0), chip: new m.MissionChip() };
+    return msMade;
+  }
   let ogunDefsMade: MissionDef[] | null = null;
   /** Ogun's five, from its part once it has loaded (coin catch's stars from ogun-1.json). */
-  const ogunDefs = (): MissionDef[] => {
+  const ogunDefs = (m: BoardModule): MissionDef[] => {
     if (ogunDefsMade) return ogunDefsMade;
     const part = worlds.get(OGUN);
     if (!part?.missions) return [];
@@ -786,31 +801,32 @@ function startGame(): void {
       const rows = (part.levels[`ogun-${n}`] as { kobo?: unknown } | undefined)?.kobo;
       return Array.isArray(rows) ? rows.reduce((t: number, r) => t + (Number((r as unknown[])[2]) || 0), 0) : 0;
     };
-    return (ogunDefsMade = withCoins(part.missions.list, coinsAt));
+    return (ogunDefsMade = m.withCoins(part.missions.list, coinsAt));
   };
-  const defsOf = (state: string): MissionDef[] => (state === OGUN ? ogunDefs() : lagosDefs);
+  const defsOf = (k: NonNullable<typeof msMade>, state: string): MissionDef[] => (state === OGUN ? ogunDefs(k.m) : k.lagosDefs);
   /** The mission chosen on its card: it carries on through Play again, ends on leaving the run. */
   let missionPlay: MissionDef | null = null;
   /** This go at it (a new one at each start), or null. */
   let missionGo: MissionGo | null = null;
-  const chip = new MissionChip();
   const ownIcon = (d: MissionDef) => (d.state === OGUN ? worlds.get(OGUN)?.missions?.icon : undefined);
   /** MS3a: a go starts at `place` (a street number, or LANE): the chip shows its goal. */
   function beginGo(place: number): void {
     missionGo?.end();
-    const d = missionPlay;
-    missionGo = d
-      ? new MissionGo(d, place, book, (n, total) => {
-          // MS-R2, MS-R3: kept the moment it fills, ₦2 each the first time (saved at once).
-          cityLife.set(addKobo(cityLife.state, n * STAR_KOBO), true);
-          starKobo += n * STAR_KOBO;
-          sound.play('checkpoint');
-          toast.show(WORDS.missions.star, 1000);
-          runSaid.textContent = chip.star(total, d.stars.length);
-        })
-      : null;
+    const k = ms();
+    const d = k ? missionPlay : null;
+    missionGo =
+      k && d
+        ? new k.m.MissionGo(d, place, k.book, (n, total) => {
+            // MS-R2, MS-R3: kept the moment it fills, ₦2 each the first time (saved at once).
+            cityLife.set(addKobo(cityLife.state, n * k.m.STAR_KOBO), true);
+            starKobo += n * k.m.STAR_KOBO;
+            sound.play('checkpoint');
+            toast.show(k.m.BOARD_WORDS.star, 1000);
+            runSaid.textContent = k.chip.star(total, d.stars.length);
+          })
+        : null;
     starKobo = 0;
-    chip.set(missionGo, d ? book.stars(d.id) : 0, d ? ownIcon(d) : undefined);
+    k?.chip.set(missionGo, k && d ? k.book.stars(d.id) : 0, d ? ownIcon(d) : undefined);
   }
   /** Money from this go's new stars (already in the wallet), for the "You brought ... home" line. */
   let starKobo = 0;
@@ -818,10 +834,10 @@ function startGame(): void {
   function endGo(): void {
     missionGo?.end();
     missionGo = null;
-    chip.set(null, 0);
+    msMade?.chip.set(null, 0);
   }
   /** "You got a star!" for the end cards, or null when this go won none. */
-  const starLine = (): string | null => (missionGo && missionGo.won > 0 ? WORDS.missions.got(missionGo.won, missionGo.stars, missionGo.def.stars.length) : null);
+  const starLine = (): string | null => (missionGo && msMade && missionGo.won > 0 ? msMade.m.BOARD_WORDS.got(missionGo.won, missionGo.stars, missionGo.def.stars.length) : null);
   /** The run's events that a mission counts (part 7: kobo, food, goatEat, room, busBoard, fufuPlug, crumble). */
   function feedGo(e: GameEvent): void {
     const go = missionGo;
@@ -831,12 +847,14 @@ function startGame(): void {
     else if (goal === 'foods' && e.type === 'food') go.food(e.kind);
     else if ((goal === 'goats' && e.type === 'goatEat') || (goal === 'potholes' && e.type === 'fufuPlug') || (goal === 'gravel' && e.type === 'crumble')) go.add();
     else if ((goal === 'wells' && e.type === 'room') || (goal === 'garri' && e.type === 'busBoard' && game.run.parcel)) go.found();
-    chip.update();
+    msMade?.chip.update();
   }
   /** A mission card's Play: its place (the first not done, for the wells and the garri). */
   function playMission(d: MissionDef, at: TapPoint | null): void {
+    const k = ms();
+    if (!k) return;
     const ogun = d.state === OGUN;
-    const place = placeToPlay(d, book.save, (n) => n === LANE || streetOpen(progress.state(ogun ? OGUN : LAGOS), n));
+    const place = k.m.placeToPlay(d, k.book.save, (n) => n === LANE || streetOpen(progress.state(ogun ? OGUN : LAGOS), n));
     if (place === null) return;
     missionPlay = d;
     if (place === LANE) startLane(null, ogun);
@@ -1005,20 +1023,23 @@ function startGame(): void {
       }
     },
     // MS3b: the Missions board, shown once Lagos has had its first Mission complete (Ogun: always).
+    hasMissions: (state) => (state === OGUN ? (worlds.get(OGUN)?.missions?.list.length ?? 0) > 0 : cityLife.state.fixed.length > 0),
     missions: (state) => {
       const ogun = state === OGUN;
-      if (!ogun && cityLife.state.fixed.length === 0) return null;
-      const defs = defsOf(state);
+      const k = ms();
+      if (!k || (!ogun && cityLife.state.fixed.length === 0)) return null;
+      const defs = defsOf(k, state);
       if (defs.length === 0) return null;
       const p = progress.state(ogun ? OGUN : LAGOS);
-      return { state, defs, save: book.save, open: (n: number) => n === LANE || streetOpen(p, n), ...(ogun && worlds.get(OGUN)?.missions?.icon ? { own: worlds.get(OGUN)!.missions!.icon! } : {}) };
+      return { state, defs, save: k.book.save, open: (n: number) => n === LANE || streetOpen(p, n), ...(ogun && worlds.get(OGUN)?.missions?.icon ? { own: worlds.get(OGUN)!.missions!.icon! } : {}) };
     },
     playMission: (d, at) => playMission(d, at),
-    missionKit: BOARD_KIT,
     everyDue: (state) => {
-      const [n, of] = book.total(defsOf(state));
-      if (!of || book.save.helper[state] || n < of) return false;
-      book.put({ helper: { [state]: 1 } }, true);
+      const k = ms();
+      if (!k) return false;
+      const [n, of] = k.book.total(defsOf(k, state));
+      if (!of || k.book.save.helper[state] || n < of) return false;
+      k.book.put({ helper: { [state]: 1 } }, true);
       return true;
     },
     ogunRoadView: () => {

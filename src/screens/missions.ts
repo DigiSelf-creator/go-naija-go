@@ -1,24 +1,20 @@
 /**
- * MS3b: the quick missions in the first load (docs/missions.md part 2): Lagos's five, the goal
- * pictures and the run's goal chip. The board and the cards are their own small chunk
- * (missionBoard.ts), fetched while the city sits idle, as the road is. Ogun's five come with its
+ * MS3b: Lagos's five, the goal pictures and the run's goal chip (docs/missions.md part 2). Not in
+ * the first load: they come with the board's chunk (missionBoard.ts), fetched while the city sits
+ * idle, as the road is, and a mission is only played from its card. Ogun's five come with its
  * part. Every picture is drawn once, when its card or chip is made.
  */
-import { drawKobo, drawFoodIcon } from '../art/items';
-import { drawFufuIcon } from '../art/fufu';
-import { drawGoat } from '../art/hazards';
+import type { drawKobo as DrawKobo, drawFoodIcon as DrawFood } from '../art/items';
+import type { drawFufuIcon as DrawFufu } from '../art/fufu';
+import type { drawGoat as DrawGoat } from '../art/hazards';
 import { drawWell } from '../art/well';
 import { drawParcelIcon } from '../art/wellRoom';
 import { iconSvg } from '../art/icons';
 import type { FoodKind } from '../game/level';
 import { starSvg } from '../art/star';
 import { coinStars, type MissionDef, type MissionGo, type MissionIcon } from '../game/missions';
-import { button, h } from './dom';
-import { layer } from './travel';
-import { helpFor, perPlace } from '../game/missions';
-import { WORDS } from './words';
-
-const W = WORDS.missions;
+import { h } from './dom';
+import { BOARD_WORDS as W } from './boardWords';
 
 /** Lagos's five, easiest first (part 1). Coin catch's stars come from Alausa's level file. */
 export function lagosMissions(): MissionDef[] {
@@ -39,9 +35,23 @@ export function lagosMissions(): MissionDef[] {
 export const withCoins = (defs: readonly MissionDef[], coinsAt: (n: number) => number): MissionDef[] =>
   defs.map((d) => (d.goal === 'coins' && d.stars.length === 0 ? { ...d, stars: coinStars(coinsAt(d.at[0]!)) } : d));
 
-/** What the board's chunk (missionBoard.ts) takes from the first load. */
-export const BOARD_KIT = { h, button, layer, goalPic, starSvg, helpFor, perPlace };
-export type BoardKit = typeof BOARD_KIT;
+/**
+ * The coin, food, fufu and goat pictures, handed in from the first load (main.ts): importing
+ * art/items.ts, art/fufu.ts or art/hazards.ts here would split them, and what they share a file
+ * with, out of the hero's file into a file of their own (a bigger first load). The well's and
+ * the parcel's art are in the first load's main file, so they are imported.
+ */
+export interface SharedArt {
+  kobo: typeof DrawKobo;
+  food: typeof DrawFood;
+  fufu: typeof DrawFufu;
+  goat: typeof DrawGoat;
+}
+const NO_ART = (): void => undefined;
+let art: SharedArt = { kobo: NO_ART, food: NO_ART, fufu: NO_ART, goat: NO_ART };
+export const useArt = (a: SharedArt): void => {
+  art = a;
+};
 
 /** A later state's own goal pictures (the Ijebu garri parcel, the gravel); false: not one of its own. */
 export type OwnIcon = (g: CanvasRenderingContext2D, icon: MissionIcon, size: number) => boolean;
@@ -64,15 +74,15 @@ export function goalPic(icon: MissionIcon | FoodKind, px: number, own?: OwnIcon)
   if (icon === 'coin') {
     g.translate(16, 16);
     g.scale(1.25, 1.25);
-    drawKobo(g, 0, 0, 0);
+    art.kobo(g, 0, 0, 0);
   } else if (icon === 'foods') {
-    for (const [f, x, y] of [['corn', 9, 13], ['amala', 23, 12], ['fufu', 16, 22]] as const) f === 'fufu' ? drawFufuIcon(g, x, y, 19) : drawFoodIcon(g, f, x, y, 0.6);
-  } else if (icon === 'corn' || icon === 'amala') drawFoodIcon(g, icon, 16, 16, 0.85);
-  else if (icon === 'fufu') drawFufuIcon(g, 16, 16, 26);
+    for (const [f, x, y] of [['corn', 9, 13], ['amala', 23, 12], ['fufu', 16, 22]] as const) f === 'fufu' ? art.fufu(g, x, y, 19) : art.food(g, f, x, y, 0.6);
+  } else if (icon === 'corn' || icon === 'amala') art.food(g, icon, 16, 16, 0.85);
+  else if (icon === 'fufu') art.fufu(g, 16, 16, 26);
   else if (icon === 'goat') {
     g.translate(16, 29);
     g.scale(0.46, 0.46);
-    drawGoat(g, 0, 0, 0, 'walk', 1);
+    art.goat(g, 0, 0, 0, 'walk', 1);
   } else if (icon === 'well') {
     g.translate(16, 31);
     g.scale(0.32, 0.32);
