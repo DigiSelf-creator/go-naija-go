@@ -3159,7 +3159,7 @@ body.lane {
 /* MS-R4: with "Missions" the row holds five: "Challenge road" and "Nigeria's wheel" take two lines
    sooner, so all five stay in one row on a phone held sideways (the wheel moves into Settings only
    where even then they do not fit). */
-@media (max-width: 900px) {
+@media (min-width: 401px) and (max-width: 900px) {
   .city-buttons:has(.ms-button) .two-line {
     max-width: 128px;
     line-height: 1.1;
