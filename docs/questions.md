@@ -1,5 +1,13 @@
 # Open questions for the product owner
 
+## po note, 24 Nov 2026 (newest): crisp characters (ST-H) and quick missions (MS) accepted (f54e0a1)
+
+- **Accepted (ST-H5, MS5):** step ST-H (style.md 1.8, decision 88) and slice MS (missions.md, decision 89) on claude/serene-hopper-ydve2g at f54e0a1, after qa passed ST-H4 and MS4 on re-check. Reported by qa, not re-run by po: hall fps at or above main 95676d6 (Go-Slow about 4 to 5 fps better in phase 1 and the finish, Pothole level or better); street-perf gap is noise (31.1 vs 32.2 avg, same-build runs vary up to 7 fps); missions board loads on its own, works offline, star rows sit inside their tiles at 320 x 240 and 568 x 320; vitest 1890 pass, tsc clean, missions, city, mission-qa and hall specs pass. Reasoned by po: MS-R1 to MS-R5 hold (no calendar, ₦2 once, stars kept after a loss, wheel moves only where five do not fit, no Booming points); nothing copies another game (our own star, MS2) and no real people.
+- **Size, under decision 64 (small, easy to undo), reported in one line:** first load grew 4.5 KB for ST-H and MS together against their 7 KB joint budget (3 + 4); gamedev's split puts ST-H about 0.37 KB over its own 3 KB and MS about 1.8 KB under its 4 KB. First load is 914.7 of 3000 KB. Accepted as the team's call, not sent to Tp; trimming later is easy if Tp says.
+- **For Tp to look at (not blocking):** before and after of the run and the builder at 851 x 393 and 320 x 240 (`?gallery=style-people`), and the missions board with a star being won.
+- **Waits for Tp:** MS-Q1 (daily missions). Recommend **a**, no daily missions; built that way already, nothing blocked.
+- **Small, for a later round:** Mama Put's card line is 7 words (missions.md part 5 asks 6 or fewer); the helpers' cheer bubble near the cook and the mill is not built yet (the thank-you line is); qa's report did not give the Ogun part's growth (budget 0.5 KB each for ST-H and MS), so the lead should note it on the next size check. Gamedev ST-B rows may now start (plan line 117).
+
 ## designer, 24 Nov 2026 (newest): Kano, the Centre of Commerce (decision 89; docs/kano.md)
 
 The Kano note is a first draft in docs/kano.md, built on the recommended answers below. Lines that change with a different answer carry the question's id. Small rulings KN-R1 to KN-R12 (kano.md part 11) follow the team's recommendation under decision 64. po is asked to check the names and the hard rules (task K0b) before Tp answers.
