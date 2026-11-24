@@ -164,7 +164,8 @@ describe('O5a Pothole Hall art', () => {
               drawCarriedBag(bag.g, look, pose, 0, 0);
               expect(bag.bad, at).toEqual([]);
               // (the bounds count each ellipse as a whole circle, so allow the pad's 7 u radius)
-              expect(bag.box.bottom, at).toBeLessThan(hero.box.top + 8);
+              // Style 1.8: the head is bigger (15 u), so the eyes sit about 10 u under its top; 9 u keeps the face clear
+              expect(bag.box.bottom, at).toBeLessThan(hero.box.top + 9);
               expect(bag.box.top, at).toBeLessThan(hero.box.top - 8);
             }
           }

@@ -15,6 +15,7 @@
  */
 import { HAIRS, OUTFITS, SKINS, SUIT, ageOf, bodyOf, type HairOption, type HeroLook, type OutfitOption, type SkinOption } from './hero';
 import { INK, WHITE } from './palette';
+import { armInk, devPerUnit, heroInkPx, inkRatio, innerPx, silhouette } from './ink';
 import { LANE_U, bake, capsule, dot, line, mix, oval, poly, rimOf, shadeOf, shape, type Baked, type UBox } from './lane-shade';
 
 export type LaneHeroMove = 'run' | 'jump' | 'slide' | 'stumble' | 'torch' | 'wave';
@@ -279,23 +280,27 @@ interface PartLook {
  * each a copy of the shape moved toward the light, so the far edge shows rim then shadow.
  */
 function part(g: CanvasRenderingContext2D, path: () => void, t: Tone, o: PartLook = {}): void {
-  const rim = o.rim ?? 0.6;
-  const sh = o.shade ?? 1.3;
+  const sh = (o.rim ?? 0.6) + (o.shade ?? 1.3);
   const ln = o.line ?? OUT / 2;
   g.lineJoin = 'round';
   g.lineCap = 'round';
   g.beginPath();
   path();
   if (ln > 0) {
+    // Style 1.8: the silhouette pass draws every outline at the hero's width; the paint pass
+    // only the thin inner line between parts
     g.strokeStyle = INK;
-    g.lineWidth = ln * 2;
+    g.lineWidth = outline(g);
     g.stroke();
   }
-  g.fillStyle = t.rim;
+  // Style 1.8: flat base and one solid shade with a hard edge (only when 2 px or wider); no rim
+  const shade = shows(g, sh);
+  g.fillStyle = shade ? t.deep : t.base;
   g.fill();
+  if (!shade && !o.hi) return;
   g.save();
   g.clip();
-  for (const [d, c] of [[rim, t.deep], [rim + sh, t.base]] as const) {
+  for (const [d, c] of shade ? ([[sh, t.base]] as const) : ([] as const)) {
     g.save();
     g.translate(LX * d, LY * d);
     g.beginPath();
@@ -304,7 +309,7 @@ function part(g: CanvasRenderingContext2D, path: () => void, t: Tone, o: PartLoo
     g.fill();
     g.restore();
   }
-  if (o.hi) {
+  if (o.hi && shows(g, o.hiW ?? 1)) {
     g.beginPath();
     o.hi();
     g.strokeStyle = t.glow;
@@ -312,6 +317,23 @@ function part(g: CanvasRenderingContext2D, path: () => void, t: Tone, o: PartLoo
     g.stroke();
   }
   g.restore();
+}
+
+/*
+ * Style 1.8 outlines, in screen px (src/art/ink.ts): the lane hero is the hero, so its outline is
+ * max(1.6 u, 2 px) at the side view's size, in hero ink, one line round the whole figure.
+ */
+let silPass = false;
+let heroDev = 2;
+function dpu(g: CanvasRenderingContext2D): number {
+  return devPerUnit(g) ?? 1;
+}
+/** Outline stroke (before the fill): the silhouette's full width, or the inner line. */
+function outline(g: CanvasRenderingContext2D): number {
+  return silPass ? armInk((2 * heroDev) / dpu(g)) : (2 * innerPx(heroDev)) / dpu(g);
+}
+function shows(g: CanvasRenderingContext2D, w: number): boolean {
+  return devPerUnit(g) === null || w * dpu(g) >= 2 * inkRatio();
 }
 
 /** The lit side's unit normal of a segment (the side facing the light). */
@@ -583,10 +605,11 @@ function drawArm(c: Ctx, i: 0 | 1): void {
 /** The back of the head, the ears, the hair or headwear, and a face side when the head turns. */
 function drawHead(c: Ctx): void {
   const { g, b, s, h, rig } = c;
-  const k = b.head;
+  // Style 1.8: a bigger head (about 1.2 times), sitting a little lower into the shoulders
+  const k = b.head * 1.2;
   const hx = rig.lean * 1.1 + (rig.turn === 2 ? 0.6 : rig.turn * 0.4);
   const sy = (rig.sh - rig.shrug * 0.4) * b.len;
-  const hy = sy - 7.6 * k;
+  const hy = sy - 6.6 * k;
   const { c: hc, acc } = hairColours(h, b);
   const skin = skinTone(s);
   // Neck
@@ -824,6 +847,19 @@ export function drawLaneHero(g: CanvasRenderingContext2D, look: HeroLook, pose: 
   const s = SKINS[look.skin] ?? SKINS[0]!;
   const h = HAIRS[look.hair] ?? HAIRS[0]!;
   const o = OUTFITS[look.outfit] ?? OUTFITS[0]!;
+  // 1 lane unit here is the side view's 1/LANE_HERO_SCALE unit: the outline follows the hero's.
+  const d = devPerUnit(g);
+  heroDev = heroInkPx((d ?? 1) * LANE_HERO_SCALE);
+  silPass = true;
+  try {
+    laneHeroPass(silhouette(g), look, pose, s, h, o);
+  } finally {
+    silPass = false;
+  }
+  laneHeroPass(g, look, pose, s, h, o);
+}
+
+function laneHeroPass(g: CanvasRenderingContext2D, look: HeroLook, pose: LaneHeroPose, s: SkinOption, h: HairOption, o: OutfitOption): void {
   const c: Ctx = { g, b: buildOf(look), s, h, o, rig: rigOf(pose), suit: !!pose.suit };
   g.save();
   g.scale(LANE_HERO_SCALE, LANE_HERO_SCALE);

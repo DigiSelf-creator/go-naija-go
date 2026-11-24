@@ -17,6 +17,7 @@
  */
 import { drawCityBus } from './city';
 import { CREAM, INK, WHITE } from './palette';
+import { EYE_INK, FOLK_INK, HERO_INK, armInk, devPerUnit, folkInkPx, inkRatio, innerPx, silhouette } from './ink';
 
 const TAU = Math.PI * 2;
 
@@ -195,6 +196,149 @@ export function drawFolk(g: CanvasRenderingContext2D, f: Folk, x: number, y: num
     }
   }
   g.restore();
+}
+
+/** The three darkest skins: head outline in hero ink (style 1.8 part 7). */
+const DARK = ['#4b2c1a', '#7a4a2a', '#3a2012'];
+
+/**
+ * The small townsperson redrawn crisp (style 1.8, ST-H2), for the first streets' proud people
+ * (firstLook.ts, about 36 u tall once scaled): one warm-ink outline round the whole figure in
+ * screen px, thin lines between parts, flat colours, solid eyes with a catch-light, a smile and a
+ * blush on everyone. A headscarf is tied cloth with a knot and tails, never a hat. Bake it.
+ */
+export function drawFolkCrisp(g: CanvasRenderingContext2D, f: Folk, o: { turn?: -1 | 0 | 1; reach?: boolean } = {}): void {
+  g.save();
+  oval(g, 0, 0.4, 4.6, 1.6, 'rgba(0,0,0,0.2)');
+  if (f.small) g.scale(0.85, 0.85);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const L = devPerUnit(g) ?? 1;
+  const out = folkInkPx(L);
+  folkCrisp(silhouette(g), f, o, out / L, true);
+  folkCrisp(g, f, o, innerPx(out) / L, false);
+  g.restore();
+}
+
+function folkCrisp(g: CanvasRenderingContext2D, f: Folk, o: { turn?: -1 | 0 | 1; reach?: boolean }, e: number, sil: boolean): void {
+  const ink = (w: number): number => (sil ? armInk(w) : w);
+  const limb = (c: string, w: number, pts: readonly number[]): void => {
+    line(g, FOLK_INK, ink(w + 2 * e), pts);
+    line(g, c, w, pts);
+  };
+  const edge = (c = FOLK_INK): void => {
+    g.strokeStyle = c;
+    g.lineWidth = ink(sil ? 2 * e : e);
+    g.stroke();
+  };
+  // Legs and shoes, then the arm behind
+  const leg = f.robe ? f.skin : f.bottom;
+  limb(leg, 2.1, [-1.3, -5, -1.3, -0.9]);
+  limb(leg, 2.1, [1.3, -5, 1.3, -0.9]);
+  for (const x of [-1.3, 1.3]) {
+    g.beginPath();
+    g.ellipse(x + 0.5, -0.6, 1.3, 0.75, 0, 0, TAU);
+    g.fillStyle = '#3b2a20';
+    g.fill();
+    edge();
+  }
+  limb(f.top, 1.8, [-3.1, -10.6, -3.5, -6.6]);
+  // Body
+  g.beginPath();
+  if (f.robe) {
+    g.moveTo(-3, -11.5);
+    g.lineTo(3, -11.5);
+    g.lineTo(4, -2);
+    g.lineTo(-4, -2);
+  } else {
+    g.moveTo(-3, -11.5);
+    g.lineTo(3, -11.5);
+    g.lineTo(2.7, -4.6);
+    g.lineTo(-2.7, -4.6);
+  }
+  g.closePath();
+  g.fillStyle = f.top;
+  g.fill();
+  edge();
+  if (!f.robe) {
+    g.fillStyle = f.bottom;
+    g.fillRect(-2.7, -6, 5.4, 1.6);
+  }
+  // The near arm (up and out when wiping a window) and its hand
+  const hand: [number, number] = o.reach ? [5.8, -14.4] : [3.6, -6.4];
+  limb(f.top, 1.8, o.reach ? [3.1, -10.6, 5.6, -14] : [3.1, -10.6, 3.5, -6.8]);
+  g.beginPath();
+  g.arc(hand[0], hand[1], 0.95, 0, TAU);
+  g.fillStyle = f.skin;
+  g.fill();
+  edge();
+  // Head and hair
+  const hy = -14;
+  const headInk = DARK.includes(f.skin) ? HERO_INK : FOLK_INK;
+  if (f.head === 'afro') {
+    g.beginPath();
+    g.arc(0, hy - 0.6, 3.8, 0, TAU);
+    g.fillStyle = f.headCol;
+    g.fill();
+    edge();
+  }
+  if (f.head === 'scarf') {
+    // The scarf's knot and two short tails at the back of the head: tied cloth, not a hat
+    g.beginPath();
+    g.arc(-2.7, hy - 0.8, 1.05, 0, TAU);
+    g.moveTo(-2.9, hy - 0.2);
+    g.lineTo(-4.4, hy + 2.4);
+    g.lineTo(-3.1, hy + 2.2);
+    g.lineTo(-2.2, hy + 0.2);
+    g.closePath();
+    g.fillStyle = f.headCol;
+    g.fill();
+    edge();
+  }
+  g.beginPath();
+  g.arc(0, hy, 2.8, 0, TAU);
+  g.fillStyle = f.skin;
+  g.fill();
+  edge(headInk);
+  g.beginPath();
+  if (f.head === 'gele') {
+    g.moveTo(GELE_START[0], hy + GELE_START[1]);
+    for (const [qx, qy, x, y] of GELE) g.quadraticCurveTo(qx, hy + qy, x, hy + y);
+  } else if (f.head === 'scarf') {
+    g.moveTo(-3.05, hy + 0.2);
+    g.quadraticCurveTo(-3.2, hy - 3.6, 0.3, hy - 3.3);
+    g.quadraticCurveTo(3.3, hy - 3.1, 3.05, hy - 0.4);
+    g.quadraticCurveTo(0, hy - 1.6, -3.05, hy + 0.2);
+  } else if (f.head === 'afro') g.arc(0, hy - 0.6, 3.8, Math.PI, TAU);
+  else g.arc(0, hy - 0.2, 2.95, Math.PI * 1.08, Math.PI * 1.92);
+  g.closePath();
+  g.fillStyle = f.headCol;
+  g.fill();
+  if (f.head === 'gele' || f.head === 'scarf') edge();
+  if (f.head === 'braids') limb(f.headCol, 1.1, [-2.5, hy, -2.7, hy + 3.8]);
+  if (sil) return;
+  const px = inkRatio() / (devPerUnit(g) ?? 1);
+  if (f.head === 'scarf' || f.head === 'gele') {
+    // One fold line across the cloth
+    g.beginPath();
+    g.moveTo(-2.4, hy - 1.4);
+    g.quadraticCurveTo(0, hy - 2.6, 2.6, hy - 1.6);
+    g.strokeStyle = 'rgba(255,248,230,0.8)';
+    g.lineWidth = Math.max(0.5, px);
+    g.stroke();
+  }
+  // Face: solid eyes with a white catch-light, a cheek blush and a smile on everyone
+  const tx = (o.turn ?? 0) * 0.7;
+  oval(g, 1.5 + tx, hy + 0.9, 0.7, 0.42, 'rgba(230,110,90,0.28)');
+  for (const x of [-0.85, 0.95]) {
+    oval(g, x + tx, hy + 0.05, 0.45, 0.62, EYE_INK);
+    disc(g, x + tx + 0.15, hy - 0.2, Math.max(0.16, px * 0.35), WHITE);
+  }
+  g.beginPath();
+  g.arc(tx + 0.05, hy + 0.75, 0.95, 0.15 * Math.PI, 0.85 * Math.PI);
+  g.strokeStyle = DARK.includes(f.skin) ? '#efb3a0' : '#8a3a2e';
+  g.lineWidth = Math.max(0.45, px);
+  g.stroke();
 }
 
 /** A white enamel plate of rice and stew with fried plantain (dodo) and a little green, r units across. */

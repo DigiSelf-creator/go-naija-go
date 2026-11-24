@@ -189,7 +189,8 @@ describe('throw pose (S2.15): every body, age, skin, hair and outfit, on the gro
       return r.calls.filter((c) => c.name === 'arc').length;
     };
     const base: HeroPose = { phase: 0.2, inAir: false, facing: 1, glow: false };
-    expect(arcs({ ...base, throwing: 0.2 })).toBe(arcs(base) + 1);
+    // Style 1.8 draws the hero twice (silhouette, then paint), so the ball's circle shows up twice.
+    expect(arcs({ ...base, throwing: 0.2 })).toBe(arcs(base) + 2);
     expect(arcs({ ...base, throwing: 0.7 })).toBe(arcs(base));
     expect(arcs({ ...base, throwing: 1 })).toBe(arcs(base));
     expect(arcs({ ...base, throwing: Number.NaN })).toBe(arcs(base));

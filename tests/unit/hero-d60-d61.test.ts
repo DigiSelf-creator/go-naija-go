@@ -86,7 +86,8 @@ describe('decision 60: the richer hero', () => {
             const w = watch();
             drawHero(w.g, look, { ...stand, face });
             expect(w.fills.get(SKINS[skin]!.face.lip.toLowerCase()), `${face} ${JSON.stringify(look)}`).toBe(1);
-            expect(w.used.has('#ffffff')).toBe(true);
+            // Style 1.8: solid eyes; the white is their catch-light, so only open eyes show it
+            if (face !== 'hurt' && face !== 'win') expect(w.used.has('#ffffff')).toBe(true);
             const r = boundsContext();
             drawHero(r.g, look, { ...stand, face });
             expect(r.bad).toEqual([]);
