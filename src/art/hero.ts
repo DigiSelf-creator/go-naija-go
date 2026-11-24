@@ -3474,20 +3474,44 @@ export const SPRITE_STEPS = 24;
 /**
  * The cache key of a pose that may be drawn from a sprite, or null when it must be drawn live:
  * any effect (amala glow, corn lines, dash, suit, throw, skid, dust, rope, push, the turn), and
- * standing (its breath and cloth sway follow the clock). Only the run, walk, jump, fall and
- * landing, which follow the stride, the fall speed and the landing alone, are cached.
+ * standing (its breath and cloth sway follow the clock: see momentKey). Only the run, walk,
+ * jump, fall and landing, which follow the stride, the fall speed and the landing alone, are
+ * cached, with the face's set mood if any (the wince after a knock, the beam on a win).
  */
 export function spriteKey(pose: HeroPose): string | null {
+  const base = plainKey(pose);
+  if (base === null || pose.standing) return null;
+  const s = snapStep(pose);
+  if (pose.inAir) return `${base}a${s.vy}`;
+  return `${base}${pose.gait === 'walk' ? 'w' : 'r'}${s.step}l${s.land}`;
+}
+
+/** The suit and face part of a key, or null for a pose with an effect that is drawn live. */
+function plainKey(pose: HeroPose): string | null {
   // The garri suit once fully on (no plates clicking on, no cracks) never moves by itself, so it
   // is kept as sprites too: it can stay on for the rest of a street or a whole hall fight.
   const suit = pose.suit ? (steadySuit(pose) ? 's' : null) : '';
-  if (suit === null || pose.glow || pose.strong || pose.fast || pose.dash || pose.rope || pose.standing || pose.resting || pose.blink) return null;
+  if (suit === null || pose.glow || pose.strong || pose.fast || pose.dash || pose.rope || pose.resting || pose.blink) return null;
   if (pose.push || pose.front || pose.shakeOut !== undefined || throwOf(pose) !== null || dustOffOf(pose) !== null) return null;
-  // A set mood (the wince after a knock, the beam on a win) lasts a moment: drawn live
-  if (typeof pose.dust === 'number' || (typeof pose.skid === 'number' && pose.skid > 0) || pose.face) return null;
-  const s = snapStep(pose);
-  if (pose.inAir) return `${suit}a${s.vy}`;
-  return `${suit}${pose.gait === 'walk' ? 'w' : 'r'}${s.step}l${s.land}`;
+  // The start-of-run puff shows only on the ground (heroPass), so a jump with it is kept as one without.
+  if ((typeof pose.dust === 'number' && !pose.inAir) || (typeof pose.skid === 'number' && pose.skid > 0)) return null;
+  return suit + (pose.face && pose.face in MOODS ? pose.face : '');
+}
+
+/** Standing is made again at most this many times a second (its breath moves under 1 px in that time). */
+export const MOMENT_HZ = 10;
+
+/**
+ * Standing with no effect (under a go light, the kind finish): the breath and cloth sway follow
+ * the clock, so it is not kept with the other sprites. It has one sprite of its own, made again
+ * only when this key changes (MOMENT_HZ times a second), and copied 1:1 like the others (the hall
+ * drew it live twice a frame, outline pass and paint pass: qa ST-H4). Null for any other pose.
+ */
+export function momentKey(pose: HeroPose): string | null {
+  const base = plainKey(pose);
+  if (base === null || !pose.standing || pose.inAir) return null;
+  const t = typeof pose.time === 'number' && Number.isFinite(pose.time) ? pose.time : 0;
+  return `${base}S${snapStep(pose).land}t${Math.floor(t * MOMENT_HZ)}`;
 }
 
 /** The suit is on and still: every plate in place (or reduced motion), no crack showing. */
@@ -3556,28 +3580,34 @@ export class HeroSprites {
   private madeAt = -Infinity;
   /** Device px a screen px where the hero is shown (the game canvas's, view.ts); null: the page's, capped at 2. */
   ratio: number | null = null;
-
+  /** Standing's own sprite and the key it was made for (momentKey). */
+  private moment: { key: string; c: HTMLCanvasElement } | null = null;
 
   /** Starts again for a new look, pixel scale or ratio. */
   private use(look: HeroLook, px: number): void {
     const lk = JSON.stringify(clampLook(look)) + bodyOf(look) + ageOf(look) + this.ratio;
     if (lk === this.look && Math.abs(px - this.px) <= 1e-6) return;
     this.frames.clear();
+    this.moment = null;
     this.look = lk;
     this.px = px;
     const b = spriteBox(px);
     this.keep = Math.max(MIN_SPRITES, Math.min(MAX_SPRITES, Math.floor(SPRITE_BYTES / (b.w * b.h * 4))));
   }
 
-  /** Makes one sprite (facing right) and keeps it, the oldest unused ones going first. */
-  private make(look: HeroLook, pose: HeroPose, key: string): HTMLCanvasElement | null {
+  /** Draws `pose` (snapped, facing right) into sprite `c`, or a new one; null when there is no context. */
+  private paint(look: HeroLook, pose: HeroPose, c?: HTMLCanvasElement): HTMLCanvasElement | null {
     const px = this.px;
     const b = spriteBox(px);
-    const c = document.createElement('canvas');
-    c.width = b.w;
-    c.height = b.h;
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = b.w;
+      c.height = b.h;
+    }
     const cg = c.getContext('2d');
     if (!cg) return null;
+    cg.setTransform(1, 0, 0, 1, 0, 0);
+    cg.clearRect(0, 0, c.width, c.height);
     cg.setTransform(px, 0, 0, px, b.ox, b.oy);
     setInkRatio(this.ratio);
     try {
@@ -3585,6 +3615,13 @@ export class HeroSprites {
     } finally {
       setInkRatio(null);
     }
+    return c;
+  }
+
+  /** Makes one sprite (facing right) and keeps it, the oldest unused ones going first. */
+  private make(look: HeroLook, pose: HeroPose, key: string): HTMLCanvasElement | null {
+    const c = this.paint(look, pose);
+    if (!c) return null;
     for (const k of this.frames.keys()) {
       if (this.frames.size < this.keep) break;
       this.frames.delete(k);
@@ -3617,16 +3654,30 @@ export class HeroSprites {
 
   /** Draws the hero with its feet at the current origin, as drawHero does. */
   draw(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose): void {
-    const key = typeof document === 'undefined' || typeof g.getTransform !== 'function' ? null : spriteKey(pose);
-    const m = key === null ? null : g.getTransform();
+    const page = typeof document !== 'undefined' && typeof g.getTransform === 'function';
+    const key = page ? spriteKey(pose) : null;
+    const still = page && key === null ? momentKey(pose) : null;
+    const m = key === null && still === null ? null : g.getTransform();
     // Only a plain scale (no turn, no squeeze) can be copied pixel for pixel
-    if (key === null || m === null || m.b !== 0 || m.c !== 0 || !(m.a > 0) || Math.abs(m.a - m.d) > 1e-6) {
+    if (m === null || m.b !== 0 || m.c !== 0 || !(m.a > 0) || Math.abs(m.a - m.d) > 1e-6) {
       drawHero(g, look, pose);
       return;
     }
     this.use(look, m.a);
-    let c = this.frames.get(key);
-    if (c === undefined) {
+    let c = key === null ? undefined : this.frames.get(key);
+    if (still !== null) {
+      // Standing: its one sprite, made again when the key moves on (MOMENT_HZ a second).
+      if (this.moment?.key !== still) {
+        const t = typeof pose.time === 'number' && Number.isFinite(pose.time) ? pose.time : 0;
+        const made = this.paint(look, { ...pose, time: Math.floor(t * MOMENT_HZ) / MOMENT_HZ }, this.moment?.c);
+        if (!made) {
+          drawHero(g, look, pose);
+          return;
+        }
+        this.moment = { key: still, c: made };
+      }
+      c = this.moment.c;
+    } else if (key !== null && c === undefined) {
       const now = typeof performance !== 'undefined' ? performance.now() : 0;
       if (now - this.madeAt > 12) {
         this.made = 0;
@@ -3643,11 +3694,12 @@ export class HeroSprites {
         return;
       }
       c = made;
-    } else if (this.frames.size >= this.keep) {
+    } else if (key !== null && c !== undefined && this.frames.size >= this.keep) {
       // Kept in use order once full, so the poses of the run now are never the ones let go.
       this.frames.delete(key);
       this.frames.set(key, c);
     }
+    if (c === undefined) return;
     const b = spriteBox(this.px);
     g.save();
     // Round first, then flip round that whole pixel (style 1.8 part 5 rule 3).

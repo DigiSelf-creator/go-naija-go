@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FOLK_BOX } from '../../src/art/folk';
 import { folkFramesFor, folkSheetLayout } from '../../src/art/folkBake';
 import { HALL_CROWD, STREET_CASTS } from '../../src/art/folkCasts';
-import { HeroSprites, type HeroPose } from '../../src/art/hero';
+import { HeroSprites, momentKey, type HeroPose } from '../../src/art/hero';
 import { inkAtLeast, inkRatio } from '../../src/art/ink';
 import { CastSheet } from '../../src/game/crowdDraw';
 import { HallCrowd } from '../../src/game/crowd';
@@ -202,6 +202,27 @@ describe('ST-H3: the hero', () => {
     }
     expect(kept(s).reduce((n, c) => n + c.width * c.height * 4, 0)).toBeLessThanOrEqual(6 * 1024 * 1024);
     expect(kept(s).length).toBeGreaterThanOrEqual(60);
+  });
+
+  it('standing (qa ST-H4: the halls) is one sprite of its own, made again only 10 times a second, and copied 1:1', () => {
+    const s = new HeroSprites();
+    s.ratio = 2;
+    const calls: Call[] = [];
+    const g = fakeContext(null, calls);
+    g.setTransform(1.87, 0, 0, 1.87, 40.4, 60.6);
+    // Two seconds of frames at 60 a second, the beam of a win on the face
+    for (let i = 0; i < 120; i++) s.draw(g, look, { ...run, standing: true, face: 'win', facing: i % 2 ? 1 : -1, time: 3 + i / 60 });
+    expect(calls.length).toBe(120);
+    expect(made.length).toBe(1);
+    expect(kept(s).length).toBe(0);
+    for (const c of calls) expect(c.a.length === 3 && isWhole(c.m.e) && isWhole(c.m.f) && Math.abs(c.m.a) === 1).toBe(true);
+    // The moments it is made for
+    expect(momentKey({ ...run, standing: true, time: 3.04 })).toBe(momentKey({ ...run, standing: true, time: 3.06 }));
+    expect(momentKey({ ...run, standing: true, time: 3.04 })).not.toBe(momentKey({ ...run, standing: true, time: 3.14 }));
+    // Effects still draw live; not standing is not a moment
+    expect(momentKey({ ...run, standing: true, glow: true })).toBeNull();
+    expect(momentKey({ ...run, standing: true, dust: 0.3 })).toBeNull();
+    expect(momentKey(run)).toBeNull();
   });
 });
 
