@@ -24,6 +24,7 @@ import { RULES, Run, type RunEvent } from '../../src/game/run';
 import { LANE, MissionBook, MissionGo, STAR_KOBO, coinStars, helpFor, placeToPlay, readMissions, type MissionDef } from '../../src/game/missions';
 import { lagosMissions, withCoins } from '../../src/screens/missions';
 import { WORDS } from '../../src/screens/words';
+import { BOARD_WORDS } from '../../src/screens/boardWords';
 import { OGUN_MISSIONS } from '../../src/worlds/ogun/missions';
 import { createStore } from '../../src/storage';
 
@@ -189,11 +190,11 @@ describe('stars: kept, paid once, saved (parts 1 and 3)', () => {
   it('end card lines', () => {
     const g = WORDS.missions.got;
     expect([g(1, 1, 3), g(2, 2, 3), g(1, 3, 3), g(1, 2, 2), g(1, 1, 2)]).toEqual(['You got a star!', 'You got 2 stars!', 'All 3 stars!', 'Both stars!', 'You got a star!']);
-    expect(WORDS.missions.every('Ogun')).toBe('Every Ogun star!');
-    expect(WORDS.missions.everyLine('Lagos')).toBe('You are a Lagos star helper.');
-    expect(WORDS.missions.everyLine('Ogun')).toBe('You are an Ogun star helper.');
-    expect(WORDS.missions.tile('Coin catch', 'Alausa', 1, 3)).toBe('Coin catch. Alausa. 1 of 3 stars.');
-    expect(WORDS.missions.tileLocked('Secret wells', 'Ikeja')).toBe('Secret wells. Locked. Open Ikeja first.');
+    expect(BOARD_WORDS.every('Ogun')).toBe('Every Ogun star!');
+    expect(BOARD_WORDS.everyLine('Lagos')).toBe('You are a Lagos star helper.');
+    expect(BOARD_WORDS.everyLine('Ogun')).toBe('You are an Ogun star helper.');
+    expect(BOARD_WORDS.tile('Coin catch', 'Alausa', 1, 3)).toBe('Coin catch. Alausa. 1 of 3 stars.');
+    expect(BOARD_WORDS.tileLocked('Secret wells', 'Ikeja')).toBe('Secret wells. Locked. Open Ikeja first.');
     expect(WORDS.missions.starSpoken(1, 3)).toBe('Star! 1 of 3.');
   });
 

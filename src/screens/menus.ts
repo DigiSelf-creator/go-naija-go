@@ -41,7 +41,7 @@ import { gateIconSvg } from '../art/gateway';
 import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
 import { isNativeApp } from '../native/is-native';
 import type { BoardView } from './missionBoard';
-import { BOARD_KIT } from './missions';
+import type { BoardKit } from './missions';
 import { starSvg } from '../art/star';
 import type { MissionDef } from '../game/missions';
 
@@ -199,6 +199,12 @@ export interface MenuHooks {
   playMission?(d: MissionDef, at: TapPoint | null): void;
   /** MS3c: every star of the state is won and its card has not shown yet (true once: it is saved as shown). */
   everyDue?(state: StateId): boolean;
+  /**
+   * MS3b: what the board's chunk takes from the first load (screens/missions.ts BOARD_KIT). Passed
+   * in, not imported: road.ts imports menus.ts, so an import here would pull the goal pictures' art
+   * into a file of its own.
+   */
+  missionKit?: BoardKit;
 }
 
 /** What the game over and win screens show. */
@@ -628,7 +634,7 @@ export class Menus {
 
   /** MS3b: "Missions", first in the city's bottom row once the state has missions to show. */
   private missionsButton(state: StateId): HTMLButtonElement[] {
-    if (!this.hooks.missions?.(state)) return [];
+    if (!this.hooks.missionKit || !this.hooks.missions?.(state)) return [];
     const b = this.guarded(WORDS.missions.button, 'minor ms-button', () => this.openMissions(state), {}, 'settings');
     // The star stands in the icon disc (art's star, MS2, replaces starSvg).
     const disc = b.querySelector<HTMLElement>('.ic');
@@ -651,7 +657,7 @@ export class Menus {
             this.hooks.playMission?.(d, tapPoint(e));
           },
           close: () => this.closeOverlay(),
-        }, BOARD_KIT),
+        }, this.hooks.missionKit!),
       );
     }, () => undefined);
   }
@@ -662,7 +668,7 @@ export class Menus {
     const from = this.screen;
     void preloadBoard().then(({ everyCard }) => {
       if (this.screen !== from || this.overlay || !this.hooks.everyDue?.(state)) return;
-      this.openOverlay(everyCard(state === 'ogun' ? OGUN_WORDS.travel.ogun : OGUN_WORDS.travel.lagos, () => this.closeOverlay(), BOARD_KIT));
+      this.openOverlay(everyCard(state === 'ogun' ? OGUN_WORDS.travel.ogun : OGUN_WORDS.travel.lagos, () => this.closeOverlay(), this.hooks.missionKit!));
       this.hooks.playSound('sting');
     }, () => undefined);
   }

@@ -58,7 +58,7 @@ export function goalPic(icon: MissionIcon | FoodKind, px: number, own?: OwnIcon)
   const g = c.getContext('2d');
   if (!g) return c;
   g.scale(2, 2);
-  if (icon !== 'corn' && icon !== 'amala' && icon !== 'garri' && icon !== 'ikokore' && icon !== 'ofada' && own?.(g, icon, px)) return c;
+  if ((icon === 'parcel' || icon === 'gravel') && own?.(g, icon, px)) return c;
   const k = px / 32;
   g.scale(k, k);
   if (icon === 'coin') {
@@ -84,11 +84,10 @@ export function goalPic(icon: MissionIcon | FoodKind, px: number, own?: OwnIcon)
 /**
  * The run's goal chip (part 2, "In the run"): the goal's picture, "{have} / {next star}" and
  * the star slots; after the last star, the number and a tick. DOM only, touched when the count
- * changes. Spoken (polite) when a star fills.
+ * changes. A star filling is spoken by the game's polite line (main.ts runSaid).
  */
 export class MissionChip {
   readonly el: HTMLElement;
-  private readonly said: HTMLElement;
   private go: MissionGo | null = null;
   private saved = 0;
   private last = '';
@@ -96,8 +95,6 @@ export class MissionChip {
 
   constructor() {
     this.el = h('span', { class: 'ms-chip', hidden: true });
-    this.said = h('span', { class: 'sr-only', 'aria-live': 'polite' });
-    document.body.append(this.said);
   }
 
   /** A new go (or none): the chip's picture is drawn now, once. `saved`: stars won before. */
@@ -130,14 +127,12 @@ export class MissionChip {
     }
     d.foods?.forEach((f, i) => this.foods[i]?.classList.toggle('got', go.foods.has(f)));
     this.el.querySelector('.ms-stars')!.innerHTML = Array.from({ length: d.stars.length }, (_, i) => starSvg(i < won, 16)).join('');
-    this.el.setAttribute('aria-label', `${d.name}: ${n?.textContent ?? ''}`);
   }
 
-  /** A star filled: it pops once (0.3 s; none with reduced motion, screens.css), and is spoken (polite). */
-  star(total: number, of: number): void {
+  /** A star filled: it pops once (0.3 s; none with reduced motion, screens.css). Returns its spoken words. */
+  star(total: number, of: number): string {
     this.update();
-    const s = this.el.querySelector('.ms-stars')?.children[total - 1];
-    s?.classList.add('pop');
-    this.said.textContent = W.starSpoken(total, of);
+    this.el.querySelector('.ms-stars')?.children[total - 1]?.classList.add('pop');
+    return W.starSpoken(total, of);
   }
 }

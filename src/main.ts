@@ -52,7 +52,7 @@ import type { LaneSession } from './lane/session';
 import { KEY_LANE, ONE_RUN_BOTH_FIXES, haulWords, readLane, writeLane, type Haul, type LaneSave } from './lane/rewards';
 import { TILT_APP_ASKS_AGAIN, TiltAccess } from './game/tilt';
 import { LANE, MissionBook, MissionGo, STAR_KOBO, placeToPlay, type MissionDef } from './game/missions';
-import { MissionChip, lagosMissions, withCoins } from './screens/missions';
+import { BOARD_KIT, MissionChip, lagosMissions, withCoins } from './screens/missions';
 import type { GameEvent } from './game/game';
 
 const el = document.getElementById('game');
@@ -764,12 +764,10 @@ function startGame(): void {
     if (ogunDefsMade) return ogunDefsMade;
     const part = worlds.get(OGUN);
     if (!part?.missions) return [];
+    // A street's laid coins: each `kobo` row is [x, y, count] (the level file's own shape).
     const coinsAt = (n: number): number => {
-      try {
-        return parseLevel(part.levels[`ogun-${n}`]).coins.length;
-      } catch {
-        return 0;
-      }
+      const rows = (part.levels[`ogun-${n}`] as { kobo?: unknown } | undefined)?.kobo;
+      return Array.isArray(rows) ? rows.reduce((t: number, r) => t + (Number((r as unknown[])[2]) || 0), 0) : 0;
     };
     return (ogunDefsMade = withCoins(part.missions.list, coinsAt));
   };
@@ -791,7 +789,7 @@ function startGame(): void {
           starKobo += n * STAR_KOBO;
           sound.play('checkpoint');
           toast.show(WORDS.missions.star, 1000);
-          chip.star(total, d.stars.length);
+          runSaid.textContent = chip.star(total, d.stars.length);
         })
       : null;
     starKobo = 0;
@@ -999,6 +997,7 @@ function startGame(): void {
       return { state, defs, save: book.save, open: (n: number) => n === LANE || streetOpen(p, n), ...(ogun && worlds.get(OGUN)?.missions?.icon ? { own: worlds.get(OGUN)!.missions!.icon! } : {}) };
     },
     playMission: (d, at) => playMission(d, at),
+    missionKit: BOARD_KIT,
     everyDue: (state) => {
       const [n, of] = book.total(defsOf(state));
       if (!of || book.save.helper[state] || n < of) return false;

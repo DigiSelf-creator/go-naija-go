@@ -521,26 +521,16 @@ export const WORDS = {
     /** The plain spelling, if a phone shows a tone mark as a box. */
     plain: { 'Ẹ káàárọ̀!': 'E kaaro!', 'Ụtụtụ ọma!': 'Ututu oma!', 'Ẹ n lẹ́ o!': 'E n le o!', 'Ẹ kú iṣẹ́!': 'E ku ise!' } as Readonly<Record<string, string>>,
   },
-  /** MS3b: quick missions (docs/missions.md part 2). Ogun's five are in the Ogun part. */
+  /**
+   * MS3b: quick missions (docs/missions.md part 2): the run and Lagos's five. The board's and
+   * the cards' words load with the board (src/screens/boardWords.ts); Ogun's five are in the Ogun part.
+   */
   missions: {
     button: 'Missions',
-    heading: 'Missions',
-    sub: 'Get stars! Tap a mission.',
-    helper: 'Star helper',
-    total: (n: number, of: number) => `Stars: ${n} of ${of}`,
-    locked: (place: string) => `Open ${place} first`,
-    tile: (name: string, place: string, n: number, of: number) => `${name}. ${place}. ${n} of ${of} stars.`,
-    tileLocked: (name: string, place: string) => `${name}. Locked. Open ${place} first.`,
-    best: (n: number) => `Best: ${n}`,
-    play: 'Play',
-    back: 'Back',
-    ok: 'OK',
     star: 'Star!',
     starSpoken: (n: number, of: number) => `Star! ${n} of ${of}.`,
     /** End cards: stars won in this go. */
     got: (n: number, total: number, of: number) => (total >= of ? (of === 2 ? 'Both stars!' : `All ${of} stars!`) : n === 1 ? 'You got a star!' : `You got ${n} stars!`),
-    every: (state: string) => `Every ${state} star!`,
-    everyLine: (state: string) => `You are ${/^[AEIOU]/.test(state) ? 'an' : 'a'} ${state} star helper.`,
     lagos: {
       coins: { name: 'Coin catch', line: 'Catch coins on Alausa!' },
       lunch: { name: 'Lunch for Mama Put', line: 'Mama Put needs corn, fufu and amala!', thanks: 'Mama Put says thank you!' },

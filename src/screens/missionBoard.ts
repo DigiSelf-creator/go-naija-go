@@ -8,9 +8,7 @@ import './missionBoard.css';
 import { iconSvg } from '../art/icons';
 import type { MissionDef, MissionSave } from '../game/missions';
 import type { OwnIcon, BoardKit } from './missions';
-import { WORDS } from './words';
-
-const W = WORDS.missions;
+import { BOARD_WORDS as W } from './boardWords';
 
 export interface BoardView {
   /** The state's name for the helper card ("Lagos"). */
