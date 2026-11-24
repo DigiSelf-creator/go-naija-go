@@ -116,6 +116,8 @@
   overflow: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  /* A tile is never squeezed shorter than its words and stars (the list scrolls instead). */
+  grid-auto-rows: max-content;
   gap: 8px;
   margin: 0 -6px;
   padding: 4px 6px 10px;
@@ -230,6 +232,15 @@
   .ms-tile {
     padding: 2px 6px;
     column-gap: 6px;
+  }
+  /* qa MS4: a two-line name ("Lunch for Mama Put") and its star row fit inside the 56 px tile,
+     clear of its bottom edge: tighter lines and 15 px stars. */
+  .ms-tile .ms-words {
+    line-height: 1.05;
+  }
+  .ms-tile .ms-stars svg {
+    width: 15px;
+    height: 15px;
   }
   .ms-words small {
     display: none;
