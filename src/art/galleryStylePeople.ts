@@ -14,7 +14,8 @@ import { drawFolkFrame, type FolkFrame, type FolkLook } from './folk';
 import { LANE_CHILDREN, STREET_CASTS } from './folkCasts';
 import { drawHero, type HeroLook, type HeroPose } from './hero';
 import { setInkRatio } from './ink';
-import { drawLaneHero } from './lane-hero';
+// Through the lane gallery, so this page reaches the same lane files and the game's lane chunk stays whole
+import { drawLaneHero } from './galleryLane';
 import { WORLD_H } from '../engine/view';
 
 /** Screen sizes: 1 unit is this many screen px in the run. */

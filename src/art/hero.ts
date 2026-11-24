@@ -1503,92 +1503,6 @@ function mouthOpen(g: CanvasRenderingContext2D, f: FaceColours, shape: () => voi
   g.stroke();
 }
 
-function drawMouth(g: CanvasRenderingContext2D, f: FaceColours, m: Mood): void {
-  g.lineCap = 'round';
-  g.lineJoin = 'round';
-  switch (m.mouth) {
-    case 'smile':
-      // Rose lower lip, corners turned up, and the smile line along its top
-      lip(g, f, 2.35, 2.45, 3.85, 5.15, 5.15, 2.4, 3.35);
-      g.strokeStyle = f.line;
-      g.lineWidth = fine(g, 0.5);
-      g.beginPath();
-      g.moveTo(2.1, 2.15);
-      g.quadraticCurveTo(2.2, 2.45, 2.35, 2.45);
-      g.quadraticCurveTo(3.75, 3.35, 5.15, 2.4);
-      g.stroke();
-      return;
-    case 'grin': {
-      // A small, sure grin while running
-      const shape = (): void => {
-        g.moveTo(2.3, 2.3);
-        g.quadraticCurveTo(3.75, 3.0, 5.15, 2.25);
-        g.quadraticCurveTo(4.0, 4.35, 2.3, 2.3);
-      };
-      mouthOpen(g, f, shape, () => {
-        g.moveTo(2.3, 2.3);
-        g.quadraticCurveTo(3.75, 3.0, 5.15, 2.25);
-        g.lineTo(5.15, 2.9);
-        g.quadraticCurveTo(3.75, 3.55, 2.3, 2.9);
-        g.closePath();
-      });
-      lip(g, f, 2.9, 3.35, 3.95, 4.65, 4.8, 3.2, 3.85);
-      return;
-    }
-    case 'open': {
-      // An excited "whoa" in the jump
-      const shape = (): void => {
-        g.moveTo(2.6, 2.25);
-        g.quadraticCurveTo(3.8, 1.85, 5.05, 2.15);
-        g.quadraticCurveTo(4.8, 4.75, 3.6, 4.55);
-        g.quadraticCurveTo(2.5, 4.3, 2.6, 2.25);
-      };
-      mouthOpen(g, f, shape, null);
-      lip(g, f, 3.0, 3.8, 3.8, 4.95, 4.6, 3.75, 4.25);
-      return;
-    }
-    case 'wince': {
-      // A quick clenched "ouch": teeth together, corners pulled
-      const shape = (): void => {
-        g.moveTo(2.45, 2.55);
-        g.quadraticCurveTo(3.1, 2.15, 3.8, 2.4);
-        g.quadraticCurveTo(4.5, 2.2, 5.1, 2.45);
-        g.quadraticCurveTo(4.6, 3.35, 3.8, 3.15);
-        g.quadraticCurveTo(3.0, 3.4, 2.45, 2.55);
-      };
-      mouthOpen(g, f, shape, () => g.rect(2.3, 2.0, 3.0, 1.6));
-      g.beginPath();
-      g.moveTo(2.6, 2.75);
-      g.lineTo(4.95, 2.7);
-      g.moveTo(3.8, 2.4);
-      g.lineTo(3.8, 3.1);
-      g.strokeStyle = f.line;
-      g.lineWidth = fine(g, 0.3);
-      g.stroke();
-      lip(g, f, 3.05, 3.3, 3.85, 4.15, 4.6, 3.25, 3.6);
-      return;
-    }
-    case 'beam': {
-      // A big open smile on a win
-      const shape = (): void => {
-        g.moveTo(2.2, 2.1);
-        g.quadraticCurveTo(3.75, 2.9, 5.2, 2.0);
-        g.quadraticCurveTo(4.85, 5.1, 3.55, 4.85);
-        g.quadraticCurveTo(2.35, 4.5, 2.2, 2.1);
-      };
-      mouthOpen(g, f, shape, () => {
-        g.moveTo(2.2, 2.1);
-        g.quadraticCurveTo(3.75, 2.9, 5.2, 2.0);
-        g.lineTo(5.2, 2.75);
-        g.quadraticCurveTo(3.75, 3.6, 2.2, 2.85);
-        g.closePath();
-      });
-      lip(g, f, 2.85, 3.95, 3.8, 5.2, 4.65, 3.9, 4.35);
-      return;
-    }
-  }
-}
-
 /**
  * The eyes on every face (style 1.8 part 4): two solid ovals 22 % of the head tall (2.5 u in the
  * head frame, 3.3 u on the hero), a white catch-light upper front at least 1 device px across. A
@@ -1688,10 +1602,29 @@ function smallFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean
   g.ellipse(2.3, 1.75, 1.15, 0.7, -0.15, 0, TAU);
   g.fill();
   faceEyes(g, blink, b, m);
-  const line = Math.max(0.6, inkRatio() / dpu);
-  // Mouth: one smile line about 30 % of the head wide, or a simple open mouth
+  mouth(g, f, m, Math.max(0.6, inkRatio() / dpu), false);
+}
+
+/** Rose lower lip under each mouth (big heads only): start, control, end and inner y. */
+const LIPS: Record<Mood['mouth'], readonly [number, number, number, number, number, number, number]> = {
+  smile: [2.35, 2.45, 3.85, 5.15, 5.15, 2.4, 3.35],
+  grin: [2.35, 2.45, 3.85, 5.15, 5.15, 2.4, 3.35],
+  open: [3.0, 3.8, 3.8, 4.95, 4.6, 3.75, 4.25],
+  beam: [2.85, 3.95, 3.8, 5.2, 4.65, 3.9, 4.35],
+  wince: [3.05, 3.3, 3.85, 4.15, 4.6, 3.25, 3.6],
+};
+
+/**
+ * The mouth for each mood (style 1.8): one smile line about 30 % of the head wide, a zigzag wince
+ * or a simple open mouth. On big heads (`lips`) the rose lower lip goes with it, once.
+ */
+function mouth(g: CanvasRenderingContext2D, f: FaceColours, m: Mood, line: number, lips: boolean): void {
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const open = m.mouth === 'open' || m.mouth === 'beam';
+  if (lips && !open) lip(g, f, ...LIPS[m.mouth]);
   g.beginPath();
-  if (m.mouth === 'open' || m.mouth === 'beam') {
+  if (open) {
     const big = m.mouth === 'beam';
     g.moveTo(2.4, 2.3);
     g.quadraticCurveTo(3.8, big ? 2.9 : 2.1, 5.2, 2.2);
@@ -1699,7 +1632,15 @@ function smallFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean
     g.quadraticCurveTo(2.5, 4.3, 2.4, 2.3);
     g.fillStyle = MOUTH;
     g.fill();
-    g.strokeStyle = EYE_INK;
+    if (lips) {
+      lip(g, f, ...LIPS[m.mouth]);
+      g.beginPath();
+      g.moveTo(2.4, 2.3);
+      g.quadraticCurveTo(3.8, big ? 2.9 : 2.1, 5.2, 2.2);
+      g.quadraticCurveTo(4.9, big ? 5.0 : 4.6, 3.7, big ? 4.8 : 4.5);
+      g.quadraticCurveTo(2.5, 4.3, 2.4, 2.3);
+    }
+    g.strokeStyle = lips ? f.line : EYE_INK;
     g.lineWidth = line;
     g.stroke();
     return;
@@ -1714,8 +1655,8 @@ function smallFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean
     g.moveTo(2.2 - wide, 2.3);
     g.quadraticCurveTo(3.7, 3.9 + wide, 5.2, 2.2);
   }
-  // On the darker skins the smile is the rose lip colour, so it reads against the skin
-  g.strokeStyle = f.rim ? f.lip : EYE_INK;
+  // On the darker skins the run-size smile is the rose lip colour, so it reads against the skin
+  g.strokeStyle = lips ? f.line : f.rim ? f.lip : EYE_INK;
   g.lineWidth = line;
   g.stroke();
 }
@@ -1760,7 +1701,7 @@ function drawFace(g: CanvasRenderingContext2D, skin: SkinOption, blink: boolean,
   g.moveTo(5.2, 1.2);
   g.quadraticCurveTo(5.6, 1.6, 5.2, 1.85);
   g.stroke();
-  drawMouth(g, f, m);
+  mouth(g, f, m, fine(g, 0.5), true);
 }
 
 /** Hair or headwear that sits behind the head and body (afro mass, braids, scarf tails). */

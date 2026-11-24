@@ -17,7 +17,7 @@
  */
 import { HAIRS, OUTFITS, SKINS, SUIT, ageOf, bodyOf, type HairOption, type HeroLook, type OutfitOption, type SkinOption } from './hero';
 import { INK, WHITE } from '../palette';
-import { LANE_U, bake, capsule, dot, line, mix, oval, poly, rimOf, shadeOf, shape, type Baked, type UBox } from '../lane-shade';
+import { LANE_U, bake, capsule, dot, line, mix, oval, poly, rimOf, shadeOf, shape, type Baked, type UBox } from './lane-shade';
 
 export type LaneHeroMove = 'run' | 'jump' | 'slide' | 'stumble' | 'torch' | 'wave';
 
