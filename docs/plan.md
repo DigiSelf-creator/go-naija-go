@@ -73,12 +73,12 @@ qa checks every CO row; po accepts.
 
 ## Slice P: Picture style (decision 85; designer note docs/style.md)
 
-A richer picture style, all our own: chunky buttons and one building shading recipe first, then angled cities with bigger people and soft shadows, then everyday detail. The evening look waits (style.md part 7). Not to be mixed up with the store rows (ST0 to ST6): these ids start with ST-A to ST-D.
+A richer picture style, all our own: chunky buttons and one building shading recipe first, then angled cities with bigger people and soft shadows, then everyday detail. The evening look waits (style.md part 7). Not to be mixed up with the store rows (ST0 to ST6): these ids start with ST-A to ST-D, plus step ST-H (crisp characters, decision 88), which comes before ST-B because Tp asked for characters first.
 
 Rules for the whole slice:
 - Everything follows docs/style.md: exact colours and numbers in part 1, limits in part 2, the qa checks in part 5.
 - Drawn once and reused. Nothing new is drawn per frame on streets: street frame draw calls equal or fewer than before, fps at 4x CPU equal or better. City drag at least 45 fps at 4x CPU; idle draws nothing; each bake under 50 ms per block at 4x CPU. No `shadowBlur`, canvas `filter` or CSS blur anywhere.
-- Budget (gzip): first load grows 16 KB at most and the Ogun part 9 KB at most for the whole slice, per phase as style.md 2.2. First load stays under 3 MB, Ogun under 150 KB.
+- Budget (gzip): first load grows 19 KB at most and the Ogun part 9.5 KB at most for the whole slice (ST-H's 3 KB and 0.5 KB included), per phase as style.md 2.2. First load stays under 3 MB, Ogun under 150 KB.
 - Every button keeps its words, a 44 x 44 px tap area and text of 15 px or more, at all six sizes (320 x 240, 568 x 320, 640 x 200, 851 x 393, 1280 x 720, 1920 x 1080), with and without the 24 px safe area.
 - Each phase ends with qa, po and before and after screenshots for Tp (851 x 393 and 320 x 240) before the next phase starts. Merging to the live link stays Tp's call (decision 64).
 
@@ -89,9 +89,14 @@ Rules for the whole slice:
 | 3 | ST-A3 | gamedev | City top and bottom rows and zoom in Lagos and Ogun; road screen buttons and stop card; run HUD counters as cream status chips (no bigger than today). Run pads, the HUD Pause and Sound buttons, the well and throw buttons stay (style.md 4.2) | ST-A1 | rows fit at all six sizes with the safe area; no pin, sign or edge arrow newly covered; street fps at 4x CPU not lower | 0.5 KB first load |
 | 4 | ST-A4 | qa | Phase 1 pass | ST-A2, ST-A3 | style.md part 5; greyscale shots of every changed screen; first load +3 KB at most | |
 | 5 | ST-A5 | po | Accept phase 1; Tp sees the screenshots | ST-A4 | note in docs/questions.md | |
-| 6 | ST-B1 | art | Shared shading helpers in src/art/shade.ts (`wall()`, `zincRoof()`, `flatRoof()`, `softShadow()`, `mix()`), warm ink in palette.ts; gallery page `?gallery=style-shading` | ST-A5 | numbers match style.md 1.3 and 1.5; helpers draw only into bake canvases | 1 KB first load |
-| 7 | ST-B2 | gamedev | Streets: shopfronts with the recipe, baked into cached strips with their soft shadow, in every Lagos and Ogun street, well rooms and both halls; street people take the warm outline and face recipe | ST-B1, SP-Q1 | frame draw calls equal or fewer, fps at 4x CPU equal or better on Alausa, Ota and Go-Slow Hall; strip memory under 4 MB a street; level tests and e2e pass; hero, kobo, food and hazards read as before | 1.5 KB first load, 1 KB Ogun |
-| 8 | ST-B3 | gamedev | Cities: the recipe on every Lagos and Ogun block, kiosk and stall, still top-down; warm outlines; zinc and concrete roofs in place of big grey | ST-B1 | bake under 50 ms a block at 4x CPU; drag at least 45 fps; idle draws nothing; tap areas unchanged; tired and bright still told apart without colour | 0.5 KB first load |
+| 5a | ST-H1 | designer | Crisp characters recipe, docs/style.md 1.8: what makes characters soft today, shape, outline, colour, face, pixel and size numbers | none | done 24 Nov; po checks the note | 0 |
+| 5b | ST-H2 | art | Redraw to 1.8: the run hero (src/art/hero.ts, every skin, hair, outfit, age and body, every pose), the lane hero (lane-hero.ts), the people kit (folk.ts; folkCasts looks unchanged), the Alausa helper and other one-off street people; outline width taken as a bake setting in px; gallery page `?gallery=style-people` with before and after at 851 x 393 and 320 x 240 scale, at 1x and 2x, every skin tone | ST-H1 | numbers match 1.8; hero still 50 u with the same hit box; heads 3.3 (hero) and 3.1 (adults) tall; every skin, hair and outfit still there; our own, copying no game; mock no one; dark-skin rules 2.3 and 1.8 part 7; listed in docs/assets.md | 2 KB first load, 0.5 KB Ogun |
+| 5c | ST-H3 | gamedev | Wire it in: bake hero and people at view scale x devicePixelRatio (cap 2) with the outline in px; copy 1 to 1 at whole device pixels; people sheets split into a second sheet instead of shrinking; run, jump and fall baked during the opening card; builder preview and galleries at devicePixelRatio; bosses, goats and birds get the 1.8 outline minimum where they are baked | ST-H2 | no sprite drawn bigger than baked (test); frame draw calls equal or fewer and fps at 4x CPU equal or better on Alausa, Ota, Go-Slow Hall and the lane run; people bake under 40 ms at 4x CPU; memory as 1.8 part 6; level tests and e2e pass | 1 KB first load |
+| 5d | ST-H4 | qa | Step ST-H pass | ST-H3 | the 1.8 crisp check at 400 percent on 851 x 393 (1x, 2.75x) and 320 x 240 (1x, 2x); every skin tone in greyscale; hero reads first; first load +3 KB, Ogun +0.5 KB at most | |
+| 5e | ST-H5 | po | Accept step ST-H; Tp sees before and after (851 x 393 and 320 x 240, run and builder) | ST-H4 | note in docs/questions.md | |
+| 6 | ST-B1 | art | Shared shading helpers in src/art/shade.ts (`wall()`, `zincRoof()`, `flatRoof()`, `softShadow()`, `mix()`), warm ink in palette.ts; gallery page `?gallery=style-shading` | ST-H2 | numbers match style.md 1.3 and 1.5; helpers draw only into bake canvases | 1 KB first load |
+| 7 | ST-B2 | gamedev | Streets: shopfronts with the recipe, baked into cached strips with their soft shadow, in every Lagos and Ogun street, well rooms and both halls (street people already done in ST-H) | ST-B1, ST-H5, SP-Q1 | frame draw calls equal or fewer, fps at 4x CPU equal or better on Alausa, Ota and Go-Slow Hall; strip memory under 4 MB a street; level tests and e2e pass; hero, kobo, food and hazards read as before | 1.5 KB first load, 1 KB Ogun |
+| 8 | ST-B3 | gamedev | Cities: the recipe on every Lagos and Ogun block, kiosk and stall, still top-down; warm outlines; zinc and concrete roofs in place of big grey | ST-B1, ST-H5 | bake under 50 ms a block at 4x CPU; drag at least 45 fps; idle draws nothing; tap areas unchanged; tired and bright still told apart without colour | 0.5 KB first load |
 | 9 | ST-B4 | qa | Phase 2 pass | ST-B2, ST-B3 | style.md part 5; first load +3 KB, Ogun +1 KB at most | |
 | 10 | ST-B5 | po | Accept phase 2; Tp sees the screenshots | ST-B4 | note in docs/questions.md | |
 | 11 | ST-C1 | designer | Angled city note in docs/city.md: how far fronts reach (40 percent of block depth at most), labels, signs, pins and edge arrows, people per zoom step | ST-B5 (may start during phase 2) | po checks the note | |
@@ -109,7 +114,7 @@ Question for Tp (style.md part 6), id SP-Q1: should ST-B2 also swap the old mark
 
 Order and what runs side by side:
 - ST-A1 can start now beside slice O; ST-A2 and ST-A3 fit in gamedev's gaps (one task at a time, slice O and the speed task from decision 83 first, unless Tp says otherwise).
-- Art runs one phase ahead: ST-B1 may be drawn while phase 1 is in qa, but no gamedev ST-B row starts before ST-A5.
+- Characters first (decision 88): ST-H runs after ST-A5 and before any gamedev ST-B row. Art may draw ST-B1 once ST-H2 is done, but no gamedev ST-B row starts before ST-H5.
 - ST-C3 before ST-C4: Lagos proves the angled view and its tap areas; Ogun reuses it.
 - The evening look is not in this slice.
 

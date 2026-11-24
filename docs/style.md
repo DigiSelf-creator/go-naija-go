@@ -114,7 +114,7 @@ City people grow from about 8 px to **about 32 units tall** (feet to top of head
 3. Outline warm ink, 1.6 units on body and head, 1.1 to 1.4 on hands and arms.
 4. Everyone smiles. Wide range of skin tones (the seven tones art uses, `#3e2619` to `#bf8558`, plus the lighter `#d9a172` and `#f1c9a5` from the hero builder), hair (gele, fila, braids, afro, puffs, low cut, head tie) and clothes (kaftan, agbada for an older man, wrapper and blouse, ankara, school uniform, work clothes). A wheelchair user and an older person with a walking stick are in every city.
 5. A small foot shadow: an oval 8 by 2.6 units, `rgba(70,35,15,0.28)`.
-6. Street people (about 30 px) already have this size; they take the warm outline and the face recipe when their street is redone in phase 2, nothing more.
+6. Street and lane people follow the crisp characters recipe (1.8) in step ST-H, before phase 2. City people take the same recipe when the city is redrawn in phase 3.
 
 ### 1.5 Soft shadows, no blur
 
@@ -134,8 +134,100 @@ Soft shadows are **two flat see-through shapes**, never a blur:
 
 ### 1.7 The hero stays easiest to see
 
-1. The hero keeps hero ink `#1d1a14` at today's width (2.6 for the outline, 1.3 for inner lines, src/art/hero.ts). No background thing uses a darker or thicker outline than the hero.
+1. The hero keeps hero ink `#1d1a14`. Its outline is the thickest on screen: the widths are in 1.8 (at least 2 screen pixels you can see, never less than today's 1.3 units). No background thing and no street person uses a darker or thicker outline than the hero.
 2. Kobo, food and hazards keep their current looks and outlines; the background may never be busier right behind them than today (qa compares, part 5).
+
+### 1.8 Crisp characters (decision 88)
+
+Owner: designer, 24 Nov 2026. Tp played the Android app with a 6 year old (decision 86: players from about 5 up) and asked for characters as crisp as the new buttons. We learn general craft from popular phone games (clear outlines, big friendly heads, a few clean colours, sharp pixels). We copy nothing: no character, outfit, pose, logo, colour scheme or shape from any game. Every person stays our own Nigerian street person.
+
+#### What makes them soft today
+
+Looked at in the run at 851 x 393 and 320 x 240, the hero builder, the people kit gallery (`?gallery=folk`) and the main gallery. The game world is 420 units tall, so 1 unit is about 0.94 screen pixels at 851 x 393 and only 0.57 at 320 x 240.
+
+1. **Outlines too thin for the screen.** Only the outer half of an outline shows. The hero's 2.6 unit outline shows as 1.3 units: 1.2 px at 851 x 393 and 0.7 px at 320 x 240. Street people's 1.5 unit outline shows as about 0.75 units: 0.7 px and 0.4 px. A line under 1 px is drawn as a grey fringe, so the figure's edge melts into the shop behind it. Some older one-off people (the Alausa helper in the hard hat) have no head outline at all.
+2. **Detail smaller than a pixel.** The hero's face has a cheek glow 1 unit wide, a nose glow 0.3 units, a nostril line 0.6, lip outline, brow rim and elder smile lines 0.24 to 0.9 units thick. On a head about 11 px tall in the run (6.5 px at 320 x 240) these blur into a brown smudge. Cloth patterns do the same.
+3. **Small heads, thin limbs.** The hero is 4.4 heads tall; street adults are 4.3 heads tall (head 8.6 units on 37). Arms and legs are 1 to 2 px wide in the run. Grown-up proportions read as "stick" at this size, and to a 5 year old the face is the character.
+4. **Muddy colours.** Cloth shade is a see-through plum layer (`rgba(42,28,56,0.3)`) laid over the colour, then a rim light, then a glow on top. Three thin see-through layers on a 2 px arm make a greyish mix, not a clean shade. Dark hair on the darker skins has nothing between them, so the hairline disappears.
+5. **Stretched sprites in some places.** The hero sprite is already baked at the screen's own pixels and copied at whole pixels (good: keep it). But the people sheet shrinks its pixels per unit when a cast does not fit 1024 x 1024 (src/art/folkBake.ts `folkSheetLayout`), and the city bakes at 1.5x (1x while dragging) on phones that are 2x or more. Both are then stretched up, which blurs.
+
+Before pictures (real size): the run at 851 x 393 and 320 x 240 and the people kit, kept with ST-H2's PR.
+
+#### The recipe
+
+Numbers are in drawing units at the hero's size (50 units tall) unless they say "px" (screen pixels you see) or "device px" (the phone's own pixels).
+
+**1. Shape: chunky and friendly**
+
+| Who | Height (stays as today) | Head height | Heads tall |
+|---|---|---|---|
+| Hero, adult | 50 | 15 (was about 11.4) | 3.3 |
+| Hero, teen | 46 | 14.4 (96 percent, as design.md) | 3.2 |
+| Street adult or elder | 37 / 36 | 12 (was 8.6) | 3.1 |
+| Street teen | 33 | 11 | 3 |
+| Street child | 26 | 10 | 2.6 |
+
+1. The hero keeps its 50 units and its hit box (decision 60: "the small size"). The bigger head comes from a shorter body and legs, not a taller hero.
+2. Arms at least 4 units thick, legs at least 5, hands a simple round mitt of 3.2, shoes 7 long. Nothing on the body thinner than 2 px at 851 x 393.
+3. The silhouette reads when filled solid black: in every run, walk and jump frame there is a gap between at least one arm and the body, and the legs are apart.
+4. Elders stand tall; no body is drawn as a joke (assets.md rules stand).
+
+**2. Outline: the biggest fix**
+
+The outline is set in screen pixels when a sprite is baked, then rounded to whole device pixels. The width is what you SEE (the outer half of a stroke drawn under the fill).
+
+| Who | Outline you see | Colour |
+|---|---|---|
+| Hero (run, lane run, builder) | the larger of 1.6 units and 2 px | hero ink `#1d1a14` |
+| Bosses | same as the hero | hero ink |
+| Street, lane and hall people | the larger of 1.2 units and 1.5 px, and always at least 1 device px thinner than the hero's on the same screen | warm ink `#3a2618`; head outline on the three darkest skins in hero ink (2.3) |
+| Goats, birds, other animals | as street people | warm ink |
+| Inner lines (sleeve edge, mouth, shoe sole, hair parting) | at least 1 px, about half the outline | ink or the part's deep tone |
+
+Round joins and round caps. One outline round the whole figure, not a separate ring round every small part.
+
+**3. Colour: flat, one shade, one highlight**
+
+1. Every part is a flat base colour, one shade and one highlight. All three are solid colours, never see-through layers laid on each other.
+2. Shade: the base mixed 25 percent toward plum `#2a1c38`, as one clean shape with a hard edge on the side away from the light. Highlight: the base mixed 30 percent toward `#fff0cc`, a strip or spot on the lit side. Skins keep their hand-picked shade and glow from decision 60.
+3. A shade or highlight thinner than 2 px is left out at that size.
+4. At most 12 colours on one figure, outline included.
+5. Clothes use clear, strong colours so they stand off the shop walls. Ankara and isiagu patterns are 2 or 3 large blocks or dots at least 2 px across in the run; fine pattern only in the builder preview.
+6. Hair and skin differ by at least 1.5 to 1 in contrast, or the hairline gets a 1 px highlight line on the hair side.
+
+**4. Face: big, kind, readable**
+
+1. Eyes: two solid ovals `#1f150f`, height 22 percent of the head (3.3 units on the hero, 2.6 on a street adult), width 70 percent of the height, one eye width apart.
+2. A white catch-light in each eye, at least 1 device px and about 0.6 px, upper front. On every skin.
+3. Smile: one line at least 1 px thick, about 30 percent of the head wide. Cheek blush: one flat oval `rgba(230,110,90,0.28)`.
+4. Brows: one short stroke at least 1 px thick, or left out. Nostrils, lip outlines, cheek and nose glows and elder smile lines show only when the head is 20 px tall or more (builder preview, win card), never in the run.
+5. Everyone smiles. Bosses get big simple faces too (eyes at least a fifth of the face wide) and lose in a funny way.
+
+**5. Crisp pixels**
+
+1. Bake each pose at the screen's pixels per unit: view scale times devicePixelRatio, capped at 2 as the game canvas is (src/engine/view.ts).
+2. Copy 1 to 1: a sprite is drawn at exactly its baked size, at whole device pixel positions (round x and y). Never stretch a sprite when drawing. A new screen size or ratio re-bakes.
+3. Facing left: flip round a whole pixel (round first, then flip), so the two sides match.
+4. People sheets: cells are the art box times pixels per unit, rounded up, plus 2 device px of gap; a sheet is at most 1024 x 1024. If a cast does not fit, use a second sheet (at most 2 per place) or bake fewer frames for far people (stand and two walk frames). **Never lower the pixels per unit to fit.**
+5. The builder preview and every gallery canvas use the screen's devicePixelRatio (capped at 2).
+6. The city keeps its own ratio caps for speed until phase 3 redraws it; its people then follow these rules inside the city picture.
+
+**6. Speed and size**
+
+1. Drawn once and reused (2.1). Nothing new is drawn per frame: a person is one drawImage, the hero one drawImage, as today.
+2. The hero makes at most 2 new sprites a frame (as today). The 8 run steps, jump and fall are baked while the street's opening card is on screen, so the first seconds do not draw the hero live.
+3. A street's people bake stays under 40 ms in all at 4x CPU, spread over frames (as today).
+4. Memory at 2x: hero sprites 6 MB at most; people sheets 2 per place at most (4 MB each).
+5. Size (gzip): step ST-H adds at most **3 KB** to the first load and **0.5 KB** to the Ogun part. No image files: everything stays drawn in code. Taking out sub-pixel detail should pay for most of it.
+
+**7. Dark skin (adds to 2.3)**
+
+1. The darkest three skins (`#3e2619`, `#4b2c1a`, `#5a3825`): head outline in hero ink, catch-lights always, the warm glow on the lit cheek kept at least 2 px.
+2. Hair on these skins gets its highlight along the top and the hairline (rule 3.6).
+3. Clothes next to dark skin are never a near-black; collars and sleeves end in a clear colour so the neck and arms read.
+4. qa checks every skin tone at 320 x 240 and in greyscale (part 5, item 8).
+
+**How we check it is crisp** (qa, at 400 percent zoom with no smoothing, on 851 x 393 at 1x and 2.75x and on 320 x 240 at 1x and 2x): the outline is solid ink all round, at least 2 device px for the hero, never only a grey fringe; both eyes and their catch-lights show on every skin; no part of a person is wider when drawn than when baked (no stretching); in greyscale the hero, then the people, then the background read in that order.
 
 ---
 
@@ -154,10 +246,11 @@ Soft shadows are **two flat see-through shapes**, never a blur:
 | Phase | First load grows by at most | Ogun part grows by at most | Why |
 |---|---|---|---|
 | 1 Buttons | 3 KB | 0 KB | CSS and about 14 small SVG icons |
+| 1b Crisp characters (ST-H) | 3 KB | 0.5 KB | hero and people redrawn in code (1.8); sub-pixel detail removed |
 | 2 Shading | 3 KB | 1 KB | one shared helper file; small changes in each street and city |
 | 3 Angled cities, people, shadows | 7 KB (Lagos city is in the first load) | 6 KB (Ogun city) | block fronts, people pieces |
 | 4 Everyday detail, paler far blocks | 3 KB | 2 KB | detail helpers, used by both |
-| **All four** | **16 KB** | **9 KB** | first load stays under 3 MB; Ogun stays under 150 KB |
+| **All of slice P** | **19 KB** | **9.5 KB** | first load stays under 3 MB; Ogun stays under 150 KB |
 
 The CI size check (`npm run check-size`) prints both lines. Each task in slice P says its own share. Over budget means the task is not done.
 
@@ -185,7 +278,7 @@ No font download. Buttons and cards use bold `'Trebuchet MS', Verdana, sans-seri
 
 ## 3. The plan, in four phases
 
-The tasks are slice P in docs/plan.md, named ST-A (phase 1) to ST-D (phase 4). Each phase finishes (qa passes, po accepts, Tp sees the screenshots) before the next starts. The evening look is not in this plan (part 7).
+The tasks are slice P in docs/plan.md, named ST-A (phase 1) to ST-D (phase 4), with step ST-H (crisp characters, 1.8) between phase 1 and phase 2, because Tp asked for characters first (decision 88). Each phase finishes (qa passes, po accepts, Tp sees the screenshots) before the next starts. The evening look is not in this plan (part 7).
 
 Six screen sizes for every check: **320 x 240, 568 x 320, 640 x 200, 851 x 393, 1280 x 720, 1920 x 1080**, each also with a 24 px safe area (notch) on the long side. Slow phone profile: 4x CPU slowdown.
 
@@ -210,7 +303,7 @@ What it changes: the shading recipe (1.3) and warm outlines on every building. I
 | id | owner | what changes | files likely touched | size | perf rule | qa checks | screenshots for Tp |
 |---|---|---|---|---|---|---|---|
 | ST-B1 | art | One shared helper file: `wall()`, `zincRoof()`, `flatRoof()`, `softShadow()`, `mix()`; warm ink and the 1.1 colours in palette.ts; gallery page `?gallery=style-shading` with one Lagos shop, one Ogun shed, one stall with a flat cloth shade, before and after | new src/art/shade.ts; src/art/palette.ts; src/art/galleries.ts; docs/assets.md | 1 KB | the helpers only draw into a bake canvas; never called in a frame loop | numbers match 1.3 and 1.5 exactly; no `shadowBlur` or `filter` | the gallery page |
-| ST-B2 | gamedev | Streets: shopfronts drawn with the recipe and baked into cached strips, in all Lagos streets (Alausa, Computer Village, Ikeja), the Ogun streets (Ota, Abeokuta, Sagamu), the well rooms and both halls' walls; street people get the warm outline and face recipe (1.4 point 6) | src/art/street.ts, backdrop.ts, market.ts, buspark.ts, roadside.ts, folk.ts, folkBake.ts, well.ts, wellRoom.ts, hall.ts; src/worlds/ogun/ (Ota, Abeokuta, Sagamu, Pothole Hall art) | 1.5 KB first load, 1 KB Ogun | **nothing new drawn per frame**: frame draw calls on a street equal or fewer than today (count them in the perf test); fps at 4x CPU equal or better than today on Alausa, Ota and Go-Slow Hall; strip memory under 4 MB for a street | every street plays the same (level tests, e2e); hero, kobo, food and hazards read as well as before (side by side and greyscale); no held brooms; any market umbrella in these streets is listed for Tp (part 6, question 1) | Alausa, Computer Village, Ota, Abeokuta, Go-Slow Hall |
+| ST-B2 | gamedev | Streets: shopfronts drawn with the recipe and baked into cached strips, in all Lagos streets (Alausa, Computer Village, Ikeja), the Ogun streets (Ota, Abeokuta, Sagamu), the well rooms and both halls' walls; street people already follow 1.8 from step ST-H | src/art/street.ts, backdrop.ts, market.ts, buspark.ts, roadside.ts, folk.ts, folkBake.ts, well.ts, wellRoom.ts, hall.ts; src/worlds/ogun/ (Ota, Abeokuta, Sagamu, Pothole Hall art) | 1.5 KB first load, 1 KB Ogun | **nothing new drawn per frame**: frame draw calls on a street equal or fewer than today (count them in the perf test); fps at 4x CPU equal or better than today on Alausa, Ota and Go-Slow Hall; strip memory under 4 MB for a street | every street plays the same (level tests, e2e); hero, kobo, food and hazards read as well as before (side by side and greyscale); no held brooms; any market umbrella in these streets is listed for Tp (part 6, question 1) | Alausa, Computer Village, Ota, Abeokuta, Go-Slow Hall |
 | ST-B3 | gamedev | Cities: the recipe on every Lagos and Ogun city block, kiosk and stall, still in today's top-down view; thin grey outlines become warm ink; grey roofs become zinc and flat concrete mixed | src/art/city.ts, src/screens/city.ts, src/worlds/ogun/city.ts | 0.5 KB first load | bake under 50 ms per block at 4x CPU; drag at least 45 fps at 4x CPU; idle draws nothing | tap areas and pins unchanged (same positions); tired and bright blocks still easy to tell apart without colour (the tired marks stay) | Lagos city, Ogun city, tired and bright |
 | ST-B4 | qa | Phase 2 pass | ST-B2, ST-B3 | | slow profile; first load +3 KB, Ogun +1 KB at most | as above; plus the code search for `shadowBlur`, `filter =`, `filter:` blur in src/ | qa's full set |
 | ST-B5 | po | Accept phase 2; Tp sees screenshots | ST-B4 | | | | |
