@@ -1,10 +1,11 @@
 /**
  * Drawing the people (task S3g1b; design.md "People everywhere" part 11): each place's cast is
- * baked once into one sprite sheet at the screen's pixel scale (art's bakeFolk), then every
+ * baked once into sprite sheets at the screen's pixel scale (CastSheet), then every
  * person is one drawImage. Bubbles, the heads in bus windows, the keke's riders and the okada
  * are baked once too. Rebuilt only when the screen's pixel scale or the cast changes.
  */
-import { bakeBubble, drawFolkSprite, folkFramesFor, folkSheetLayout, type FolkSheet } from '../art/folkBake';
+import { bakeBubble, drawFolkCell, folkCanvas, folkCellAt, folkFramesFor, folkSheetLayout, type FolkCell, type FolkSheet } from '../art/folkBake';
+import { setInkRatio } from '../art/ink';
 import { FOLK_BOX, drawFolkFrame, drawKekeRiders, drawOkada, drawWindowHeads, type FolkFrame, type FolkLook } from '../art/folk';
 import { OKADA_BOX, BUS_SHAPE_WINDOWS } from '../art/folkCasts';
 import { WORDS } from '../screens/words';
@@ -18,46 +19,62 @@ export function screenRatio(): number {
   return Math.min(Math.max(r, 1), 2);
 }
 
+/** A frame to bake, at the kit's size (1) or at another size it is drawn at (the hall's door people at 0.9). */
+export type CastCell = FolkFrame | { frame: FolkFrame; size: number };
+
+const cellFrame = (c: CastCell): FolkFrame => (typeof c === 'string' ? c : c.frame);
+const cellSize = (c: CastCell): number => (typeof c === 'string' ? 1 : c.size > 0 && Number.isFinite(c.size) ? c.size : 1);
+
+/** The cell baked at `size`, else the first one baked (the kit's size, the biggest a cast uses: shrunk, never stretched). */
+const pick = (list: readonly FolkCell[] | undefined, size: number): FolkCell | undefined => list?.find((c) => Math.abs(c.size - size) <= size * 0.02) ?? list?.[0];
+
 /**
- * One cast baked at one size. The bake is spread over frames (at most `budget` ms each), so a
- * place's first frame is never held up (part 11: no more than 30 ms later): a person whose
- * picture is not baked yet is simply not drawn for those first few frames.
+ * One cast baked at one pixel scale, on one sprite sheet or more (style 1.8 part 5: a cast that
+ * does not fit 1024 x 1024 goes on into a second sheet; the pixels per unit are never lowered).
+ * The bake is spread over frames (at most `budget` ms each), so a place's first frame is never
+ * held up (part 11: no more than 30 ms later): nobody is drawn until the whole cast is baked.
+ * Outlines are set in screen pixels for the ratio the picture is shown at (src/art/ink.ts).
  */
 export class CastSheet {
   private sheet: FolkSheet | null = null;
   private key = '';
-  private todo: { look: number; frame: FolkFrame }[] = [];
+  private todo: { look: number; frame: FolkFrame; size: number }[] = [];
   private looks: readonly FolkLook[] = [];
   private next = 0;
+  private ratio = 1;
   /** The cells by look, then frame (found without building a key each draw). */
-  private byLook: Map<FolkFrame, [number, number]>[] = [];
+  private byLook: Map<FolkFrame, FolkCell[]>[] = [];
   /** Milliseconds the bake took in all, over its frames (qa: at most 40 ms on the slow phone profile). */
   bakeMs = 0;
   /** The longest piece of it in one frame. */
   bakeStepMs = 0;
 
   constructor(
-    private frames: (look: FolkLook, i: number) => readonly FolkFrame[] = folkFramesFor,
+    private frames: (look: FolkLook, i: number) => readonly CastCell[] = folkFramesFor,
     private budget = 4,
   ) {}
 
-  /** Makes the sheet if the cast or the pixel scale changed, and bakes a little more of it. */
-  ready(looks: readonly FolkLook[], pxPerU: number, castKey: string): FolkSheet | null {
-    const key = `${castKey}|${pxPerU.toFixed(3)}`;
+  /**
+   * Makes the sheets if the cast, the pixel scale or the ratio changed, and bakes a little more.
+   * pxPerU: device px a unit at the kit's size; ratio: device px a screen px where it is shown.
+   */
+  ready(looks: readonly FolkLook[], pxPerU: number, castKey: string, ratio = screenRatio()): FolkSheet | null {
+    const key = `${castKey}|${pxPerU.toFixed(3)}|${ratio}`;
     // No page (unit tests drawing with a stand-in context): nobody is drawn.
     if (typeof document === 'undefined') return null;
     if (!this.sheet || key !== this.key) {
       this.key = key;
       this.looks = looks;
+      this.ratio = ratio;
       // Stand first for everyone, then the other frames, so people show as early as possible.
       const first = (f: FolkFrame): boolean => f === 'stand' || f === 'backStand' || f === 'sit';
-      const all = looks.flatMap((l, i) => this.frames(l, i).map((frame) => ({ look: i, frame })));
+      const all = looks.flatMap((l, i) => this.frames(l, i).map((c) => ({ look: i, frame: cellFrame(c), size: cellSize(c) })));
       this.todo = [...all.filter((c) => first(c.frame)), ...all.filter((c) => !first(c.frame))];
-      const layout = folkSheetLayout(this.todo.length, pxPerU);
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, layout.width);
-      canvas.height = Math.max(1, layout.height);
-      this.sheet = { canvas, layout, cells: new Map() };
+      const big = this.todo.reduce((m, c) => Math.max(m, c.size), 1);
+      const layout = folkSheetLayout(this.todo.length, pxPerU * big);
+      // The layout's cells fit the biggest size; its pixels per unit are for the kit's size.
+      this.sheet = { canvas: folkCanvas(layout, 0), canvases: [], layout: { ...layout, pxPerU: layout.pxPerU / big }, cells: new Map() };
+      this.sheet.canvases.push(this.sheet.canvas);
       this.byLook = [];
       this.next = 0;
       this.bakeMs = 0;
@@ -67,19 +84,27 @@ export class CastSheet {
       const t0 = performance.now();
       const sh = this.sheet;
       const L = sh.layout;
-      const c2 = sh.canvas.getContext('2d')!;
-      while (this.next < this.todo.length) {
-        const c = this.todo[this.next]!;
-        const n = this.next++;
-        const sx = (n % L.cols) * L.cellW;
-        const sy = Math.floor(n / L.cols) * L.cellH;
-        c2.setTransform(L.pxPerU, 0, 0, L.pxPerU, sx + 1 - FOLK_BOX.l * L.pxPerU, sy + 1 - FOLK_BOX.t * L.pxPerU);
-        drawFolkFrame(c2, this.looks[c.look]!, c.frame);
-        sh.cells.set(`${c.look}:${c.frame}`, [sx, sy]);
-        (this.byLook[c.look] ??= new Map()).set(c.frame, [sx, sy]);
-        if (performance.now() - t0 > this.budget) break;
+      setInkRatio(this.ratio);
+      try {
+        while (this.next < this.todo.length) {
+          const c = this.todo[this.next]!;
+          const at = folkCellAt(L, this.next++);
+          const img = (sh.canvases[at.sheet] ??= folkCanvas(L, at.sheet));
+          const c2 = img.getContext('2d')!;
+          const p = L.pxPerU * c.size;
+          c2.setTransform(p, 0, 0, p, at.x + 1 - FOLK_BOX.l * p, at.y + 1 - FOLK_BOX.t * p);
+          drawFolkFrame(c2, this.looks[c.look]!, c.frame);
+          c2.setTransform(1, 0, 0, 1, 0, 0);
+          const cell: FolkCell = { ...at, size: c.size };
+          const m = (this.byLook[c.look] ??= new Map());
+          const list = m.get(c.frame);
+          if (list) list.push(cell);
+          else m.set(c.frame, [cell]);
+          if (performance.now() - t0 > this.budget) break;
+        }
+      } finally {
+        setInkRatio(null);
       }
-      c2.setTransform(1, 0, 0, 1, 0, 0);
       const ms = performance.now() - t0;
       this.bakeMs += ms;
       this.bakeStepMs = Math.max(this.bakeStepMs, ms);
@@ -92,48 +117,54 @@ export class CastSheet {
   }
 
   /**
-   * The whole sheet is baked. Nobody is drawn from it before then: a canvas still being drawn
+   * The whole cast is baked. Nobody is drawn from it before then: a canvas still being drawn
    * into would have to be copied again for every frame that uses it (a big cost on a slow phone).
    */
   get done(): boolean {
     return this.sheet !== null && this.next >= this.todo.length;
   }
 
+  /** The cell for a look and frame at a size; an unknown frame shows the person standing. */
+  private cellFor(d: Pick<FolkDraw, 'look' | 'frame' | 'size'>): FolkCell | undefined {
+    const m = this.byLook[d.look];
+    return pick(m?.get(d.frame) ?? m?.get(String(d.frame).startsWith('back') ? 'backStand' : 'stand'), d.size);
+  }
+
   /**
    * One person in device pixels (the context's transform is the identity): feet at (sx, sy),
-   * unitPx device px a unit. When the sheet was baked at this scale the copy is 1:1 at whole
-   * pixels. Nothing is drawn until the whole sheet is baked.
+   * unitPx device px a unit. When the cell was baked at this size (the street's people, the
+   * hall's) the copy is 1:1 at whole device pixels: never stretched (style 1.8 part 5).
+   * Nothing is drawn until the whole cast is baked.
    */
   drawDevice(g: G, d: Pick<FolkDraw, 'look' | 'frame' | 'flip' | 'size'>, sx: number, sy: number, unitPx: number): void {
     const s = this.sheet;
     if (!s || !this.done) return;
-    const m = this.byLook[d.look];
-    // Never stops the frame: an unknown frame shows the person standing.
-    const c = m?.get(d.frame) ?? m?.get(String(d.frame).startsWith('back') ? 'backStand' : 'stand');
+    const c = this.cellFor(d);
     if (!c) return;
     const L = s.layout;
-    let k = (d.size * unitPx) / L.pxPerU;
+    const p = L.pxPerU * c.size;
+    let k = (d.size * unitPx) / p;
     if (Math.abs(k - 1) < 0.02) k = 1;
-    const w = L.cellW * k;
-    const h = L.cellH * k;
-    const ox = (1 - FOLK_BOX.l * L.pxPerU) * k;
-    const oy = (1 - FOLK_BOX.t * L.pxPerU) * k;
-    const y = Math.round(sy - oy);
+    const ox = Math.round((1 - FOLK_BOX.l * p) * k);
+    const oy = Math.round((1 - FOLK_BOX.t * p) * k);
+    const img = s.canvases[c.sheet]!;
+    const y = Math.round(sy) - oy;
     if (!d.flip) {
-      g.drawImage(s.canvas, c[0], c[1], L.cellW, L.cellH, Math.round(sx - ox), y, w, h);
+      g.drawImage(img, c.x, c.y, L.cellW, L.cellH, Math.round(sx) - ox, y, L.cellW * k, L.cellH * k);
       return;
     }
-    const x = Math.round(sx);
-    g.setTransform(-1, 0, 0, 1, x, 0);
-    g.drawImage(s.canvas, c[0], c[1], L.cellW, L.cellH, -Math.round(ox), y, w, h);
+    // Facing left: round first, then flip round that whole pixel (part 5 rule 3).
+    g.setTransform(-1, 0, 0, 1, Math.round(sx), 0);
+    g.drawImage(img, c.x, c.y, L.cellW, L.cellH, -ox, y, L.cellW * k, L.cellH * k);
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  /** One person: one drawImage. A frame the look did not bake falls back to standing. */
+  /** One person in the current units: one drawImage. A frame the look did not bake falls back to standing. */
   draw(g: G, d: Pick<FolkDraw, 'look' | 'frame' | 'x' | 'y' | 'flip' | 'size'>): void {
     const s = this.sheet;
     if (!s || !this.done) return;
-    if (!drawFolkSprite(g, s, d.look, d.frame, d.x, d.y, d.size, d.flip)) drawFolkSprite(g, s, d.look, String(d.frame).startsWith('back') ? 'backStand' : 'stand', d.x, d.y, d.size, d.flip);
+    const c = this.cellFor(d);
+    if (c) drawFolkCell(g, s, c, d.x, d.y, d.size, d.flip);
   }
 }
 
@@ -240,7 +271,12 @@ function bakeLayer(box: { x: number; y: number; w: number; h: number }, pxPerU: 
   const g = c.getContext('2d')!;
   g.scale(pxPerU, pxPerU);
   g.translate(-box.x, -box.y);
-  draw(g);
+  setInkRatio(screenRatio());
+  try {
+    draw(g);
+  } finally {
+    setInkRatio(null);
+  }
   return { c, ...box };
 }
 function blit(g: G, l: Layer | null | undefined, dx = 0, dy = 0): void {

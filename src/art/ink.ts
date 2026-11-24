@@ -56,6 +56,26 @@ export function innerPx(outlinePx: number): number {
   return Math.max(Math.round(inkRatio()), Math.round(outlinePx / 2));
 }
 
+/**
+ * A line width in local units that shows at least `px` screen pixels in `g`'s transform now
+ * (style 1.8 part 2: bosses, goats, birds and other animals drawn live), rounded to whole device
+ * pixels. For a stroke drawn over its fill, where all of it shows. `w` as is where the context
+ * cannot say (stand-in contexts in unit tests).
+ */
+export function inkAtLeast(g: CanvasRenderingContext2D, w: number, px: number): number {
+  const dpu = devPerUnit(g);
+  if (dpu === null) return w;
+  return Math.max(1, Math.round(Math.max(w * dpu, px * inkRatio()))) / dpu;
+}
+
+/**
+ * The width of an ink line drawn under a `core` line of colour (a leg, a neck), so each edge shows
+ * at least `edge` units and `px` screen pixels, in whole device pixels.
+ */
+export function edgedWidth(g: CanvasRenderingContext2D, core: number, edge: number, px: number): number {
+  return core + 2 * inkAtLeast(g, edge, px);
+}
+
 /** Screen pixels per unit for `dpu` device pixels per unit. */
 export function screenPerUnit(dpu: number): number {
   return dpu / inkRatio();

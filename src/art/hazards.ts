@@ -6,6 +6,7 @@
  * The goat is never hurt. When smashed or bounced it trots away, tail up, ears
  * back, with a cheerful bleat bubble.
  */
+import { edgedWidth, inkAtLeast } from './ink';
 import * as P from './palette';
 
 const TAU = Math.PI * 2;
@@ -22,10 +23,10 @@ export function goatEatFrame(k: number): 0 | 1 {
   return Math.floor(t * 6) % 2 === 1 ? 1 : 0;
 }
 
-function blob(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string): void {
+function blob(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string, lw = 1.4): void {
   g.fillStyle = fill;
   g.strokeStyle = P.INK;
-  g.lineWidth = 1.4;
+  g.lineWidth = lw;
   g.beginPath();
   g.roundRect(x, y, w, h, r);
   g.fill();
@@ -77,6 +78,9 @@ function goat(g: CanvasRenderingContext2D, x: number, y: number, time: number, m
   g.translate(x, y + hop);
   // Drawn facing left; flip to face right.
   g.scale(-facing, 1);
+  // Style 1.8 part 2: the outline shows at least 1.5 px (as street people), each leg edge too.
+  const ol = inkAtLeast(g, 1.4, 1.5);
+  const legInk = edgedWidth(g, 2.2, 0.9, 1.5);
 
   if (run) {
     g.strokeStyle = P.WHITE;
@@ -96,7 +100,7 @@ function goat(g: CanvasRenderingContext2D, x: number, y: number, time: number, m
   for (const [lx, ph] of legs) {
     const swing = ph * (run ? 4 : 2.5);
     g.strokeStyle = P.INK;
-    g.lineWidth = 4;
+    g.lineWidth = legInk;
     g.beginPath();
     g.moveTo(lx, -11);
     g.lineTo(lx + swing, -1);
@@ -109,7 +113,7 @@ function goat(g: CanvasRenderingContext2D, x: number, y: number, time: number, m
   }
 
   // Body with a brown patch
-  blob(g, -14, -22, 28, 13, 6, P.GOAT_COAT);
+  blob(g, -14, -22, 28, 13, 6, P.GOAT_COAT, ol);
   g.fillStyle = P.GOAT_PATCH;
   g.beginPath();
   g.ellipse(4, -17, 5, 3.5, 0.2, 0, TAU);
@@ -129,7 +133,7 @@ function goat(g: CanvasRenderingContext2D, x: number, y: number, time: number, m
   if (eat) g.translate(chew === 0 ? -16 : -15, chew === 0 ? -9 : -16);
   else g.translate(-14, -22);
   g.rotate(eat ? (chew === 0 ? 0.45 : 0.15) : run ? -0.15 : Math.sin(time * 2) * 0.05);
-  blob(g, -10, -8, 12, 11, 4, P.GOAT_COAT);
+  blob(g, -10, -8, 12, 11, 4, P.GOAT_COAT, ol);
   // Horns
   g.strokeStyle = P.GOAT_HORN;
   g.lineWidth = 2.2;

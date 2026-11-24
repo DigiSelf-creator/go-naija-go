@@ -12,7 +12,7 @@
 import { drawDashPuff, drawDustPuff, drawKneePuff, drawSkidScuff } from './dust';
 import { FUFU } from './fufu';
 import { INK, WHITE } from './palette';
-import { EYE_INK, armInk, devPerUnit, heroInkPx, inkRatio, innerPx, screenPerUnit, silhouette } from './ink';
+import { EYE_INK, armInk, devPerUnit, heroInkPx, inkRatio, innerPx, screenPerUnit, setInkRatio, silhouette } from './ink';
 
 /** Lip rose. Every skin draws the same lip shape with a thin outline darker than the skin. */
 const LIP = '#d9705f';
@@ -3525,20 +3525,95 @@ const MAKE_PER_FRAME = 2;
 /** Room round the art box in a sprite (u): the outer half of the ink outline and a little more. */
 const SPRITE_PAD = 3;
 
+/** Memory for one hero's sprites (style 1.8 part 6: 6 MB at most at 2x); kept between these counts. */
+const SPRITE_BYTES = 6 * 1024 * 1024;
+const MIN_SPRITES = 60;
+const MAX_SPRITES = 260;
+
+/** The poses baked ahead (style 1.8 part 6 rule 2): every run step, then the jump and fall speeds. */
+const WARM: readonly HeroPose[] = [
+  ...Array.from({ length: SPRITE_STEPS }, (_, s): HeroPose => ({ phase: s / SPRITE_STEPS, inAir: false, vy: 0, land: 0, facing: 1, glow: false, gait: 'run' })),
+  ...Array.from({ length: 33 }, (_, i): HeroPose => ({ phase: 0, inAir: true, vy: (i - 16) * 25, facing: 1, glow: false })),
+];
+
 /**
- * The game's hero, drawn from sprites made at the screen's own pixel size (decision 60). The lit
- * hero takes more drawing than the old flat one; drawn once per pose and copied after, it costs
- * less than before. Each sprite is made at the exact device pixels per unit and copied to whole
- * pixels, so it is as crisp as drawing it live, on every screen. A new look or a new screen size
- * starts again. Poses with effects are drawn live (see spriteKey).
+ * The game's hero, drawn from sprites made at the screen's own pixel size (decision 60, style
+ * 1.8 part 5). The lit hero takes more drawing than the old flat one; drawn once per pose and
+ * copied after, it costs less than before. Each sprite is made at the exact device pixels per
+ * unit, with the outline set in screen pixels for `ratio`, and copied 1:1 at whole device pixels
+ * (never stretched), so it is as crisp as drawing it live, on every screen. A new look, screen
+ * size or ratio starts again. Poses with effects are drawn live (see spriteKey). The run steps,
+ * jump and fall can be made ahead while a card is on screen (prewarm).
  */
 export class HeroSprites {
   private frames = new Map<string, HTMLCanvasElement>();
   private look = '';
   private px = 0;
+  /** Sprites kept at most at this size (SPRITE_BYTES). */
+  private keep = MAX_SPRITES;
   /** New sprites made in this frame (about 12 ms): at most MAKE_PER_FRAME, so a new stride never stalls. */
   private made = 0;
   private madeAt = -Infinity;
+  /** Device px a screen px where the hero is shown (the game canvas's, view.ts); null: the page's, capped at 2. */
+  ratio: number | null = null;
+
+
+  /** Starts again for a new look, pixel scale or ratio. */
+  private use(look: HeroLook, px: number): void {
+    const lk = JSON.stringify(clampLook(look)) + bodyOf(look) + ageOf(look) + this.ratio;
+    if (lk === this.look && Math.abs(px - this.px) <= 1e-6) return;
+    this.frames.clear();
+    this.look = lk;
+    this.px = px;
+    const b = spriteBox(px);
+    this.keep = Math.max(MIN_SPRITES, Math.min(MAX_SPRITES, Math.floor(SPRITE_BYTES / (b.w * b.h * 4))));
+  }
+
+  /** Makes one sprite (facing right) and keeps it, the oldest unused ones going first. */
+  private make(look: HeroLook, pose: HeroPose, key: string): HTMLCanvasElement | null {
+    const px = this.px;
+    const b = spriteBox(px);
+    const c = document.createElement('canvas');
+    c.width = b.w;
+    c.height = b.h;
+    const cg = c.getContext('2d');
+    if (!cg) return null;
+    cg.setTransform(px, 0, 0, px, b.ox, b.oy);
+    setInkRatio(this.ratio);
+    try {
+      drawHero(cg, look, snapped(pose));
+    } finally {
+      setInkRatio(null);
+    }
+    for (const k of this.frames.keys()) {
+      if (this.frames.size < this.keep) break;
+      this.frames.delete(k);
+    }
+    this.frames.set(key, c);
+    return c;
+  }
+
+  /**
+   * Makes the run steps, the jump and the fall ahead for `look` at `px` device px a unit (the
+   * game's view.scale), for at most `ms` milliseconds (style 1.8 part 6 rule 2: while the
+   * street's opening card is on screen, so the first seconds never draw the hero live).
+   * Returns true once all of them are made.
+   */
+  prewarm(look: HeroLook, px: number, ms = 4): boolean {
+    if (typeof document === 'undefined' || !(px > 0)) return true;
+    this.use(look, px);
+    const t0 = performance.now();
+    let made = 0;
+    for (const pose of WARM) {
+      const key = spriteKey(pose);
+      if (key === null || this.frames.has(key)) continue;
+      // At least one each time, however short the time given
+      if (made > 0 && performance.now() - t0 > ms) return false;
+      if (!this.make(look, pose, key)) return true;
+      made++;
+    }
+    return true;
+  }
 
   /** Draws the hero with its feet at the current origin, as drawHero does. */
   draw(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose): void {
@@ -3549,20 +3624,7 @@ export class HeroSprites {
       drawHero(g, look, pose);
       return;
     }
-    const lk = JSON.stringify(clampLook(look)) + bodyOf(look) + ageOf(look);
-    if (lk !== this.look || Math.abs(m.a - this.px) > 1e-6) {
-      this.frames.clear();
-      this.look = lk;
-      this.px = m.a;
-    }
-    // Full: the oldest sprites go first (never the whole set at once, which re-made every pose).
-    for (const k of this.frames.keys()) {
-      if (this.frames.size <= 260) break;
-      this.frames.delete(k);
-    }
-    const px = m.a;
-    const ox = Math.ceil((SPRITE_PAD - HERO_ART_BOX.left) * px);
-    const oy = Math.ceil((SPRITE_PAD - HERO_ART_BOX.top) * px);
+    this.use(look, m.a);
     let c = this.frames.get(key);
     if (c === undefined) {
       const now = typeof performance !== 'undefined' ? performance.now() : 0;
@@ -3575,21 +3637,29 @@ export class HeroSprites {
         return;
       }
       this.made++;
-      c = document.createElement('canvas');
-      c.width = ox + Math.ceil((HERO_ART_BOX.right + SPRITE_PAD) * px);
-      c.height = oy + Math.ceil((HERO_ART_BOX.bottom + SPRITE_PAD) * px);
-      const cg = c.getContext('2d');
-      if (!cg) {
+      const made = this.make(look, pose, key);
+      if (!made) {
         drawHero(g, look, pose);
         return;
       }
-      cg.setTransform(px, 0, 0, px, ox, oy);
-      drawHero(cg, look, snapped(pose));
+      c = made;
+    } else if (this.frames.size >= this.keep) {
+      // Kept in use order once full, so the poses of the run now are never the ones let go.
+      this.frames.delete(key);
       this.frames.set(key, c);
     }
+    const b = spriteBox(this.px);
     g.save();
+    // Round first, then flip round that whole pixel (style 1.8 part 5 rule 3).
     g.setTransform(pose.facing === -1 ? -1 : 1, 0, 0, 1, Math.round(m.e), Math.round(m.f));
-    g.drawImage(c, -ox, -oy);
+    g.drawImage(c, -b.ox, -b.oy);
     g.restore();
   }
+}
+
+/** A sprite's size and where the feet sit in it, in device pixels, at `px` device px a unit. */
+function spriteBox(px: number): { ox: number; oy: number; w: number; h: number } {
+  const ox = Math.ceil((SPRITE_PAD - HERO_ART_BOX.left) * px);
+  const oy = Math.ceil((SPRITE_PAD - HERO_ART_BOX.top) * px);
+  return { ox, oy, w: ox + Math.ceil((HERO_ART_BOX.right + SPRITE_PAD) * px), h: oy + Math.ceil((HERO_ART_BOX.bottom + SPRITE_PAD) * px) };
 }

@@ -41,94 +41,131 @@ export function folkFramesFor(look: FolkLook): FolkFrame[] {
   return out;
 }
 
-
-
 export interface FolkSheetLayout {
-  /** Pixels per unit actually used (lowered if the sheet would pass maxSide). */
+  /** Pixels per unit (style 1.8 part 5: never lowered to fit; a cast that does not fit takes more sheets). */
   pxPerU: number;
   cellW: number;
   cellH: number;
   cols: number;
+  /** Rows on the first sheet. */
   rows: number;
+  /** Cells a full sheet holds. */
+  perSheet: number;
+  /** Sheets the cast takes (style 1.8 part 5: 2 a place at most on a phone). */
+  sheets: number;
+  /** The first sheet's size. */
   width: number;
   height: number;
-}
-
-/** Sheet size for `cells` sprites at `pxPerU`, kept within maxSide x maxSide (part 11: 1024). Pure. */
-export function folkSheetLayout(cells: number, pxPerU: number, maxSide = 1024): FolkSheetLayout {
-  const W = FOLK_BOX.r - FOLK_BOX.l;
-  const H = FOLK_BOX.b - FOLK_BOX.t;
-  let p = Math.max(0.25, Number.isFinite(pxPerU) ? pxPerU : 1);
-  const n = Math.max(1, cells);
-  for (let guard = 0; guard < 60; guard++) {
-    const cw = Math.ceil(W * p) + 2;
-    const ch = Math.ceil(H * p) + 2;
-    const cols = Math.max(1, Math.floor(maxSide / cw));
-    const rowsN = Math.ceil(n / cols);
-    if (rowsN * ch <= maxSide || p <= 0.25) return { pxPerU: p, cellW: cw, cellH: ch, cols, rows: rowsN, width: Math.min(maxSide, cols * cw), height: rowsN * ch };
-    p *= 0.94;
-  }
-  throw new Error('folk sheet');
-}
-
-export interface FolkSheet {
-  canvas: HTMLCanvasElement;
-  layout: FolkSheetLayout;
-  /** `${lookIndex}:${frame}` to the cell's top left in pixels. */
-  cells: Map<string, [number, number]>;
+  /** Each sheet's height in pixels (the last one only as tall as its rows). */
+  heights: number[];
 }
 
 /**
- * Bakes a place's cast into one sprite sheet (part 11): each look in each of its frames, at
- * pxPerU pixels per unit (view.scale x devicePixelRatio x the size you will draw at), within
- * 1024 x 1024. Call when the place opens and again only when the screen size or pixel scale
- * changes. frames: per look (default folkFramesFor).
+ * Sheet size for `cells` sprites at `pxPerU`: each sheet at most maxSide x maxSide (1024), a
+ * cell the art box times pixels per unit rounded up, plus 2 px of gap. A cast that does not fit
+ * one sheet goes on into a second (style 1.8 part 5): the pixels per unit are never lowered to
+ * fit, so nobody is stretched back up to their size. Pure.
+ */
+export function folkSheetLayout(cells: number, pxPerU: number, maxSide = 1024): FolkSheetLayout {
+  const W = FOLK_BOX.r - FOLK_BOX.l;
+  const H = FOLK_BOX.b - FOLK_BOX.t;
+  const p = Math.max(0.25, Number.isFinite(pxPerU) ? pxPerU : 1);
+  const n = Math.max(1, Math.floor(Number.isFinite(cells) ? cells : 1));
+  const cw = Math.ceil(W * p) + 2;
+  const ch = Math.ceil(H * p) + 2;
+  const cols = Math.max(1, Math.min(n, Math.floor(maxSide / cw)));
+  const perSheet = cols * Math.max(1, Math.floor(maxSide / ch));
+  const sheets = Math.ceil(n / perSheet);
+  const heights: number[] = [];
+  for (let i = 0; i < sheets; i++) heights.push(Math.ceil(Math.min(perSheet, n - i * perSheet) / cols) * ch);
+  return { pxPerU: p, cellW: cw, cellH: ch, cols, rows: heights[0]! / ch, perSheet, sheets, width: cols * cw, height: heights[0]!, heights };
+}
+
+/** Where cell number `n` goes: its sheet, and its top left in pixels there. Pure. */
+export function folkCellAt(L: FolkSheetLayout, n: number): { sheet: number; x: number; y: number } {
+  const sheet = Math.floor(n / L.perSheet);
+  const k = n - sheet * L.perSheet;
+  return { sheet, x: (k % L.cols) * L.cellW, y: Math.floor(k / L.cols) * L.cellH };
+}
+
+/** One baked person: its sheet, its top left in pixels, and the size it was baked at (1: the kit's size). */
+export interface FolkCell {
+  sheet: number;
+  x: number;
+  y: number;
+  size: number;
+}
+
+export interface FolkSheet {
+  /** The first sheet (a cast that fits on one has only this). */
+  canvas: HTMLCanvasElement;
+  canvases: HTMLCanvasElement[];
+  layout: FolkSheetLayout;
+  /** `${lookIndex}:${frame}` to its cell. */
+  cells: Map<string, FolkCell>;
+}
+
+/** A blank canvas for sheet `i` of a layout. */
+export function folkCanvas(L: FolkSheetLayout, i: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, L.width);
+  c.height = Math.max(1, L.heights[i] ?? L.height);
+  return c;
+}
+
+/**
+ * Bakes a place's cast into sprite sheets in one go (part 11; the game's own bake, spread over
+ * frames, is CastSheet in src/game/crowdDraw.ts): each look in each of its frames, at pxPerU
+ * device pixels per unit (view.scale x the size you will draw at), each sheet within 1024 x 1024.
+ * frames: per look (default folkFramesFor).
  */
 export function bakeFolk(looks: readonly FolkLook[], pxPerU: number, frames: (look: FolkLook, i: number) => readonly FolkFrame[] = folkFramesFor, maxSide = 1024): FolkSheet {
   const lists = looks.map((l, i) => frames(l, i));
   const total = lists.reduce((n, f) => n + f.length, 0);
   const layout = folkSheetLayout(total, pxPerU, maxSide);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, layout.width);
-  canvas.height = Math.max(1, layout.height);
-  const g = canvas.getContext('2d')!;
-  const cells = new Map<string, [number, number]>();
+  const canvases: HTMLCanvasElement[] = [];
+  for (let i = 0; i < layout.sheets; i++) canvases.push(folkCanvas(layout, i));
+  const cells = new Map<string, FolkCell>();
+  const p = layout.pxPerU;
   let n = 0;
   lists.forEach((list, i) => {
     for (const f of list) {
-      const sx = (n % layout.cols) * layout.cellW;
-      const sy = Math.floor(n / layout.cols) * layout.cellH;
-      g.setTransform(layout.pxPerU, 0, 0, layout.pxPerU, sx + 1 - FOLK_BOX.l * layout.pxPerU, sy + 1 - FOLK_BOX.t * layout.pxPerU);
+      const at = folkCellAt(layout, n++);
+      const g = canvases[at.sheet]!.getContext('2d')!;
+      g.setTransform(p, 0, 0, p, at.x + 1 - FOLK_BOX.l * p, at.y + 1 - FOLK_BOX.t * p);
       drawFolkFrame(g, looks[i]!, f);
-      cells.set(`${i}:${f}`, [sx, sy]);
-      n++;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      cells.set(`${i}:${f}`, { ...at, size: 1 });
     }
   });
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  return { canvas, layout, cells };
+  return { canvas: canvases[0]!, canvases, layout, cells };
 }
 
 /**
- * Draws a baked person with the feet at (x, y) in the current units, `size` times the kit's
- * size (1 in a street at 0.85 of the hero; CITY_FOLK_SCALE in the city). flip faces left.
- * One drawImage. Returns false if that look and frame were not baked.
+ * Draws one baked cell with the feet at (x, y) in the current units, `size` times the kit's size
+ * (1 in a street at 0.85 of the hero; CITY_FOLK_SCALE in the city). flip faces left. One drawImage.
  */
-export function drawFolkSprite(g: G, sheet: FolkSheet, look: number, frame: FolkFrame, x: number, y: number, size = 1, flip = false): boolean {
-  const c = sheet.cells.get(`${look}:${frame}`);
-  if (!c) return false;
+export function drawFolkCell(g: G, sheet: FolkSheet, c: FolkCell, x: number, y: number, size = 1, flip = false): void {
   const L = sheet.layout;
-  const k = size / L.pxPerU;
-  const w = L.cellW * k;
-  const h = L.cellH * k;
-  const ox = (1 - FOLK_BOX.l * L.pxPerU) * k;
-  const oy = (1 - FOLK_BOX.t * L.pxPerU) * k;
+  const p = L.pxPerU * c.size;
+  const k = size / p;
+  const ox = (1 - FOLK_BOX.l * p) * k;
+  const oy = (1 - FOLK_BOX.t * p) * k;
+  const img = sheet.canvases[c.sheet] ?? sheet.canvas;
   if (flip) {
     g.save();
     g.translate(x, y);
     g.scale(-1, 1);
-    g.drawImage(sheet.canvas, c[0], c[1], L.cellW, L.cellH, -ox, -oy, w, h);
+    g.drawImage(img, c.x, c.y, L.cellW, L.cellH, -ox, -oy, L.cellW * k, L.cellH * k);
     g.restore();
-  } else g.drawImage(sheet.canvas, c[0], c[1], L.cellW, L.cellH, x - ox, y - oy, w, h);
+  } else g.drawImage(img, c.x, c.y, L.cellW, L.cellH, x - ox, y - oy, L.cellW * k, L.cellH * k);
+}
+
+/** A baked person by look and frame (drawFolkCell). Returns false if that look and frame were not baked. */
+export function drawFolkSprite(g: G, sheet: FolkSheet, look: number, frame: FolkFrame, x: number, y: number, size = 1, flip = false): boolean {
+  const c = sheet.cells.get(`${look}:${frame}`);
+  if (!c) return false;
+  drawFolkCell(g, sheet, c, x, y, size, flip);
   return true;
 }
 
