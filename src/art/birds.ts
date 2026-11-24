@@ -11,6 +11,7 @@
  */
 import { drawFufuBall } from './fufu';
 import { drawKobo } from './items';
+import { edgedWidth, inkAtLeast } from './ink';
 import { INK } from './palette';
 
 const TAU = Math.PI * 2;
@@ -53,11 +54,12 @@ function frame(time: number, perSecond: number, still?: boolean): 0 | 1 {
   return Math.floor(time * perSecond) % 2 === 0 ? 0 : 1;
 }
 
-function outlined(g: CanvasRenderingContext2D, fill: string, w = 1.1): void {
+/** Fills the path and inks its edge: at least 1.5 px (style 1.8 part 2, as street people); the body's at least 1.2 u. */
+function outlined(g: CanvasRenderingContext2D, fill: string, w = 1.2): void {
   g.fillStyle = fill;
   g.fill();
   g.strokeStyle = INK;
-  g.lineWidth = w;
+  g.lineWidth = inkAtLeast(g, w, 1.5);
   g.stroke();
 }
 
@@ -72,7 +74,7 @@ function leg(g: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2
     g.lineTo(x2 + 2.6, y2);
   }
   g.strokeStyle = INK;
-  g.lineWidth = 2;
+  g.lineWidth = edgedWidth(g, 1, 0.5, 1);
   g.stroke();
   g.strokeStyle = colour;
   g.lineWidth = 1;
@@ -137,7 +139,7 @@ function egretHead(g: CanvasRenderingContext2D, y: number, down: boolean, fufu: 
   if (down) g.quadraticCurveTo(8.6, y - 16, hx - 0.4, hy - 1.4);
   else g.quadraticCurveTo(1.2, y - 21.6, hx - 0.6, hy + 1.6);
   g.strokeStyle = INK;
-  g.lineWidth = 4.4;
+  g.lineWidth = edgedWidth(g, 2.6, 0.9, 1);
   g.stroke();
   g.strokeStyle = BIRD.egretWhite;
   g.lineWidth = 2.6;
