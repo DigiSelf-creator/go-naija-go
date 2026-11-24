@@ -386,7 +386,17 @@ The same size (1600 x 1000, 12 blocks in 3 rows of 4, a motor park in the middle
 
 - 6 places before the first boom, 24 points, so 20 is always reachable (as Ogun).
 - **Card words:** "Sand is on the road. Carts can't get through. Run Kurmi to earn Naira." / "Lamps are out on this road. Run the Harmattan Road for Power." / "Slow internet here. Run the Harmattan Road for Tech." / "The taps are dry. Rusty Borehole is clogged with dust. Go to Borehole Hall." (before Dawanau is cleared: "Clear Kurmi, Kofar Mata and Dawanau to reach Borehole Hall.").
-- **Quick missions** (decision 89, after Kano's first boom, in the same shape pm plans for Lagos and Ogun): "Help the dyers" (a short Kofar Mata run: bounce to collect 10 cloths), "Bring the grain truck in" (a short Dawanau run to the bus with no whirl touched). Designer writes each when pm schedules the Lagos and Ogun ones, so all three states share one mission shape.
+- **Quick missions** (decision 89; the shape, board, stars and saves of docs/missions.md, ids KM1 to KM5, built with Kano once the Missions board is in):
+
+| # | Name | Where | What you do | Stars | Line on the card |
+|---|---|---|---|---|---|
+| KM1 | **Coin catch** | Kurmi | Pick up coins | 60 · 100 · 135 coins | "Catch coins on Kurmi!" |
+| KM2 | **Ride the wind** | Kurmi | Pick up the kobo arcs over pits inside a tailwind | 1 · 2 arcs | "Jump far with the wind!" |
+| KM3 | **Bounce high** | Kofar Mata | Bounce on springy cloth | 3 · 5 · 8 bounces | "Bounce on the springy cloth!" |
+| KM4 | **Puff the dust** | Dawanau | Puff dust whirls (by landing on them, or with fura da nono or amala) | 1 · 3 · 5 whirls | "Puff the dust whirls!" |
+| KM5 | **Power for the market** | Harmattan Road | Pick up Power bulbs | 4 · 8 · 12 bulbs | "Catch Power bulbs!" |
+
+  K0a checks each top number against the level files, as missions.md's unit test does.
 
 ### 6.3 Tax places (decision 71, W18 rules)
 
