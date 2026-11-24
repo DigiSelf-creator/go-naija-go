@@ -512,6 +512,23 @@ function startGame(): void {
   /** S3f2: the lane run showing now (its code loads the first time one opens), or null. */
   let lane: LaneSession | null = null;
   let laneLoading = false;
+
+  /**
+   * ST-H3 (style 1.8 part 6 rule 2): the hero's run steps, jump and fall are made ahead in idle
+   * moments while no run is played (a card, the city, the menus), so a run's first seconds never
+   * draw the hero live. Once per look and screen size; looked at twice a second.
+   */
+  let warming = false;
+  const idle: (f: (d: { timeRemaining(): number }) => void) => void = window.requestIdleCallback?.bind(window) ?? ((f) => window.setTimeout(() => f({ timeRemaining: () => 4 }), 60));
+  const warm = (d: { timeRemaining(): number }): void => {
+    warming = !playing && !lane && !laneLoading && !document.hidden && !game.prewarmHero(view, Math.min(6, d.timeRemaining() - 1));
+    if (warming) idle(warm);
+  };
+  window.setInterval(() => {
+    if (warming) return;
+    warming = true;
+    idle(warm);
+  }, 500);
   let laneModule: Promise<typeof import('./lane/session')> | null = null;
   /** The fix the lane run was started for (Lights out or Slow internet), or null (part 2). */
   let laneFor: BuildId | null = null;

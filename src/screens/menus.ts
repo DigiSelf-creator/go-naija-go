@@ -5,6 +5,7 @@
  * canvas; one screen shows at a time.
  */
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
+import { setInkRatio } from '../art/ink';
 import { WHEEL_STATES, wheelSvg } from '../art/wheel';
 import { readSafeArea } from '../engine/view';
 import {
@@ -1376,7 +1377,13 @@ export class Menus {
           g.beginPath();
           g.ellipse(0, 0, 13, 3, 0, 0, Math.PI * 2);
           g.fill();
-          drawHero(g, this.look, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, blink: t % 3.2 < 0.15, time: t });
+          // Drawn at the canvas's own device pixels, outlines set for its ratio (style 1.8 part 5).
+          setInkRatio(dpr);
+          try {
+            drawHero(g, this.look, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, blink: t % 3.2 < 0.15, time: t });
+          } finally {
+            setInkRatio(null);
+          }
         }
       }
       this.previewFrame = requestAnimationFrame(frame);

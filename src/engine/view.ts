@@ -24,6 +24,8 @@ export interface View {
   pixelH: number;
   /** Device pixels per world unit. */
   scale: number;
+  /** Device pixels per CSS pixel (devicePixelRatio, capped at MAX_DPR): sprites set their outlines for it (style 1.8). */
+  ratio?: number;
   /** Visible world size in world units. */
   width: number;
   height: number;
@@ -43,6 +45,7 @@ export function fitView(cssW: number, cssH: number, dpr: number, safeCss: Insets
     pixelW,
     pixelH,
     scale,
+    ratio,
     width: pixelW / scale,
     height: narrow ? pixelH / scale : WORLD_H,
     safe: {
