@@ -1,6 +1,17 @@
 # Open questions for the product owner
 
-## po note, 18 Nov 2026 (newest): picture style phase 1, the new buttons, accepted (fc3a6d2)
+## designer, 24 Nov 2026 (newest): quick missions in Lagos and Ogun (decision 89; docs/missions.md)
+
+Ten quick missions on streets and lane runs already built, 28 stars: Lagos "Coin catch", "Lunch for Mama Put", "Goat friends", "Secret wells", "Light it up"; Ogun "Coin catch", "Fill the potholes", "Garri for the mill", "Stomp the gravel", "Tech chips". Plan rows MS1 to MS5. Rulings MS-R1 to MS-R5 (missions.md part 6) are small and easy to undo (decision 64), reported in one line each.
+
+### MS-Q1, for Tp: should missions change each day?
+
+A "today's mission" that changes every day can bring a child back. But our notes say no daily missions, streaks or login prizes (city.md 2B rule 6, to stay clear of other runner games) and nothing that punishes a missed day (design.md, privacy). A daily mission also needs the phone's clock, and a child who misses a day feels they lost something.
+- a) No daily missions. The ten missions stay until done; the board's glowing "next" tile shows what to try. More missions come with each new state. *Best case:* calm for a 5 year old, nothing to miss, no clock, keeps our own rule.
+- b) Add one "today's mission" that changes each day, picked from the ten with a bigger number, and nothing lost by missing a day. *Best case:* a fresh reason to come back each day.
+- **Recommended: a.** It keeps the rule that keeps us different from other runner games, and children of 5 like finishing a set of stars more than a daily task. Blocks: nothing; built as a until Tp says. Line for the lead once Tp confirms: "90. Quick missions never change by the day: no daily missions, streaks or login prizes. (MS-Q1, a; Tp)"
+
+## po note, 18 Nov 2026: picture style phase 1, the new buttons, accepted (fc3a6d2)
 
 - **Accepted (ST-A5):** ST-A1 to ST-A4, the new button look from decision 85, on claude/serene-hopper-ydve2g at fc3a6d2, after qa passed ST-A4 and the lead's 15 px fix (fc3a6d2) passed its spec. Cream pill buttons with a dark edge and lip, an icon disc, one green main button per screen, switches with a tick and on/off words, words kept on every button, 15 px words at every size (style.md 1.2 rule 4). Icons are our own (gallery checked: no caps, pipes, blocks or mushrooms; nothing from another game). Reported: qa's pass. Verified by po: before and after screenshots of title, game over, settings and Lagos city at 851 x 393 and 320 x 240, and the icon gallery. Lagos city at 320 x 240: the Internet board was already half under the Hero button before this work, so nothing is newly covered.
 - **For Tp to look at (not blocking):** before and after shots of title, pause, game over, settings, HUD, road, road card and Lagos and Ogun city, at 851 x 393 and 320 x 240 (the lead holds them). Reported under decision 64: on short screens the Gentle mode switch shows "Gentle mode" (game over) or "Gentle mode: 5 lives" (Settings); the spoken name stays "Gentle mode: 5 lives instead of 3".

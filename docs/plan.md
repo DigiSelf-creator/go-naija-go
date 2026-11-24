@@ -482,6 +482,28 @@ Order (15 Nov): ST0, ST1a, ST2 done; ST1b done but for the README steps. Next ST
 5. For ST4b: in App Store Connect, create the app with the same id, make an App Store Connect API key, and add it as GitHub Actions secrets the same way.
 6. **Never paste keys, passwords, key files or codes in chat, in a file or in a PR.** If one is ever pasted, tell the lead at once: it must be replaced.
 
+## Slice MS: Quick missions in Lagos and Ogun (decision 89; designer note docs/missions.md)
+
+Tp's 6 year old has played everything. Ten quick missions (five in Lagos, five in Ogun, 28 stars) on streets and lane runs already built: one goal on top, stars kept the moment they fill. No new level, hazard, food, boss or tune. Runs beside slice P and the Kano design; gamedev fits it between slice P rows (it touches the HUD chip and the city bottom row, so it follows ST-A3's look).
+
+Rules for the whole slice:
+- Budget (gzip): first load grows 4 KB at most, the Ogun part 0.5 KB at most.
+- Words exactly as docs/missions.md part 2; every word in words.ts (Ogun's in `OGUN_WORDS`).
+- No calendar, no streaks, no network (MS-R1). Saves on the phone under `gidi-missions` only.
+- Every row: qa passes it, on the slow phone profile (4x CPU) too, then po accepts.
+
+| # | id | owner | task | depends on | done when | size (gzip) |
+|---|----|-------|------|------------|-----------|-------------|
+| 1 | MS1 | designer | Mission note docs/missions.md: ten missions, stars, words, saves, rulings MS-R1 to MS-R5, question MS-Q1 | none | done 24 Nov; po checks the note | 0 |
+| 2 | MS2 | art | Our own star icon, outline and filled (missions.md part 4), in src/art/icons.ts; shown in `?gallery=style-buttons` | MS1 | reads at 26 px and in greyscale; no face, never like any game's star; listed in docs/assets.md | 0.3 KB first load |
+| 3 | MS3a | gamedev | Missions core: the list, a watcher fed by street and lane events, the `gidi-missions` save, ₦2 a new star into the wallet, unit tests that work every star number out from the level files | MS1 | every star reachable from level data (test); a star survives game over and reload; never paid twice | 1.5 KB first load |
+| 4 | MS3b | gamedev | Missions board, mission card, the run chip, end card lines, the "Missions" button (first in the city bottom row, after the first Mission complete), the wheel-into-Settings rule (MS-R4), Lagos's five missions | MS2, MS3a, ST-A3 | missions.md part 2 words exact; 44 px tap areas (tiles 56 px) at all six sizes with and without the safe area; nothing newly covered | 1.5 KB first load |
+| 5 | MS3c | gamedev | Ogun's five missions (words in the Ogun part), the parcel-in-mission rule, the wells help line, the helpers' thank-you lines and cheer, the "Every {state} star!" card | MS3b | never two parcels saved; help line only after two goes; Ogun part +0.5 KB at most | 0.5 KB first load, 0.5 KB Ogun |
+| 6 | MS4 | qa | Slice MS pass, missions.md part 8 | MS3c | all ten checks pass; Alausa, Ota and lane run fps at 4x CPU not lower with the chip | |
+| 7 | MS5 | po | Accept slice MS; Tp sees the board and a star being won (851 x 393 and 320 x 240) | MS4 | note in docs/questions.md | |
+
+Order: MS2 and MS3a side by side now; MS3b after ST-A3 (already done) and MS2; then MS3c, MS4, MS5. Merging to the live link stays Tp's call (decision 64).
+
 ## Known facts
 
 1. Node 22 via nvm: ~/.nvm/versions/node/v22.19.0.
