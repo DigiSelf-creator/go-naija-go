@@ -60,3 +60,43 @@ export function innerPx(outlinePx: number): number {
 export function screenPerUnit(dpu: number): number {
   return dpu / inkRatio();
 }
+
+/*
+ * One outline round the whole figure (style 1.8 part 2). A figure is drawn twice: first a
+ * silhouette pass on silhouette(g), where fills do nothing and only the outline strokes draw
+ * (each one armed with armInk just before it), then the normal paint pass, where the same
+ * strokes are only thin inner lines between parts. So the edge of the figure is one thick, even
+ * ink line and the parts inside it are split by thin lines.
+ */
+let armed = 0;
+
+/** Marks the next stroke width as an outline the silhouette pass draws. Returns `w`. */
+export function armInk(w: number): number {
+  armed = w;
+  return w;
+}
+
+const NOOP = (): void => undefined;
+
+/** The silhouette pass's context: fills and images do nothing, and only armed strokes draw. */
+export function silhouette(g: CanvasRenderingContext2D): CanvasRenderingContext2D {
+  armed = 0;
+  return new Proxy(g, {
+    get(t, k) {
+      if (k === 'fill' || k === 'fillRect' || k === 'fillText' || k === 'drawImage' || k === 'strokeText') return NOOP;
+      if (k === 'stroke') {
+        return (...a: [Path2D?]) => {
+          if (armed > 0 && Math.abs(t.lineWidth - armed) <= armed * 1e-3) {
+            t.lineJoin = 'round';
+            Reflect.apply(t.stroke, t, a);
+          }
+        };
+      }
+      const v: unknown = Reflect.get(t, k, t);
+      return typeof v === 'function' ? (v as (...x: unknown[]) => unknown).bind(t) : v;
+    },
+    set(t, k, v) {
+      return Reflect.set(t, k, v, t);
+    },
+  });
+}

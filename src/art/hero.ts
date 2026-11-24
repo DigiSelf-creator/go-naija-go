@@ -12,7 +12,7 @@
 import { drawDashPuff, drawDustPuff, drawKneePuff, drawSkidScuff } from './dust';
 import { FUFU } from './fufu';
 import { INK, WHITE } from './palette';
-import { EYE_INK, devPerUnit, heroInkPx, inkRatio, innerPx, screenPerUnit } from './ink';
+import { EYE_INK, armInk, devPerUnit, heroInkPx, inkRatio, innerPx, screenPerUnit, silhouette } from './ink';
 
 /** Lip rose. Every skin draws the same lip shape with a thin outline darker than the skin. */
 const LIP = '#d9705f';
@@ -508,48 +508,13 @@ function localDpu(g: CanvasRenderingContext2D): number {
   return devPerUnit(g) ?? 1;
 }
 
-/**
- * Style 1.8: one outline round the whole figure. The hero is drawn twice: first a silhouette pass
- * (every outline stroke at the full outline width, in hero ink, nothing filled), then the paint
- * pass, where the same strokes are only the inner line between parts. So the edge of the figure
- * is one thick, even ink line and the parts inside are split by thin lines.
- */
+/** True in the silhouette pass (src/art/ink.ts silhouette): outlines are drawn full width there. */
 let silPass = false;
-/** The width ol() last gave in the silhouette pass (only those strokes are drawn there). */
-let silWidth = 0;
 
 /** Outline stroke width (local units) for shapes outlined before they are filled: twice what shows. */
 function ol(g: CanvasRenderingContext2D): number {
-  if (silPass) {
-    silWidth = (2 * inkDev) / localDpu(g);
-    return silWidth;
-  }
+  if (silPass) return armInk((2 * inkDev) / localDpu(g));
   return (2 * lineDev) / localDpu(g);
-}
-
-const NOOP = (): void => undefined;
-
-/** The silhouette pass's context: fills do nothing, and only outline strokes draw, in ink. */
-function silhouette(g: CanvasRenderingContext2D): CanvasRenderingContext2D {
-  return new Proxy(g, {
-    get(t, k) {
-      if (k === 'fill' || k === 'fillRect' || k === 'fillText' || k === 'drawImage') return NOOP;
-      if (k === 'stroke') {
-        return (...a: [Path2D?]) => {
-          if (silWidth > 0 && Math.abs(t.lineWidth - silWidth) <= silWidth * 1e-3) {
-            t.strokeStyle = INK;
-            t.lineJoin = 'round';
-            Reflect.apply(t.stroke, t, a);
-          }
-        };
-      }
-      const v: unknown = Reflect.get(t, k, t);
-      return typeof v === 'function' ? (v as (...x: unknown[]) => unknown).bind(t) : v;
-    },
-    set(t, k, v) {
-      return Reflect.set(t, k, v, t);
-    },
-  });
 }
 
 /** Inner lines and small parts drawn over the body (sleeves, shorts, shoes, hands). */
@@ -2461,7 +2426,6 @@ function suitPart(g: CanvasRenderingContext2D, f: Frame, pose: HeroPose, part: S
 export function drawHero(g: CanvasRenderingContext2D, look: HeroLook, pose: HeroPose, outlinePx?: number): void {
   setInk(g, outlinePx);
   silPass = true;
-  silWidth = 0;
   try {
     heroPass(silhouette(g), look, pose);
   } finally {
