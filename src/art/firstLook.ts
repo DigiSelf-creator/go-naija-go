@@ -18,7 +18,7 @@
  */
 import type { StreetTheme } from './backdrop';
 import { TIRED_MIX, TIRED_SAND } from './bright';
-import { FOLK, drawFolk, type Folk } from './places';
+import { FOLK, drawFolkCrisp, type Folk } from './places';
 import { drawCone } from './roadside';
 import { MARKET_TILE_H, paintMarketTile } from './market';
 import { PARK_LAMPS, PARK_TILE_H, paintParkTile } from './buspark';
@@ -186,7 +186,7 @@ export function drawFirstFolk(g: CanvasRenderingContext2D, x: number, y: number,
     g.save();
     g.translate(x, y);
     g.scale(s, s);
-    drawFolk(g, folk, 0, 0, { turn: 1 });
+    drawFolkCrisp(g, folk, { turn: 1 });
     g.restore();
     box(g, x - 4, y - 16, 30, 3, '#8a5d36', 1, 1);
     g.fillStyle = '#6b4a2b';
@@ -201,7 +201,8 @@ export function drawFirstFolk(g: CanvasRenderingContext2D, x: number, y: number,
   g.save();
   g.translate(x, y);
   g.scale(s, s);
-  drawFolk(g, folk, 0, 0, { turn: doing === 'read' ? 0 : 1, happy: doing === 'school' || doing === 'buy', reach: doing === 'wipe' });
+  // Style 1.8 (ST-H2): the crisp townsperson; everyone smiles
+  drawFolkCrisp(g, folk, { turn: doing === 'read' ? 0 : 1, reach: doing === 'wipe' });
   g.restore();
   if (doing === 'wipe') {
     // A cloth in her raised hand, wiping her own shop window clean (no broom: decision 75)
