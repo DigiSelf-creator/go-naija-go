@@ -156,3 +156,14 @@ No new level file, hazard, food, boss or tune. The engine (run.ts, lane sim) nee
 8. Stars read in greyscale (outline vs filled); spoken names as part 2; Sound off silences the ding; reduced motion stills the pop and the bob.
 9. First load grows 4 KB at most, the Ogun part 0.5 KB at most; offline after one visit.
 10. Originality and "mock no one" check of the star, the words and the helper lines.
+
+## 9. Build notes (gamedev, MS3a to MS3c, 25 Nov)
+
+- **Coin stars** are worked out from each level file by the unit test (tests/unit/missions.test.ts): Alausa 159 coins and Ota 160, both 60 · 100 · 135. city.md W5's old 46 is not used.
+- **Fill the potholes:** a fufu ball does plug an opened crack (the test throws one into Abeokuta's crack at x 5250 on the real level). Star 3 stays at 5.
+- **Light it up / Tech chips:** before the bus stop the lane run lays 14 Power and 9 Tech (pickups and bursts), as part 1 says.
+- **Tiles' pictures** are the goal's picture (coin, foods, goat, well, Power, fufu, parcel, gravel, Tech), not the road card picture: the road's pictures draw the city map and live in the road's chunk. Placeholder star in src/art/star.ts until art's MS2 star.
+- **MS-R4:** "Nigeria's wheel" moves into Settings only where five do not fit in one row (568 x 320 and 320 x 240 today); on a phone held sideways all five fit ("Challenge road" and the wheel take two lines).
+- **Short screens:** at 320 x 240 and 640 x 200 the board's tiles scroll between the heading and Back (both always show); from 320 px tall nothing scrolls.
+- **Lane run:** the goal chip sits under the lane run's top rows on the left.
+- Mama Put's card line has 7 words (part 5 says 6 or fewer); kept as written. The helpers' cheer bubble near the cook or the mill is not built yet; the thank-you line is.

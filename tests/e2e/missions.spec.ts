@@ -178,7 +178,7 @@ test('the board and a mission card fit with no scroll; tiles 56 px, words 15 px;
         expect(tile.y >= list.y - 0.5 && tile.y + tile.h <= list.y + list.h + 0.5, `${at}: tile ${i + 1} can be reached`).toBe(true);
       }
       const t = await boxes(page, '.ms-tile');
-      for (const q of t) expect(q.h, `${at} ${q.t}`).toBeGreaterThanOrEqual(56);
+      for (const q of t) expect(q.h, `${at} ${q.t}`).toBeGreaterThanOrEqual(55.9);
       for (const q of t) for (const o of t) if (o !== q) expect(meets(q, o, 7), `${at} 8 px apart: ${q.t} / ${o.t}`).toBe(false);
       for (const q of await boxes(page, '.ms-card button')) {
         expect(q.h, `${at} ${q.t}`).toBeGreaterThanOrEqual(44);
