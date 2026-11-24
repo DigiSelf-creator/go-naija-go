@@ -142,7 +142,7 @@ export interface LaneHooks {
    * warning (a lamp's "tunk", the close hum) or the corn tune plays (PE-R6).
    */
   murmur?(on: boolean): void;
-  /** MS3b: a quick mission's goal chip, shown in the top row beside the chips (null: none). */
+  /** MS3b: a quick mission's goal chip, shown under the top rows on the left (null: none). */
   missionChip?: HTMLElement | null;
   /** MS3b: the Power and Tech this run has gained so far (pickups and bursts), after each pickup. */
   gained?(power: number, tech: number): void;
@@ -348,8 +348,9 @@ export class LaneSession {
     this.hud = h(
       'div',
       { class: 'lane-hud', 'data-ui': true },
-      h('div', { class: 'lane-row' }, h('div', { class: 'lane-chips' }, ...this.chipEls), hooks.missionChip ?? null, h('div', { class: 'lane-buttons-top' }, this.soundButton, pauseButton)),
+      h('div', { class: 'lane-row' }, h('div', { class: 'lane-chips' }, ...this.chipEls), h('div', { class: 'lane-buttons-top' }, this.soundButton, pauseButton)),
       h('div', { class: 'lane-row2' }, this.leftEl, (this.rightEl = h('div', { class: 'lane-right' }, this.toGo, this.bestEl))),
+      hooks.missionChip ?? null,
       this.hintEl,
       this.sayEl,
     );

@@ -2,7 +2,12 @@
 /* They sit on the Travel card's dim layer; tiles are place boxes (style.md 1.2), at least 56 px
    tall, 8 px apart. */
 .ms-card {
+  display: flex;
+  flex-direction: column;
   max-width: 640px;
+}
+.ms-card > * {
+  flex: none;
 }
 .ms-head h2,
 .ms-mhead {
@@ -16,10 +21,16 @@
 .ms-helper {
   font-weight: 800;
 }
-.ms-tiles {
+/* On a short screen the tiles scroll between the heading and Back (both always show). */
+.ms-card > .ms-tiles {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
   gap: 8px;
+  margin: 0 -6px;
+  padding: 4px 6px 10px;
 }
 .ms-tile {
   display: grid;
@@ -119,8 +130,8 @@
 
 /* Short screens: two or three tiles a row; the heading, its line and the count tight. */
 @media (max-height: 320px) {
-  .ms-tiles {
-    grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  .ms-card > .ms-tiles {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
   .ms-head {
     display: flex;

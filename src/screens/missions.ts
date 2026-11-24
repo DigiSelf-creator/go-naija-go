@@ -66,7 +66,7 @@ export function goalPic(icon: MissionIcon | FoodKind, px: number, own?: OwnIcon)
     g.scale(1.25, 1.25);
     drawKobo(g, 0, 0, 0);
   } else if (icon === 'foods') {
-    for (const [f, x, y] of [['corn', 9, 11], ['amala', 23, 11], ['fufu', 16, 23]] as const) f === 'fufu' ? drawFufuIcon(g, x, y, 15) : drawFoodIcon(g, f, x, y, 0.5);
+    for (const [f, x, y] of [['corn', 9, 13], ['amala', 23, 12], ['fufu', 16, 22]] as const) f === 'fufu' ? drawFufuIcon(g, x, y, 19) : drawFoodIcon(g, f, x, y, 0.6);
   } else if (icon === 'corn' || icon === 'amala') drawFoodIcon(g, icon, 16, 16, 0.85);
   else if (icon === 'fufu') drawFufuIcon(g, 16, 16, 26);
   else if (icon === 'goat') {

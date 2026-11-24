@@ -3156,10 +3156,8 @@ body.lane {
 .hud-tightest .ms-chip .ms-stars {
   display: none;
 }
-@media (max-width: 560px) {
-  .lane-row .ms-chip .ms-stars {
-    display: none;
-  }
+.lane-hud > .ms-chip {
+  margin-top: 4px;
 }
 .ms-stars .pop {
   animation: ms-pop 0.3s ease-out;

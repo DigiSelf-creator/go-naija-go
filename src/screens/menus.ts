@@ -312,7 +312,10 @@ export class Menus {
       true,
     );
     parent.append(this.layer);
-    window.addEventListener('resize', () => this.refit?.());
+    window.addEventListener('resize', () => {
+      this.fitRow();
+      this.refit?.();
+    });
   }
 
   get current(): MenuScreen {
@@ -490,6 +493,7 @@ export class Menus {
       return;
     }
     this.layer.append(card);
+    this.fitRow();
     const next = this.overlayNext;
     this.overlayNext = null;
     if (next) this.openOverlay(next);
@@ -642,6 +646,25 @@ export class Menus {
     return [b];
   }
 
+  /** MS-R4: the city's "Nigeria's wheel" button, while it is out of its row (it goes into Settings). */
+  private wheelOut: HTMLElement | null = null;
+
+  /**
+   * MS-R4: where the five bottom buttons (with Missions) do not fit in one row, "Nigeria's wheel"
+   * moves into Settings, with the same words. Checked as the city opens and on every resize
+   * (before the city measures what its signs keep clear of).
+   */
+  private fitRow(): void {
+    const row = this.layer.querySelector<HTMLElement>('.city-buttons');
+    if (!row?.querySelector('.ms-button')) return;
+    const wheel = row.querySelector<HTMLElement>('[data-wheel]') ?? this.wheelOut;
+    if (!wheel) return;
+    row.append(wheel);
+    const tops = [...row.children].map((e) => e.getBoundingClientRect().top);
+    this.wheelOut = Math.max(...tops) > Math.min(...tops) + 20 ? wheel : null;
+    this.wheelOut?.remove();
+  }
+
   /** MS3b: the Missions board over the city (its chunk is usually in already: preloadBoard). */
   private openMissions(state: StateId): void {
     const from = this.screen;
@@ -721,7 +744,7 @@ export class Menus {
         button(w.road, 'minor two-line', () => this.showOgunRoad(), {}, 'road'),
         this.travelButton(),
         button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
-        button(w.wheel, 'minor two-line', () => this.showWheel('ogun'), {}, 'wheel'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('ogun'), { 'data-wheel': true }, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runOgunSpot(spot, tapPoint(e)),
       seeStop: (spot) => this.showOgunRoad(spot === 'potholes' ? 'ota' : spot === 'badRoad' ? 'hall' : 'expressway', true),
@@ -1270,6 +1293,8 @@ export class Menus {
         this.laneButtonsSwitch(),
         this.tiltRow('settings'),
         ogunOpen && this.busRideSwitch(),
+        // MS-R4: "Nigeria's wheel" is here while the city's bottom row has no room for it.
+        this.wheelOut && this.settingsBack !== 'title' && button(WORDS.city.wheel, 'minor', () => this.showWheel(this.settingsBack), {}, 'wheel'),
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
         button(w.back, 'go', () => this.show(this.settingsBack), {}, 'back'),
       ),
@@ -1316,7 +1341,7 @@ export class Menus {
         // O1b2 (ogun.md 1.2): "Travel" once Ogun is open.
         ...(this.hooks.states().ogun.open ? [this.travelButton()] : []),
         button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
-        button(w.wheel, 'minor two-line', () => this.showWheel('city'), {}, 'wheel'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('city'), { 'data-wheel': true }, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
       // S3e0 part 7: the road, scrolled to that stop with its card open, "for" that card's fix.
