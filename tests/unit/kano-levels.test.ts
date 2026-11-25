@@ -413,7 +413,7 @@ describe('kano.md 5.2 to 5.5: Borehole Hall (kano-hall.json)', () => {
   });
 
   it('Gentle mode (5.4): slower whirls, later coughs, gusts take an eighth', () => {
-    expect(B.gentle).toEqual({ whirlSpeed: 45, later: 0.4, gustAirScale: 1 - WIND / 2 });
+    expect(B.gentle).toEqual({ whirlSpeed: 45, later: 0.4, gustAirScale: 1 - WIND / 2, huffAfter: 2.4 });
   });
 
   it('the funny, kind finish runs in order and ends on the Win screen at 6 s (5.5)', () => {

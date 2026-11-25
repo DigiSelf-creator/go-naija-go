@@ -179,6 +179,8 @@ export function rustyLook(f: RustyFight, clock: number, still: boolean): RustyLo
   const since = last === undefined ? Infinity : (f.steps - last) / STEPS;
   const base = { flakes, time: clock, still };
   if (since < BH_LOOK.hiccup) return { ...base, mood: 'hiccup', k: since / BH_LOOK.hiccup };
+  // KN-R15: his soft "Hmph!" puff while the hero slides back.
+  if (f.huffing) return { ...base, mood: 'blow' };
   if (f.gusting) return { ...base, mood: 'blow' };
   const w = f.warn;
   if (w >= 0) return { ...base, mood: f.nextKind === 'gust' ? 'puff' : 'wheeze', k: w };

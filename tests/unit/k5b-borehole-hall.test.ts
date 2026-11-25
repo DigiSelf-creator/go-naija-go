@@ -119,7 +119,7 @@ describe('kano.md 5.2 to 5.5: the hall file, read by the fight', () => {
     expect(DATA.whirl).toEqual({ speed: 60, w: 30, h: 50, fromX: 440, bounceVy: -480, clearGap: 11 });
     expect(DATA.gust).toEqual({ lasts: 2.0, warn: 0.6, airScale: 0.75 });
     expect(DATA.fall.backTo).toBe(50);
-    expect(DATA.gentle).toEqual({ whirlSpeed: 45, later: 0.4, gustAirScale: 0.875 });
+    expect(DATA.gentle).toEqual({ whirlSpeed: 45, later: 0.4, gustAirScale: 0.875, huffAfter: 2.4 });
     expect(DATA.finish).toEqual({ glugTo: 1.2, sneeze: 1.2, shine: 1.8, tapsFrom: 2.4, tapsTo: 3.6, toast: 4.0, win: 6.0 });
   });
 
@@ -943,47 +943,91 @@ describe('KN-R14: the valve waits for his whirl, so the fight is never won from 
   });
 });
 
-describe('KN-R15: a whirl never appears touching the hero (as OG-R25)', () => {
+describe('KN-R15: a whirl never appears touching the hero (as OG-R25); "Hmph!" if they stay', () => {
   /** Plays `t` s with the hero put at x (the wall stops them at 440), standing or holding Forward; each whirl's first step is checked. */
-  function stand(x: number, o: { gentle: boolean; forward: boolean }, t = 14): { p: Play; firstHurts: number; births: number } {
+  function stand(x: number, o: { gentle: boolean; forward: boolean }, t = 14): { p: Play; firstHurts: number; births: number; slideHurts: number } {
     const p = play({ gentle: o.gentle });
     p.run.hero = p.run.newHero(x);
     if (o.forward) p.run.steer(1);
     let firstHurts = 0;
     let births = 0;
+    let slideHurts = 0;
     for (let i = 0; i < secs(t) && p.run.phase === 'arena' && p.f.hits === 0; i++) {
       const n0 = p.f.whirlsOut;
       const lives = p.run.lives;
+      const sliding = p.f.huffing !== null;
       const ev = p.run.step(DT);
       p.ev.push(...ev);
+      const hurt = ev.some((e) => e.type === 'hit') || p.run.lives < lives;
       if (p.f.whirlsOut > n0) {
         births++;
-        if (ev.some((e) => e.type === 'hit') || p.run.lives < lives) firstHurts++;
+        if (hurt) firstHurts++;
       }
+      if (sliding && hurt) slideHurts++;
       if (o.forward) p.run.steer(1);
     }
     p.run.steer(0);
-    return { p, firstHurts, births };
+    return { p, firstHurts, births, slideHurts };
   }
 
-  it("a hero standing at every x from 400 to 480, or holding Forward there (Gentle too), never loses a life on a whirl's first frame", () => {
+  it('holds the puff numbers: after 2.0 s (Gentle 2.4), back 60 u at 75 u/s', () => {
+    expect(DATA.huff).toEqual({ after: 2.0, back: 60, speed: 75 });
+    expect(DATA.gentle.huffAfter).toBe(2.4);
+  });
+
+  it("a hero standing at every x from 400 to 480, or holding Forward there (Gentle too), never loses a life on a whirl's first frame, nor in the puff's slide", () => {
     for (const gentle of [false, true])
       for (const forward of [false, true])
         for (let x = 400; x <= 480; x++) {
           const r = stand(x, { gentle, forward });
-          expect(r.firstHurts, `x ${x} gentle ${gentle} forward ${forward}`).toBe(0);
-          expect(r.p.f.touchedAtBirth, `x ${x} gentle ${gentle} forward ${forward}`).toBe(0);
-          // Holding Forward against him: no whirl leaves him at all, so no life is lost.
-          if (forward) expect(r.p.run.lives, `x ${x} gentle ${gentle}`).toBe(gentle ? 5 : 3);
+          const at = `x ${x} gentle ${gentle} forward ${forward}`;
+          expect(r.firstHurts, at).toBe(0);
+          expect(r.slideHurts, at).toBe(0);
+          expect(r.p.f.touchedAtBirth, at).toBe(0);
+          // Whirls still come, so the fight goes on: the valve shakes loose.
+          expect(r.births, at).toBeGreaterThan(0);
+          expect(r.p.f.ready, at).toBe(true);
         }
+  });
+
+  it('a child holding Forward against him sees whirls come in every phase-1 cough, and the try ends (no stalemate)', () => {
+    for (const gentle of [false, true]) {
+      const r = stand(440, { gentle, forward: true }, 120);
+      expect(r.firstHurts).toBe(0);
+      expect(r.p.run.phase).not.toBe('arena');
+      expect(r.p.f.huffs).toBeGreaterThan(0);
+    }
+  });
+
+  it('the child (Forward held, Jump tapped about 3 a second, even bunny-hopping off a cloth) meets whirls, never on their first frame, and the try ends within a few minutes', () => {
+    for (const gentle of [false, true]) {
+      const p = play({ gentle });
+      let firstHurts = 0;
+      let i = 0;
+      for (; i < secs(300) && p.run.phase === 'arena'; i++) {
+        p.run.steer(1);
+        if (i % 18 === 0) p.run.press('k');
+        if (i % 18 === 4) p.run.release('k');
+        const n0 = p.f.whirlsOut;
+        const ev = p.run.step(DT);
+        if (p.f.whirlsOut > n0 && ev.some((e) => e.type === 'hit')) firstHurts++;
+      }
+      expect(p.run.phase, `gentle ${gentle}`).not.toBe('arena');
+      expect(i / STEPS_PER_SECOND, `gentle ${gentle}`).toBeLessThan(200);
+      expect(p.f.whirlsOut).toBeGreaterThan(3);
+      expect(p.f.huffs).toBeGreaterThan(0);
+      expect(firstHurts).toBe(0);
+      expect(p.f.touchedAtBirth).toBe(0);
+    }
   });
 
   it('at his mouth (x above 407) the whirl waits, wheezing; it leaves 0.5 s after the hero steps clear, 11 u of floor away or more', () => {
     for (const gentle of [false, true]) {
-      const r = stand(420, { gentle, forward: false }, 8);
+      const r = stand(420, { gentle, forward: false }, 3.5);
       expect(r.births).toBe(0);
       expect(r.p.f.waiting).toBe(true);
       expect(r.p.f.crowded).toBe(1);
+      expect(r.p.f.huffs).toBe(0);
       expect(r.p.f.warn).toBe(1);
       expect(rustyLook(r.p.f, 0, false).mood).toBe('wheeze');
       // The hero steps back to x 380: the whirl rolls out 0.5 s later, with clear floor before it.
@@ -999,8 +1043,54 @@ describe('KN-R15: a whirl never appears touching the hero (as OG-R25)', () => {
     expect(p.f.crowded).toBe(0);
   });
 
+  it('"Hmph!": after 2.0 s of waiting (Gentle 2.4) a soft puff slides the hero back 60 u, no hurt, Forward held only in the slide; the whirl rolls out 0.5 s after they are clear; the hint once a try', () => {
+    for (const gentle of [false, true]) {
+      const due = gentle ? 2.4 : 2.0;
+      const wait = gentle ? 2.4 : 2.0;
+      const p = play({ gentle });
+      p.run.hero = p.run.newHero(440);
+      p.run.steer(1);
+      steps(p, secs(due + wait) - 1, () => p.run.steer(1));
+      expect(p.f.huffs).toBe(0);
+      expect(p.f.whirlsOut).toBe(0);
+      const n = p.ev.length;
+      steps(p, 1, () => p.run.steer(1));
+      expect(p.f.huffs).toBe(1);
+      expect(sounds(p.ev.slice(n))).toContain('whirlFff');
+      expect(says(p.ev.slice(n))).toEqual([KANO_WORDS.hall.stepBack]);
+      expect(rustyLook(p.f, 0, false).mood).toBe('blow');
+      const lives = p.run.lives;
+      let clearAt = -1;
+      let i = 0;
+      // Forward stays held all through: the slide wins.
+      while (p.f.whirlsOut === 0 && i++ < 300) {
+        steps(p, 1, () => p.run.steer(1));
+        if (clearAt < 0 && !p.f.atMouth(p.run.hero.x)) clearAt = p.run.steps;
+      }
+      expect(p.run.lives).toBe(lives);
+      expect(p.run.steps - clearAt).toBe(secs(0.5));
+      expect(440 - p.run.hero.x).toBeGreaterThanOrEqual(60 - 1e-6);
+      expect(p.f.huffing).toBeNull();
+      const z = rolling(p)[0]!;
+      expect(z.x - RUN_NUMBERS.whirlHalfW - (p.run.hero.x + RUN_NUMBERS.heroHalfW)).toBeGreaterThanOrEqual(DATA.whirl.clearGap);
+      // Forward again after the slide: the hero walks on (no longer held).
+      const x0 = p.run.hero.x;
+      steps(p, 5, () => p.run.steer(1));
+      expect(p.run.hero.x).toBeGreaterThan(x0);
+      // A second puff in the same try: no hint again.
+      p.run.hero = p.run.newHero(440);
+      const m = p.ev.length;
+      for (let k = 0; k < secs(12) && p.f.huffs < 2 && p.run.phase === 'arena'; k++) {
+        p.run.hero.x = 440;
+        steps(p, 1, () => p.run.steer(1));
+      }
+      expect(p.f.huffs).toBe(2);
+      expect(says(p.ev.slice(m))).not.toContain(KANO_WORDS.hall.stepBack);
+    }
+  });
+
   it('a whirl that waited at his mouth still shakes the valve loose when it goes (KN-R14 unchanged)', () => {
-    const r = stand(440, { gentle: false, forward: true }, 6);
+    const r = stand(440, { gentle: false, forward: true }, 3);
     expect(r.p.f.ready).toBe(false);
     r.p.run.hero = r.p.run.newHero(60);
     untilWhirl(r.p);

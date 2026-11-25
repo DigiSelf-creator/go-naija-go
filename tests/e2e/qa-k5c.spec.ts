@@ -589,9 +589,6 @@ for (const seedN of [3, 5, 9]) {
 }
 
 /** The child bot: Forward held, Jump tapped about 3 a second, never aimed; up to 3 games. */
-/** The longest the child bot plays one game, s of play. */
-const CHILD_CAP = 90;
-
 async function childHall(page: Page, kind: 'borehole' | 'pothole') {
   const h = hands(await page.context().newCDPSession(page));
   const btn = await buttonCentres(page);
@@ -608,12 +605,6 @@ async function childHall(page: Page, kind: 'borehole' | 'pothole') {
       lives = s.a.lives;
       if (s.a.defeated) {
         cur.won = true;
-        games.push(cur);
-        break;
-      }
-      // KN-R15: a child pressed against Rusty is never hurt (his whirl waits until they step
-      // back), so a game can go on and on: it counts as lasting CHILD_CAP s.
-      if (s.a.time >= CHILD_CAP) {
         games.push(cur);
         break;
       }
