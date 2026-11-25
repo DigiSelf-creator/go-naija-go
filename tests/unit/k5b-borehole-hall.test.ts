@@ -722,7 +722,7 @@ describe('Borehole Hall in the Kano part', () => {
     bump(p);
     steps(p, secs(7));
     const W = KANO_WORDS.hall;
-    const ok = new Set([W.parcelShield, W.start, W.hint, W.waitHint, W.left(2), W.left(1), W.cross, W.open]);
+    const ok = new Set([W.parcelShield, W.start, W.hint, W.waitHint, W.valveHint, W.left(2), W.left(1), W.cross, W.open]);
     for (const s of says(p.ev)) expect(ok.has(s), s).toBe(true);
     expect(RUSTY_RULES.toastMs).toBeGreaterThan(0);
   });

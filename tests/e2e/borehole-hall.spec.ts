@@ -217,6 +217,60 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
   expect(errors).toEqual([]);
 });
 
+/** Half the cloth frame's width (kano-hall.json boss.springs.w / 2): the arrows hide over it. */
+const DATA_CLOTH_HALF = 40;
+
+test('KN-R16: holding Forward and mashing Jump, the hint arrows come 8 s after STUCK, with "Go back. Bounce under it!"; hidden over the cloth', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await openKano(page, true);
+  await page.locator('.kano-city').getByRole('button', { name: 'Go to Borehole Hall' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('play');
+  type Hint = { ready: boolean; arrows: boolean; arrowDue: boolean; arrowWords: number; hits: number; stuck: number; valves: number[]; time: number; runPhase: string };
+  const hint = () => page.evaluate(() => ({ a: window.__game!.arena as unknown as Hint, x: window.__game!.hero.x, toast: window.__game!.toast }));
+  const pad = await touchPad(page);
+  await pad.move(1);
+  const toasts = new Set<string>();
+  let readyAt = -1;
+  let s = await hint();
+  // The K7 bot: Forward held at his mouth, Jump mashed, never under a valve.
+  for (let i = 0; i < 4000 && !s.a.arrows && s.a.runPhase === 'arena'; i++) {
+    if (i % 2 === 0) await pad.jumpDown();
+    else await pad.jumpUp();
+    s = await hint();
+    if (s.toast) toasts.add(s.toast);
+    if (readyAt < 0 && s.a.ready) readyAt = s.a.time;
+    if (readyAt >= 0 && s.a.time - readyAt < 7.8) expect(s.a.arrowDue).toBe(false);
+  }
+  await pad.jumpUp();
+  expect(s.a.hits).toBe(0);
+  expect(s.a.arrows).toBe(true);
+  expect(s.a.time - readyAt).toBeGreaterThanOrEqual(7.9);
+  expect(s.a.time - readyAt).toBeLessThan(9.5);
+  await expect.poll(async () => {
+    const t = (await hint()).toast;
+    if (t) toasts.add(t);
+    return toasts.has('Go back. Bounce under it!');
+  }).toBe(true);
+  if (process.env['R16_SHOT']) await page.screenshot({ path: process.env['R16_SHOT'] });
+  // Back to the first valve's cloth: the arrows hide there.
+  const vx = s.a.valves[s.a.stuck]!;
+  await pad.move(-1);
+  let over = await hint();
+  for (let i = 0; i < 2000 && Math.abs(over.x - vx) > 25; i++) {
+    if (over.x < vx) await pad.move(1);
+    over = await hint();
+  }
+  await pad.move(0);
+  over = await hint();
+  expect(Math.abs(over.x - vx)).toBeLessThanOrEqual(DATA_CLOTH_HALF);
+  expect(over.a.arrowDue).toBe(true);
+  expect(over.a.arrows).toBe(false);
+  await pad.done();
+  expect(errors).toEqual([]);
+});
+
 test('Kano\'s city at 320 x 240 with Borehole Hall open: every button on screen, 44 px tall, 8 px apart', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
   await openKano(page, false);
