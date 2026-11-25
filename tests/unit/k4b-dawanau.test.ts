@@ -456,10 +456,11 @@ describe('K4b: Dawanau\'s look from the Kano part', () => {
     expect(skin.gift!(G, 280, 181, 0)).toBe(true);
   });
 
-  it('the first load\'s words match the Kano part\'s word for word', () => {
-    expect(FIRST.street.fura).toBe(KANO_WORDS.toast.fura);
-    expect(FIRST.street.furaWearingOff).toBe(KANO_WORDS.toast.furaWearingOff);
-    expect(FIRST.street.furaHud(7)).toBe(KANO_WORDS.hud.fura(7));
-    expect(FIRST.street.play3).toBe(`Play ${KANO_WORDS.streets[2]}`);
+  it('fura\'s words and Dawanau\'s button ride in the Kano part, never the first load', () => {
+    expect(KANO_WORDS.toast.fura).toBe("Fura da nono! Dust can't stop you for 12 seconds.");
+    expect(KANO_WORDS.toast.furaWearingOff).toBe('Fura is wearing off!');
+    expect(KANO_WORDS.hud.fura(7)).toBe('Fura 7');
+    expect(KANO_WORDS.place.plays).toEqual(KANO_WORDS.streets.map((n) => `Play ${n}`));
+    expect(Object.keys(FIRST)).not.toContain('street');
   });
 });

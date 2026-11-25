@@ -10,7 +10,7 @@
  *   the promise never rejects. It resolves with `ok: false` and plain words to show, and the next
  *   try loads afresh. The game never crashes on it.
  */
-import { KANO_WORDS, WORLD_PART_WORDS } from '../screens/words';
+import { KANO_WORDS, WORLD_PART_WORDS, addShortToasts } from '../screens/words';
 import type { StreetSkin } from '../game/skin';
 import type { ArenaRules, Run } from '../game/run';
 import type { Tune } from '../art/tunes';
@@ -21,6 +21,30 @@ import type { Obj, StateProgress } from '../game/progress';
 import type { MissionDef, MissionIcon } from '../game/missions';
 import type { Level } from '../game/level';
 import { addSounds, type Recipe, type SoundName } from '../engine/sound';
+
+/**
+ * K-size (kano.md 9.1): a part's own words that the first load shows only once the part is in
+ * (Kano's, so they ride in its part, not the first load). The part imports no value from the
+ * first load (KN-R10), so money comes in as words the game has already written.
+ */
+export interface PartWords {
+  /** Toasts on its streets by name: a timed food's pick up (`kilishi`) and end (`kilishiWearingOff`), `gate`, `parcel`. */
+  readonly toast: Readonly<Record<string, string>>;
+  /** A timed food's HUD chip words, by food ("Kilishi 9"). */
+  readonly hud: Readonly<Record<string, (s: number) => string>>;
+  /** Short words for its toasts on a narrow bar (added to SHORT_TOAST when the part loads). */
+  readonly short: Readonly<Record<string, string>>;
+  /** Out of lives on its street. */
+  readonly gameOver: { readonly text: (money: string) => string };
+  /** Street cleared, carrying the parcel. */
+  readonly cleared: { readonly parcel: string };
+  /** Its arrival card, first visit only. */
+  readonly arrival: { readonly heading: string; readonly line1: string; readonly line2: string; readonly go: string };
+  /** The ride's spoken name, going and coming back. */
+  readonly ride: { readonly spokenIn: string; readonly spokenOut: string };
+  /** Its home's Play buttons, one per street, opening in order. */
+  readonly place: { readonly plays: readonly string[] };
+}
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
 export const WORLD_PART_VERSION = 1;
@@ -39,6 +63,8 @@ export interface WorldPart {
   readonly street?: (level: Level) => StreetSkin | null;
   /** K2b: the part's own sound recipes (a part that imports only types cannot add them itself). Optional. */
   readonly sounds?: Readonly<Partial<Record<SoundName, Recipe>>>;
+  /** K-size (kano.md 9.1): the words the first load's toasts, chips and cards show once the part is in. Optional. */
+  readonly words?: PartWords;
   /**
    * O5b: the state's boss hall (its level file is `<id>-hall`): its fight, made fresh for each try,
    * and its tune (it stands in for the hall tune while that hall is played). Optional.
@@ -118,6 +144,7 @@ export class WorldParts {
         const part = checkPart(mod, id);
         if (!part) return { ok: false, why: 'broken', message: w.broken };
         if (part.sounds) addSounds(part.sounds);
+        if (part.words) addShortToasts(part.words.short);
         this.loaded.set(id, part);
         return { ok: true, part };
       },

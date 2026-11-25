@@ -2,8 +2,9 @@
  * K1b: Kano's home until Kano's city is built (K6b): the old wall and the gate (art K1a, ./gate)
  * under a soft gold sky, the heading "Kano", the line that Kurmi is just through the gate, and the city's
  * own buttons from the first load (Sound and Settings at the top; Travel, Hero and the wheel at
- * the bottom). It uses the Lagos city's page classes, so it needs no new first-load style, and it
- * imports no value from outside this folder (KN-R10).
+ * the bottom). It uses the Lagos city's page classes; its few own rules (HOME_STYLE) ride in this
+ * part, never the first load's style sheet (kano.md 9.1). It imports no value from outside this
+ * folder (KN-R10).
  *
  * The picture is drawn once as the screen opens and again only on a resize: a still screen draws
  * nothing (kano.md 9.1).
@@ -45,7 +46,29 @@ export function paintKanoHome(g: CanvasRenderingContext2D, w: number, h: number,
   drawKanoGate(g, w / 2, foot, s, { lit, still: true });
 }
 
+/**
+ * Kano's home's own style, put in the page once as the home first opens.
+ * K3b: two streets' Play buttons share one row; K4b: three in one row, tighter sides, so "Play
+ * Kofar Mata" takes two lines, not three. K1c fix: the words panel a little smaller where it must
+ * sit beside the gate board.
+ */
+export const HOME_STYLE = `.city-buttons .go-pair{display:flex;gap:8px;width:100%}
+.city-buttons .go-pair .go{flex:1 1 0;width:auto;min-width:0}
+.city-buttons .go-three .go{padding:4px 6px}
+@media (max-width:400px){.city-buttons .go-three .go{font-size:15px;line-height:1.1;min-height:48px}}
+.screen .city-banner.tight{padding:3px 8px 4px}
+.screen .city-banner.tight p{font-size:12px;line-height:1.2}`;
+
+function addHomeStyle(): void {
+  if (document.getElementById('kano-home-style')) return;
+  const st = document.createElement('style');
+  st.id = 'kano-home-style';
+  st.textContent = HOME_STYLE;
+  document.head.append(st);
+}
+
 export function kanoHome(hooks: WorldCityHooks): WorldCity {
+  addHomeStyle();
   const w = KANO_WORDS.place;
   const el = document.createElement('div');
   el.className = 'card city-card kano-city';

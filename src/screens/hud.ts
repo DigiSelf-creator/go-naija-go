@@ -10,7 +10,7 @@ import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
 import { h } from './dom';
 import { pressOnDown, type HintBarBox } from './controls';
-import { KANO_WORDS, OGUN_WORDS, WORDS, barWords } from './words';
+import { OGUN_WORDS, WORDS, barWords } from './words';
 
 /** O2b, O3b: ikokore's and ofada's chips (Ogun); their icons are painted by the Ogun part (setIcon). */
 type Slot = 'corn' | 'garri' | 'amala' | 'ikokore' | 'ofada' | 'kilishi' | 'fura';
@@ -107,9 +107,12 @@ export class Hud {
   }
 
   /** O2b: a later state's food icon (ikokore, ofada), drawn by its lazy part. */
-  setIcon(kind: OwnIcon, draw: (g: CanvasRenderingContext2D) => void): void {
+  setIcon(kind: OwnIcon, draw: (g: CanvasRenderingContext2D) => void, words?: (s: number) => string): void {
     this.paintIcon(this.slots[kind].icon, draw);
+    if (words) this.ownWords[kind] = words;
   }
+  /** K-size: a later state's chip words, from its part (Kano's kilishi and fura). */
+  private readonly ownWords: Partial<Record<OwnIcon, (s: number) => string>> = {};
 
   /** O3b: the parcel chip's icon: a state's own parcel (Ijebu garri), or null for Lagos's. */
   setParcelIcon(draw: ((g: CanvasRenderingContext2D) => void) | null): void {
@@ -163,8 +166,8 @@ export class Hud {
     this.setSlot('amala', p.amala > 0, WORDS.hud.strong(secs(p.amala)), warn(p.amala));
     this.setSlot('ikokore', p.ikokore > 0, OGUN_WORDS.hud.ikokore(secs(p.ikokore)), warn(p.ikokore));
     this.setSlot('ofada', p.ofada > 0, OGUN_WORDS.hud.ofada(secs(p.ofada)), warn(p.ofada));
-    this.setSlot('kilishi', p.kilishi > 0, KANO_WORDS.street.hud(secs(p.kilishi)), warn(p.kilishi));
-    this.setSlot('fura', p.fura > 0, KANO_WORDS.street.furaHud(secs(p.fura)), warn(p.fura));
+    this.setSlot('kilishi', p.kilishi > 0, this.ownWords.kilishi?.(secs(p.kilishi)) ?? '', warn(p.kilishi));
+    this.setSlot('fura', p.fura > 0, this.ownWords.fura?.(secs(p.fura)) ?? '', warn(p.fura));
     this.fufu.hidden = run.fufu <= 0;
     this.setText(this.fufuText, WORDS.hud.fufu(run.fufu));
     this.fufu.setAttribute('aria-label', WORDS.hud.fufuSpoken(run.fufu));
