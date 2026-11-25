@@ -181,6 +181,72 @@ for (const size of [{ width: 320, height: 240 }, { width: 640, height: 200 }]) {
   });
 }
 
+/**
+ * K7 gate: on Kano's map no board lies on another board or on the top row (heading, chips, top
+ * buttons; boards stand below that whole row), and each pin is shown with its word and round
+ * clear of every button row and its middle tappable, or has an edge arrow that can be tapped.
+ */
+const layoutFaults = (page: Page) =>
+  page.evaluate(() => {
+    const WORD: Record<string, string> = { sandyRoad: 'Sandy road', lightsOut: 'Lights out', slowInternet: 'Slow internet', dryTaps: 'Dry taps' };
+    const out: string[] = [];
+    const city = document.querySelector<HTMLElement>('.kano-city')!;
+    const shown = (e: Element): boolean => !(e as HTMLElement).hidden && (e as HTMLElement).offsetParent !== null && e.getBoundingClientRect().width > 0;
+    const hit = (a: DOMRect, b: DOMRect): boolean => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+    const tops = [...city.querySelectorAll('.city-head, .city-chip, .city-top button')].filter(shown).map((e) => ({ name: (e.textContent ?? '').trim().slice(0, 14), r: e.getBoundingClientRect() }));
+    const rowBottom = Math.max(...tops.map((t) => t.r.bottom));
+    const rows = [...tops, ...[...city.querySelectorAll('.city-bottom button')].filter(shown).map((e) => ({ name: (e.textContent ?? '').trim().slice(0, 14), r: e.getBoundingClientRect() }))];
+    const boards = [...city.querySelectorAll<HTMLElement>('.city-board')].filter(shown).map((e) => ({ name: e.dataset['build']!, r: e.getBoundingClientRect() }));
+    const sw = innerWidth;
+    const sh = innerHeight;
+    for (const [i, b] of boards.entries()) {
+      if (b.r.left >= sw || b.r.right <= 0 || b.r.top >= sh || b.r.bottom <= 0) continue;
+      for (const o of boards.slice(i + 1)) if (hit(b.r, o.r)) out.push(`board ${b.name} on board ${o.name}`);
+      for (const t of tops) if (hit(b.r, t.r)) out.push(`board ${b.name} on "${t.name}"`);
+      if (b.r.top < rowBottom - 0.5) out.push(`board ${b.name} in the top row (top ${Math.round(b.r.top)} < ${Math.round(rowBottom)})`);
+    }
+    // Its middle is on the screen and not under a button row or a board (a pin's may be under a pin beside it).
+    const tappable = (e: HTMLElement): boolean => {
+      const r = e.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      if (x < 0 || y < 0 || x > sw || y > sh) return false;
+      const at = document.elementFromPoint(x, y);
+      return at === e || e.contains(at) || (e.classList.contains('city-pin') && !!at?.closest('.kano-city .city-pin'));
+    };
+    for (const pin of city.querySelectorAll<HTMLElement>('.city-pin')) {
+      const spot = pin.dataset['spot']!;
+      const arrow = [...city.querySelectorAll<HTMLElement>(`.city-arrow[data-for="${WORD[spot]}"]`)].find((a) => shown(a) && tappable(a));
+      if (shown(pin)) {
+        const r = pin.getBoundingClientRect();
+        // The word tag: 16 px tall, 14 px up from the box's bottom; the round's middle 50 px up.
+        const word = new DOMRect(r.left + 4, r.bottom - 30, r.width - 8, 16);
+        const under = rows.find((t) => hit(word, t.r) || (r.left + r.width / 2 > t.r.left && r.left + r.width / 2 < t.r.right && r.bottom - 50 > t.r.top && r.bottom - 50 < t.r.bottom));
+        if (under) out.push(`pin ${spot} shown under "${under.name}"`);
+        else if (!tappable(pin) && !arrow) out.push(`pin ${spot} cannot be tapped and has no arrow`);
+      } else if (!arrow) out.push(`pin ${spot} hidden with no edge arrow`);
+    }
+    return out;
+  });
+
+const POOR = { ...save({ streets: {}, city: { ...FRESH, hints: ['pin', 'walk'] } }), city: { ...CITY, kobo: 0, power: 0, tech: 0 } };
+const RICH = save({ streets: { 1: K(1) }, city: { ...FRESH, paid: { dye: 300 }, hints: ['pin', 'walk'] } });
+for (const size of [{ width: 320, height: 240 }, { width: 568, height: 320 }, { width: 640, height: 200 }]) {
+  test(`K7: at ${size.width} x ${size.height} no board is on another board or the top row, and every pin shows or has an edge arrow`, async ({ page }) => {
+    for (const [name, s] of [['poor', POOR], ['rich', RICH]] as const) {
+      const errors = await open(page, s, size);
+      await page.waitForTimeout(1500);
+      if (SHOTS) await page.screenshot({ path: `${SHOTS}/k7-${name}-${size.width}.png` });
+      expect(await layoutFaults(page), `${name} ${size.width}x${size.height}`).toEqual([]);
+      // Zoomed in, the camera moves: still no board on a board or the top row.
+      await page.locator('.kano-city').getByRole('button', { name: /zoom in/i }).tap();
+      await page.waitForTimeout(800);
+      expect(await layoutFaults(page), `${name} ${size.width}x${size.height} zoomed in`).toEqual([]);
+      expect(errors).toEqual([]);
+    }
+  });
+}
+
 test('offline after one visit: Kano\'s city, its road, Harmattan Road and the Missions board', async ({ page, context }) => {
   test.setTimeout(120_000);
   const failed: string[] = [];

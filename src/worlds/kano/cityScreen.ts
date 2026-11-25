@@ -19,7 +19,7 @@ import type { BucketKind } from '../../art/city';
 import type { EdgeIcon } from '../../art/payspot';
 import type { WalkDir } from '../../art/walker';
 import type { CityKit, WorldCity, WorldCityHooks } from '../ui';
-import { KANO_CITY_CAST, KANO_MAP, KANO_PLACES, KANO_SPOTS, KANO_SPOT_WORDS, KANO_BLOCKS, drawKanoPin, kanoPinHitBox, makeKanoCityCanvas, type KanoPlaceId, type KanoSpotId } from './city';
+import { KANO_CITY_CAST, KANO_MAP, KANO_PLACES, KANO_SPOTS, KANO_SPOT_WORDS, KANO_BLOCKS, drawKanoPin, drawKanoSpotIcon, kanoPinHitBox, makeKanoCityCanvas, type KanoPlaceId, type KanoSpotId } from './city';
 import { KANO_PLACE_LOOK, drawDyePits, drawGrainMarket, drawLeatherStalls, drawPyramidPlace } from './cityPlaces';
 import { KURMI_CAST, KURMI_TRADER_LOOKS } from './kurmi';
 import { KOFAR_BEATERS, KOFAR_BUYER, KOFAR_DYERS, KOFAR_MATA_CAST } from './kofarMata';
@@ -190,6 +190,10 @@ export class KanoCityScreen implements WorldCity {
   private arrowEls: HTMLButtonElement[] = [];
   private arrowBox: { icon: string; x: number; y: number; tap: number; for: string }[] = [];
   private covers: Box[] = [];
+  /** K7: each heading, chip and button box, top and bottom: a pin whose word or round is under one hides. */
+  private pinCovers: Box[] = [];
+  /** K7: this frame's edge arrows for hidden pins, placed before the boards so a pin always gets one. */
+  private pinArrows: { spot: KanoSpotId; at: Pt; x: number; y: number; tap: number }[] = [];
   private coversDirty = true;
   private hintWant: Box | null = null;
   /** The problem card, the Not enough card or the boom card showing. */
@@ -406,10 +410,14 @@ export class KanoCityScreen implements WorldCity {
     if (!this.coversDirty) return;
     this.coversDirty = false;
     const r = this.el.getBoundingClientRect();
-    this.covers = [...this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button'), ...this.el.querySelectorAll<HTMLElement>('.city-bottom button')]
-      .map((e) => e.getBoundingClientRect())
-      .filter((b) => b.width > 0 && b.height > 0)
-      .map((b) => ({ x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height }));
+    const boxes = (els: Iterable<HTMLElement>): Box[] =>
+      [...els]
+        .map((e) => e.getBoundingClientRect())
+        .filter((b) => b.width > 0 && b.height > 0)
+        .map((b) => ({ x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height }));
+    const bottom = boxes(this.el.querySelectorAll<HTMLElement>('.city-bottom button'));
+    this.pinCovers = [...boxes(this.top.querySelectorAll<HTMLElement>('.city-head, .city-chip, button')), ...bottom];
+    this.covers = [...boxes(this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button')), ...bottom];
   }
 
   // ---------- Heading, chips, pins ----------
@@ -496,9 +504,17 @@ export class KanoCityScreen implements WorldCity {
       if (p.el.hidden !== off) p.el.hidden = off;
     }
   }
-  /** K6c: a pin is off once its middle is under the bottom rows (a tap there hits a button). */
+  /**
+   * K6c: a pin is off once its middle is under the bottom rows (a tap there hits a button).
+   * K7: also once its word, or the middle of its round, is under the heading, a chip or a
+   * button (top or bottom): it could not be read or tapped there. (Box bottom to top: 4 below the foot, the stem
+   * 10, the word 16, a gap of 2, the round 36.)
+   */
   private pinOff(b: Box): boolean {
-    return this.offMap(b) || b.y + b.h / 2 >= this.view.h - this.view.bot - 2;
+    if (this.offMap(b) || b.y + b.h / 2 >= this.view.h - this.view.bot - 2) return true;
+    const word = { x: b.x + 4, y: b.y + b.h - 30, w: b.w - 8, h: 16 };
+    const round = { x: b.x + b.w / 2, y: b.y + b.h - 50, w: 0, h: 0 };
+    return this.pinCovers.some((t) => near(t, word, 0) || near(t, round, 0));
   }
   /** Off the map, or under the bottom rows (as good as off: it cannot be tapped there). */
   private offMap(b: Box): boolean {
@@ -564,18 +580,21 @@ export class KanoCityScreen implements WorldCity {
   private placeSigns(g: G): void {
     this.measureCovers();
     const P = this.k.pay;
-    const hard: Box[] = [...this.pins.map((p) => this.pinBox(p.spot, p.word)), ...this.covers, ...(this.hintWant ? [this.hintWant] : [])];
+    const shownPins = this.pins.map((p) => this.pinBox(p.spot, p.word)).filter((b) => !this.pinOff(b));
+    // K7: every hidden pin's edge arrow is placed first, so the boards make room for it.
+    const pinArrowBoxes = this.placePinArrows(shownPins);
+    const hard: Box[] = [...shownPins, ...pinArrowBoxes, ...this.covers, ...(this.hintWant ? [this.hintWant] : [])];
     const taken: Box[] = [];
-    const { w: vw, h: vh } = this.view;
-    const inView = (b: Box): boolean => b.x >= 0 && b.y >= 0 && b.x + b.w <= vw && b.y + b.h <= vh;
+    const { w: vw, h: vh, top } = this.view;
+    // K7: a board or bubble stands below the whole top row (never between its buttons and chips).
+    const inView = (b: Box): boolean => b.x >= 0 && b.y >= top + 2 && b.x + b.w <= vw && b.y + b.h <= vh;
     const strict = (b: Box): boolean => inView(b) && !hard.some((t) => near(t, b, 2)) && !taken.some((t) => near(t, b, 2));
-    // Loose (no room otherwise): it may touch a pin or another sign, but its middle stays clear of
-    // every shown pin and sign, and no sign's middle goes under it (K6c: each one still takes a tap).
+    // Loose (no room otherwise): it may touch a pin, but its middle stays clear of every shown pin
+    // (K6c: each one still takes a tap); K7: never on another sign or a pin's edge arrow.
     const mid = (b: Box): Pt => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
     const inside = (p: Pt, b: Box): boolean => p.x >= b.x - 2 && p.x <= b.x + b.w + 2 && p.y >= b.y - 2 && p.y <= b.y + b.h + 2;
-    const shownPins = this.pins.map((p) => this.pinBox(p.spot, p.word)).filter((b) => !this.pinOff(b));
     const loose = (b: Box): boolean =>
-      inView(b) && !this.covers.some((t) => near(t, b, 2)) && !shownPins.some((t) => inside(mid(b), t)) && !taken.some((t) => inside(mid(b), t) || inside(mid(t), b));
+      inView(b) && !this.covers.some((t) => near(t, b, 2)) && !pinArrowBoxes.some((t) => near(t, b, 0)) && !shownPins.some((t) => inside(mid(b), t)) && !taken.some((t) => near(t, b, 0));
     const fit = (id: string, want: Box, clear = strict): Box | null => {
       const prev = this.signAt.get(id);
       if (clear(want)) return want;
@@ -637,36 +656,52 @@ export class KanoCityScreen implements WorldCity {
    * smaller only when none fits) stays on the map, clear of the rows, every sign, pin and arrow.
    */
   private drawArrows(g: G): void {
-    const { w: vw, top } = this.view;
+    const vw = this.view.w;
     // A thing under the bottom rows cannot be tapped: it counts as off the map.
     const vh = this.view.h - this.view.bot;
     const P = this.k.pay;
     const off = (b: Box): boolean => this.offMap(b);
     const onView = (b: Box): boolean => b.x + b.w > 0 && b.y + b.h > 0 && b.x < vw && b.y < vh;
     const mid = (b: Box): Pt => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
-    const want: { icon: EdgeIcon; at: Pt; go: () => void; label: string }[] = [];
-    const pinBoxes = this.pins.map((p) => this.pinBox(p.spot, p.word));
-    this.pins.forEach((p, i) => this.pinOff(pinBoxes[i]!) && want.push({ icon: SPOT_ICON[p.spot], at: mid(pinBoxes[i]!), go: () => this.openPin(p.spot), label: KANO_SPOT_WORDS[p.spot] }));
+    type Want = { icon: EdgeIcon; at: Pt; go: () => void; label: string; spot?: { x: number; y: number; tap: number }; pin?: KanoSpotId };
+    const want: Want[] = [];
+    // K7: the hidden pins' arrows, already placed (placeSigns), come first.
+    for (const a of this.pinArrows) want.push({ icon: SPOT_ICON[a.spot], at: a.at, go: () => this.openPin(a.spot), label: KANO_SPOT_WORDS[a.spot], spot: a, pin: a.spot });
     for (const [b, box] of this.boardBox) if (off(box) && !this.roomless.has(b)) want.push({ icon: KANO_PRICES[b].bucket, at: mid(box), go: () => this.goPay(b), label: KW.board[b] });
     for (const [p, box] of this.bubbleBox) if (off(box) && !this.roomless.has(p)) want.push({ icon: 'naira', at: mid(box), go: () => this.walkTo(KANO_MATS[p]), label: KW.board[p] });
-    const avoid: Box[] = [...this.covers, ...(this.hintWant ? [this.hintWant] : []), ...[...this.boardBox.values(), ...this.bubbleBox.values(), ...pinBoxes].filter(onView)];
+    // K7: a board with no room on the map points the way to its mat (walking onto it pays).
+    for (const b of this.boardBox.keys()) if (this.roomless.has(b)) want.push({ icon: KANO_PRICES[b].bucket, at: this.toScreen(KANO_MATS[b]), go: () => this.goPay(b), label: KW.board[b] });
+    const shownPins = this.pins.map((p) => this.pinBox(p.spot, p.word)).filter((b) => !this.pinOff(b));
+    const avoid: Box[] = [
+      ...this.covers,
+      ...(this.hintWant ? [this.hintWant] : []),
+      ...[...this.boardBox.values(), ...this.bubbleBox.values(), ...shownPins].filter(onView),
+      ...this.pinArrows.map((a) => ({ x: a.x - a.tap / 2, y: a.y - a.tap / 2, w: a.tap, h: a.tap })),
+    ];
     this.arrowBox = [];
     while (this.arrowEls.length < want.length) {
       const el = this.k.dom.button('', 'city-sign city-arrow', () => undefined, { 'aria-hidden': 'true', tabindex: '-1' });
       this.arrowEls.push(el);
       this.signLayer.append(el);
     }
-    const inset = Math.max(P.EDGE_ARROW.r + 2, Math.min(P.EDGE_ARROW.inset, (vh - top) / 2));
+    const inset = this.arrowInset();
     this.arrowEls.forEach((el, i) => {
       const a = want[i];
-      const base = a && P.edgeArrowPlace(a.at.x, a.at.y, vw, vh, top, inset);
-      const spot = base ? this.arrowSpot(base, avoid, inset) : null;
+      const spot = a ? (a.spot ?? this.arrowSpot(this.arrowBase(a.at, inset), avoid, inset)) : null;
       el.hidden = !a || !spot;
       if (!a || !spot) return;
       const r = spot.tap / 2;
       const box = { x: spot.x - r, y: spot.y - r, w: r * 2, h: r * 2 };
-      avoid.push(box);
+      if (!a.spot) avoid.push(box);
       P.drawEdgeArrow(g, spot.x, spot.y, Math.atan2(a.at.y - spot.y, a.at.x - spot.x), a.icon);
+      // K7: a pin's arrow shows Kano's own spot icon (as on the pin), so two arrows never look the same.
+      if (a.pin) {
+        g.fillStyle = '#ffffff';
+        g.beginPath();
+        g.arc(spot.x, spot.y, P.EDGE_ARROW.r - 3, 0, Math.PI * 2);
+        g.fill();
+        drawKanoSpotIcon(g, a.pin, spot.x, spot.y);
+      }
       this.placeEl(el, box);
       el.dataset['for'] = a.label;
       el.onclick = (e) => {
@@ -674,6 +709,42 @@ export class KanoCityScreen implements WorldCity {
       };
       this.arrowBox.push({ icon: String(a.icon), x: spot.x, y: spot.y, tap: spot.tap, for: a.label });
     });
+  }
+
+  private arrowInset(): number {
+    const vh = this.view.h - this.view.bot;
+    return Math.max(this.k.pay.EDGE_ARROW.r + 2, Math.min(this.k.pay.EDGE_ARROW.inset, (vh - this.view.top) / 2));
+  }
+  /**
+   * Where an arrow for a thing at `at` would stand on the edge band; K7: a thing on the map but
+   * not tappable there (under a row, or a board with no room) gets the nearest band spot.
+   */
+  private arrowBase(at: Pt, inset: number): Pt {
+    const { w: vw, top } = this.view;
+    const vh = this.view.h - this.view.bot;
+    const e = this.k.pay.edgeArrowPlace(at.x, at.y, vw, vh, top, inset);
+    if (e) return e;
+    const cx = (a: number, lo: number, hi: number): number => Math.min(Math.max(a, lo), Math.max(lo, hi));
+    return { x: cx(at.x, inset, vw - inset), y: cx(at.y, top + inset, vh - inset) };
+  }
+  /** K7: places an edge arrow for each hidden pin (before any board), clear of the rows, the hint and the shown pins; returns their tap squares. */
+  private placePinArrows(shownPins: readonly Box[]): Box[] {
+    const inset = this.arrowInset();
+    const avoid: Box[] = [...this.covers, ...(this.hintWant ? [this.hintWant] : []), ...shownPins];
+    const out: Box[] = [];
+    this.pinArrows = [];
+    for (const p of this.pins) {
+      const b = this.pinBox(p.spot, p.word);
+      if (!this.pinOff(b)) continue;
+      const at = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+      const spot = this.arrowSpot(this.arrowBase(at, inset), avoid, inset);
+      if (!spot) continue;
+      const box = { x: spot.x - spot.tap / 2, y: spot.y - spot.tap / 2, w: spot.tap, h: spot.tap };
+      avoid.push(box);
+      out.push(box);
+      this.pinArrows.push({ spot: p.spot, at, ...spot });
+    }
+    return out;
   }
 
   /** The nearest clear place for an arrow on the edge band (then bands nearer the edge, then anywhere on the map), 48 px tap first. */
