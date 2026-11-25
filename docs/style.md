@@ -112,7 +112,7 @@ City people grow from about 8 px to **about 32 units tall** (feet to top of head
 1. Head about a third of the body: head circle radius 7, body and legs about 20 below it.
 2. Face: two dot eyes (`#1f150f`, 1 x 1.3), a tiny white catch-light in each eye (`rgba(255,255,255,0.8)`, radius 0.35), a small smile (1 unit line), warm cheeks (`rgba(230,110,90,0.28)`).
 3. Outline warm ink, 1.6 units on body and head, 1.1 to 1.4 on hands and arms.
-4. Everyone smiles. Wide range of skin tones (the seven tones art uses, `#3e2619` to `#bf8558`, plus the lighter `#d9a172` and `#f1c9a5` from the hero builder), hair (gele, fila, braids, afro, puffs, low cut, head tie) and clothes (kaftan, agbada for an older man, wrapper and blouse, ankara, school uniform, work clothes). A wheelchair user and an older person with a walking stick are in every city.
+4. Everyone smiles. Wide range of skin tones (the seven tones art uses, `#3e2619` to `#bf8558`, plus the lighter `#d9a172` and `#f1c9a5` from the hero builder), hair (gele, fila, braids, afro, puffs, low cut, head tie) and clothes (kaftan, agbada for an older man, wrapper and blouse, ankara, school uniform, work clothes). A wheelchair user and an older person (no walking stick, decision 21) are in every city.
 5. A small foot shadow: an oval 8 by 2.6 units, `rgba(70,35,15,0.28)`.
 6. Street and lane people follow the crisp characters recipe (1.8) in step ST-H, before phase 2. City people take the same recipe when the city is redrawn in phase 3.
 
