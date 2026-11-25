@@ -22,7 +22,7 @@ export const KANO_WORDS = {
   place: {
     heading: 'Kano',
     line: 'The Centre of Commerce',
-    soon: 'Kurmi, the first street through the gate, is coming next.',
+    soon: 'Kurmi, the first street, is just through the gate.',
     /** The picture's spoken name. */
     pic: 'The old red wall of Kano and its open gate.',
   },

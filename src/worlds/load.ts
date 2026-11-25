@@ -19,6 +19,8 @@ import type { RoadPlan, PlanStop } from '../screens/road';
 import type { LaneLook } from '../lane/view';
 import type { Obj, StateProgress } from '../game/progress';
 import type { MissionDef, MissionIcon } from '../game/missions';
+import type { Level } from '../game/level';
+import { addSounds, type Recipe, type SoundName } from '../engine/sound';
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
 export const WORLD_PART_VERSION = 1;
@@ -34,7 +36,9 @@ export interface WorldPart {
    * O2b: a street's own look (skin.ts) by level id, made fresh for each play, or null when the
    * part has none for it yet. Optional in the shape check.
    */
-  readonly street?: (level: { readonly id: string; readonly arch: number | null }) => StreetSkin | null;
+  readonly street?: (level: Level) => StreetSkin | null;
+  /** K2b: the part's own sound recipes (a part that imports only types cannot add them itself). Optional. */
+  readonly sounds?: Readonly<Partial<Record<SoundName, Recipe>>>;
   /**
    * O5b: the state's boss hall (its level file is `<id>-hall`): its fight, made fresh for each try,
    * and its tune (it stands in for the hall tune while that hall is played). Optional.
@@ -113,6 +117,7 @@ export class WorldParts {
       (mod): WorldLoad => {
         const part = checkPart(mod, id);
         if (!part) return { ok: false, why: 'broken', message: w.broken };
+        if (part.sounds) addSounds(part.sounds);
         this.loaded.set(id, part);
         return { ok: true, part };
       },

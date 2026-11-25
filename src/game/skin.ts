@@ -17,6 +17,7 @@ import type { FoodKind, Level } from './level';
 import type { GamePeople } from './people';
 import type { HazardState, Run, RunEvent } from './run';
 import type { RoomData } from './well';
+import type { Tune } from '../art/tunes';
 
 type G = CanvasRenderingContext2D;
 
@@ -49,8 +50,8 @@ export interface SkinNow {
 export type SkinEvent = RunEvent | { type: 'mudStep'; x: number; y: number };
 
 export interface StreetSkin {
-  /** Screen space: everything behind the road, back to front. */
-  backdrop(g: G, camX: number, viewW: number, time: number, viewH: number, groundY: number, still: boolean): void;
+  /** Screen space: everything behind the road, back to front. K2b: `s` is what the skin may read now. */
+  backdrop(g: G, camX: number, viewW: number, time: number, viewH: number, groundY: number, still: boolean, s: SkinNow): void;
   /** World space, before the back pavement people: scenery behind them (stalls). */
   back?(g: G, s: SkinNow): void;
   /** World space, right after the road: mud, its prints, the arch. */
@@ -85,4 +86,6 @@ export interface StreetSkin {
   restart?(): void;
   /** The street's own people (design.md "People everywhere"), or none for the Lagos casts. */
   readonly cast?: StreetCast;
+  /** K2b: the street's own tune (it stands in for the street tune while this street is played). */
+  readonly tune?: Tune;
 }

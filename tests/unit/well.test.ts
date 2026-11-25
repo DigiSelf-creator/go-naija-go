@@ -234,12 +234,12 @@ describe('going down (S2.5 The well on the street)', () => {
     goat.mode = 'move';
     goat.vx = -36;
     goat.x = 3100;
-    run.power = { corn: 200, amala: 300, ikokore: 0, ofada: 0, shield: true };
+    run.power = { corn: 200, amala: 300, ikokore: 0, ofada: 0, kilishi: 0, shield: true };
     standAt(run, WELL2.x);
     run.goDown();
     steps(run, WELL_RULES.downSteps + WELL_RULES.arriveSteps + 600); // 10 s in the room
     expect(goat).toMatchObject({ x: 3100, mode: 'move' });
-    expect(run.power).toEqual({ corn: 200, amala: 300, ikokore: 0, ofada: 0, shield: true });
+    expect(run.power).toEqual({ corn: 200, amala: 300, ikokore: 0, ofada: 0, kilishi: 0, shield: true });
     expect(run.lives).toBe(3);
   });
 

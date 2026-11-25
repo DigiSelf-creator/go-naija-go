@@ -81,10 +81,11 @@ export interface HallData {
 /**
  * O2b (ogun.md 4.1): ikokore, Ogun's own food: mud does not slow you for 12 s.
  * O3b: ofada rice: cracks stay shut for 12 s.
+ * K2b (kano.md 4.1): kilishi: a headwind cannot hold you back for 12 s.
  */
-export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu' | 'ikokore' | 'ofada';
+export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu' | 'ikokore' | 'ofada' | 'kilishi';
 /** S2.15: crates may hold fufu later (it needs a crate stamp from art); none do now. */
-export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu' | 'ikokore' | 'ofada'>;
+export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu' | 'ikokore' | 'ofada' | 'kilishi'>;
 
 /** A crate hung over the road or a roof (S2.4): centre x, bottom edge y. */
 export interface CrateData {
@@ -114,6 +115,13 @@ export interface CrackData {
 }
 /** ogun.md 3.3: a crack is a tap (40) or hold (60) pothole once open. */
 export const CRACK_WIDTHS: readonly number[] = [40, 60];
+
+/** K2b (kano.md 3.3): a stretch of Harmattan wind from x to x + w, behind you ("back") or in your face. */
+export interface WindData {
+  x: number;
+  w: number;
+  dir: 'back' | 'face';
+}
 
 /** A well (S2.5): entrance x, exit x, room file id. */
 export interface WellData {
@@ -172,6 +180,10 @@ export interface Level {
   cracks: readonly CrackData[];
   /** O3b: left lips of potholes drawn holding water (look only). */
   waterPits: readonly number[];
+  /** K2b (kano.md 3.3): wind stretches, left to right (none on most levels). */
+  wind: readonly WindData[];
+  /** K2b (kano.md 3.4): our own gate in the old wall (Kurmi only), or null. */
+  gate: number | null;
   /** S2.16 B4: reaching this x turns the dash on (saved), or null. */
   dashFrom: number | null;
   /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
@@ -195,7 +207,7 @@ const WALL_GAP = 7;
 /** S2.6 street walk speed with roasted corn (the hall file has no speeds; it uses the streets'). */
 const CORN_WALK = 120;
 
-const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu', 'ikokore', 'ofada'];
+const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu', 'ikokore', 'ofada', 'kilishi'];
 const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', 'corn', 'garri', 'amala'];
 const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow', 'gravel'];
 /** S2.16 B1: the egret paces its patch at 30 u/s; the crow hovers in place. */
@@ -303,6 +315,14 @@ export function parseLevel(raw: unknown): Level {
     return { x: x!, w: w! };
   });
   const waterPits = opt('waterPits').map((x, i) => num(x, `waterPits[${i}]`));
+  // K2b (kano.md 3.8): wind [x, width, dir], gate x.
+  const wind: WindData[] = opt('wind').map((q, i) => {
+    const [x, w, dir] = tuple(q, `wind[${i}]`, 3);
+    const d = { x: num(x, `wind[${i}][0]`), w: num(w, `wind[${i}][1]`), dir: oneOf(dir, `wind[${i}][2]`, ['back', 'face'] as const) };
+    if (d.w <= 0) fail(`wind[${i}][1]`, 'should be above 0');
+    return d;
+  });
+  const gate = r['gate'] === undefined ? null : num(r['gate'], 'gate');
   for (const k of rocks) platforms.push({ x: k.x, y: groundY - k.h, w: k.w });
 
   const crates: CrateData[] =
@@ -369,6 +389,8 @@ export function parseLevel(raw: unknown): Level {
     rocks,
     cracks: cracks.sort((p, q) => p.x - q.x),
     waterPits,
+    wind: wind.sort((p, q) => p.x - q.x),
+    gate,
     dashFrom,
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
@@ -490,6 +512,8 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     rocks: [],
     cracks: [],
     waterPits: [],
+    wind: [],
+    gate: null,
     dashFrom: null,
     hints: [],
     checkpoint: Infinity,

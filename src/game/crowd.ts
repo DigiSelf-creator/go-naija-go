@@ -177,6 +177,8 @@ export interface StreetCast {
   /** Traders' calls: each trader's own (callOf), else any of these. */
   readonly calls: readonly string[];
   readonly callOf?: (look: FolkLook) => string | undefined;
+  /** K2b: which looks are the street's traders (they stand at their stalls and call), if not by what they hold. */
+  readonly isTrader?: (look: FolkLook) => boolean;
   /** Greetings left of `to` use these lines (the welcome by the arch). */
   readonly welcome?: { readonly to: number; readonly lines: Lines };
   /** People who stand at their own spots (the travellers by the arch). */
@@ -232,15 +234,15 @@ export interface CrowdPlan {
  * (tired, bright or fixed), the same every try (a fixed seed per street). `from`: where the
  * counts start (after the first screen, which S3e0 keeps). `looks`: the cast (streetCast).
  */
-export function crowdSpots(level: Level, look: CrowdLook, looks: readonly FolkLook[], parkFrom = looks.length, from = STREET_FROM[STREET_OF[level.id] ?? 'alausa']): CrowdPlan {
+export function crowdSpots(level: Level, look: CrowdLook, looks: readonly FolkLook[], parkFrom = looks.length, from = STREET_FROM[STREET_OF[level.id] ?? 'alausa'], trader: (l: FolkLook) => boolean = isTrader): CrowdPlan {
   const rand = seeded(seedOf(`${level.id}|${look}`));
   const zones = clearZones(level);
   const lastGround = level.ground.length ? level.ground[level.ground.length - 1]![1] : from;
   const to = level.end ? level.end.x : lastGround;
   const free = freeStretches(zones, from, to).filter((s) => s.b - s.a >= CROWD.minStand);
   const own = Array.from({ length: Math.max(1, Math.min(parkFrom, looks.length)) }, (_, i) => i);
-  const traders = own.filter((i) => looks[i] && isTrader(looks[i]!));
-  const movers = own.filter((i) => looks[i] && !isTrader(looks[i]!) && looks[i]!.age !== 'elder' && !looks[i]!.stool);
+  const traders = own.filter((i) => looks[i] && trader(looks[i]!));
+  const movers = own.filter((i) => looks[i] && !trader(looks[i]!) && looks[i]!.age !== 'elder' && !looks[i]!.stool);
   const pick = (list: readonly number[], k: number): number => list[k % Math.max(1, list.length)] ?? 0;
 
   // Standing: spread along the joined free length, one per standEvery.
@@ -255,7 +257,7 @@ export function crowdSpots(level: Level, look: CrowdLook, looks: readonly FolkLo
     const i = order[k % order.length]!;
     const l = looks[i]!;
     // O2b: a look on a stool (Ota's truck driver resting) always sits.
-    const kind: SpotKind = isTrader(l) ? 'trader' : l.age === 'child' ? 'child' : l.stool || (l.age === 'elder' && k % 2 === 0) ? 'sit' : 'stand';
+    const kind: SpotKind = trader(l) ? 'trader' : l.age === 'child' ? 'child' : l.stool || (l.age === 'elder' && k % 2 === 0) ? 'sit' : 'stand';
     stands.push({ x, look: i, kind, flip: rand() < 0.5 });
   }
   // Every street has at least one trader calling when it has standing people and traders.

@@ -10,7 +10,7 @@ import { BossFight, throwBox, type BossEvent } from './boss';
 import { CRATE_RULES, freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import { ballsOut, FUFU_RULES, stepBall, tossBall, type BallWorld, type FufuBall } from './fufu';
-import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type MudData, type ThrowKind, type WellData } from './level';
+import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type MudData, type ThrowKind, type WellData, type WindData } from './level';
 import type { SoundName } from '../engine/sound';
 import { pitKind, pitsOf, withBlocks, BIG_PIT, type Pit, type PitKind } from './pits';
 import { GENTLE_HINTS } from '../screens/words';
@@ -34,6 +34,17 @@ export const RULES = {
   ikokoreSteps: secs(12),
   /** O3b (ogun.md 4.1): ofada's steady road lasts 12 s. */
   ofadaSteps: secs(12),
+  /** K2b (kano.md 4.1): kilishi's strong legs last 12 s. */
+  kilishiSteps: secs(12),
+  /**
+   * K2b (kano.md 3.3): in the air, a wind behind you adds a quarter to your speed forward; one in
+   * your face takes a quarter away (Gentle mode: an eighth; kilishi: nothing). The ground is not changed.
+   */
+  tailwind: 0.25,
+  headwind: 0.25,
+  headwindGentle: 0.125,
+  /** The soft "whoosh" plays again this often while the hero is in a wind stretch. */
+  whooshSteps: secs(0.9),
   /**
    * O3b (ogun.md 3.3): a crack rumbles open when the hero first comes this near its left lip
    * (Gentle mode: farther), over this long (art's CRACK.openTime), and then it is a pothole.
@@ -194,6 +205,10 @@ export type RunEvent =
   | { type: 'powerEnd'; kind: TimedFood }
   /** O2b (ogun.md 1.4): the hero passed under the gateway arch (once a play). */
   | { type: 'arch' }
+  /** K2b (kano.md 3.4): the hero passed through the gate in the old wall (once a play). */
+  | { type: 'gate' }
+  /** K2b (kano.md 3.3): in a wind stretch, every 0.9 s (the soft "whoosh"). */
+  | { type: 'whoosh' }
   /** O3b (ogun.md 3.3): a crack starts to rumble open (it is a pothole 0.4 s later). */
   | { type: 'crackOpen'; x: number; w: number }
   /** O4b (ogun.md 3.3): a hopping gravel lands on the road ("tk", a dust puff). */
@@ -275,13 +290,15 @@ export interface Power {
   ikokore: number;
   /** O3b: steps of ofada left (cracks stay shut). */
   ofada: number;
+  /** K2b: steps of kilishi left (a headwind does not hold you back). */
+  kilishi: number;
   shield: boolean;
 }
 
 /** The foods that work for a time (they tick, warn and end). */
-export type TimedFood = 'corn' | 'amala' | 'ikokore' | 'ofada';
-const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore', 'ofada'];
-const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false };
+export type TimedFood = 'corn' | 'amala' | 'ikokore' | 'ofada' | 'kilishi';
+const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore', 'ofada', 'kilishi'];
+const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, shield: false };
 
 /**
  * O3b (ogun.md 3.3): a crack in this play. shut: a line in the road; opening: rumbling since step
@@ -380,6 +397,9 @@ export class Run {
   readonly cracks: CrackState[];
   /** O2b: the arch's welcome showed in this play. */
   private archShown = false;
+  private gateShown = false;
+  /** K2b: steps to the next whoosh while in a wind stretch. */
+  private whooshIn = 0;
   /** O2b: the feet were in mud since they last stood on firm road (ogun.md 3.3: the run timer starts again on leaving it). */
   private wasMud = false;
   /** Hints already shown in this play of the level (not again after a fall). */
@@ -584,6 +604,7 @@ export class Run {
 
     if (h.dash > 0 && this.power.corn > 0) endDash(h); // corn is faster already
     this.mudStep(h);
+    if (h.manual) h.wind = this.level.wind.length > 0 ? this.windFactor(h.x) : 1;
     const dash0 = h.dash > 0;
     const rest0 = resting(h);
     step(h, this.terrain, dt);
@@ -642,6 +663,19 @@ export class Run {
     if (arch !== null && !this.archShown && h.x >= arch) {
       this.archShown = true;
       ev.push({ type: 'arch' });
+    }
+    // K2b (kano.md 3.4): through the gate in the old wall, "Welcome to Kano!" (once a play).
+    const gate = this.level.gate;
+    if (gate !== null && !this.gateShown && h.x >= gate) {
+      this.gateShown = true;
+      ev.push({ type: 'gate' });
+    }
+    if (this.level.wind.length > 0) {
+      if (!this.windAt(h.x)) this.whooshIn = 0;
+      else if (--this.whooshIn <= 0) {
+        this.whooshIn = RULES.whooshSteps;
+        ev.push({ type: 'whoosh' });
+      }
     }
     if (this.cracks.length > 0) this.stepCracks(ev);
     this.pickUps(ev);
@@ -983,6 +1017,26 @@ export class Run {
     return b;
   }
 
+  // ---------- Wind and kilishi (K2b, kano.md 3.3, 4.1) ----------
+
+  /** The wind stretch at x (its start to its end), or null. */
+  windAt(x: number): WindData | null {
+    for (const w of this.level.wind) if (x >= w.x && x <= w.x + w.w) return w;
+    return null;
+  }
+
+  /**
+   * How much of the air speed forward the hero covers at x (physics Body.wind): 1.25 in a wind
+   * behind you, 0.75 in your face (Gentle: 0.875), 1 with kilishi in your face or with no wind.
+   */
+  windFactor(x: number): number {
+    const w = this.windAt(x);
+    if (!w) return 1;
+    if (w.dir === 'back') return 1 + RULES.tailwind;
+    if (this.power.kilishi > 0) return 1;
+    return 1 - (this.gentle ? RULES.headwindGentle : RULES.headwind);
+  }
+
   // ---------- Mud (O2b, ogun.md 3.3) ----------
 
   /** True when x is on a mud patch (its left edge to its right edge). */
@@ -1116,6 +1170,7 @@ export class Run {
         else if (f.kind === 'amala') this.power.amala = RULES.amalaSteps;
         else if (f.kind === 'ikokore') this.power.ikokore = RULES.ikokoreSteps;
         else if (f.kind === 'ofada') this.power.ofada = RULES.ofadaSteps;
+        else if (f.kind === 'kilishi') this.power.kilishi = RULES.kilishiSteps;
         else if (f.kind === 'fufu') this.fufu = Math.min(FUFU_RULES.max, this.fufu + FUFU_RULES.give);
         else this.power.shield = true; // a second garri while shielded gives nothing extra
         ev.push({ type: 'food', kind: f.kind, x: f.x, y: f.y });
