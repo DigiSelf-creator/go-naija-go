@@ -9,6 +9,7 @@
  *   ?gallery=folk, folk2 … folk5       the people kit (S3g1a)
  *   ?gallery=ogun-city, ogun-city2, ogun-city3   Ogun's city, road and Expressway (O6a)
  *   ?gallery=ogun, ogun2, ogun3        Ogun's gateway pieces (O1a)
+ *   ?gallery=kano, kano2               Kano's wall, gate, "To Kano" stop and the ride north (K1a)
  *   ?gallery=ota | abeokuta | sagamu   each Ogun street's pieces (O2a, O3a, O4a)
  *   ?gallery=hall-ogun                 Pothole Hall and King Pothole (O5a)
  *   ?gallery=road, road2 … road8       the challenge road (S3e1a)
@@ -28,6 +29,7 @@ const GALLERIES: readonly { match: (v: string) => number | null; load: () => Pro
   { match: pages('folk'), load: () => import('./galleryFolk').then((m) => (g, w, h, t, p) => m.drawFolkGallery(g, w, h, t, p)) },
   { match: pages('ogun-city'), load: () => import('./galleryOgunCity').then((m) => (g, w, h, t, p, s) => m.drawOgunCityGallery(g, w, h, t, p, s)) },
   { match: pages('ogun'), load: () => import('./galleryOgun').then((m) => (g, w, h, t, p) => m.drawOgunGallery(g, w, h, t, p)) },
+  { match: pages('kano'), load: () => import('./galleryKano').then((m) => (g, w, h, t, p) => m.drawKanoGallery(g, w, h, t, p)) },
   { match: only('ota'), load: () => import('./galleryOta').then((m) => (g, w, h, t, _p, s) => m.drawOtaGallery(g, w, h, t, s)) },
   { match: only('abeokuta'), load: () => import('./galleryAbeokuta').then((m) => (g, w, h, t, _p, s) => m.drawAbeokutaGallery(g, w, h, t, s)) },
   { match: only('sagamu'), load: () => import('./gallerySagamu').then((m) => (g, w, h, t, _p, s) => m.drawSagamuGallery(g, w, h, t, s)) },
