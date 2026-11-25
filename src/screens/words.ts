@@ -707,6 +707,19 @@ export const KANO_WORDS = {
   },
   /** Part 1.7: Settings, under "Saved on this phone". */
   saved: 'Your hero, Lagos, Ogun and Kano are saved on this phone.',
+  /**
+   * K2b: what the first load shows on a Kano street (kano.md 3.4, 4.1, 8), word for word as
+   * src/worlds/kano/words.ts (tests/unit/k2b-wind.test.ts checks they match).
+   */
+  street: {
+    gate: 'Welcome to Kano!',
+    kilishi: "Kilishi! Wind can't hold you back for 12 seconds.",
+    kilishiWearingOff: 'Kilishi is wearing off!',
+    hud: (s: number) => `Kilishi ${s}`,
+    gameOver: (kobo: number) => `You keep ${formatMoney(kobo)}. The street is still here. Try again!`,
+    /** Kano's home: Kurmi's button (gamedev's words, for designer to check). */
+    play: 'Play Kurmi',
+  },
 } as const;
 
 /**

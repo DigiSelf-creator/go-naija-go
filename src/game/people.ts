@@ -279,7 +279,7 @@ export class GamePeople {
     if ((!name && !own) || !level.manual) return;
     const cast = own ? ownCast(own, n.look) : streetCast(name!, n.look);
     this.looks = cast.looks;
-    const plan = own ? crowdSpots(level, n.crowdLook, cast.looks, cast.park, own.from) : crowdSpots(level, n.crowdLook, cast.looks, cast.park);
+    const plan = own ? crowdSpots(level, n.crowdLook, cast.looks, cast.park, own.from, own.isTrader) : crowdSpots(level, n.crowdLook, cast.looks, cast.park);
     // O2b: a later state's people at their own spots (the travellers by the arch), if their look is in.
     for (const e of own?.extras ?? []) {
       const i = cast.looks.indexOf(e.look);

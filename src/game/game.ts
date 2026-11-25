@@ -319,7 +319,7 @@ export class Game {
   /** A food on the road: the skin's own (ikokore, Ijebu garri), else the game's. */
   private drawFoodNow(g: CanvasRenderingContext2D, kind: Level['foods'][number]['kind'], x: number, y: number, t: number): void {
     if (this.skinDo((k) => k.food?.(g, kind, x, y, t))) return;
-    if (kind !== 'ikokore' && kind !== 'ofada') drawFood(g, kind, x, y, t);
+    if (kind !== 'ikokore' && kind !== 'ofada' && kind !== 'kilishi') drawFood(g, kind, x, y, t);
   }
   /** One object, filled again each call (no garbage a step). */
   private readonly folkNow = {} as PeopleNow;
@@ -628,10 +628,12 @@ export class Game {
     const folk = this.peopleNow();
     // O2b: a later state's street brings its own backdrop (skin.ts).
     const skin = this.skin;
-    if (!skin || this.skinDo((k) => (k.backdrop(g, camX, W, t, H, gy, this.still), true)) === undefined) {
+    // K2b: the backdrop reads the run too (Kurmi's dust streaks follow the hero into the wind).
+    const sn0 = skin ? this.skinNow(L, R, H) : null;
+    if (!sn0 || this.skinDo((k) => (k.backdrop(g, camX, W, t, H, gy, this.still, sn0), true)) === undefined) {
       drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed, first, this.people?.riders(view, folk));
     }
-    const sn = this.skin ? this.skinNow(L, R, H) : null;
+    const sn = this.skin ? sn0 : null;
     // S3g1b: an okada passing on the far road now and then.
     this.people?.drawOkada(g, view, folk);
 

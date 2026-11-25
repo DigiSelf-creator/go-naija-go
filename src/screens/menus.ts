@@ -198,6 +198,8 @@ export interface MenuHooks {
   playOgun(n: number, at: TapPoint | null): void;
   /** O2b: Ogun street n is done (saved under states.ogun). */
   ogunDone(n: number): boolean;
+  /** K2b: play Kano street n (Kurmi is 1) from Kano's home. */
+  playKano?(n: number, at: TapPoint | null): void;
   /** O6b: Ogun's own city part in memory (its fixes, trays and Booming meter; never the wallet). */
   ogunCity: StateCity;
   /** O6b: an Ogun problem card's challenge (Ota for the road, the Expressway for Power and Tech). */
@@ -226,6 +228,8 @@ export interface RunSummary {
   firstHall?: boolean;
   /** O2b: lost on an Ogun street: "You keep {money} for Ogun..."; Challenge road goes to Ogun's (OG-R35). */
   ogun?: boolean;
+  /** K2b: lost on a Kano street: "You keep {money}..."; no Challenge road (Kano has none yet). */
+  kano?: boolean;
   /** MS3b: "You got a star!" (stars won in this go of a mission), or null. */
   stars?: string | null;
 }
@@ -243,6 +247,8 @@ export interface ClearedSummary {
   ogun?: boolean;
   /** O3b: an Ogun street with the next one built (Ota to Abeokuta): "Next street". */
   ogunNext?: boolean;
+  /** K2b: a Kano street: home is Kano's; no Next street or Challenge road yet. */
+  kano?: boolean;
   /** MS3b: "You got a star!", or null. */
   stars?: string | null;
 }
@@ -299,6 +305,8 @@ export class Menus {
   laneRun = false;
   /** O2b: the run is an Ogun street (Pause has no Challenge road; Home is Ogun's place). Set by main. */
   ogunRun = false;
+  /** K2b: the run is a Kano street (Pause has no Challenge road; Home is Kano's). Set by main. */
+  kanoRun = false;
   /** S3f3: the lane Pause card's "So far: ..." line. */
   laneSoFar = '';
   /** S3f0 part 25: can this phone tilt, and what it said (main sets it). Null: no tilt at all. */
@@ -811,7 +819,11 @@ export class Menus {
       own,
       look: () => this.look,
       topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('kano'), {}, 'settings')],
-      bottom: [this.travelButton(), button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'), button(w.wheel, 'minor two-line', () => this.showWheel('kano'), { 'data-wheel': true }, 'wheel')],
+      // K2b: Kurmi, the first street, from Kano's home (the full city is K6b).
+      bottom: [
+        ...(this.hooks.playKano ? [button(KANO_WORDS.street.play, 'go', (e) => this.hooks.playKano?.(1, tapPoint(e)), {}, 'play')] : []),
+        this.travelButton(),
+        button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'), button(w.wheel, 'minor two-line', () => this.showWheel('kano'), { 'data-wheel': true }, 'wheel')],
       run: () => undefined,
       ignoreTap: (e) => this.ignoreTap(e),
       sound: (name) => this.hooks.playSound(name as MenuSound),
@@ -1043,7 +1055,7 @@ export class Menus {
         { class: 'pause-grid' },
         this.guarded(w.keepPlaying, 'go', () => this.hooks.resume(), {}, 'play'),
         this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+        !this.kanoRun && this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city'), {}, 'home'),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
@@ -1062,12 +1074,12 @@ export class Menus {
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       this.summary.stars && h('p', { class: 'ms-line' }, this.summary.stars),
-      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
+      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.kano ? KANO_WORDS.street.gameOver(this.summary.kobo) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+        ...(this.summary.kano ? [] : [this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road')]),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city'), {}, 'home'),
       ),
     );
@@ -1088,7 +1100,9 @@ export class Menus {
       // O2b: from Ogun it goes home to Ogun's city; O3b: Ota's card goes on to Abeokuta.
       this.actions(
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'),
-        ...(c.ogun
+        ...(c.kano
+          ? [this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry')]
+          : c.ogun
           ? [
               ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),
               this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
