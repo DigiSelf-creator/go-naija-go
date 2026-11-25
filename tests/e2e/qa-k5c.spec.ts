@@ -700,6 +700,9 @@ test('qa K5c break: switch apps mid-bounce, turn the phone, mash Jump on WAIT, a
   const pad = await touchPad(page);
   // Mash Jump as fast as a finger can under the first valve while it says WAIT.
   await walkTo(page, pad, 140);
+  // Stopped under it first (on a busy computer the walk can end still sliding, and the mash
+  // would carry that speed through the air toward Rusty).
+  await expect.poll(async () => (await look(page)).h.vx, { intervals: [16] }).toBe(0);
   for (let i = 0; i < 80; i++) {
     await pad.jumpDown();
     await page.waitForTimeout(15);
