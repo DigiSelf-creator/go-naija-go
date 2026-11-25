@@ -14,7 +14,8 @@ import { KANO_WORDS, WORLD_PART_WORDS, addShortToasts } from '../screens/words';
 import type { StreetSkin } from '../game/skin';
 import type { ArenaRules, Run } from '../game/run';
 import type { Tune } from '../art/tunes';
-import type { WorldCity, WorldCityHooks, WorldUi } from './ui';
+import type { CityKit, WorldCity, WorldCityHooks, WorldUi } from './ui';
+import type { HarmattanKit } from './kano/laneLook';
 import type { RoadPlan, PlanStop } from '../screens/road';
 import type { LaneLook } from '../lane/view';
 import type { Obj, StateProgress } from '../game/progress';
@@ -39,7 +40,9 @@ export interface PartWords {
   /** Street cleared, carrying the parcel (K5b: and the last street's button to its hall). */
   readonly cleared: { readonly parcel: string; readonly toHall?: string };
   /** K5b: its hall's Win screen. */
-  readonly win?: { readonly heading: string; readonly line: string; readonly money: (money: string) => string; readonly takeHome: string; readonly playAgain: string };
+  readonly win?: { readonly heading: string; readonly line: string; readonly money: (money: string) => string; readonly takeHome: string; readonly playAgain: string; readonly road?: string };
+  /** K6b: its lane run's Pause card button ("Back to Kano"). */
+  readonly laneHome?: string;
   /** Its arrival card, first visit only. */
   readonly arrival: { readonly heading: string; readonly line1: string; readonly line2: string; readonly go: string };
   /** The ride's spoken name, going and coming back. */
@@ -76,11 +79,12 @@ export interface WorldPart {
   /** O6b: the state's city from above (opens once its hall is won). Optional. */
   readonly city?: (hooks: WorldCityHooks) => WorldCity;
   /** O6b: the state's challenge road, for the road screen. Optional. */
-  readonly road?: (v: WorldRoadView, play: (st: PlanStop, e: MouseEvent) => void, still: () => boolean) => RoadPlan;
+  readonly road?: (v: WorldRoadView, play: (st: PlanStop, e: MouseEvent) => void, still: () => boolean) => RoadPlan | null;
   /** O6b: the state's lane run (its level file, look, and the fix a win is for). Optional. */
   readonly lane?: {
     readonly level: unknown;
-    readonly look: LaneLook;
+    /** K6b: or made from the lane pieces the game passes in (a part that imports only types). */
+    readonly look: LaneLook | ((kit: HarmattanKit) => LaneLook);
     /** The fix a win is for now (`fix`: the city's spot id), what bucket pays it and what is left, or null. */
     forFix(own: Readonly<Obj>, wallet: { kobo: number; power: number; tech: number }): { fix: string; bucket: 'power' | 'tech'; left: number } | null;
   };
@@ -101,6 +105,8 @@ export interface WorldRoadView {
   lane: { best: number; goals: number };
   /** K1b: Rusty Borehole is beaten (Ogun's "To Kano" stop shows the bright gate). */
   kanoLit?: boolean;
+  /** K6b: the first-load pieces Kano's road draws with (KN-R10). */
+  kit?: CityKit;
 }
 
 export type WorldLoad = { ok: true; part: WorldPart } | { ok: false; why: 'missing' | 'broken'; message: string };

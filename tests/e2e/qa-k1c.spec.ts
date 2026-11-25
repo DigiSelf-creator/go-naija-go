@@ -208,7 +208,9 @@ test.describe("part 1 at every size (web, first visit)", () => {
       await go.tap();
       await expect(card).toHaveCount(0);
       faults.push(
-        ...(await fits(page, ".kano-city")).map((f) => `kano home ${f}`),
+        // K6b: Kano's city replaced the home; its rows' buttons (the map's pins and boards have edge arrows).
+        ...(await fits(page, ".kano-city .city-top")).map((f) => `kano home ${f}`),
+        ...(await fits(page, ".kano-city .city-bottom")).map((f) => `kano home ${f}`),
       );
       await shot(page, `${at}-kano-home`);
       await page

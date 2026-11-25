@@ -25,6 +25,11 @@ import { DARK_FROM, LaneView, WARN_UNDER, type HeroPose, type LaneLook } from '.
 import { FrameWatch } from '../game/crowd';
 import { drawBucketIcon } from '../art/city';
 import { cornCount } from '../game/music-cue';
+import { LANE_CAMERA, ROAD, project } from '../art/lane';
+import { bake, line, oval, poly, rand, shape } from '../art/lane-shade';
+import { LANE_BOXES, bakeLaneThings, drawLaneThing } from '../art/lane-things';
+import { drawFolkBust, drawFolkFrame } from '../art/folk';
+import type { HarmattanKit } from '../worlds/kano/laneLook';
 import type { HintBarBox } from '../screens/controls';
 import { DOTS_FROM_W, INTRO_TIME, LAMP_DOTS, PLUS_TIME, PopFlights, introAt, laneCountBox, litDots, type ChipKind } from './polish';
 
@@ -136,7 +141,8 @@ export interface LaneHooks {
   corn(c: { left: number; held: boolean; box: HintBarBox } | null): void;
   /** O6b: another state's lane file (Ogun's Expressway, as JSON) and look; left out: Lagos's. */
   level?: unknown;
-  laneLook?: LaneLook | null;
+  /** K6b: or a look made from the lane pieces (Kano's Harmattan Road, from a part that imports only types). */
+  laneLook?: LaneLook | ((kit: HarmattanKit) => LaneLook) | null;
   /**
    * S3g1b (people everywhere part 12): the crowd murmur, while 5 or more people show and no
    * warning (a lamp's "tunk", the close hum) or the corn tune plays (PE-R6).
@@ -318,8 +324,9 @@ export class LaneSession {
   constructor(private readonly hooks: LaneHooks) {
     addLaneSounds();
     this.lvl = hooks.level !== undefined ? parseLane(hooks.level) : laneLevel();
-    this.view.look = hooks.laneLook ?? null;
-    this.view.folk.frontArt = hooks.laneLook?.front ?? null;
+    const look = hooks.laneLook;
+    this.view.look = typeof look === 'function' ? look({ lane: { LANE_CAMERA, ROAD, project }, shade: { bake, shape, line, oval, poly, rand }, things: { LANE_BOXES, bakeLaneThings, drawLaneThing }, folk: { drawFolkFrame, drawFolkBust } }) : (look ?? null);
+    this.view.folk.frontArt = this.view.look?.front ?? null;
     this.sim = new LaneSim(this.lvl, { gentle: hooks.gentle() });
     this.loop = new FixedLoop({ update: (dt) => this.update(dt), render: (a) => this.render(a) });
     this.buttons = new LaneButtons(document.body, WORDS.lane.buttons, (m) => this.press(m));

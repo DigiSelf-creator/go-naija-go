@@ -15,7 +15,10 @@
  */
 import type { WorldPart } from '../load';
 import { ui } from './ride';
-import { kanoHome } from './home';
+import { kanoCity } from './cityScreen';
+import { kanoRoad } from './roadPlan';
+import { harmattanLook } from './laneLook';
+import { KANO_PRICES, laneFix, leftOn, readKanoCity, type KanoBoard } from './cityRules';
 import { kanoStreet } from './kurmiStreet';
 import { KANO_WIND_SOUNDS } from './wind';
 import { KANO_CLOTH_SOUNDS } from './cloth';
@@ -32,8 +35,7 @@ for (const [path, data] of Object.entries(files)) {
   if (name) levels[name] = data;
 }
 
-// The long ride north and its welcome tune; Kano's home (the wall and gate, and Kurmi's button)
-// until its city (K6b). K2b: Kurmi's look, tune and whoosh. K3b: Kofar Mata's look and tune, the
+// The long ride north and its welcome tune. K6b: Kano's city replaces the still home. K2b: Kurmi's look, tune and whoosh. K3b: Kofar Mata's look and tune, the
 // groundnut store, the cloth's boing and the beaters' tok. K4b: Dawanau's look and tune, the whirl's fff and pff.
 // K-size: the words the first load shows once the part is in (toasts, chips, cards, home buttons).
 // K5b: Borehole Hall's fight, look (kurmiStreet.ts kanoStreet), sounds and tune.
@@ -42,10 +44,22 @@ export const part: WorldPart = {
   version: 1,
   levels,
   ui,
-  city: kanoHome,
   street: kanoStreet,
   sounds: { ...KANO_WIND_SOUNDS, ...KANO_CLOTH_SOUNDS, ...KANO_WHIRL_SOUNDS, ...RUSTY_SOUNDS },
   words: KANO_WORDS,
+  // K6b: Kano from above (its home, from the first visit), its challenge road and Harmattan Road.
+  city: kanoCity,
+  road: (v, play) => kanoRoad(v, play),
+  lane: {
+    level: levels['kano-lane'],
+    look: harmattanLook,
+    forFix: (own) => {
+      const c = readKanoCity(own);
+      const fix = laneFix(c);
+      return fix ? { fix, bucket: fix === 'slowInternet' ? 'tech' : 'power', left: leftOn(c, fix) } : null;
+    },
+  },
+  left: (own, spot) => (spot in KANO_PRICES ? leftOn(readKanoCity(own), spot as KanoBoard) : 0),
   ...hall(),
 };
 

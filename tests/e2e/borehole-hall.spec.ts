@@ -184,8 +184,8 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
   const take = win.getByRole('button', { name: 'Take it home', exact: true });
   await expect(take).toHaveClass(/\bgo\b/);
   await expect(win.getByRole('button', { name: 'Play again', exact: true })).toBeVisible();
-  // Kano has no challenge road yet (K6b): no button for it.
-  await expect(win.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
+  // K6b: the Win screen gains Kano's Challenge road.
+  await expect(win.getByRole('button', { name: 'Challenge road', exact: true })).toBeVisible();
 
   const s = await saved(page);
   expect(s.states?.kano?.hall).toEqual({ done: true, best: 0 });
@@ -198,16 +198,21 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
   await waitOutTapLock(page);
   await take.tap();
   await expect.poll(() => screenNow(page)).toBe('kano');
+  // K6b: home is Kano's city, "Mission complete!" over the money, then the water's line once.
   await expect(page.locator('.kano-city .city-banner')).toContainText('You brought ₦15 home.');
+  await expect(page.locator('.kano-city .city-banner')).toContainText('Mission complete!');
+  await expect(page.locator('.kano-city .city-banner')).toContainText('The water is flowing. Everyone can fill up.', { timeout: 10_000 });
+  await expect(page.locator('.kano-city .city-pin[data-spot="dryTaps"]')).toHaveCount(0);
   expect(await page.evaluate(() => window.__game!.skin)).toBe(false);
   expect([...asked]).toEqual(['kano']);
   expect(errors).toEqual([]);
 });
 
-test('Kano\'s home at 320 x 240 with Borehole Hall open: every button on screen, 44 px tall, 8 px apart', async ({ page }) => {
+test('Kano\'s city at 320 x 240 with Borehole Hall open: every button on screen, 44 px tall, 8 px apart', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
   await openKano(page, false);
-  const boxes = await page.locator('.kano-city button').evaluateAll((els) =>
+  // K6b: the city's rows (the pins and boards on the map may sit partly off it, with edge arrows).
+  const boxes = await page.locator('.kano-city .city-top button, .kano-city .city-bottom button').evaluateAll((els) =>
     els.filter((e) => (e as HTMLElement).offsetParent !== null).map((e) => ({ name: e.getAttribute('aria-label') ?? e.textContent ?? '', ...JSON.parse(JSON.stringify(e.getBoundingClientRect())) as DOMRect })),
   );
   if (process.env['K5B_HOME_SHOT']) await page.screenshot({ path: process.env['K5B_HOME_SHOT'] });

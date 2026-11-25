@@ -145,9 +145,7 @@ describe('saves (kano.md 1.7)', () => {
 });
 
 describe('the lazy Kano part (kano.md 9.1, 9.2; KN-R10)', () => {
-  it("K1c fix: Kano's home says plainly what Kano is and that Kurmi is through the gate; the board keeps its words", () => {
-    expect(KANO_PART_WORDS.place.line).toBe('Where people come to buy and sell');
-    expect(KANO_PART_WORDS.place.soon).toBe('Kurmi, the first street, is just through the gate.');
+  it("K1c fix (K6b: Kano's city replaced the home and its two lines): the board keeps its words", () => {
     expect(JSON.stringify(KANO_PART_WORDS.place)).not.toMatch(/coming next|Centre of Commerce/);
     expect(GATE_WORDS).toEqual(['WELCOME TO KANO', 'CENTRE OF COMMERCE']);
   });
