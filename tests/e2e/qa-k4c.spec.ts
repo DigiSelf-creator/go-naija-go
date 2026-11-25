@@ -7,7 +7,7 @@
  *   never aimed. Run on Kurmi, Kofar Mata and Dawanau to compare (report; the bar is that Dawanau
  *   is no harder for it than Kofar Mata, give or take one life).
  * - Offline after one visit: Dawanau plays past the bus stop with no internet.
- * - Kano's home at 320 x 240: the three Play buttons on screen, 44 px tall, 8 px apart.
+ * - Kano's home at 320 x 240: one Play button (the next street's, K6c), every bottom button on screen, 44 px tall, 4 px apart (QA-O2-4).
  * - Break it: switch apps mid-jump over a whirl, turn the phone, tap very fast through the whirl row.
  * Pictures for the greyscale and small-screen check go to QA_SHOTS (a folder), if set.
  */
@@ -241,7 +241,7 @@ test('qa K4c: offline after one visit, Dawanau plays past the bus stop', async (
   expect(failed.filter((u) => !/favicon/.test(u))).toEqual([]);
 });
 
-test('qa K4c: Kano\'s home at 320 x 240: three Play buttons on screen, 44 px tall, 8 px apart', async ({ page }) => {
+test('qa K4c: Kano\'s home at 320 x 240: the next street\'s Play button and every bottom button on screen, 44 px tall, never touching', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
   await seed(page);
   await page.reload();
@@ -249,12 +249,20 @@ test('qa K4c: Kano\'s home at 320 x 240: three Play buttons on screen, 44 px tal
   await expect.poll(() => screenNow(page)).toBe('kano');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await shot(page, '320-kano-home', false);
-  const boxes = [];
-  for (const n of NAMES) {
-    const b = page.locator('.kano-city').getByRole('button', { name: `Play ${n}` });
-    await expect(b).toBeVisible();
-    boxes.push({ n, ...(await b.boundingBox())! });
-  }
+  // K6c (f4aaabc, decision 64): a screen 320 px tall or less shows one Play button, the next
+  // street's (here Dawanau); Kurmi and Kofar Mata stay on the Challenge road.
+  const city = page.locator('.kano-city');
+  await expect(city.getByRole('button', { name: 'Play Dawanau' })).toBeVisible();
+  for (const n of NAMES.slice(0, 2)) await expect(city.getByRole('button', { name: `Play ${n}` })).toHaveCount(0);
+  const boxes = await city.locator('.city-bottom button').evaluateAll((els) =>
+    els
+      .filter((e) => (e as HTMLElement).offsetParent !== null)
+      .map((e) => {
+        const r = e.getBoundingClientRect();
+        return { n: e.getAttribute('aria-label') ?? e.textContent ?? '', x: r.x, y: r.y, width: r.width, height: r.height, over: e.scrollWidth > e.clientWidth + 1 };
+      }),
+  );
+  expect(boxes.map((b) => b.n)).toContain('Play Dawanau');
   console.log(`qa K4c home 320x240: ${boxes.map((b) => `${b.n} ${b.x.toFixed(0)},${b.y.toFixed(0)} ${b.width.toFixed(0)}x${b.height.toFixed(0)}`).join('; ')}`);
   for (const b of boxes) {
     expect(b.x, b.n).toBeGreaterThanOrEqual(0);
@@ -267,13 +275,11 @@ test('qa K4c: Kano\'s home at 320 x 240: three Play buttons on screen, 44 px tal
     for (const b of boxes.slice(i + 1)) {
       const gapX = Math.max(b.x - (a.x + a.width), a.x - (b.x + b.width));
       const gapY = Math.max(b.y - (a.y + a.height), a.y - (b.y + b.height));
-      expect(Math.max(gapX, gapY), `${a.n} to ${b.n}`).toBeGreaterThanOrEqual(8);
+      // QA-O2-4: on a short screen the city's bottom buttons sit 4 px apart (Lagos and Ogun alike).
+      expect(Math.max(gapX, gapY), `${a.n} to ${b.n}`).toBeGreaterThanOrEqual(4);
     }
-  // Each name reads whole (not cut off with an ellipsis or overflow).
-  for (const n of NAMES) {
-    const over = await page.locator('.kano-city').getByRole('button', { name: `Play ${n}` }).evaluate((e) => e.scrollWidth > e.clientWidth + 1);
-    expect(over, n).toBe(false);
-  }
+  // Each button's name reads whole (not cut off with an ellipsis or overflow).
+  for (const b of boxes) expect(b.over, b.n).toBe(false);
 });
 
 test('qa K4c break: switch apps mid-jump over a whirl, turn the phone, mash Jump through the whirl row', async ({ page }) => {
