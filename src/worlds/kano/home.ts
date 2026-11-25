@@ -53,7 +53,7 @@ export function paintKanoHome(g: CanvasRenderingContext2D, w: number, h: number,
  * narrow screen. K1c fix: the words panel a little smaller where it must
  * sit beside the gate board.
  */
-export const HOME_STYLE = `.city-buttons .go-pair{display:flex;gap:6px;width:100%}
+export const HOME_STYLE = `.city-buttons .go-pair{display:flex;gap:8px;width:100%}
 .city-buttons .go-pair .go{flex:1 1 0;width:auto;min-width:0}
 .city-buttons .go-three .go{padding:4px 6px}
 @media (max-width:400px){.city-buttons .go-three .go{font-size:15px;line-height:1.1;min-height:48px}}
