@@ -190,6 +190,8 @@ Length: spawn 80 to bus 11800 = 11720 u.
 
 Kobo: about 150 loose and 12 in crates. Well: none (the arrival street stays simple). Hints: 4 plus the gate toast.
 
+**Built (K0a, 25 Nov):** src/data/levels/kano-1.json. Pits as ground gaps: tap 40 at 1100, hold 60 at 1450, wide 100 at 2700, tap 40 at 3900, big 170 at 6000, tap 40 at 7400, tap 40 at 8800, hold 60 at 10400, tap 40 at 11500. Wind `[x, width, dir]`: [2200, 800, back], [3600, 600, face], [6800, 800, face], [10000, 600, back]. Roofs [8500, 245, 120] and [9000, 245, 120] (kobo crates 8560, 9060). Gate 200. Kobo: 160 loose (so KM1's stars 60, 100, 135 are 40, 65 and 85 percent, as missions.md), 4 kobo crates (12): 800, 3200 (added, to make the 12), 8560, 9060. End: bus door 11800, wall 12000. Nothing moved from the table. Checked by tests/unit/street.test.ts (S2.6) and tests/unit/kano-levels.test.ts (3.3 wind and food rules, the gate, KM1 and KM2). Until gamedev reads `wind`, `gate` and kilishi (K2b), the S2.6 test reads a copy without kilishi (tests/unit/kano-level-data.ts).
+
 ### 3.5 Street 2: Kofar Mata (src/data/levels/kano-2.json)
 
 Idea: midday at the dye pits. Behind a low wall, dyers lift dark blue cloth from round pits on long poles; cloth beaters tap a steady "tok-tok"; cloth dries on frames and lines. A fura seller with a calabash, a tailor, a cloth shop. Signs (made up): "INDIGO CLOTH", "TAILOR", "FINE CLOTH", "FURA DA NONO", "PROVISIONS". Teaches springy cloth.
@@ -210,6 +212,8 @@ Length: spawn 80 to bus 12200 = 12120 u.
 | Amala | 11300-12200 | | Amala on the road at 11300, tyre 11600, goat 11900. Bus door 12200 |
 
 Kobo: about 150 loose and 12 in crates, plus 17 in the well room. Hints: 1 (wind and wells were taught before).
+
+**Built (K0a, 25 Nov):** src/data/levels/kano-2.json. Pits as ground gaps: wide 100 at 2900, wide 100 at 6000 (under the long roof), big 170 at 6720, tap 40 at 7800, tap 40 at 9300, hold 60 at 10600. Springs `[x, width]`: 1250, 1800, 5700, 8800, each 100 wide. Roofs (150 high, y 150): [1950, 150, 120] (kobo crate 2010), the long roof [5850, 150, 300], [8950, 150, 120] (kobo crate 9010). Wind: [2500, 700, back], [7200, 700, face], [10300, 600, back]. Well 3600, exit 4800. Kobo: 152 loose, 4 kobo crates (12): 700, 2010, 3300 (added, to make the 12), 9010; corn crate 8400; amala 11300. End: bus door 12200, wall 12400. Hints: 2 (the 3.2 count leaves out the bus stop line, which every street has). Nothing moved from the table. Until gamedev reads `springs` (K3b), the frames are only checked by kano-levels.test.ts: 200 u from any pit and farther than a held bounce carries you at the fastest speed there (154 u at run speed, 225 u at corn speed).
 
 ### 3.6 Street 3: Dawanau (src/data/levels/kano-3.json)
 
@@ -232,6 +236,12 @@ Length: spawn 80 to bus 12600 = 12520 u.
 
 Kobo: about 140 loose and 12 in crates, plus 17 in the well room. Hints: 2.
 
+**Built (K0a, 25 Nov):** src/data/levels/kano-3.json. Pits as ground gaps: tap 40 at 3500, hold 60 at 6600 (added), big 170 at 7600, wide 100 at 8900, tap 40 at 10200, hold 60 at 12300. Sacks `[x, width, height]`: [2800, 100, 50], [2930, 100, 100], [3060, 100, 150], and two added after the bus stop, [6100, 100, 60], [6230, 100, 120]. Spring 9700; roof [9850, 150, 120] (kobo crate 9910). Wind [8600, 600, back]. Whirls 1500, 2200, 4300, 4600, 4900, 8100, 11000; goats 8400, 12000; tyre 11400. Kobo: 143 loose, 4 kobo crates (12): 600, 800, 6900 (added), 9910; corn crate 9300; fura 3900; pepper fufu 11700. End: bus door 12600, wall 12800. Hints: 3 (with the bus stop line).
+
+**One move past 100 u:** the table puts the secret well (6000, exit 6900) after the bus stop (5600), but an exit well must always come before the bus stop (design.md S2.5 rule 5: the bus stop is never skipped). The well moved to 5150, exit 5480, behind the sacks at the end of the fura row; the bus stop stays at 5600. The stretch it left (5600 to 7300) got two sack steps, a hold pit and a kobo crate, so it still has something to do. A small ruling under decision 64, for Tp in one line.
+
+Until gamedev reads `sacks`, the "whirl" hazard and fura (K4b), the S2.6 test reads a copy with each sack stack as a rock and each whirl as a tyre (the same placing rules), without fura.
+
 These tables are the plan; the level files (task K0a) may move a thing up to 100 u to pass the level test, and record each move under "Built" as Ogun did.
 
 ### 3.7 The well room: the groundnut store (src/data/levels/kano-well.json)
@@ -239,6 +249,8 @@ These tables are the plan; the level files (task K0a) may move a thing up to 100
 The S2.5 room rules, Kano's own look: a cool store room under the market, sacks of groundnuts, baskets of kuli-kuli, light through two holes in the ceiling. The gift is **the garri parcel** with Kano's look: garri, sugar and groundnuts tied in our own woven cloth (decision 18's shield for every Borehole Hall try until the hall is cleared; one parcel per state, never stacking). If the player already carries one, the room shows coins instead.
 - **The store keeper:** an elder woman in a wrapper and head shawl, sitting on a low stool by the back wall. She waves when the hero comes down; when the hero takes the parcel she claps, bubble **"For Borehole Hall. Safe trip!"**
 - Toast: "Groundnut garri parcel! Shield for the hall."
+
+**Built (K0a, 25 Nov):** src/data/levels/kano-well.json, the Ogun room's shape: shelves [100, 250, 90], [230, 205, 100], [390, 240, 90]; the parcel on the middle shelf at (280, 181); 14 loose kobo and one kobo crate at 345 (17 in all). Short toast for narrow bars: "Garri parcel! Shield for the hall."
 
 ### 3.8 Level file fields
 
@@ -310,6 +322,8 @@ Hall x runs 0 to 560, floor y 300 (S2.7).
 3. The order is left, middle, right: each valve is nearer Rusty, so his dust reaches it sooner. A done valve shows a tick and drips.
 
 Hit counter: three valve shapes at the top that fill with a tick. Toasts: "Glug! 2 more valves." and "Glug! 1 more valve."
+
+**Built (K0a, 25 Nov):** src/data/levels/kano-hall.json holds every number in 5.2 to 5.5 in a `boss` block of kind "rusty-borehole" (body, valves, frames, phases, whirl, gust, finish times, Gentle), read by gamedev in K5b. kano-levels.test.ts checks the reach rule with the real jump numbers: a held jump puts the head at y 112, a held cloth bounce at y 48, a double jump at y 2, against the valves' bottom at y 70; an un-held bounce falls short, so the "hold" in the hint matters.
 
 **He holds his breath while you bounce.** No new whirl leaves Rusty while the hero is in the air after a cloth bounce, so the way up to the valve and back down is always clear of new dust. Landing on a whirl from above is always a bounce, never a hurt (3.3), so coming down on one is safe.
 
@@ -417,6 +431,8 @@ All Kano trays together before the boom (₦4.80) stay under half of a street wi
 ### 6.5 Harmattan Road (the lane run in Kano; src/data/levels/kano-lane.json)
 
 The same rules, numbers, hints and prize as the Expressway (ogun.md 6.6). Our own look: a long straight road across the savanna toward the old wall in gold haze, grain trucks and danfos in the lanes, baobabs, cattle far off on the plain, roadside stalls of groundnuts and oranges. No new rule. Trucks are the `danfo` kind.
+
+**Built (K0a, 25 Nov):** src/data/levels/kano-lane.json. Every number, hint and teaching row up to 230 m is the Expressway's; after that, Kano's own rows (the Expressway's laid across the road the other way round, so each fairness rule still holds) and 8 endless chunks with Kano names. Checked by kano-levels.test.ts with the Lagos and Ogun lane checks, plus KM5 (12 Power before the goal).
 
 ---
 
@@ -544,3 +560,4 @@ Order: K0a, K0b and K1 together; then K2, K3, K4 in order (each street teaches w
 - **KN-R10.** Kano's streets use none of Ogun's mud, cracks or gravel, so the Kano part works without the Ogun part.
 - **KN-R11.** The well parcel stays the garri parcel (decision 18), drawn with Kano's groundnuts and cloth; no new power.
 - **KN-R12.** Kano's lane run is "Harmattan Road", with the Expressway's numbers and no new rule.
+- **KN-R13.** Dawanau's secret well sits before the bus stop (5150 to 5480), not after it, so the bus stop is never skipped (design.md S2.5 rule 5). K0a, 25 Nov.
