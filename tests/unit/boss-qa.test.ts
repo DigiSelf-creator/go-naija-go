@@ -122,7 +122,7 @@ describe('qa break it in the hall', () => {
     for (let k = 0; k < 120 && run.phase === 'arena'; k++) ev.push(...run.step(DT));
     expect(ev.map((e) => e.type)).toEqual(expect.arrayContaining(['hit', 'gameOver']));
     expect(run.phase).toBe('over');
-    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false });
+    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, shield: false });
     const frozen = JSON.stringify(boss.throws);
     const steps = boss.steps;
     expect(run.step(DT)).toEqual([]);

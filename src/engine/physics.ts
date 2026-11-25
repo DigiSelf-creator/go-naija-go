@@ -168,6 +168,12 @@ export interface Body {
   restAtLanding: boolean;
   /** Faster than the gait's top after a dash: eases back at dashEase while forward is held. */
   dashEase: boolean;
+  /**
+   * K2b (kano.md 3.3): wind on a player-moved hero. While in the air, moving forward (+x) covers
+   * this much of its speed each step (1.25 behind you, 0.75 in your face). Its speed is kept, so
+   * it lands at the same speed. On the ground, and going back, it does nothing. 1: no wind.
+   */
+  wind: number;
 }
 
 export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHYSICS): Body {
@@ -198,6 +204,7 @@ export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHY
     rest: 0,
     restAtLanding: false,
     dashEase: false,
+    wind: 1,
   };
 }
 
@@ -386,7 +393,7 @@ export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig =
     // S2.16 B4: the dash ends when its way is no longer held, or after dashSteps.
     if (b.dash > 0 && b.move !== b.dashDir) endDash(b, cfg);
     walk(b, dt, cfg);
-    b.x += b.vx * dt;
+    b.x += b.vx * dt * (b.vx > 0 && !b.grounded ? b.wind : 1);
     if (b.dash > 0 && --b.dash === 0) {
       b.dash = 1; // endDash needs it running
       endDash(b, cfg);
