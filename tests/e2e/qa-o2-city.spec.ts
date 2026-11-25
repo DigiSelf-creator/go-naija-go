@@ -277,9 +277,10 @@ test('qa O2 road: Ogun\'s Challenge road: Coming soon stops cannot be played; "T
   await expect(page.locator('.road-stop')).toHaveCount(8, { timeout: 15_000 });
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   await page.screenshot({ path: `${SHOTS}/oqa2-ogun-road.png` });
+  // K1b (kano.md 1.2): "The way on" became "To Kano" (open here: Pothole Hall is won); Border market stays Coming soon.
+  await expect(page.locator('[data-where="wayOn"]')).toHaveAttribute('aria-label', 'To Kano. Open. The road to Kano is open.');
   for (const [id, spoken, line3] of [
     // OG-R42: a coming-soon stop is spoken "{name}. {line} Coming soon."; line 3 shows on its plate.
-    ['wayOn', 'The way on. The road to the rest of Nigeria is still being built. Coming soon.', 'More of Nigeria'],
     ['border', 'Border market. A busy market road. Coming soon.', 'More soon'],
   ] as const) {
     const stop = page.locator(`[data-where="${id}"]`);

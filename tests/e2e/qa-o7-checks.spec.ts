@@ -286,7 +286,8 @@ test('qa O7 a11y: every new Ogun button has a name a screen reader says; pins sa
   console.log(stops.join('\n'));
   test.info().annotations.push({ type: 'road spoken', description: stops.join(' | ') });
   for (const s of stops) expect(s).toBeTruthy();
-  expect(stops.find((s) => s.startsWith('The way on'))).toBe('The way on. The road to the rest of Nigeria is still being built. Coming soon.');
+  // K1b (kano.md 1.2): "The way on" became "To Kano", locked until Pothole Hall is won.
+  expect(stops.find((s) => s.startsWith('To Kano'))).toBe('To Kano. Locked. Win Pothole Hall to open the road to Kano.');
   expect(stops.find((s) => s.startsWith('Border market'))).toBe('Border market. A busy market road. Coming soon.');
   expect(errors).toEqual([]);
 });
