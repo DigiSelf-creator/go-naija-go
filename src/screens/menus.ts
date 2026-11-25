@@ -32,23 +32,23 @@ import { IntroScreen, loadIntroScene, type IntroMusic } from './intro';
 import { button, h, say, type IconName } from './dom';
 import { wheelFit } from './streets';
 import type { PlanStop, RoadOpen, RoadView, StopInfo } from './road';
-import { GAME_NAME, OGUN_WORDS, WORDS, WORLD_PART_WORDS } from './words';
+import { GAME_NAME, KANO_WORDS, OGUN_WORDS, WORDS, WORLD_PART_WORDS } from './words';
 import type { StateId } from '../game/states';
 import type { WorldLoad, WorldPart, WorldRoadView } from '../worlds/load';
 import type { WorldCity, WorldUi } from '../worlds/ui';
 import type { StateCity } from '../game/states';
 import type { Tune } from '../art/tunes';
 import { gateIconSvg } from '../art/gateway';
-import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
+import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelCard, wheelLine, type DownloadCard, type OgunView, type TravelLine } from './travel';
 import { isNativeApp } from '../native/is-native';
 import type { BoardView } from './missionBoard';
 import { starSvg } from '../art/star';
 import type { MissionDef } from '../game/missions';
 
-export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ride' | 'ogun' | null;
+export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ride' | 'ogun' | 'kano' | null;
 
 /** Screens that fill the whole screen (no cream card in the middle). */
-const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city', 'road', 'ride', 'ogun'];
+const FULL_SCREENS: readonly MenuScreen[] = ['wheel', 'intro', 'city', 'road', 'ride', 'ogun', 'kano'];
 
 /** Screens that open during play (design.md: Pause, Game over, Street cleared, Win): their buttons ignore taps for 0.4 s. */
 const EVENT_SCREENS: readonly MenuScreen[] = ['pause', 'gameover', 'cleared', 'win'];
@@ -132,10 +132,12 @@ export interface StatesView {
   lagos: { boom: number; turning: boolean };
   /** Ogun: open (Go-Slow Hall won), its Booming points, its cog, King Pothole beaten. */
   ogun: OgunView & { boom: number };
+  /** K1b: Kano: open (Pothole Hall won), its Booming points, its cog, Rusty Borehole beaten, its arrival card closed. */
+  kano: OgunView & { boom: number; arrived: boolean };
 }
 
 /** Where a screen in a run sends the player when the run ends ("Home" is the city, slice 3). */
-export type LeaveTo = 'title' | 'road' | 'wheel' | 'city' | 'ogun';
+export type LeaveTo = 'title' | 'road' | 'wheel' | 'city' | 'ogun' | 'kano';
 
 export interface MenuHooks {
   /** "Play" on the title, or "Start running" in the builder. */
@@ -186,14 +188,20 @@ export interface MenuHooks {
   loadWorld(id: StateId): Promise<WorldLoad>;
   /** O1b2: the city now open, saved as `where` (ogun.md 1.6). */
   setWhere(id: StateId): void;
-  /** O1b2: Ogun's arrival card was closed (saved, so it shows once). */
-  arrived(): void;
+  /** O1b2: Ogun's (K1b: or Kano's) arrival card was closed (saved, so it shows once). */
+  arrived(id?: StateId): void;
+  /** K1b: Kano's own city part in memory (its Booming meter; never the wallet). */
+  kanoCity?: StateCity;
   /** O1b2: the welcome tune as the bus passes under the arch (the Music switch rules). */
   playTune(tune: Tune): void;
   /** O2b: play Ogun street n (Ota is 1, Pothole Hall 4): the Bad road card (OG-R37). */
   playOgun(n: number, at: TapPoint | null): void;
   /** O2b: Ogun street n is done (saved under states.ogun). */
   ogunDone(n: number): boolean;
+  /** K2b: play Kano street n (Kurmi is 1) from Kano's home. */
+  playKano?(n: number, at: TapPoint | null): void;
+  /** K3b: Kano street n is done (saved under states.kano): the next one opens. */
+  kanoDone?(n: number): boolean;
   /** O6b: Ogun's own city part in memory (its fixes, trays and Booming meter; never the wallet). */
   ogunCity: StateCity;
   /** O6b: an Ogun problem card's challenge (Ota for the road, the Expressway for Power and Tech). */
@@ -222,6 +230,8 @@ export interface RunSummary {
   firstHall?: boolean;
   /** O2b: lost on an Ogun street: "You keep {money} for Ogun..."; Challenge road goes to Ogun's (OG-R35). */
   ogun?: boolean;
+  /** K2b: lost on a Kano street: "You keep {money}..."; no Challenge road (Kano has none yet). */
+  kano?: boolean;
   /** MS3b: "You got a star!" (stars won in this go of a mission), or null. */
   stars?: string | null;
 }
@@ -239,6 +249,10 @@ export interface ClearedSummary {
   ogun?: boolean;
   /** O3b: an Ogun street with the next one built (Ota to Abeokuta): "Next street". */
   ogunNext?: boolean;
+  /** K2b: a Kano street: home is Kano's; no Challenge road yet. */
+  kano?: boolean;
+  /** K3b: a Kano street with the next one built (Kurmi to Kofar Mata): "Next street". */
+  kanoNext?: boolean;
   /** MS3b: "You got a star!", or null. */
   stars?: string | null;
 }
@@ -261,17 +275,21 @@ export class Menus {
   /** Builder and the wheel's list: watches a scrolling box, to show the fade while more is below. */
   private sideWatch: ResizeObserver | null = null;
   /** Where the wheel's "Back" goes: where it opened from (S2.10 flow). */
-  private wheelBack: 'title' | 'city' | 'ogun' = 'city';
+  private wheelBack: 'title' | 'city' | 'ogun' | 'kano' = 'city';
   /** Where the challenge road opens (part 4 rule 4). */
   private roadOpen: RoadOpen = {};
+  /** K1b: whose challenge road shows (Lagos's, or Ogun's from its part). */
+  private roadState: StateId = 'lagos';
   /** Where Settings' "Back" goes: where it opened from. */
-  private settingsBack: 'title' | 'city' | 'ogun' = 'title';
+  private settingsBack: 'title' | 'city' | 'ogun' | 'kano' = 'title';
   /** O1b2: a card over the screen (Travel, download, arrival), or null. */
   private overlay: HTMLElement | null = null;
   /** O1b2: a card to open over the next screen once it is in the page (the arrival card). */
   private overlayNext: HTMLElement | null = null;
   /** O1b2: the bus ride the 'ride' screen plays. */
-  private rideNext: { ui: WorldUi; toLagos: boolean; first: boolean; then: () => void } | null = null;
+  private rideNext: { ui: WorldUi; toLagos: boolean; first: boolean; then: () => void; kano?: boolean } | null = null;
+  /** K1b: Kano's home showing now (tests), or null. */
+  kanoScreen: WorldCity | null = null;
   /** What follows the intro story (the builder, Play, or back to Settings). */
   private afterIntro: () => void = () => this.show('title');
   /** Stops the screen that is going away (the intro's drawing, the city's listeners). */
@@ -291,6 +309,8 @@ export class Menus {
   laneRun = false;
   /** O2b: the run is an Ogun street (Pause has no Challenge road; Home is Ogun's place). Set by main. */
   ogunRun = false;
+  /** K2b: the run is a Kano street (Pause has no Challenge road; Home is Kano's). Set by main. */
+  kanoRun = false;
   /** S3f3: the lane Pause card's "So far: ..." line. */
   laneSoFar = '';
   /** S3f0 part 25: can this phone tilt, and what it said (main sets it). Null: no tilt at all. */
@@ -411,7 +431,7 @@ export class Menus {
   }
 
   /** Opens Nigeria's wheel; its "Back" goes to `back`. */
-  showWheel(back: 'title' | 'city' | 'ogun'): void {
+  showWheel(back: 'title' | 'city' | 'ogun' | 'kano'): void {
     this.wheelBack = back;
     this.show('wheel');
   }
@@ -429,7 +449,7 @@ export class Menus {
   }
 
   /** Opens Settings; its "Back" goes to `back`. */
-  showSettings(back: 'title' | 'city' | 'ogun'): void {
+  showSettings(back: 'title' | 'city' | 'ogun' | 'kano'): void {
     this.settingsBack = back;
     this.show('settings');
   }
@@ -474,6 +494,7 @@ export class Menus {
     this.layer.replaceChildren();
     this.overlay = null;
     this.ogunScreen = null;
+    this.kanoScreen = null;
     this.layer.hidden = screen === null;
     this.layer.classList.toggle('full', FULL_SCREENS.includes(screen));
     this.hooks.screenChanged?.(screen);
@@ -492,9 +513,10 @@ export class Menus {
     if (screen === 'city') card = this.cityCard();
     if (screen === 'ride') card = this.rideCard();
     if (screen === 'ogun') card = this.ogunCard();
+    if (screen === 'kano') card = this.kanoCard();
     if (!card) {
-      // O1b2: Ogun's part is not here after all (never expected): Lagos instead.
-      if (screen === 'ride' || screen === 'ogun') this.show('city');
+      // O1b2: Ogun's (or Kano's) part is not here after all (never expected): Lagos instead.
+      if (screen === 'ride' || screen === 'ogun' || screen === 'kano') this.show('city');
       return;
     }
     this.layer.append(card);
@@ -504,6 +526,7 @@ export class Menus {
     if (next) this.openOverlay(next);
     if (screen === 'city') this.cityScreen?.start();
     if (screen === 'ogun') (this.ogunScreen as WorldCity | null)?.start();
+    if (screen === 'kano') (this.kanoScreen as WorldCity | null)?.start();
     // Set by wheel() just now (TypeScript still thinks it is the null set above).
     (this.refit as (() => void) | null)?.();
     // po M4 bug 4: a card that opens in a run puts focus on its big button, so Space or Enter
@@ -534,85 +557,88 @@ export class Menus {
     this.hooks.cardChanged?.();
   }
 
-  /** "Play": the city last used (ogun.md 1.6). Ogun opens only with its part on the phone; else Lagos. */
+  /** "Play": the city last used (ogun.md 1.6). Ogun or Kano opens only with its part on the phone; else Lagos. */
   openHome(): void {
-    const v = this.hooks.states();
-    if (v.where !== 'ogun') {
+    const to = this.hooks.states().where;
+    if (to === 'lagos') {
       this.show('city');
       return;
     }
-    if (this.hooks.worldPart('ogun')?.ui) {
-      this.show('ogun');
+    if (this.hooks.worldPart(to)?.ui) {
+      this.show(to);
       return;
     }
     const from = this.screen;
-    void this.hooks.loadWorld('ogun').then((r) => {
+    void this.hooks.loadWorld(to).then((r) => {
       if (this.screen !== from) return;
-      this.show(r.ok && r.part.ui ? 'ogun' : 'city');
+      this.show(r.ok && r.part.ui ? to : 'city');
     });
+  }
+
+  /** K1b: the state whose screen (its city, or its challenge road) shows now. */
+  private here(): StateId {
+    return this.screen === 'kano' ? 'kano' : this.screen === 'ogun' || (this.screen === 'road' && this.roadState === 'ogun') ? 'ogun' : 'lagos';
   }
 
   /**
-   * Go to a state (the Win screen's "On to Ogun", the "To Ogun" stop, the Travel card). Ogun
-   * needs its part first (the download card on the web, when it is not on the phone yet); then
-   * the bus ride (always the first time, after that only with "Show the bus ride" on), then
-   * Ogun's place with the arrival card the first time. Never starts a run.
+   * Go to a state (the Win screen's "On to Ogun" or "On to Kano", the "To Ogun" and "To Kano"
+   * stops, the Travel card). A later state needs its part first (the download card on the web,
+   * when it is not on the phone yet); then the bus ride (always the first time, after that only
+   * with "Show the bus ride" on), then the state's home with the arrival card the first time.
+   * Never starts a run. K1b (kano.md 1.3, KN-R1): any trip to or from Kano is Kano's one ride
+   * (the other way when leaving); Lagos and Ogun ride through the arch as before.
    */
   travelTo(to: StateId): void {
     const v = this.hooks.states();
-    if (to === 'lagos') {
-      this.closeOverlay();
-      if (this.screen === 'city') return;
-      const ui = this.hooks.worldPart('ogun')?.ui;
-      const home = (): void => {
-        this.hooks.setWhere('lagos');
-        this.show('city');
-      };
-      if (ui && this.settings.busRide && (this.screen === 'ogun' || this.screen === 'road')) {
-        this.rideNext = { ui, toLagos: true, first: false, then: home };
-        this.show('ride');
-      } else home();
-      return;
-    }
-    if (!v.ogun.open) return;
-    if (this.screen === 'ogun') {
+    const from = this.here();
+    if (to === from) {
       this.closeOverlay();
       return;
     }
-    void this.withOgun((ui) => {
+    if (to !== 'lagos' && !v[to].open) return;
+    const kano = to === 'kano' || from === 'kano';
+    const go = (): void => {
+      const ui = this.hooks.worldPart(kano ? 'kano' : 'ogun')?.ui;
       const arrive = (): void => {
-        this.hooks.setWhere('ogun');
-        this.show('ogun');
+        this.hooks.setWhere(to);
+        this.show(to === 'lagos' ? 'city' : to);
       };
-      const first = !v.arrived;
-      if (first || this.settings.busRide) {
-        this.rideNext = { ui, toLagos: false, first, then: arrive };
+      const back = to === 'lagos' || from === 'kano';
+      const first = !back && !(to === 'kano' ? v.kano.arrived : v.arrived);
+      if (ui && (first || this.settings.busRide)) {
+        this.rideNext = { ui, toLagos: back, first, then: arrive, kano };
         this.show('ride');
       } else arrive();
-    });
+    };
+    if (to === 'lagos') {
+      this.closeOverlay();
+      go();
+    } else void this.withPart(to, go);
   }
 
-  /** Runs `then` with Ogun's part: at once if loaded; else loads it, asking first on the web (ogun.md 9.2). */
-  private async withOgun(then: (ui: WorldUi) => void): Promise<void> {
-    const have = this.hooks.worldPart('ogun')?.ui;
-    if (have) return then(have);
+  /** Runs `then` once a state's part is in: at once if loaded; else loads it, asking first on the web (ogun.md 9.2). */
+  private async withPart(id: StateId, then: () => void): Promise<void> {
+    if (this.hooks.worldPart(id)?.ui) return then();
     const from = this.screen;
+    const k = id === 'kano';
+    const name = k ? KANO_WORDS.name : OGUN_WORDS.travel.ogun;
+    const words = k ? { ...OGUN_WORDS.download, ...KANO_WORDS.download } : OGUN_WORDS.download;
     const load = async (card: DownloadCard | null): Promise<void> => {
-      const r = await this.hooks.loadWorld('ogun');
+      const r = await this.hooks.loadWorld(id);
       // The player left first (another screen, or the card closed by Escape, "Not now" or back):
       // do nothing more. The part may stay on the phone for next time.
       if (this.screen !== from || (card && this.overlay !== card.el)) return;
       if (r.ok && r.part.ui) {
         this.closeOverlay();
-        then(r.part.ui);
+        then();
         return;
       }
-      const message = r.ok ? WORLD_PART_WORDS.broken : r.message;
-      if (card) card.step(message === OGUN_WORDS.download.noNet ? 'noNet' : 'broken', message);
-      else this.openOverlay(noticeCard(message, () => this.closeOverlay()));
+      const message = r.ok ? (k ? KANO_WORDS.broken : WORLD_PART_WORDS.broken) : r.message;
+      if (card) card.step(message === words.noNet ? 'noNet' : 'broken', message);
+      else this.openOverlay(noticeCard(message, () => this.closeOverlay(), name));
     };
     // The store app has the part inside; a web player who already downloaded it is not asked again.
-    if (isNativeApp() || (await partHeld('ogun'))) return load(null);
+    if (isNativeApp() || (await partHeld(id))) return load(null);
     if (this.screen !== from) return;
     const card = downloadCard(
       () => {
@@ -620,25 +646,23 @@ export class Menus {
         void load(card);
       },
       () => this.closeOverlay(),
+      name,
+      words,
     );
     this.openOverlay(card.el);
   }
 
-  /** The Travel card (ogun.md 1.5) over the city or Ogun's place. */
+  /** The Travel card (ogun.md 1.5; kano.md 1.5: Kano third, once open) over a state's home. */
   private openTravel(): void {
     const v = this.hooks.states();
-    const here = this.screen === 'ogun' ? 'ogun' : 'lagos';
+    const here = this.here();
     const w = OGUN_WORDS.travel;
-    this.openOverlay(
-      travelCard(
-        [
-          { id: 'lagos', name: w.lagos, boom: v.lagos.boom, turning: v.lagos.turning, here: here === 'lagos' },
-          { id: 'ogun', name: w.ogun, boom: v.ogun.boom, turning: v.ogun.turning, here: here === 'ogun' },
-        ],
-        (id) => (id === here ? this.closeOverlay() : this.travelTo(id)),
-        () => this.closeOverlay(),
-      ),
-    );
+    const lines: TravelLine[] = [
+      { id: 'lagos', name: w.lagos, boom: v.lagos.boom, turning: v.lagos.turning, here: here === 'lagos' },
+      { id: 'ogun', name: w.ogun, boom: v.ogun.boom, turning: v.ogun.turning, here: here === 'ogun' },
+    ];
+    if (v.kano.open) lines.push({ id: 'kano', name: KANO_WORDS.name, boom: v.kano.boom, turning: v.kano.turning, here: here === 'kano' });
+    this.openOverlay(travelCard(lines, (id) => (id === here ? this.closeOverlay() : this.travelTo(id)), () => this.closeOverlay()));
   }
 
   /** MS3b: "Missions", first in the city's bottom row once the state has missions to show. */
@@ -712,14 +736,19 @@ export class Menus {
     this.rideNext = null;
     if (!r) return null;
     const w = OGUN_WORDS.busRide;
+    const v = this.hooks.states();
+    const said = r.kano ? KANO_WORDS.ride : w;
     const ride = r.ui.busRide({
       look: this.look,
       toLagos: r.toLagos,
-      lit: this.hooks.states().ogun.beaten,
+      lit: r.kano ? v.kano.beaten : v.ogun.beaten,
       still: this.hooks.stillWanted(),
       first: r.first,
-      spoken: r.toLagos ? w.spokenOut : w.spokenIn,
+      spoken: r.toLagos ? said.spokenOut : said.spokenIn,
       skip: w.skip,
+      // K1b: the Kano part draws no hero and makes no button of its own (KN-R10).
+      rider: (g) => drawHero(g, this.look, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, time: 0 }),
+      skipButton: (onTap) => button(w.skip, 'minor', onTap, {}, 'skip'),
       tune: () => this.hooks.playTune(r.ui.tune),
       done: () => r.then(),
     });
@@ -772,11 +801,65 @@ export class Menus {
     window.setTimeout(() => void preloadRoad().catch(() => undefined), 200);
     if (!arrived) {
       this.overlayNext = arrivalCard(() => {
-        this.hooks.arrived();
+        this.hooks.arrived('ogun');
         this.closeOverlay();
       });
     } else this.everyNext('ogun');
     return screen.el;
+  }
+
+  /**
+   * K1b: Kano's home from its part (the wall and gate until Kano's city, K6b), with the city's
+   * buttons; the arrival card over it the first time (kano.md 1.4).
+   */
+  private kanoCard(): HTMLElement | null {
+    const make = this.hooks.worldPart('kano')?.city;
+    const own = this.hooks.kanoCity;
+    if (!make || !own) return null;
+    const w = WORDS.city;
+    const v = this.hooks.states();
+    const screen = make({
+      life: this.hooks.cityLife,
+      own,
+      look: () => this.look,
+      topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('kano'), {}, 'settings')],
+      // K2b: Kurmi, the first street, from Kano's home (the full city is K6b).
+      bottom: [
+        ...this.kanoPlays(),
+        this.travelButton(),
+        button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'), button(w.wheel, 'minor two-line', () => this.showWheel('kano'), { 'data-wheel': true }, 'wheel')],
+      run: () => undefined,
+      ignoreTap: (e) => this.ignoreTap(e),
+      sound: (name) => this.hooks.playSound(name as MenuSound),
+      gentle: () => this.settings.gentle,
+      still: () => this.hooks.stillWanted(),
+      touch: () => this.touchWords(),
+      cogOn: () => this.hooks.states().kano.turning,
+      hallWon: v.kano.beaten,
+      line: null,
+    });
+    this.kanoScreen = screen;
+    this.cleanup = () => screen.close();
+    if (!v.kano.arrived) {
+      this.overlayNext = arrivalCard(() => {
+        this.hooks.arrived('kano');
+        this.closeOverlay();
+      }, KANO_WORDS.arrival);
+    }
+    return screen.el;
+  }
+
+  /**
+   * K2b: Kano's home's Play buttons: Kurmi; K3b: Kofar Mata beside it (one row) once Kurmi is
+   * cleared; K4b: Dawanau too once Kofar Mata is.
+   */
+  private kanoPlays(): HTMLElement[] {
+    const play = this.hooks.playKano;
+    if (!play) return [];
+    const w = KANO_WORDS.street;
+    const all = [w.play, w.play2, w.play3].map((name, i) => button(name, 'go', (e) => play(i + 1, tapPoint(e)), {}, 'play'));
+    const open = 1 + (this.hooks.kanoDone?.(1) ? 1 + (this.hooks.kanoDone?.(2) ? 1 : 0) : 0);
+    return open === 1 ? [all[0]!] : [h('div', { class: open === 3 ? 'go-pair go-three' : 'go-pair' }, ...all.slice(0, open))];
   }
 
   /** O6b: Ogun's challenge road (ogun.md 6.5), on a stop (with its card open from a city card). */
@@ -788,6 +871,8 @@ export class Menus {
       (st, e) => {
         this.hooks.playSound('horn');
         if (st.id === 'toLagos') this.travelTo('lagos');
+        // K1b: "To Kano" (in the way on's place) goes to Kano, never a run.
+        else if (st.id === 'wayOn') this.travelTo('kano');
         else this.hooks.playOgunStop(st, tapPoint(e));
       },
       () => this.hooks.stillWanted(),
@@ -987,7 +1072,7 @@ export class Menus {
         { class: 'pause-grid' },
         this.guarded(w.keepPlaying, 'go', () => this.hooks.resume(), {}, 'play'),
         this.guarded(w.restart, 'go secondary', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+        !this.kanoRun && this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city'), {}, 'home'),
       ),
       h('div', { class: 'minor-row switches' }, this.soundSwitch(), this.musicSwitch()),
@@ -1006,12 +1091,12 @@ export class Menus {
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       this.summary.stars && h('p', { class: 'ms-line' }, this.summary.stars),
-      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
+      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.kano ? KANO_WORDS.street.gameOver(this.summary.kobo) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
       this.actions(
         this.guarded(w.playAgain, 'go', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
-        this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+        ...(this.summary.kano ? [] : [this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road')]),
         this.guarded(w.home, 'minor', () => this.hooks.leave('city'), {}, 'home'),
       ),
     );
@@ -1027,12 +1112,17 @@ export class Menus {
       h('h2', {}, w.heading),
       c.stars && h('p', { class: 'ms-line' }, c.stars),
       h('p', {}, w.text(c.name, c.kobo)),
-      c.parcel && h('p', { class: 'parcel-line' }, c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
+      c.parcel && h('p', { class: 'parcel-line' }, c.kano ? KANO_WORDS.street.clearedParcel : c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
       // O2b: from Ogun it goes home to Ogun's city; O3b: Ota's card goes on to Abeokuta.
       this.actions(
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'),
-        ...(c.ogun
+        ...(c.kano
+          ? [
+              ...(c.kanoNext ? [this.guarded(w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),
+              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+            ]
+          : c.ogun
           ? [
               ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),
               this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
@@ -1053,19 +1143,27 @@ export class Menus {
     if (this.summary.ogun) {
       // O5b (ogun.md 5.5): Pothole Hall's Win screen. Ogun's challenge road comes with its city (O6b).
       const o = OGUN_WORDS.win;
+      // K1b (kano.md 1.2): the road north is open. The first win's big "On to Kano" sits above
+      // "Take it home"; after later wins a small "Go to Kano" comes last.
+      const k = KANO_WORDS.ogunWin;
+      const first = this.summary.firstHall === true;
+      const toKano = this.guarded(first ? k.onToKano : k.goToKano, first ? 'go' : 'minor', () => this.hooks.leave('kano'), {}, 'travel');
+      const home = this.guarded(o.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home');
+      const rest = [
+        this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+        this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
+        this.guarded(w.wheel, 'minor', () => this.hooks.leave('wheel'), {}, 'wheel'),
+      ];
       return h(
         'div',
         { class: 'card narrow event', role: 'dialog', 'aria-label': o.heading },
         h('h2', {}, o.heading),
         h('p', {}, o.line),
+        h('p', {}, k.line),
         h('p', {}, OGUN_WORDS.win.money(this.summary.kobo)),
         // O6b: the Challenge road (Ogun's) and the wheel, as Lagos's Win screen.
-        this.actions(
-          this.guarded(o.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'),
-          this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
-          this.guarded(w.road, 'minor', () => this.hooks.leave('road'), {}, 'road'),
-          this.guarded(w.wheel, 'minor', () => this.hooks.leave('wheel'), {}, 'wheel'),
-        ),
+        // K1c fix (qa-o7re): the two big buttons share a pair, side by side on short screens.
+        first ? h('div', { class: 'actions two-go' }, h('div', { class: 'go-pair' }, toKano, home), h('div', { class: 'minor-row' }, ...rest)) : this.actions(home, ...rest, toKano),
       );
     }
     const o = OGUN_WORDS.lagosWin;
@@ -1092,6 +1190,7 @@ export class Menus {
    * "Opening the road..." shows, and the road takes its place as soon as the chunk is in.
    */
   private road(): HTMLElement {
+    this.roadState = this.roadOpen.plan !== undefined ? 'ogun' : 'lagos';
     if (roadModule) return this.roadWith(roadModule);
     const wait = h('section', { class: 'road-opening', role: 'status' });
     wait.textContent = WORDS.city.roadOpening;
@@ -1153,9 +1252,10 @@ export class Menus {
     const n = WHEEL_STATES.filter((s) => working.has(s.id)).length;
     // O1b2 (ogun.md 1.7): the rail's line follows the road to Ogun; Ogun open but not turning
     // carries the pennant (on the cog and before "Ogun, next" in the list), never colour alone.
-    const ogun = this.hooks.states().ogun;
-    const moreLine = wheelLine(n, ogun);
-    const next = ogun.open && !ogun.turning && !working.has('ogun') ? 'ogun' : null;
+    // K1b (kano.md 1.6): then the road to Kano, with Kano's pennant and "Kano, next".
+    const { ogun, kano } = this.hooks.states();
+    const moreLine = wheelLine(n, ogun, kano);
+    const next = ogun.open && !ogun.turning && !working.has('ogun') ? 'ogun' : kano.open && !kano.turning && !working.has('kano') ? 'kano' : null;
 
     const pic = h('div', { class: 'wheel-box', 'aria-hidden': 'true' });
     pic.innerHTML = wheelSvg(working, { turn: !this.hooks.stillWanted(), next: next ? [next] : [] });
@@ -1168,7 +1268,7 @@ export class Menus {
         if (s.id === next) {
           const flag = h('span', { class: 'tick pennant', 'aria-hidden': 'true' });
           flag.innerHTML = gateIconSvg('pennant', 14);
-          return h('li', { class: 'next' }, flag, OGUN_WORDS.wheel.listNext, h('span', { class: 'sr-only' }, w.notWorking));
+          return h('li', { class: 'next' }, flag, next === 'kano' ? KANO_WORDS.wheel.listNext : OGUN_WORDS.wheel.listNext, h('span', { class: 'sr-only' }, w.notWorking));
         }
         return h(
           'li',
@@ -1303,7 +1403,7 @@ export class Menus {
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
         button(w.back, 'go', () => this.show(this.settingsBack), {}, 'back'),
       ),
-      ogunOpen && h('p', { class: 'small settings-saved' }, OGUN_WORDS.saved),
+      ogunOpen && h('p', { class: 'small settings-saved' }, this.hooks.states().kano.open ? KANO_WORDS.saved : OGUN_WORDS.saved),
     );
   }
 

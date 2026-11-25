@@ -267,6 +267,8 @@ export interface PlanStop extends Omit<StopInfo, 'id' | 'cut' | 'forFix'> {
   forFix: string | null;
   /** The plate's status icon in place of the state's (the "To Lagos" arch). */
   icon?: 'arch';
+  /** K1b: the status icon as the part's own markup (the "To Kano" gate). */
+  iconSvg?: string;
   /** What the card picture is spoken as, in place of the general words (OG-R41: the hall). */
   pic?: string;
 }
@@ -349,7 +351,7 @@ export function roadScreen(hooks: RoadHooks, open: RoadOpen = {}): RoadScreen {
     }, { 'data-where': String(st.id), 'aria-label': st.spoken, 'aria-disabled': st.state === 'locked' ? 'true' : undefined, style: `left:${x}em;top:${y}em;width:${bw}em;height:${bh}em` });
     // The plate inside the button (the button's own box stays still while the Next plate bobs).
     b.innerHTML =
-      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? ic('parcel') : ''}</span><span class="road-st">${ic((st.id === 'ogun' && st.state === 'open') || st.icon ? 'arch' : STATE_ICON[st.state])}${st.status}</span>` +
+      `<span class="road-plate"><span class="road-name">${st.name}${st.parcel ? ic('parcel') : ''}</span><span class="road-st">${st.iconSvg ? `<i class="road-ic">${st.iconSvg}</i>` : ic((st.id === 'ogun' && st.state === 'open') || st.icon ? 'arch' : STATE_ICON[st.state])}${st.status}</span>` +
       (st.line3 ? `<span class="road-l3">${st.line3}</span>` : '') +
       (st.state === 'next' ? `<span class="road-next" data-ic="next"></span>` : st.state === 'done' || st.state === 'built' ? `<span class="road-tick" data-ic="tick"></span>` : '') +
       '</span>';

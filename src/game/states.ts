@@ -25,8 +25,10 @@
  */
 import { LAGOS, anyDone, isObj, readState, type Obj, type StateProgress } from './progress';
 
-export type StateId = 'lagos' | 'ogun';
+export type StateId = 'lagos' | 'ogun' | 'kano';
 export const OGUN = 'ogun' satisfies StateId;
+/** K1b (kano.md 1.1): Kano opens once Pothole Hall is won. */
+export const KANO = 'kano' satisfies StateId;
 
 export interface StateInfo {
   readonly id: StateId;
@@ -42,6 +44,7 @@ export interface StateInfo {
 export const STATES: readonly StateInfo[] = [
   { id: 'lagos', name: 'Lagos', part: null, after: null },
   { id: 'ogun', name: 'Ogun', part: 'ogun', after: 'lagos' },
+  { id: 'kano', name: 'Kano', part: 'kano', after: 'ogun' },
 ];
 
 export const stateInfo = (id: string): StateInfo | undefined => STATES.find((s) => s.id === id);
@@ -85,7 +88,7 @@ export function whereNow(saved: Readonly<Obj> | null): StateId {
   return typeof w === 'string' && stateOpen(saved, w) ? (w as StateId) : LAGOS;
 }
 
-/** Ogun's arrival card has been closed (ogun.md 1.4). */
+/** A state's arrival card has been closed (ogun.md 1.4; kano.md 1.4). */
 export function arrived(saved: Readonly<Obj> | null, id: string = OGUN): boolean {
   return statePart(saved, id)['arrived'] === true;
 }

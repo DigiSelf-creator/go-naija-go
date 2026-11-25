@@ -159,7 +159,10 @@ export type OgunSoundName =
   | 'mudSplat'
   | 'rollerToot';
 
-export type SoundName = CoreSoundName | LaneSoundName | OgunSoundName;
+/** K2b: Kano's street sounds (K3b: the cloth's boing, the beaters' tok); their recipes come with the lazy Kano part (load.ts adds them). */
+export type KanoSoundName = 'windWhoosh' | 'clothBoing' | 'beaterTok' | 'whirlFff' | 'whirlPuff';
+
+export type SoundName = CoreSoundName | LaneSoundName | OgunSoundName | KanoSoundName;
 
 /**
  * One tone. f = start Hz; peak = Hz reached at 35% of the length (a talking-drum

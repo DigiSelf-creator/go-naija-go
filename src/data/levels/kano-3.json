@@ -1,0 +1,88 @@
+{
+  "schema": 2,
+  "type": "street",
+  "id": "kano-3",
+  "state": "kano",
+  "street": 3,
+  "name": "Dawanau",
+  "theme": "grain",
+  "schemaNote": "See docs/kano.md 3.3, 3.6 and 3.8 (and docs/design.md S2.6 for the rest). New: the \"whirl\" hazard (a dust whirl, 30 x 50, drifting left at 50 u/s; jump it or land on it to bounce, vy -480; any other touch hurts, as a tyre); sacks: [x, width, height] stacked grain sacks, one-way steps with the rock rules (ogun.md 3.3). springs and wind as on Kofar Mata and Kurmi. foods may hold \"fura\" (fura da nono). The secret well goes to the kano-well room.",
+  "groundY": 300,
+  "walkSpeed": 90,
+  "runSpeed": 156,
+  "cornWalkSpeed": 120,
+  "cornSpeed": 228,
+  "spawnX": 80,
+  "startWall": 20,
+  "koboSpacing": 24,
+  "wakeDistance": 520,
+  "hazardSpeeds": { "goat": 36, "tyre": 60, "drum": 84, "whirl": 50 },
+  "ground": [
+    [-400, 3500], [3540, 6600], [6660, 7600], [7770, 8900], [9000, 10200],
+    [10240, 12300], [12360, 12900]
+  ],
+  "platforms": [
+    [9850, 150, 120]
+  ],
+  "sacks": [
+    [2800, 100, 50],
+    [2930, 100, 100],
+    [3060, 100, 150],
+    [6100, 100, 60],
+    [6230, 100, 120]
+  ],
+  "springs": [
+    [9700, 100]
+  ],
+  "wind": [
+    [8600, 600, "back"]
+  ],
+  "kobo": [
+    [300, 276, 5], [450, 276, 3], [960, 276, 4],
+    [1250, 276, 4], [1700, 276, 4], [2450, 276, 4],
+    [2815, 226, 3], [2945, 176, 3], [3075, 126, 3], [3300, 276, 3], [3508, 236, 2],
+    [3650, 276, 3], [4100, 276, 4], [4450, 276, 3], [4750, 276, 3], [5000, 276, 3],
+    [5300, 276, 2], [5700, 276, 4], [5950, 276, 3],
+    [6115, 216, 3], [6245, 156, 3], [6400, 276, 3], [6606, 216, 3], [6750, 276, 3],
+    [7050, 276, 2], [7300, 276, 3],
+    [7640, 170, 2], [7690, 120, 2], [7740, 170, 2],
+    [7900, 276, 4], [8250, 276, 3], [8600, 276, 4],
+    [8890, 220, 2], [8930, 170, 2], [8990, 220, 2],
+    [9150, 276, 3], [9450, 276, 4], [9866, 126, 2], [9960, 126, 1], [10050, 276, 3], [10208, 236, 2],
+    [10400, 276, 4], [11200, 276, 3], [11550, 276, 4], [11850, 276, 2],
+    [12150, 276, 3], [12306, 216, 3], [12450, 276, 3]
+  ],
+  "foods": [
+    [3900, 272, "fura"],
+    [11700, 272, "fufu"]
+  ],
+  "crates": [
+    [600, 204, "kobo"],
+    [800, 204, "kobo"],
+    [6900, 204, "kobo"],
+    [9300, 204, "corn"],
+    [9910, 54, "kobo"]
+  ],
+  "hazards": [
+    ["whirl", 1500],
+    ["whirl", 2200],
+    ["whirl", 4300],
+    ["whirl", 4600],
+    ["whirl", 4900],
+    ["whirl", 8100],
+    ["goat", 8400],
+    ["whirl", 11000],
+    ["tyre", 11400],
+    ["goat", 12000]
+  ],
+  "wells": [
+    { "x": 5150, "exitX": 5480, "room": "kano-well" }
+  ],
+  "hints": [
+    [1100, "Dust whirl! Jump over it."],
+    [3840, "Fura da nono! Dust can't stop you."],
+    [5600, "Bus stop! Now you start here."]
+  ],
+  "checkpoint": 5600,
+  "end": { "x": 12600, "wall": 12800 }
+}

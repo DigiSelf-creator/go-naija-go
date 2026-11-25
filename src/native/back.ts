@@ -79,6 +79,7 @@ export function backStep(s: BackState, labels: BackLabels): BackStep {
     case 'title':
     case 'city':
     case 'ogun':
+    case 'kano':
       return { kind: 'ask', fromRun: null };
     case 'ride':
       return { kind: 'press', labels: labels.rideSkip ? [labels.rideSkip] : [] };

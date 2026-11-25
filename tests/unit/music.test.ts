@@ -9,6 +9,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CORN, G_PENTATONIC, TUNES, laneTempoAt, type MusicPlace, type Tune } from '../../src/art/tunes';
 import { GATEWAY_TUNE } from '../../src/art/ogunGate';
 import { POTHOLE_HALL_TUNE } from '../../src/worlds/ogun/hall';
+import { KANO_WELCOME_TUNE } from '../../src/worlds/kano/rideArt';
+import { KURMI_TUNE } from '../../src/worlds/kano/kurmi';
+import { KOFAR_MATA_TUNE } from '../../src/worlds/kano/kofarMata';
+import { BOREHOLE_HALL_TUNE } from '../../src/worlds/kano/boreholeHall';
+import { DAWANAU_TUNE } from '../../src/worlds/kano/dawanau';
 import { LOOKAHEAD, MUSIC_GAIN, Music, midiHz, noteNumber, ringSeconds, stepSeconds, trackEvents, tuneEvents } from '../../src/engine/music';
 
 const PLACES = Object.keys(TUNES) as MusicPlace[];
@@ -216,6 +221,144 @@ describe('every tune is our own', () => {
         }
         expect(n, `tempo ${tempo} step ${step}`).toBeLessThanOrEqual(6);
       }
+    }
+  });
+
+  // K1a: Kano's welcome tune lives in the lazy Kano part, so it is checked here by name.
+  it("Kano's welcome tune: our own, in its key, about 1.5 s, not Ogun's welcome", () => {
+    const t = KANO_WELCOME_TUNE;
+    const mel = melody(t);
+    expect(mel.length).toBeGreaterThan(3);
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(mel, notes.map((n) => noteNumber(n)!)), `close to the ${name}`).toBe(false);
+    expect(iv(mel)).not.toEqual(iv(melody(GATEWAY_TUNE)));
+    for (const tr of t.tracks) for (const e of trackEvents(tr)) for (const n of e.notes) expect(t.key).toContain(PC[n % 12]);
+    const st = stepSeconds(t);
+    const end = Math.max(...tuneEvents(t).map((e) => e.step * st + ringSeconds(e, st)));
+    expect(end).toBeGreaterThan(1.3);
+    expect(end).toBeLessThan(2.2);
+    expect(t.loop).toBe(false);
+  });
+
+  // K2a: Kurmi's street tune lives in the lazy Kano part, so it is checked here by name.
+  it("Kurmi's street tune: our own, loops, in its key, its own opening, never more than 6 notes at once", () => {
+    const t = KURMI_TUNE;
+    const mel = melody(t);
+    expect(mel.length).toBeGreaterThan(20);
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(mel, notes.map((n) => noteNumber(n)!)), `close to the ${name}`).toBe(false);
+    expect(t.loop).toBe(true);
+    expect(t.chords.length).toBe(t.bars);
+    for (const tr of t.tracks) {
+      expect(tr.bars.length).toBe(t.bars);
+      for (const e of trackEvents(tr)) for (const n of e.notes) expect(t.key, `${tr.inst} ${PC[n % 12]}`).toContain(PC[n % 12]);
+    }
+    const open = iv(mel.slice(0, 6)).join(',');
+    for (const p of ['street', 'well', 'hall', 'lane'] as MusicPlace[]) expect(iv(melody(TUNES[p]).slice(0, 6)).join(','), p).not.toBe(open);
+    for (const other of [POTHOLE_HALL_TUNE, GATEWAY_TUNE, KANO_WELCOME_TUNE]) expect(iv(melody(other).slice(0, 6)).join(','), other.name).not.toBe(open);
+    const st = stepSeconds(t);
+    const loopS = t.bars * 16 * st;
+    expect(loopS).toBeGreaterThan(14);
+    expect(loopS).toBeLessThan(20);
+    const evs = tuneEvents(t);
+    for (let step = 0; step < t.bars * 16; step++) {
+      let n = 0;
+      for (const e of evs) {
+        const steps = Math.max(1, Math.ceil(ringSeconds(e, st) / st - 1e-9));
+        if (step >= e.step && step < e.step + steps) n += Math.max(1, e.notes.length);
+      }
+      expect(n, `step ${step}`).toBeLessThanOrEqual(6);
+    }
+  });
+
+  // K3a: Kofar Mata's street tune lives in the lazy Kano part, so it is checked here by name.
+  it("Kofar Mata's street tune: our own, loops, in its key, its own opening, never more than 6 notes at once", () => {
+    const t = KOFAR_MATA_TUNE;
+    const mel = melody(t);
+    expect(mel.length).toBeGreaterThan(20);
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(mel, notes.map((n) => noteNumber(n)!)), `close to the ${name}`).toBe(false);
+    expect(t.loop).toBe(true);
+    expect(t.chords.length).toBe(t.bars);
+    for (const tr of t.tracks) {
+      expect(tr.bars.length).toBe(t.bars);
+      for (const e of trackEvents(tr)) for (const n of e.notes) expect(t.key, `${tr.inst} ${PC[n % 12]}`).toContain(PC[n % 12]);
+    }
+    const open = iv(mel.slice(0, 6)).join(',');
+    for (const p of ['street', 'well', 'hall', 'lane'] as MusicPlace[]) expect(iv(melody(TUNES[p]).slice(0, 6)).join(','), p).not.toBe(open);
+    for (const other of [POTHOLE_HALL_TUNE, GATEWAY_TUNE, KANO_WELCOME_TUNE, KURMI_TUNE]) expect(iv(melody(other).slice(0, 6)).join(','), other.name).not.toBe(open);
+    // Not Kurmi's tune moved to another key: the whole melody's steps differ
+    expect(iv(mel).join(',')).not.toBe(iv(melody(KURMI_TUNE)).join(','));
+    const st = stepSeconds(t);
+    const loopS = t.bars * 16 * st;
+    expect(loopS).toBeGreaterThan(14);
+    expect(loopS).toBeLessThan(20);
+    const evs = tuneEvents(t);
+    for (let step = 0; step < t.bars * 16; step++) {
+      let n = 0;
+      for (const e of evs) {
+        const steps = Math.max(1, Math.ceil(ringSeconds(e, st) / st - 1e-9));
+        if (step >= e.step && step < e.step + steps) n += Math.max(1, e.notes.length);
+      }
+      expect(n, `step ${step}`).toBeLessThanOrEqual(6);
+    }
+  });
+
+  // K5a: Borehole Hall's tune lives in the lazy Kano part, so it is checked here by name.
+  it("Borehole Hall's tune: our own, loops, in its key, its own opening, never more than 6 notes at once", () => {
+    const t = BOREHOLE_HALL_TUNE;
+    const mel = melody(t);
+    expect(mel.length).toBeGreaterThan(20);
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(mel, notes.map((n) => noteNumber(n)!)), `close to the ${name}`).toBe(false);
+    expect(t.loop).toBe(true);
+    expect(t.chords.length).toBe(t.bars);
+    for (const tr of t.tracks) {
+      expect(tr.bars.length).toBe(t.bars);
+      for (const e of trackEvents(tr)) for (const n of e.notes) expect(t.key, `${tr.inst} ${PC[n % 12]}`).toContain(PC[n % 12]);
+    }
+    const open = iv(mel.slice(0, 6)).join(',');
+    for (const p of ['street', 'well', 'hall', 'lane'] as MusicPlace[]) expect(iv(melody(TUNES[p]).slice(0, 6)).join(','), p).not.toBe(open);
+    for (const other of [POTHOLE_HALL_TUNE, GATEWAY_TUNE, KANO_WELCOME_TUNE, KURMI_TUNE, KOFAR_MATA_TUNE]) expect(iv(melody(other).slice(0, 6)).join(','), other.name).not.toBe(open);
+    for (let tempo = 0; tempo < t.bpm.length; tempo++) {
+      const st = stepSeconds(t, tempo);
+      const evs = tuneEvents(t, tempo);
+      for (let step = 0; step < t.bars * 16; step++) {
+        let n = 0;
+        for (const e of evs) {
+          const steps = Math.max(1, Math.ceil(ringSeconds(e, st) / st - 1e-9));
+          if (step >= e.step && step < e.step + steps) n += Math.max(1, e.notes.length);
+        }
+        expect(n, `tempo ${tempo} step ${step}`).toBeLessThanOrEqual(6);
+      }
+    }
+  });
+
+  // K4a: Dawanau's street tune lives in the lazy Kano part, so it is checked here by name.
+  it("Dawanau's street tune: our own, loops, in its key, its own opening, never more than 6 notes at once", () => {
+    const t = DAWANAU_TUNE;
+    const mel = melody(t);
+    expect(mel.length).toBeGreaterThan(20);
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(mel, notes.map((n) => noteNumber(n)!)), `close to the ${name}`).toBe(false);
+    expect(t.loop).toBe(true);
+    expect(t.chords.length).toBe(t.bars);
+    for (const tr of t.tracks) {
+      expect(tr.bars.length).toBe(t.bars);
+      for (const e of trackEvents(tr)) for (const n of e.notes) expect(t.key, `${tr.inst} ${PC[n % 12]}`).toContain(PC[n % 12]);
+    }
+    const open = iv(mel.slice(0, 6)).join(',');
+    for (const p of ['street', 'well', 'hall', 'lane'] as MusicPlace[]) expect(iv(melody(TUNES[p]).slice(0, 6)).join(','), p).not.toBe(open);
+    for (const other of [POTHOLE_HALL_TUNE, GATEWAY_TUNE, KANO_WELCOME_TUNE, KURMI_TUNE, KOFAR_MATA_TUNE, BOREHOLE_HALL_TUNE]) expect(iv(melody(other).slice(0, 6)).join(','), other.name).not.toBe(open);
+    // Not another Kano tune moved to another key: the whole melody's steps differ
+    for (const other of [KURMI_TUNE, KOFAR_MATA_TUNE]) expect(iv(mel).join(','), other.name).not.toBe(iv(melody(other)).join(','));
+    const st = stepSeconds(t);
+    const loopS = t.bars * 16 * st;
+    expect(loopS).toBeGreaterThan(14);
+    expect(loopS).toBeLessThan(20);
+    const evs = tuneEvents(t);
+    for (let step = 0; step < t.bars * 16; step++) {
+      let n = 0;
+      for (const e of evs) {
+        const steps = Math.max(1, Math.ceil(ringSeconds(e, st) / st - 1e-9));
+        if (step >= e.step && step < e.step + steps) n += Math.max(1, e.notes.length);
+      }
+      expect(n, `step ${step}`).toBeLessThanOrEqual(6);
     }
   });
 

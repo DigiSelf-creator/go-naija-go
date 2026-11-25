@@ -63,7 +63,8 @@ if (first >= BUDGET) {
 }
 
 // O1b1 (docs/ogun.md 9.1): one line for each later state's part, gzipped as a phone downloads it.
-const WORLD_BUDGETS = { ogun: 150 * 1000 };
+// K1b (docs/kano.md 9.1): Kano, 150 KB at most (players are told "about 85 KB").
+const WORLD_BUDGETS = { ogun: 150 * 1000, kano: 150 * 1000 };
 const gz = (r) => gzipSync(readFileSync(join(DIST, r)), { level: 9 }).length;
 let overWorld = false;
 for (const [id, budget] of Object.entries(WORLD_BUDGETS)) {

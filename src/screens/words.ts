@@ -671,6 +671,70 @@ export const OGUN_WORDS = {
 } as const;
 
 /**
+ * K1b: the Kano words the first load shows (docs/kano.md parts 1 and 8), word for word. The rest
+ * of Kano's words ride in the lazy Kano part (src/worlds/kano/words.ts).
+ */
+export const KANO_WORDS = {
+  name: 'Kano',
+  /** Part 1.2: Pothole Hall's Win screen gains a line and a button. */
+  ogunWin: { line: 'The road north to Kano is open.', onToKano: 'On to Kano', goToKano: 'Go to Kano' },
+  /** Part 8: the web download card (its buttons and line 2 are Ogun's words). */
+  download: {
+    line1: 'Kano is ready to download (about 85 KB).',
+    /** While it downloads (gamedev's words, as Ogun's). */
+    loading: 'Downloading Kano...',
+    noNet: 'Kano needs the internet once to download. Lagos and Ogun still work with no internet.',
+  },
+  /** A damaged or missing file (gamedev's words, as Ogun's, for designer to check). */
+  broken: 'Kano could not open just now. Lagos and Ogun still work. Try again later.',
+  /** Part 1.2: the "To Kano" stop on Ogun's challenge road, and its card. */
+  toKano: { stop: 'To Kano', lockedShort: 'Win Pothole Hall', line: 'The road to Kano is open.', go: 'Go to Kano', locked: 'Win Pothole Hall to open the road to Kano.' },
+  /** Part 1.4: the arrival card, first visit only. */
+  arrival: {
+    heading: 'Welcome to Kano!',
+    line1: 'Kano is the Centre of Commerce. People come here to buy and sell.',
+    line2: 'The dust has dried up the borehole. Fix Kano, and the water will flow.',
+    go: "Let's go",
+  },
+  /** Part 1.3: the ride's spoken name, going and coming back (gamedev's words). */
+  ride: { spokenIn: 'A long bus drives north across the grassland to the old wall of Kano.', spokenOut: 'A long bus drives from Kano back down the road.' },
+  /** Part 1.6: the wheel's rail lines and the "All names" list. */
+  wheel: {
+    kanoNext: 'Next: Kano, the Centre of Commerce.',
+    kanoTurning: 'Kano is turning. Get the water flowing in Borehole Hall.',
+    flowing: 'The water is flowing in Kano. More states are coming soon.',
+    listNext: 'Kano, next',
+  },
+  /** Part 1.7: Settings, under "Saved on this phone". */
+  saved: 'Your hero, Lagos, Ogun and Kano are saved on this phone.',
+  /**
+   * K2b: what the first load shows on a Kano street (kano.md 3.4, 4.1, 8), word for word as
+   * src/worlds/kano/words.ts (tests/unit/k2b-wind.test.ts checks they match).
+   */
+  street: {
+    gate: 'Welcome to Kano!',
+    kilishi: "Kilishi! Wind can't hold you back for 12 seconds.",
+    kilishiWearingOff: 'Kilishi is wearing off!',
+    hud: (s: number) => `Kilishi ${s}`,
+    /** K4b (kano.md 4.1): fura da nono. */
+    fura: "Fura da nono! Dust can't stop you for 12 seconds.",
+    furaWearingOff: 'Fura is wearing off!',
+    furaHud: (s: number) => `Fura ${s}`,
+    gameOver: (kobo: number) => `You keep ${formatMoney(kobo)}. The street is still here. Try again!`,
+    /** Kano's home: Kurmi's button (gamedev's words, for designer to check). */
+    play: 'Play Kurmi',
+    /** K3b: Kano's home once Kurmi is cleared (kano.md 3.2: the streets open in order). */
+    play2: 'Play Kofar Mata',
+    /** K4b: once Kofar Mata is cleared. */
+    play3: 'Play Dawanau',
+    /** K3b (kano.md 3.7): the groundnut store's gift. */
+    parcel: 'Groundnut garri parcel! Shield for the hall.',
+    /** K3b (kano.md 8): Street cleared, carrying the parcel. */
+    clearedParcel: 'Your garri parcel is saved for Borehole Hall.',
+  },
+} as const;
+
+/**
  * S2.13 part 5: street hints whose words are not true in Gentle mode, and what they say there
  * instead (the bus stop is no longer where a fall puts you back).
  */
@@ -704,6 +768,13 @@ export const SHORT_TOAST: Readonly<Record<string, string>> = {
   'Jump over King Pothole to drop it in.': 'Jump over him to drop it in.',
   "He's cross! Two gravel lumps now. Jump them both.": 'Two gravel lumps now! Jump both.',
   'The gateway is open! Ogun is switched on!': 'The gateway is open!',
+  // K1b: Kano (docs/kano.md parts 3 to 5; the same as src/worlds/kano/words.ts KANO_WORDS.short).
+  "Kilishi! Wind can't hold you back for 12 seconds.": "Kilishi! Wind can't hold you back.",
+  "Fura da nono! Dust can't stop you for 12 seconds.": "Fura da nono! Dust can't stop you.",
+  'Groundnut garri parcel! Shield for the hall.': 'Garri parcel! Shield for the hall.',
+  "He's cross! Two whirls now. Jump them both.": 'Two whirls now! Jump them both.',
+  'The water is flowing! Kano is switched on!': 'The water is flowing!',
+  'Bounce, hold, and bump the valve!': 'Bounce, hold, bump the valve!',
 };
 
 /** The words a toast shows in a bar this wide (CSS px): the short words on a narrow bar. */

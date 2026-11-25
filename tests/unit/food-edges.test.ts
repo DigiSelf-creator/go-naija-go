@@ -83,6 +83,6 @@ describe('a fall on the last life', () => {
     run.lives = 1;
     while (run.phase === 'run') run.step(DT);
     expect(run.phase).toBe('over');
-    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false });
+    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, fura: 0, shield: false });
   });
 });

@@ -339,26 +339,32 @@ describe('O6b: Ogun\'s challenge road (6.5)', () => {
     for (const x of s) if (x.id !== 'hall') expect(x.pic, String(x.id)).toBeUndefined();
   });
 
-  it('To Lagos is a link; the way on and the border market cannot be played', () => {
+  it('To Lagos is a link; the border market cannot be played', () => {
     const s = ogunStops(view(3, true));
     const to = s.find((x) => x.id === 'toLagos')!;
     expect(to.go).toBe(OGUN_CITY_WORDS.road.goLagos);
     expect(to.forFix).toBeNull();
-    for (const id of ['wayOn', 'border']) {
-      const x = s.find((y) => y.id === id)!;
-      expect(x.state).toBe('soon');
-      expect(x.go).toBeNull();
-    }
-    expect(s.find((y) => y.id === 'wayOn')!.line3).toBe('More of Nigeria');
-    expect(s.find((y) => y.id === 'border')!.line3).toBe('More soon');
+    const x = s.find((y) => y.id === 'border')!;
+    expect(x.state).toBe('soon');
+    expect(x.go).toBeNull();
+    expect(x.line3).toBe('More soon');
   });
 
-  it('OG-R42: the way on and the border market are spoken "{name}. {line} Coming soon."; no compass word', () => {
+  it('K1b (kano.md 1.2): the way on is now "To Kano": locked until Pothole Hall is won, then a link to Kano', () => {
+    const shut = ogunStops(view(3, false)).find((y) => y.id === 'wayOn')!;
+    expect(shut).toMatchObject({ state: 'locked', name: 'To Kano', status: 'Locked', line3: 'Win Pothole Hall', go: null, forFix: null, cut: 'toKano' });
+    expect(shut.lines).toEqual(['Win Pothole Hall to open the road to Kano.']);
+    expect(shut.spoken).toBe('To Kano. Locked. Win Pothole Hall to open the road to Kano.');
+    const open = ogunStops(view(3, true)).find((y) => y.id === 'wayOn')!;
+    expect(open).toMatchObject({ state: 'open', name: 'To Kano', status: 'Open', line3: null, go: 'Go to Kano', forFix: null });
+    expect(open.lines).toEqual(['The road to Kano is open.']);
+    expect(open.spoken).toBe('To Kano. Open. The road to Kano is open.');
+    expect(open.iconSvg).toMatch(/^<svg/);
+  });
+
+  it('OG-R42: the border market is spoken "{name}. {line} Coming soon."; no compass word', () => {
     const s = ogunStops(view(0, false));
-    const way = s.find((y) => y.id === 'wayOn')!;
     const border = s.find((y) => y.id === 'border')!;
-    expect(way.lines).toEqual(['The road to the rest of Nigeria is still being built.', 'Coming soon']);
-    expect(way.spoken).toBe('The way on. The road to the rest of Nigeria is still being built. Coming soon.');
     expect(border.lines).toEqual(['A busy market road.', 'Coming soon']);
     expect(border.spoken).toBe('Border market. A busy market road. Coming soon.');
     for (const x of s) expect(`${x.spoken} ${x.lines.join(' ')}`).not.toMatch(/\b(north|south|east|west)\b/i);

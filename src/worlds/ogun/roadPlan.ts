@@ -9,10 +9,12 @@
  *   pump, then the lamps, then the mast (CR-Q1 a, as Lagos's side road).
  * - Abeokuta opens once Ota is done, Sagamu once Abeokuta is; Pothole Hall once Sagamu is. The
  *   road is open from the first visit (OG-R35), so any stop may still be locked.
- * - "The way on" and "Border market" are "Coming soon" and cannot be played.
+ * - "Border market" is "Coming soon" and cannot be played. K1b: "The way on" is now "To Kano"
+ *   (locked until Pothole Hall is won), a link to Kano like "To Lagos".
  */
 import type { PlanStop, RoadPlan, StopState } from '../../screens/road';
-import { WORDS, OGUN_WORDS } from '../../screens/words';
+import { WORDS, OGUN_WORDS, KANO_WORDS } from '../../screens/words';
+import { drawMiniKanoGate, drawToKanoCard, kanoGateIconSvg } from './toKano';
 import { formatMoney, spokenMoney } from '../../game/money';
 import { streetOpen, streetRecord, type StateProgress } from '../../game/progress';
 import { OGUN_CARD_CUTS, OGUN_ROAD, OGUN_STOP_BOX, drawOgunCardCut, drawOgunCardPicture, drawOgunRoadPicture, type OgunStopId } from './road';
@@ -26,6 +28,8 @@ export interface OgunRoadView {
   wallet: Wallet;
   /** The Expressway's best whole metres and goals reached. */
   lane: { best: number; goals: number };
+  /** K1b: Rusty Borehole is beaten (the small Kano gate is bright). */
+  kanoLit?: boolean;
 }
 
 const price = (c: OgunCityState, b: OgunFixId): string => {
@@ -102,8 +106,35 @@ export function ogunStops(v: OgunRoadView): PlanStop[] {
     // The Expressway's side road leaves between Ota and Abeokuta.
     if (k === 0) out.push(expressway(v));
   }
-  out.push(soon('wayOn', o.wayOn, o.wayOnLine, o.moreOfNigeria), soon('border', o.border, o.borderLine, w.moreSoon));
+  out.push(toKano(s.hall.done), soon('border', o.border, o.borderLine, w.moreSoon));
   return out;
+}
+
+/**
+ * K1b (kano.md 1.2 item 2): "The way on" becomes "To Kano", locked until Pothole Hall is won,
+ * then "Open"; like Lagos's "To Ogun" it goes to Kano (the ride), never a run. Its plate keeps
+ * the way on's place (id `wayOn`).
+ */
+function toKano(open: boolean): PlanStop {
+  const w = WORDS.road;
+  const k = KANO_WORDS.toKano;
+  const status = open ? OGUN_WORDS.toOgun.open : w.locked;
+  return {
+    id: 'wayOn',
+    state: open ? 'open' : 'locked',
+    heading: k.stop,
+    name: k.stop,
+    status,
+    line3: open ? null : k.lockedShort,
+    parcel: false,
+    spoken: `${k.stop}. ${status}. ${open ? k.line : k.locked}`,
+    label: k.stop,
+    lines: [open ? k.line : k.locked],
+    go: open ? k.go : null,
+    forFix: null,
+    cut: 'toKano',
+    ...(open ? { iconSvg: kanoGateIconSvg(16) } : {}),
+  };
 }
 
 /** The fix a win on the Expressway is for: the pump, then the lamps, then the mast (6.5), or null. */
@@ -164,12 +195,17 @@ export function ogunRoad(v: OgunRoadView, play: (st: PlanStop, e: MouseEvent) =>
       const b = OGUN_STOP_BOX[id as OgunStopId];
       return [b.x, b.y, b.w, b.h];
     },
-    paint: (g, next) => drawOgunRoadPicture(g, { lit: v.ogun.hall.done, next: next === null ? null : (String(next) as OgunStopId) }),
+    paint: (g, next) => {
+      drawOgunRoadPicture(g, { lit: v.ogun.hall.done, next: next === null ? null : (String(next) as OgunStopId) });
+      // K1b: once the road north is open, the small Kano gate stands past the works.
+      if (v.ogun.hall.done) drawMiniKanoGate(g, 744, 88, 0.9, v.kanoLit === true);
+    },
     card: (c, st) => {
       const g = c.getContext('2d');
       if (!g) return;
       const cut = CUT_OF[st.cut];
-      if (st.cut === 'toLagos' || st.cut === 'wayOn' || st.cut === 'border') drawOgunCardPicture(g, st.cut, c.width, c.height, 0, still());
+      if (st.cut === 'toKano') drawToKanoCard(g, c.width, c.height, v.kanoLit === true);
+      else if (st.cut === 'toLagos' || st.cut === 'wayOn' || st.cut === 'border') drawOgunCardPicture(g, st.cut, c.width, c.height, 0, still());
       else if (cut) {
         const city = cityFor(v.city, v.wallet, v.ogun.hall.done);
         if (city) drawOgunCardCut(g, city, 0.5, OGUN_CARD_CUTS[cut], c.width, c.height);

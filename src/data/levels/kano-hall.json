@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "type": "hall",
+  "id": "kano-hall",
+  "state": "kano",
+  "name": "Borehole Hall",
+  "schemaNote": "See docs/kano.md 5.2 to 5.5. Hall x runs 0 to width, floor at groundY. Rusty Borehole is an old pump and tank (a problem, never a person) standing from body[0] to body[1]; he never moves and is a wall to the hero (rightLimit). valves.x are the middles of three round valve wheels on his pipe and valves.bottom their lowest y; the stuck one shakes and wears the STUCK tag, in valves.x order. A head bump from below on the stuck valve is a hit. Under each valve stands a springy cloth frame (the Kofar Mata frame). Each cough is warned by a wheeze; a whirl rolls from whirl.fromX toward the hero and puffs apart at the left wall; a gust (from phase 2) cuts air speed toward him to gust.airScale for gust.lasts s, warned gust.warn s before. holdBreath: no new whirl leaves him while the hero is in the air after a cloth bounce. phases[0] is before any hit; one phase per valve, so 3 valves win. gentle numbers replace the normal ones in Gentle mode (5 lives there, as every hall).",
+  "groundY": 300,
+  "width": 560,
+  "spawnX": 50,
+  "leftLimit": 30,
+  "rightLimit": 440,
+  "boss": {
+    "kind": "rusty-borehole",
+    "body": [450, 540],
+    "valves": { "x": [140, 250, 360], "bottom": 70, "w": 36, "h": 36 },
+    "springs": { "w": 80, "h": 30, "vy": -640 },
+    "taps": 8,
+    "startDelay": 2.0,
+    "wheeze": 0.5,
+    "breakAfterHit": 1.5,
+    "holdBreath": true,
+    "phases": [
+      { "every": 2.8, "pattern": ["whirl"], "bpm": 120 },
+      { "every": 2.4, "pattern": ["whirl", "gust"], "bpm": 126, "adds": "shaker" },
+      { "every": 2.0, "pattern": ["whirl", "whirl", "gust"], "bpm": 132, "adds": "drum" }
+    ],
+    "whirl": { "speed": 60, "w": 30, "h": 50, "fromX": 440, "bounceVy": -480 },
+    "gust": { "lasts": 2.0, "warn": 0.6, "airScale": 0.75 },
+    "fall": { "backTo": 50 },
+    "finish": { "glugTo": 1.2, "sneeze": 1.2, "shine": 1.8, "tapsFrom": 2.4, "tapsTo": 3.6, "toast": 4.0, "win": 6.0 },
+    "gentle": { "whirlSpeed": 45, "later": 0.4, "gustAirScale": 0.875 }
+  }
+}

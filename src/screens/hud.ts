@@ -10,12 +10,12 @@ import type { Run } from '../game/run';
 import { STEPS_PER_SECOND, RULES } from '../game/run';
 import { h } from './dom';
 import { pressOnDown, type HintBarBox } from './controls';
-import { OGUN_WORDS, WORDS, barWords } from './words';
+import { KANO_WORDS, OGUN_WORDS, WORDS, barWords } from './words';
 
 /** O2b, O3b: ikokore's and ofada's chips (Ogun); their icons are painted by the Ogun part (setIcon). */
-type Slot = 'corn' | 'garri' | 'amala' | 'ikokore' | 'ofada';
-/** Chips whose icon comes from a later state's part. */
-type OwnIcon = 'ikokore' | 'ofada';
+type Slot = 'corn' | 'garri' | 'amala' | 'ikokore' | 'ofada' | 'kilishi' | 'fura';
+/** Chips whose icon comes from a later state's part (K2b: Kano's kilishi; K4b: fura). */
+type OwnIcon = 'ikokore' | 'ofada' | 'kilishi' | 'fura';
 
 export interface HudHooks {
   pause(): void;
@@ -67,12 +67,12 @@ export class Hud {
     this.kobo = h('span', { class: 'hud-kobo' }, coin, h('span', { class: 'hud-text' }, this.koboWord, this.koboCount));
     const slot = (kind: Slot): { el: HTMLElement; text: HTMLElement; icon: HTMLCanvasElement } => {
       const icon = h('canvas', { class: 'hud-icon', width: '56', height: '56', 'aria-hidden': 'true' });
-      if (kind !== 'ikokore' && kind !== 'ofada') this.paintIcon(icon, (g) => drawFoodIcon(g, kind, 16, 16, 0.85));
+      if (kind !== 'ikokore' && kind !== 'ofada' && kind !== 'kilishi' && kind !== 'fura') this.paintIcon(icon, (g) => drawFoodIcon(g, kind, 16, 16, 0.85));
       const text = h('span', { class: 'hud-text' });
       const el = h('span', { class: 'hud-food', hidden: true }, icon, text);
       return { el, text, icon };
     };
-    this.slots = { garri: slot('garri'), corn: slot('corn'), amala: slot('amala'), ikokore: slot('ikokore'), ofada: slot('ofada') };
+    this.slots = { garri: slot('garri'), corn: slot('corn'), amala: slot('amala'), ikokore: slot('ikokore'), ofada: slot('ofada'), kilishi: slot('kilishi'), fura: slot('fura') };
     const parcelIcon = h('canvas', { class: 'hud-icon', width: '56', height: '56', 'aria-hidden': 'true' });
     this.parcelIcon = parcelIcon;
     this.setParcelIcon(null);
@@ -91,7 +91,7 @@ export class Hud {
     pressOnDown(this.sound, () => hooks.toggleSound());
     const pause = h('button', { type: 'button', class: 'hud-btn hud-pause', 'aria-label': WORDS.hud.pause, 'data-ui': true }, 'II');
     pressOnDown(pause, () => hooks.pause());
-    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el, this.slots.ikokore.el, this.slots.ofada.el, this.fufu);
+    this.left = h('div', { class: 'hud-left' }, this.lives, this.kobo, this.parcel, this.slots.garri.el, this.slots.corn.el, this.slots.amala.el, this.slots.ikokore.el, this.slots.ofada.el, this.slots.kilishi.el, this.slots.fura.el, this.fufu);
     this.root = h('div', { class: 'hud', hidden: true }, this.left, h('div', { class: 'hud-right' }, this.sound, pause));
     parent.append(this.root);
     window.addEventListener('resize', () => this.fit(true));
@@ -143,7 +143,7 @@ export class Hud {
     const p = run.power;
     const secs = (steps: number): number => Math.ceil(steps / STEPS_PER_SECOND);
     const warn = (steps: number): boolean => steps > 0 && steps <= RULES.warnSteps;
-    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), secs(p.ikokore), secs(p.ofada), warn(p.corn), warn(p.amala), warn(p.ikokore), warn(p.ofada), soundOn, run.inHall, run.fufu].join('|');
+    const key = [run.lives, run.kobo, run.parcel, p.shield, secs(p.corn), secs(p.amala), secs(p.ikokore), secs(p.ofada), secs(p.kilishi), secs(p.fura), warn(p.corn), warn(p.amala), warn(p.ikokore), warn(p.ofada), warn(p.kilishi), warn(p.fura), soundOn, run.inHall, run.fufu].join('|');
     if (key === this.last) return;
     this.last = key;
     this.hall = run.inHall;
@@ -156,13 +156,15 @@ export class Hud {
     this.koboWord.textContent = kobo.endsWith(n) ? kobo.slice(0, kobo.length - n.length) : kobo;
     this.koboCount.data = kobo.endsWith(n) ? n : '';
     this.lastKobo = run.kobo;
-    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}${String(secs(p.ikokore)).length}${String(secs(p.ofada)).length}${String(run.fufu).length}`;
+    this.digits = `${String(secs(p.corn)).length}${String(secs(p.amala)).length}${String(secs(p.ikokore)).length}${String(secs(p.ofada)).length}${String(secs(p.kilishi)).length}${String(secs(p.fura)).length}${String(run.fufu).length}`;
     this.parcel.hidden = !run.parcel;
     this.setSlot('garri', p.shield, WORDS.hud.shield, false);
     this.setSlot('corn', p.corn > 0, WORDS.hud.fast(secs(p.corn)), warn(p.corn));
     this.setSlot('amala', p.amala > 0, WORDS.hud.strong(secs(p.amala)), warn(p.amala));
     this.setSlot('ikokore', p.ikokore > 0, OGUN_WORDS.hud.ikokore(secs(p.ikokore)), warn(p.ikokore));
     this.setSlot('ofada', p.ofada > 0, OGUN_WORDS.hud.ofada(secs(p.ofada)), warn(p.ofada));
+    this.setSlot('kilishi', p.kilishi > 0, KANO_WORDS.street.hud(secs(p.kilishi)), warn(p.kilishi));
+    this.setSlot('fura', p.fura > 0, KANO_WORDS.street.furaHud(secs(p.fura)), warn(p.fura));
     this.fufu.hidden = run.fufu <= 0;
     this.setText(this.fufuText, WORDS.hud.fufu(run.fufu));
     this.fufu.setAttribute('aria-label', WORDS.hud.fufuSpoken(run.fufu));

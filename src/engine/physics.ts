@@ -101,6 +101,11 @@ export interface Platform {
   x: number;
   y: number;
   w: number;
+  /**
+   * K3b (kano.md 3.3): springy cloth. Landing on it from above never stands: the hero bounces up
+   * at this vy (u/s, negative = up), held for higher as a jump, with the second jump still there.
+   */
+  spring?: number;
 }
 
 export interface Terrain {
@@ -168,6 +173,14 @@ export interface Body {
   restAtLanding: boolean;
   /** Faster than the gait's top after a dash: eases back at dashEase while forward is held. */
   dashEase: boolean;
+  /**
+   * K2b (kano.md 3.3): wind on a player-moved hero. While in the air, moving forward (+x) covers
+   * this much of its speed each step (1.25 behind you, 0.75 in your face). Its speed is kept, so
+   * it lands at the same speed. On the ground, and going back, it does nothing. 1: no wind.
+   */
+  wind: number;
+  /** K3b: the springy cloth bounced on in the last step, or null. */
+  sprung: Platform | null;
 }
 
 export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHYSICS): Body {
@@ -198,6 +211,8 @@ export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHY
     rest: 0,
     restAtLanding: false,
     dashEase: false,
+    wind: 1,
+    sprung: null,
   };
 }
 
@@ -368,6 +383,22 @@ export function headStop(b: Body, feetY: number, vy: number): void {
   b.holding = false;
 }
 
+/**
+ * K3b: landed on springy cloth from above. Like a jump from the ground at the cloth's vy: held
+ * (the finger still down) it rises on the lighter gravity; the second jump is there.
+ */
+function springUp(b: Body, p: Platform, vy: number): void {
+  leaveGround(b);
+  b.y = p.y;
+  b.vy = vy;
+  b.on = null;
+  b.coyote = 0;
+  b.buffer = 0;
+  b.airJump = true;
+  b.holding = b.down;
+  b.sprung = p;
+}
+
 function land(b: Body, y: number, on: Platform | null, cfg: PhysicsConfig): void {
   b.y = y;
   b.vy = 0;
@@ -380,13 +411,14 @@ function land(b: Body, y: number, on: Platform | null, cfg: PhysicsConfig): void
 
 /** One fixed step. dt is always 1/60 s in the game; tests may pass the same. */
 export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig = PHYSICS): void {
+  b.sprung = null;
   if (b.fallen) return;
 
   if (b.manual) {
     // S2.16 B4: the dash ends when its way is no longer held, or after dashSteps.
     if (b.dash > 0 && b.move !== b.dashDir) endDash(b, cfg);
     walk(b, dt, cfg);
-    b.x += b.vx * dt;
+    b.x += b.vx * dt * (b.vx > 0 && !b.grounded ? b.wind : 1);
     if (b.dash > 0 && --b.dash === 0) {
       b.dash = 1; // endDash needs it running
       endDash(b, cfg);
@@ -418,7 +450,8 @@ export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig =
         best = p;
       }
     }
-    if (best) land(b, best.y, best, cfg);
+    if (best?.spring !== undefined) springUp(b, best, best.spring);
+    else if (best) land(b, best.y, best, cfg);
     else if (groundAt(terrain, b.x) && b.prevY <= terrain.groundY + cfg.groundSnap && b.y >= terrain.groundY) {
       land(b, terrain.groundY, null, cfg);
     }

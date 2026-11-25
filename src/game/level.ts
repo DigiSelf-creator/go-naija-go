@@ -12,8 +12,11 @@
 import { FALL_Y, GAIT, PHYSICS, type GroundSpan, type Platform, type Terrain } from '../engine/physics';
 import { FEATURE_NAMES, type Feature } from './features';
 
-/** S2.16 B1: the egret and the crow are birds by the rubbish (never hurt; they fly off). O4b: hopping gravel (Sagamu). */
-export type HazardKind = 'goat' | 'tyre' | 'drum' | 'egret' | 'crow' | 'gravel';
+/**
+ * S2.16 B1: the egret and the crow are birds by the rubbish (never hurt; they fly off). O4b: hopping gravel (Sagamu).
+ * K4b (kano.md 3.3): the dust whirl (Dawanau), 30 x 50, drifting left.
+ */
+export type HazardKind = 'goat' | 'tyre' | 'drum' | 'egret' | 'crow' | 'gravel' | 'whirl';
 export type BirdKind = 'egret' | 'crow';
 export const isBird = (k: HazardKind): k is BirdKind => k === 'egret' || k === 'crow';
 
@@ -81,10 +84,12 @@ export interface HallData {
 /**
  * O2b (ogun.md 4.1): ikokore, Ogun's own food: mud does not slow you for 12 s.
  * O3b: ofada rice: cracks stay shut for 12 s.
+ * K2b (kano.md 4.1): kilishi: a headwind cannot hold you back for 12 s.
+ * K4b: fura da nono: dust whirls puff apart when they touch you, for 12 s.
  */
-export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu' | 'ikokore' | 'ofada';
+export type FoodKind = 'corn' | 'garri' | 'amala' | 'fufu' | 'ikokore' | 'ofada' | 'kilishi' | 'fura';
 /** S2.15: crates may hold fufu later (it needs a crate stamp from art); none do now. */
-export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu' | 'ikokore' | 'ofada'>;
+export type CrateContents = 'kobo' | Exclude<FoodKind, 'fufu' | 'ikokore' | 'ofada' | 'kilishi' | 'fura'>;
 
 /** A crate hung over the road or a roof (S2.4): centre x, bottom edge y. */
 export interface CrateData {
@@ -114,6 +119,21 @@ export interface CrackData {
 }
 /** ogun.md 3.3: a crack is a tap (40) or hold (60) pothole once open. */
 export const CRACK_WIDTHS: readonly number[] = [40, 60];
+
+/** K2b (kano.md 3.3): a stretch of Harmattan wind from x to x + w, behind you ("back") or in your face. */
+export interface WindData {
+  x: number;
+  w: number;
+  dir: 'back' | 'face';
+}
+
+/** K3b (kano.md 3.3): a springy cloth frame from x to x + w (80 to 120 wide), always on solid road. */
+export interface SpringData {
+  x: number;
+  w: number;
+}
+/** kano.md 3.3: the frame stands 30 u high; landing on it bounces you up at vy -640 (a jump is -576). */
+export const SPRING = { h: 30, vy: -640, minW: 80, maxW: 120 } as const;
 
 /** A well (S2.5): entrance x, exit x, room file id. */
 export interface WellData {
@@ -150,7 +170,7 @@ export interface Level {
   /** A hazard starts moving when it is this far ahead of the hero. */
   wakeDistance: number;
   /** Rolling and walking speeds, u/s; birds: the egret's pacing speed (30 when left out), the crow hovers; gravel 70 when left out. */
-  hazardSpeeds: Record<'goat' | 'tyre' | 'drum', number> & Partial<Record<BirdKind | 'gravel', number>>;
+  hazardSpeeds: Record<'goat' | 'tyre' | 'drum', number> & Partial<Record<BirdKind | 'gravel' | 'whirl', number>>;
   /** Road spans as [startX, endX], for drawing. */
   ground: readonly (readonly [number, number])[];
   terrain: Terrain;
@@ -168,10 +188,18 @@ export interface Level {
   arch: number | null;
   /** O3b (ogun.md 3.3): rock steps (also in terrain.platforms, so they are roofs to the rules). */
   rocks: readonly RockData[];
+  /** K4b (kano.md 3.3): sack steps, rocks under another look (also in terrain.platforms). */
+  sacks: readonly RockData[];
   /** O3b: cracks, left to right (each opens into a pothole as the hero comes near). */
   cracks: readonly CrackData[];
   /** O3b: left lips of potholes drawn holding water (look only). */
   waterPits: readonly number[];
+  /** K2b (kano.md 3.3): wind stretches, left to right (none on most levels). */
+  wind: readonly WindData[];
+  /** K2b (kano.md 3.4): our own gate in the old wall (Kurmi only), or null. */
+  gate: number | null;
+  /** K3b (kano.md 3.3): springy cloth frames, left to right (also in terrain.platforms, with their bounce). */
+  springs: readonly SpringData[];
   /** S2.16 B4: reaching this x turns the dash on (saved), or null. */
   dashFrom: number | null;
   /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
@@ -195,9 +223,9 @@ const WALL_GAP = 7;
 /** S2.6 street walk speed with roasted corn (the hall file has no speeds; it uses the streets'). */
 const CORN_WALK = 120;
 
-const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu', 'ikokore', 'ofada'];
+const FOOD_KINDS: readonly FoodKind[] = ['corn', 'garri', 'amala', 'fufu', 'ikokore', 'ofada', 'kilishi', 'fura'];
 const CRATE_CONTENTS: readonly CrateContents[] = ['kobo', 'corn', 'garri', 'amala'];
-const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow', 'gravel'];
+const HAZARD_KINDS: readonly HazardKind[] = ['goat', 'tyre', 'drum', 'egret', 'crow', 'gravel', 'whirl'];
 /** S2.16 B1: the egret paces its patch at 30 u/s; the crow hovers in place. */
 export const EGRET_SPEED = 30;
 
@@ -292,18 +320,39 @@ export function parseLevel(raw: unknown): Level {
   const arch = r['arch'] === undefined ? null : num(r['arch'], 'arch');
   // O3b (ogun.md 3.8): rocks [x, width, height], cracks [x, width], waterPits [x].
   const opt = (k: string): unknown[] => (r[k] === undefined ? [] : list(r[k], k));
-  const rocks: RockData[] = opt('rocks').map((q, i) => {
-    const [x, w, h] = tuple(q, `rocks[${i}]`, 3).map((v, j) => num(v, `rocks[${i}][${j}]`));
-    if (!(w! > 0 && h! > 0)) fail(`rocks[${i}]`, 'should have a width and height above 0');
-    return { x: x!, w: w!, h: h! };
-  });
+  // K4b (kano.md 3.3, 3.8): sacks [x, width, height] are rocks under another look.
+  const steps = (k: string): RockData[] =>
+    opt(k).map((q, i) => {
+      const [x, w, h] = tuple(q, `${k}[${i}]`, 3).map((v, j) => num(v, `${k}[${i}][${j}]`));
+      if (!(w! > 0 && h! > 0)) fail(`${k}[${i}]`, 'should have a width and height above 0');
+      return { x: x!, w: w!, h: h! };
+    });
+  const rocks = steps('rocks');
+  const sacks = steps('sacks');
   const cracks: CrackData[] = opt('cracks').map((q, i) => {
     const [x, w] = tuple(q, `cracks[${i}]`, 2).map((v, j) => num(v, `cracks[${i}][${j}]`));
     if (!CRACK_WIDTHS.includes(w!)) fail(`cracks[${i}][1]`, `should be one of ${CRACK_WIDTHS.join(', ')}`);
     return { x: x!, w: w! };
   });
   const waterPits = opt('waterPits').map((x, i) => num(x, `waterPits[${i}]`));
-  for (const k of rocks) platforms.push({ x: k.x, y: groundY - k.h, w: k.w });
+  // K2b (kano.md 3.8): wind [x, width, dir], gate x.
+  const wind: WindData[] = opt('wind').map((q, i) => {
+    const [x, w, dir] = tuple(q, `wind[${i}]`, 3);
+    const d = { x: num(x, `wind[${i}][0]`), w: num(w, `wind[${i}][1]`), dir: oneOf(dir, `wind[${i}][2]`, ['back', 'face'] as const) };
+    if (d.w <= 0) fail(`wind[${i}][1]`, 'should be above 0');
+    return d;
+  });
+  const gate = r['gate'] === undefined ? null : num(r['gate'], 'gate');
+  // K3b (kano.md 3.3, 3.8): springs [x, width]; a frame never stands over a pit.
+  const springs: SpringData[] = opt('springs').map((q, i) => {
+    const [x, w] = tuple(q, `springs[${i}]`, 2).map((v, j) => num(v, `springs[${i}][${j}]`));
+    if (w! < SPRING.minW || w! > SPRING.maxW) fail(`springs[${i}][1]`, `should be ${SPRING.minW} to ${SPRING.maxW} wide`);
+    if (!ground.some(([a, b]) => x! >= a && x! + w! <= b)) fail(`springs[${i}]`, 'should stand on solid road, never over a pit');
+    return { x: x!, w: w! };
+  });
+  springs.sort((p, q) => p.x - q.x);
+  for (const k of springs) platforms.push({ x: k.x, y: groundY - SPRING.h, w: k.w, spring: SPRING.vy });
+  for (const k of [...rocks, ...sacks]) platforms.push({ x: k.x, y: groundY - k.h, w: k.w });
 
   const crates: CrateData[] =
     r['crates'] === undefined && schema === 1
@@ -356,6 +405,7 @@ export function parseLevel(raw: unknown): Level {
       // S2.16 B1: only a street with birds names the egret's pacing speed.
       ...(speeds['egret'] === undefined ? {} : { egret: num(speeds['egret'], 'hazardSpeeds.egret') }),
       ...(speeds['gravel'] === undefined ? {} : { gravel: num(speeds['gravel'], 'hazardSpeeds.gravel') }),
+      ...(speeds['whirl'] === undefined ? {} : { whirl: num(speeds['whirl'], 'hazardSpeeds.whirl') }),
     },
     ground,
     terrain: { groundY, ground: spans, platforms, fallY: Math.max(FALL_Y, groundY + 120) },
@@ -367,8 +417,12 @@ export function parseLevel(raw: unknown): Level {
     mud: mud.sort((p, q) => p.x - q.x),
     arch,
     rocks,
+    sacks,
     cracks: cracks.sort((p, q) => p.x - q.x),
     waterPits,
+    wind: wind.sort((p, q) => p.x - q.x),
+    gate,
+    springs,
     dashFrom,
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
@@ -488,8 +542,12 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     mud: [],
     arch: null,
     rocks: [],
+    sacks: [],
     cracks: [],
     waterPits: [],
+    wind: [],
+    gate: null,
+    springs: [],
     dashFrom: null,
     hints: [],
     checkpoint: Infinity,

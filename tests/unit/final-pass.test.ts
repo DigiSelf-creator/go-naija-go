@@ -64,12 +64,12 @@ function hit(run: Run): RunEvent[] {
 describe('game over', () => {
   it('a hit on the last life ends food effects (corn and amala)', () => {
     const run = new Run(hallLevel());
-    run.power = { corn: RULES.cornSteps, amala: RULES.amalaSteps, ikokore: 0, ofada: 0, shield: false };
+    run.power = { corn: RULES.cornSteps, amala: RULES.amalaSteps, ikokore: 0, ofada: 0, kilishi: 0, fura: 0, shield: false };
     run.lives = 1;
     const ev = hit(run);
     expect(ev.map((e) => e.type)).toContain('gameOver');
     expect(run.phase).toBe('over');
-    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, shield: false });
+    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, fura: 0, shield: false });
   });
 
   it('keeps the hall view behind the game over screen: the whole hall, centred', () => {
