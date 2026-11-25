@@ -521,6 +521,14 @@ export const WORDS = {
     /** The plain spelling, if a phone shows a tone mark as a box. */
     plain: { 'Ẹ káàárọ̀!': 'E kaaro!', 'Ụtụtụ ọma!': 'Ututu oma!', 'Ẹ n lẹ́ o!': 'E n le o!', 'Ẹ kú iṣẹ́!': 'E ku ise!' } as Readonly<Record<string, string>>,
   },
+  /**
+   * MS3b: quick missions (docs/missions.md part 2): the city's button. Every other mission word
+   * (the run's, Lagos's five, the board's and the cards') loads with the board
+   * (src/screens/boardWords.ts); Ogun's five are in the Ogun part.
+   */
+  missions: {
+    button: 'Missions',
+  },
 } as const;
 
 /**

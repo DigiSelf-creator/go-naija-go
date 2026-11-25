@@ -15,7 +15,7 @@
  * once into a sprite sheet (bakeFolk) and copy it with drawFolkSprite every frame.
  */
 import { SKINS } from './hero';
-import { INK } from './palette';
+import { EYE_INK, FOLK_INK as INK, HERO_INK, armInk, devPerUnit, folkInkPx, inkRatio, innerPx, screenPerUnit, silhouette } from './ink';
 
 const TAU = Math.PI * 2;
 
@@ -26,10 +26,53 @@ const LX = 0.55;
 const LY = -0.835;
 const RIM_LIGHT = '#fff0cc';
 const PLUM = '#2a1c38';
-/** Cloth shadow: the hero's plum shadow (base mixed 30 % toward plum), as a see-through layer so patterns shade too. */
-const CLOTH_SHADE = 'rgba(42,28,56,0.3)';
-/** Outline width (u): thinner than the hero's, so the hero always reads first (part 3). */
+/**
+ * Outline width (u) before style 1.8. Outlines are now set in screen pixels when a person is drawn
+ * (baked): max(1.2 u, 1.5 px) in warm ink, at least 1 device px thinner than the hero's
+ * (src/art/ink.ts folkInkPx). Kept for things that still give a width in units.
+ */
 export const FOLK_OUTLINE = 1.5;
+
+/*
+ * Style 1.8 outlines. 'one': a thing drawn once (lane fronts, props): every outline is the full
+ * outline. 'sil' and 'paint': a person drawn twice (silhouette, then paint): one thick outline
+ * round the whole figure, thin lines between its parts.
+ */
+let pass: 'one' | 'sil' | 'paint' = 'one';
+
+function dpuOf(g: G): number {
+  return devPerUnit(g) ?? 1;
+}
+/** The visible edge (local units) of an outline in this pass. */
+function edgeOf(g: G): number {
+  const dpu = dpuOf(g);
+  const out = folkInkPx(dpu);
+  return (pass === 'paint' ? innerPx(out) : out) / dpu;
+}
+/** Stroke width for an outline stroked AFTER its fill (half of it lies inside the shape). */
+function after(g: G): number {
+  return pass === 'paint' ? edgeOf(g) : armInk(2 * edgeOf(g));
+}
+/** A line of `w` units, never thinner than 1 screen px. */
+function fine(g: G, w: number): number {
+  return Math.max(w, inkRatio() / dpuOf(g));
+}
+/** True when `w` local units are at least 2 screen px (shades and highlights). */
+function shows(g: G, w: number): boolean {
+  return devPerUnit(g) === null || w * dpuOf(g) >= 2 * inkRatio();
+}
+
+/** Draws a person twice: the silhouette (thick outline only), then the paint with thin inner lines. */
+function twoPass(g: G, draw: (g: G) => void): void {
+  pass = 'sil';
+  try {
+    draw(silhouette(g));
+    pass = 'paint';
+    draw(g);
+  } finally {
+    pass = 'one';
+  }
+}
 
 function mix(a: string, b: string, k: number): string {
   const x = parseInt(a.slice(1), 16);
@@ -49,10 +92,10 @@ function memo(key: string, make: () => string): string {
   return v;
 }
 /** A cloth's shadow tone (for limbs, where a solid tone is cheaper than a layer). */
-const deepOf = (c: string): string => memo(`d${c}`, () => mix(c, PLUM, 0.3));
+const deepOf = (c: string): string => memo(`d${c}`, () => mix(c, PLUM, 0.25));
 /** A cloth's light edge: its shadow tone leaning to warm cream, as the hero's rim. */
 const rimOf = (c: string): string => memo(`r${c}`, () => mix(deepOf(c), RIM_LIGHT, 0.42));
-const glowOf = (c: string): string => memo(`g${c}`, () => mix(c, '#fff6e2', 0.4));
+const glowOf = (c: string): string => memo(`g${c}`, () => mix(c, RIM_LIGHT, 0.3));
 
 export interface FolkSkin {
   base: string;
@@ -166,10 +209,11 @@ export const FOLK_FRAMES = ['stand', ...four('walk'), 'wave0', 'wave1', 'cheer0'
 
 /** Heights (u, feet to top of head) and head radius by age (part 3: adults 37, teens 33, children 26, elders 36). */
 const AGE: Record<FolkAge, { H: number; r: number }> = {
-  child: { H: 26, r: 3.9 },
-  teen: { H: 33, r: 4.1 },
-  adult: { H: 37, r: 4.3 },
-  elder: { H: 36, r: 4.3 },
+  // Style 1.8: big friendly heads: 12 u on an adult (about 3.1 heads), 11 on a teen, 10 on a child
+  child: { H: 26, r: 5 },
+  teen: { H: 33, r: 5.5 },
+  adult: { H: 37, r: 6 },
+  elder: { H: 36, r: 6 },
 };
 /** Every frame of every look fits this box (u) round the feet; the sprite cell. */
 export const FOLK_BOX = { l: -15, r: 15, t: -48, b: 3 } as const;
@@ -204,9 +248,10 @@ function rig(look: FolkLook): Rig {
     sh,
     sw: 4.3 * k * bw * (f ? 0.92 : 1),
     hw: 3.6 * k * bw * (f ? 1.14 : 1),
-    hip: -0.46 * A.H,
-    armW: 2.2 * k * (bw > 1 ? 1.12 : 1),
-    legW: 2.6 * k * (bw > 1 ? 1.15 : 1),
+    // The body below the bigger head: the legs keep a little over half of it
+    hip: -(A.H - 2 * r - 1.5 * k) * 0.62,
+    armW: 3.2 * k * (bw > 1 ? 1.12 : 1),
+    legW: 3.9 * k * (bw > 1 ? 1.15 : 1),
     waist: f ? -0.5 : look.body === 'round' ? 1.4 : 0.3,
   };
 }
@@ -404,38 +449,36 @@ type G = CanvasRenderingContext2D;
  * One solid part with the hero's light: base, an optional pattern, the shadow crescent on the
  * side away from the light, the thin light edge inside it, then the ink outline.
  */
-function part(g: G, path: () => void, base: string, opts: { shade?: string; rim?: string; deco?: () => void; sh?: number; line?: number } = {}): void {
-  const sh = opts.sh ?? 1.8;
+function part(g: G, path: () => void, base: string, opts: { shade?: string; rim?: string; deco?: () => void; sh?: number; line?: number; ink?: string } = {}): void {
+  const sh = opts.sh ?? 2.2;
   g.beginPath();
   path();
   g.fillStyle = base;
   g.fill();
-  g.save();
-  g.clip();
-  opts.deco?.();
-  // Shadow: the shape less a copy moved toward the light
+  // Style 1.8: one solid shade (the base 25 % toward plum) on the side away from the light, with a
+  // hard edge, only where it is 2 px wide or more; then the pattern; no rim line, no see-through.
+  const shade = shows(g, sh * 0.8);
+  if (shade || opts.deco) {
+    g.save();
+    g.clip();
+    if (shade) {
+      g.beginPath();
+      path();
+      g.save();
+      g.translate(LX * sh, LY * sh);
+      path();
+      g.restore();
+      g.fillStyle = opts.shade ?? deepOf(base);
+      g.fill('evenodd');
+    }
+    opts.deco?.();
+    g.restore();
+  }
+  void opts.rim;
   g.beginPath();
   path();
-  g.save();
-  g.translate(LX * sh, LY * sh);
-  path();
-  g.restore();
-  g.fillStyle = opts.shade ?? CLOTH_SHADE;
-  g.fill('evenodd');
-  // Light edge inside the shadow
-  g.save();
-  g.translate(LX * 0.95, LY * 0.95);
-  g.beginPath();
-  path();
-  g.restore();
-  g.strokeStyle = opts.rim ?? rimOf(base);
-  g.lineWidth = 0.55;
-  g.stroke();
-  g.restore();
-  g.beginPath();
-  path();
-  g.strokeStyle = INK;
-  g.lineWidth = opts.line ?? FOLK_OUTLINE;
+  g.strokeStyle = opts.ink ?? INK;
+  g.lineWidth = opts.line !== undefined && pass === 'one' ? Math.max(opts.line, edgeOf(g) * 2) : after(g);
   g.stroke();
 }
 
@@ -448,14 +491,17 @@ function limb(g: G, pts: readonly number[], w: number, base: string, deep: strin
   };
   path(0, 0);
   g.strokeStyle = INK;
-  g.lineWidth = w + FOLK_OUTLINE;
+  g.lineWidth = pass === 'paint' ? w + 2 * edgeOf(g) : armInk(w + 2 * edgeOf(g));
   g.stroke();
-  g.strokeStyle = deep;
+  // Style 1.8: flat, with one solid shade band only when it is 2 px wide or more
+  const shade = shows(g, w * 0.42);
+  g.strokeStyle = shade ? deep : base;
   g.lineWidth = w;
   g.stroke();
-  path(LX * w * 0.18, LY * w * 0.18);
+  if (!shade) return;
+  path(LX * w * 0.22, LY * w * 0.22);
   g.strokeStyle = base;
-  g.lineWidth = w * 0.62;
+  g.lineWidth = w * 0.56;
   g.stroke();
 }
 
@@ -466,7 +512,7 @@ function disc(g: G, x: number, y: number, r: number, fill: string, edge = 0): vo
   g.fill();
   if (edge > 0) {
     g.strokeStyle = INK;
-    g.lineWidth = edge;
+    g.lineWidth = pass === 'one' ? Math.max(edge, 2 * edgeOf(g)) : after(g);
     g.stroke();
   }
 }
@@ -477,7 +523,7 @@ function oval(g: G, x: number, y: number, rx: number, ry: number, fill: string, 
   g.fill();
   if (edge > 0) {
     g.strokeStyle = INK;
-    g.lineWidth = edge;
+    g.lineWidth = pass === 'one' ? Math.max(edge, 2 * edgeOf(g)) : after(g);
     g.stroke();
   }
 }
@@ -500,7 +546,7 @@ function lines(g: G, colour: string, w: number, pts: readonly number[]): void {
     g.lineTo(pts[i + 2]!, pts[i + 3]!);
   }
   g.strokeStyle = colour;
-  g.lineWidth = w;
+  g.lineWidth = fine(g, w);
   g.stroke();
 }
 function box(g: G, x: number, y: number, w: number, h: number, fill: string, r = 0.8): void {
@@ -524,7 +570,7 @@ function pattern(g: G, kind: Pat, colour: string, x0: number, y0: number, x1: nu
     // Our own wax print: rings with a dot, in a staggered grid
     g.strokeStyle = colour;
     g.fillStyle = colour;
-    g.lineWidth = 0.55;
+    g.lineWidth = fine(g, 0.55);
     for (let y = y0, row = 0; y < y1; y += step, row++)
       for (let x = x0 + (row % 2) * step * 0.5; x < x1; x += step) {
         g.beginPath();
@@ -555,7 +601,7 @@ function pattern(g: G, kind: Pat, colour: string, x0: number, y0: number, x1: nu
     // Our own repeat for a proud top from the South East: small open diamonds with a dot
     g.strokeStyle = colour;
     g.fillStyle = colour;
-    g.lineWidth = 0.5;
+    g.lineWidth = fine(g, 0.5);
     const st = step * 1.15;
     for (let y = y0, row = 0; y < y1; y += st, row++)
       for (let x = x0 + (row % 2) * st * 0.5; x < x1; x += st) {
@@ -587,7 +633,7 @@ function pattern(g: G, kind: Pat, colour: string, x0: number, y0: number, x1: nu
     g.stroke();
   } else if (kind === 'weave') {
     g.strokeStyle = colour;
-    g.lineWidth = 0.4;
+    g.lineWidth = fine(g, 0.4);
     g.beginPath();
     for (let y = y0; y < y1; y += 1.4) {
       g.moveTo(x0, y);
@@ -606,7 +652,8 @@ function pattern(g: G, kind: Pat, colour: string, x0: number, y0: number, x1: nu
  */
 export function drawFolkFrame(g: G, look: FolkLook, frame: FolkFrame): void {
   const R = rig(look);
-  drawPose(g, look, poseOf(look, frame, R), R);
+  const p = poseOf(look, frame, R);
+  twoPass(g, (c) => drawPose(c, look, p, R));
 }
 
 function drawPose(g: G, look: FolkLook, p: Pose, R: Rig): void {
@@ -671,10 +718,10 @@ function wheel(g: G, x: number, y: number, r: number, spin: number): void {
   g.beginPath();
   g.arc(x, y, r, 0, TAU);
   g.strokeStyle = INK;
-  g.lineWidth = 2.6;
+  g.lineWidth = fine(g, 2.6);
   g.stroke();
   g.strokeStyle = '#4a4e57';
-  g.lineWidth = 1.4;
+  g.lineWidth = fine(g, 1.4);
   g.stroke();
   disc(g, x, y, 0.9, '#c9cfd6', 0.5);
 }
@@ -697,10 +744,10 @@ function chairFront(g: G, k: number): void {
   g.beginPath();
   g.arc(-1.4 * k, -6.8 * k, 5.4 * k, Math.PI * 1.15, Math.PI * 1.85);
   g.strokeStyle = INK;
-  g.lineWidth = 1.6;
+  g.lineWidth = fine(g, 1.6);
   g.stroke();
   g.strokeStyle = '#c9cfd6';
-  g.lineWidth = 0.7;
+  g.lineWidth = fine(g, 0.7);
   g.stroke();
 }
 
@@ -877,7 +924,7 @@ function torso(g: G, look: FolkLook, R: Rig, skin: FolkSkin, spec: DressSpec, cl
     g.fillStyle = mix(cloth.top, '#ffffff', 0.25);
     g.fill();
     g.strokeStyle = INK;
-    g.lineWidth = 0.6;
+    g.lineWidth = fine(g, 0.6);
     g.stroke();
     if (look.dress !== 'school') lines(g, deepOf(cloth.top), 0.5, [0.2, shY + 2 * k, 0.2, hipY]);
   } else if (top !== 'gown' || !look.head || look.head !== 'hijab') {
@@ -886,7 +933,7 @@ function torso(g: G, look: FolkLook, R: Rig, skin: FolkSkin, spec: DressSpec, cl
     g.fillStyle = skin.base;
     g.fill();
     g.strokeStyle = INK;
-    g.lineWidth = 0.6;
+    g.lineWidth = fine(g, 0.6);
     g.stroke();
   }
   if (spec.embroid === 'neck') embroidery(g, cloth.pat, shY, k, 4.6);
@@ -896,7 +943,7 @@ function torso(g: G, look: FolkLook, R: Rig, skin: FolkSkin, spec: DressSpec, cl
 
 function embroidery(g: G, colour: string, shY: number, k: number, len: number): void {
   g.strokeStyle = colour;
-  g.lineWidth = 0.6;
+  g.lineWidth = fine(g, 0.6);
   g.beginPath();
   g.moveTo(-1.8 * k, shY + 0.2);
   g.quadraticCurveTo(0.2, shY + len * k * 1.1, 2 * k, shY + 0.2);
@@ -940,7 +987,7 @@ function drapeRobe(g: G, look: FolkLook, R: Rig, cloth: { top: string; pat: stri
     // Our own big embroidered panel: a rounded square with a spiral and lines
     const y = shY + 4 * k;
     g.strokeStyle = cloth.pat;
-    g.lineWidth = 0.7;
+    g.lineWidth = fine(g, 0.7);
     g.beginPath();
     g.roundRect(-4.2 * k, y, 6 * k, 6.4 * k, 1.4 * k);
     g.stroke();
@@ -991,6 +1038,12 @@ function arm(g: G, look: FolkLook, R: Rig, skin: FolkSkin, spec: DressSpec, top:
 
 const HAIR_COL = '#1b1410';
 const HAIR_ACC = '#4a382c';
+/** The hairline highlight on the darkest skins (style 1.8 part 3.6). */
+const HAIR_ACC_LIGHT = '#7a6656';
+/** The three darkest skins (style 1.8 part 7): hero-ink head outline, catch-lights, cheek glow. */
+const DARK_SKINS: readonly string[] = ['#3a2012', '#4b2c1a', '#7a4a2a'];
+/** Cheek blush on every skin (style 1.8 part 4). */
+const BLUSH = 'rgba(230,110,90,0.28)';
 const GREY = '#d3cec6';
 
 function head(g: G, look: FolkLook, R: Rig, skin: FolkSkin, cy: number, back: boolean): void {
@@ -1040,7 +1093,8 @@ function drawHeadAt(g: G, look: FolkLook, cx: number, cy: number, r: number, ski
     if (look.hair === 'bun' && hw === 'none') part(g, () => g.arc(cx - r * 0.35, cy - r * 1.1, r * 0.5, 0, TAU), hairCol, { rim: HAIR_ACC, sh: 0.8 });
   }
   // The head
-  part(g, () => g.ellipse(cx, cy, r * 0.95, r, 0, 0, TAU), skin.base, { shade: skin.deep, rim: skin.rim, sh: 1.5 });
+  // Style 1.8 part 7: on the three darkest skins the head outline is hero ink, so the edge shows
+  part(g, () => g.ellipse(cx, cy, r * 0.95, r, 0, 0, TAU), skin.base, { shade: skin.deep, sh: r * 0.32, ink: DARK_SKINS.includes(skin.base) ? HERO_INK : INK });
   // Ear (far side shows in three-quarter; both from behind)
   for (const ex of back ? [-1, 1] : [-1]) disc(g, cx + ex * r * 0.92, cy + 0.15 * r, r * 0.22, skin.base, 0.7);
 
@@ -1057,18 +1111,18 @@ function drawHeadAt(g: G, look: FolkLook, cx: number, cy: number, r: number, ski
       g.restore();
       g.beginPath();
       g.ellipse(cx, cy, r * 0.95, r, 0, 0, TAU);
-      g.strokeStyle = INK;
-      g.lineWidth = FOLK_OUTLINE;
+      g.strokeStyle = DARK_SKINS.includes(skin.base) ? HERO_INK : INK;
+      g.lineWidth = after(g);
       g.stroke();
     }
   } else {
     face(g, look, cx, cy, r, skin, k);
-    if (hw === 'none' || hw === 'gele' || hw === 'headscarf' || hw === 'helmet') hairCap(g, look, cx, cy, r, hairCol, hw !== 'none');
+    if (hw === 'none' || hw === 'gele' || hw === 'headscarf' || hw === 'helmet') hairCap(g, look, cx, cy, r, hairCol, hw !== 'none', skin.base);
   }
   headwear(g, look, cx, cy, r, hcol, back, k);
   if (!back && look.glasses) {
     g.strokeStyle = INK;
-    g.lineWidth = 0.55;
+    g.lineWidth = fine(g, 0.55);
     for (const ex of [-0.2, 0.5]) {
       g.beginPath();
       g.arc(cx + ex * r, cy + 0.02 * r, r * 0.27, 0, TAU);
@@ -1079,38 +1133,43 @@ function drawHeadAt(g: G, look: FolkLook, cx: number, cy: number, r: number, ski
 }
 
 function face(g: G, look: FolkLook, cx: number, cy: number, r: number, skin: FolkSkin, k: number): void {
-  const big = look.age === 'child' ? 1.15 : 1;
-  for (const ex of [-0.2, 0.5]) {
-    oval(g, cx + ex * r, cy + 0.02 * r, r * 0.17 * big, r * 0.2 * big, '#fffaf0');
-    disc(g, cx + ex * r + r * 0.04, cy + 0.04 * r, r * 0.12 * big, INK);
+  // Style 1.8 part 4: two solid eye ovals 22 % of the head tall with a white catch-light, one
+  // smile line, a cheek blush. Brows and elder lines only on big heads (20 px or more).
+  const big = look.age === 'child' ? 1.12 : 1;
+  const dpu = dpuOf(g);
+  const faceDetail = devPerUnit(g) === null || 2 * r * screenPerUnit(dpu) >= 20;
+  const line = Math.max(0.6, inkRatio() / dpu);
+  if (DARK_SKINS.includes(skin.base)) oval(g, cx + 0.5 * r, cy + 0.36 * r, Math.max(0.24 * r, (1.1 * inkRatio()) / dpu), 0.15 * r, skin.rim);
+  oval(g, cx + 0.42 * r, cy + 0.4 * r, 0.2 * r, 0.12 * r, BLUSH);
+  const ry = 0.22 * r * big;
+  const cl = Math.max(0.055 * r, 0.5 / dpu, (0.3 * inkRatio()) / dpu);
+  for (const ex of [-0.18, 0.46]) {
+    oval(g, cx + ex * r, cy + 0.02 * r, ry * 0.7, ry, EYE_INK);
+    disc(g, cx + ex * r + ry * 0.25, cy + 0.02 * r - ry * 0.4, cl, '#ffffff');
   }
-  // Brows: a short dark stroke, with a thin light line above on darker skins so they read
-  if (look.skin === 3 || look.skin === 4 || look.skin === 6) lines(g, skin.rim, 0.4, [cx - 0.36 * r, cy - 0.36 * r, cx - 0.06 * r, cy - 0.4 * r, cx + 0.36 * r, cy - 0.4 * r, cx + 0.66 * r, cy - 0.36 * r]);
-  lines(g, look.age === 'elder' ? '#9a948b' : INK, 0.55, [cx - 0.34 * r, cy - 0.28 * r, cx - 0.08 * r, cy - 0.32 * r, cx + 0.36 * r, cy - 0.32 * r, cx + 0.64 * r, cy - 0.28 * r]);
-  // A warm smile
-  g.beginPath();
-  g.arc(cx + 0.16 * r, cy + 0.36 * r, r * 0.26, 0.15 * Math.PI, 0.85 * Math.PI);
-  g.strokeStyle = skin.mouth;
-  g.lineWidth = 0.7;
-  g.stroke();
+  if (faceDetail) {
+    if (look.skin === 3 || look.skin === 4 || look.skin === 6) lines(g, skin.rim, 0.4, [cx - 0.36 * r, cy - 0.4 * r, cx - 0.06 * r, cy - 0.44 * r, cx + 0.36 * r, cy - 0.44 * r, cx + 0.66 * r, cy - 0.4 * r]);
+    lines(g, look.age === 'elder' ? '#9a948b' : INK, 0.55, [cx - 0.34 * r, cy - 0.32 * r, cx - 0.08 * r, cy - 0.36 * r, cx + 0.36 * r, cy - 0.36 * r, cx + 0.64 * r, cy - 0.32 * r]);
+  }
   if (look.beard) {
     g.beginPath();
     g.arc(cx + 0.1 * r, cy + 0.1 * r, r * 0.86, 0.12 * Math.PI, 0.88 * Math.PI);
     g.strokeStyle = GREY;
     g.lineWidth = r * 0.3;
     g.stroke();
-    g.beginPath();
-    g.arc(cx + 0.16 * r, cy + 0.36 * r, r * 0.22, 0.2 * Math.PI, 0.8 * Math.PI);
-    g.strokeStyle = skin.mouth;
-    g.lineWidth = 0.6;
-    g.stroke();
   }
-  if (look.age === 'elder') lines(g, skin.deep, 0.4, [cx + 0.78 * r, cy + 0.2 * r, cx + 0.7 * r, cy + 0.42 * r]);
+  // A warm smile, about 30 % of the head wide
+  g.beginPath();
+  g.arc(cx + 0.16 * r, cy + 0.32 * r, r * 0.3, 0.18 * Math.PI, 0.82 * Math.PI);
+  g.strokeStyle = skin.mouth;
+  g.lineWidth = line;
+  g.stroke();
+  if (look.age === 'elder' && faceDetail) lines(g, skin.deep, 0.4, [cx + 0.78 * r, cy + 0.2 * r, cx + 0.7 * r, cy + 0.42 * r]);
   void k;
 }
 
 /** Short hair on top of the head, front view: low cut, grey, cornrows, the front of an afro, braids or puffs. */
-function hairCap(g: G, look: FolkLook, cx: number, cy: number, r: number, col: string, under: boolean): void {
+function hairCap(g: G, look: FolkLook, cx: number, cy: number, r: number, col: string, under: boolean, skinBase: string): void {
   if (under) {
     // Under a gele, scarf or helmet only a little shows at the temple
     if (look.hair === 'grey') disc(g, cx - 0.78 * r, cy - 0.05 * r, 0.25 * r, GREY);
@@ -1137,13 +1196,36 @@ function hairCap(g: G, look: FolkLook, cx: number, cy: number, r: number, col: s
   g.beginPath();
   g.ellipse(cx, cy, r * 0.95 + 0.2, r + 0.2, 0, Math.PI * 1.02, Math.PI * 1.98);
   g.strokeStyle = INK;
-  g.lineWidth = FOLK_OUTLINE;
+  g.lineWidth = after(g);
   g.stroke();
+  // Style 1.8 part 3.6: dark hair on a dark skin gets a 1 px highlight along its top
+  if (col === HAIR_COL && DARK_SKINS.includes(skinBase)) {
+    g.beginPath();
+    g.ellipse(cx, cy, r * 0.95 - 0.5, r - 0.5, 0, Math.PI * 1.15, Math.PI * 1.75);
+    g.strokeStyle = HAIR_ACC_LIGHT;
+    g.lineWidth = fine(g, 0.5);
+    g.stroke();
+  }
 }
 
 function headwear(g: G, look: FolkLook, cx: number, cy: number, r: number, col: string, back: boolean, k: number): void {
   const hw = look.head ?? 'none';
   if (hw === 'none') return;
+  if (hw === 'gele') {
+    // Style 1.8: the head grew, so the gele is a little smaller on it (about its brow band) and
+    // stays tied cloth, grand but inside the sprite box.
+    g.save();
+    g.translate(cx, cy - 0.3 * r);
+    g.scale(0.8, 0.8);
+    g.translate(-cx, -(cy - 0.3 * r));
+    headwearShape(g, look, cx, cy, r, col, back, k, hw);
+    g.restore();
+    return;
+  }
+  headwearShape(g, look, cx, cy, r, col, back, k, hw);
+}
+
+function headwearShape(g: G, look: FolkLook, cx: number, cy: number, r: number, col: string, back: boolean, k: number, hw: FolkHeadwear): void {
   const sheen = glowOf(col);
   switch (hw) {
     case 'gele': {
@@ -1172,7 +1254,7 @@ function headwear(g: G, look: FolkLook, cx: number, cy: number, r: number, col: 
       g.moveTo(cx - r * 1.1, cy - r * 0.4);
       g.quadraticCurveTo(cx, cy - r * 1.0, cx + r * 1.15, cy - r * 0.6);
       g.strokeStyle = look.b === col ? sheen : look.b;
-      g.lineWidth = 0.8;
+      g.lineWidth = fine(g, 0.8);
       g.stroke();
       break;
     }
@@ -1284,7 +1366,7 @@ function headwear(g: G, look: FolkLook, cx: number, cy: number, r: number, col: 
           sh: 1.1,
           deco: () => {
             g.strokeStyle = look.b;
-            g.lineWidth = 0.5;
+            g.lineWidth = fine(g, 0.5);
             for (const y of [0.75, 1.15]) {
               g.beginPath();
               for (let i = 0; i <= 8; i++) {
@@ -1357,7 +1439,7 @@ function behind(g: G, look: FolkLook, R: Rig, shY: number, hipY: number, backVie
     if (!backView) {
       // Asleep and content: closed eyes, a small smile
       g.strokeStyle = INK;
-      g.lineWidth = 0.45;
+      g.lineWidth = fine(g, 0.45);
       for (const ex of [-0.45, 0.4]) {
         g.beginPath();
         g.arc(hx + ex * hr, hy + 0.05 * hr, hr * 0.2, 0.1 * Math.PI, 0.9 * Math.PI);
@@ -1454,7 +1536,7 @@ function heldFront(g: G, look: FolkLook, R: Rig, p: Pose, shY: number, headY: nu
         g.beginPath();
         g.arc(0, 3, 3, Math.PI, TAU);
         g.strokeStyle = '#8a6634';
-        g.lineWidth = 0.8;
+        g.lineWidth = fine(g, 0.8);
         g.stroke();
         goods(2.6, [[-1.2, '#e74c3c'], [1.2, '#3f8f4a']]);
         lines(g, INK, 0.8, [-3.4, 3, 3.4, 3]);
@@ -1533,7 +1615,7 @@ export function drawFolkBall(g: G, x: number, y: number, r = 2.4): void {
   g.beginPath();
   g.arc(x, y, r, 0, TAU);
   g.strokeStyle = INK;
-  g.lineWidth = 0.9;
+  g.lineWidth = fine(g, 0.9);
   g.stroke();
 }
 

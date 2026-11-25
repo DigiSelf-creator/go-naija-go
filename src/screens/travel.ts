@@ -46,7 +46,7 @@ export function wheelLine(n: number, ogun: OgunView): string {
 export const boomShown = (points: number): number => Math.max(0, Math.min(20, Math.floor(Number.isFinite(points) ? points : 0)));
 
 /** A card on a dim layer. Escape runs `out`. */
-function layer(card: HTMLElement, out: () => void): HTMLElement {
+export function layer(card: HTMLElement, out: () => void): HTMLElement {
   // tabindex -1: with no button showing ("Downloading Ogun..."), focus stays here so Escape still closes it.
   const dim = h('div', { class: 'travel-dim', tabindex: '-1' }, card);
   dim.addEventListener('keydown', (e) => {

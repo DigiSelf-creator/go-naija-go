@@ -164,11 +164,13 @@ describe('the people kit (S3g1a)', () => {
       expect(f.length).toBeLessThanOrEqual(10);
       for (const x of f) expect(FOLK_FRAMES).toContain(x);
     }
+    // ST-H3 (style 1.8 part 5): a cast that does not fit goes on into another sheet; the pixels per unit stay.
     const lay = folkSheetLayout(160, 4.5);
     expect(lay.width).toBeLessThanOrEqual(1024);
     expect(lay.height).toBeLessThanOrEqual(1024);
-    expect(lay.cols * lay.rows).toBeGreaterThanOrEqual(160);
-    expect(lay.pxPerU).toBeLessThan(4.5);
+    expect(lay.perSheet * lay.sheets).toBeGreaterThanOrEqual(160);
+    expect(lay.pxPerU).toBe(4.5);
+    expect(folkSheetLayout(160, 1.87).sheets).toBe(1);
     expect(folkSheetLayout(10, 2).pxPerU).toBe(2);
   });
 

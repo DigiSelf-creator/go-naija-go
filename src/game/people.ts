@@ -11,7 +11,7 @@ import type { FolkFrame, FolkLook } from '../art/folk';
 import type { HeroLook } from '../art/hero';
 import { ROOM } from '../art/wellRoom';
 import type { View } from '../engine/view';
-import { CastSheet, LayerSlot, drawBubbleAt, drawBusHeads, drawKekeHeads, drawOkadaBaked, drawWindowRow, screenRatio, type Rect } from './crowdDraw';
+import { CastSheet, LayerSlot, type CastCell, drawBubbleAt, drawBusHeads, drawKekeHeads, drawOkadaBaked, drawWindowRow, screenRatio, type Rect } from './crowdDraw';
 import { CROWD, FrameWatch, HallCrowd, RoomKeeper, STREET_OF, StreetCrowd, crowdSpots, hallCast, ownCast, streetCast, type Bubble, type CrowdEvent, type CrowdLook, type CrowdView, type FolkDraw, type StreetCast } from './crowd';
 import type { Level } from './level';
 import type { Run } from './run';
@@ -20,8 +20,17 @@ type G = CanvasRenderingContext2D;
 export type CrowdSound = 'crowdCheer' | 'crowdCheerBig';
 
 const NONE: readonly never[] = [];
-/** The hall's sheet is baked at this person size: the door people's (HallCrowd.draw). */
-const HALL_BAKE_SIZE = 0.9;
+/**
+ * The hall's people are baked at each size HallCrowd.draw shows them (style 1.8 part 5: copied
+ * 1:1, never stretched; scaled copies also cost a slow phone several fps, qa round 5): everyone
+ * at full size for the kind finish, the door people (looks 0 to 2) at 0.9 and those outside the
+ * cut walls at 0.95, standing and cheering.
+ */
+const HALL_FULL: readonly CastCell[] = ['stand', 'walk0', 'walk1', 'walk2', 'walk3', 'cheer0', 'cheer1', 'clap0', 'clap1'];
+const HALL_DOOR: readonly CastCell[] = [...HALL_FULL, ...(['stand', 'cheer0', 'cheer1'] as const).map((frame) => ({ frame, size: 0.9 }))];
+const HALL_SIDE: readonly CastCell[] = [...HALL_FULL, ...(['stand', 'cheer0', 'cheer1'] as const).map((frame) => ({ frame, size: 0.95 }))];
+/** The cells baked for the hall's look `i`. */
+export const hallCells = (_l: FolkLook, i: number): readonly CastCell[] => (i < 3 ? HALL_DOOR : HALL_SIDE);
 
 /** The okada passes every 25 s of play at 300 u/s on the far road (part 4). */
 export const OKADA = { every: 25, speed: 300, firstAt: 6, scale: 0.55 } as const;
@@ -57,7 +66,7 @@ export class GamePeople {
   private hallLooks: FolkLook[] = [];
   private walkLooks = new Set<number>();
   private readonly streetSheet = new CastSheet((l, i) => this.streetFrames(l, i));
-  private readonly hallSheet = new CastSheet(() => ['stand', 'walk0', 'walk1', 'walk2', 'walk3', 'cheer0', 'cheer1', 'clap0', 'clap1']);
+  private readonly hallSheet = new CastSheet(hallCells);
   private readonly roomSheet = new CastSheet(() => ['sit', 'wave0', 'wave1', 'clap0', 'clap1']);
   /** The last list drawn (for tests and qa: nobody after the hero). */
   drawn: FolkDraw[] = [];
@@ -337,7 +346,7 @@ export class GamePeople {
 
   /** Device px per world unit, and the sheet ready for it. */
   private ready(view: View): void {
-    if (this.street) this.streetSheet.ready(this.looks, view.scale, this.key);
+    if (this.street) this.streetSheet.ready(this.looks, view.scale, this.key, view.ratio);
   }
 
   /** The passengers of the passing bus or keke (backdrop.ts riders), in its own transform. */
@@ -466,9 +475,14 @@ export class GamePeople {
     if (!room) return;
     // O3b: a later state's room has its own keeper (Ogun's in the Ijebu garri store).
     const own = n.cast?.keeper;
-    this.roomSheet.ready([own?.look ?? STORE_KEEPER], view.scale, own ? 'keeper|own' : 'keeper');
+    this.roomSheet.ready([own?.look ?? STORE_KEEPER], view.scale, own ? 'keeper|own' : 'keeper', view.ratio);
     const d: FolkDraw = { look: 0, frame: this.keeper.frame(), x: own?.x ?? STORE_KEEPER_SPOT.x, y: room.groundY - CROWD.feetUp, flip: false, size: 1 };
-    this.roomSheet.draw(g, d);
+    // In device pixels, a 1:1 copy at whole pixels (as the street's batch).
+    const k = view.scale;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    this.roomSheet.drawDevice(g, d, (d.x - n.camX) * k, (d.y - n.lift) * k, k);
+    g.restore();
     this.drawn = [d];
     this.seen = 1;
     // Life above: a soft shadow of feet crossing a ceiling light hole every 6 s.
@@ -491,9 +505,8 @@ export class GamePeople {
   private drawHallNow(g: G, view: View, n: PeopleNow, outside: boolean): void {
     if (!outside) this.drawn = [];
     if (!this.on || !this.hall || !n.run.boss) return;
-    // Baked at the door people's size (0.9), so most of them are a 1:1 copy at whole device pixels
-    // (as the street's batch): scaled copies from the sheet cost a slow phone several fps (qa round 5).
-    this.hallSheet.ready(this.hallLooks, view.scale * HALL_BAKE_SIZE, `hall|${this.key}`);
+    // Baked at every size they are shown at (HALL_DOOR, HALL_SIDE): each a 1:1 copy at whole device pixels.
+    this.hallSheet.ready(this.hallLooks, view.scale, `hall|${this.key}`, view.ratio);
     const list = outside ? this.later : this.hall.draw(this.hallView(n));
     if (!outside) {
       this.later = list;

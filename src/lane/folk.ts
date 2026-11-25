@@ -205,7 +205,7 @@ export class LaneFolk {
   /** The sheet and the front tiles at this screen's size (CSS px per metre at about 10 m, device px). */
   ready(ppmRef: number, ratio: number): void {
     const dev = ppmRef * ratio;
-    this.sheet.ready(LANE_LOOKS, (dev * LANE_FOLK_M) / 37, 'lane');
+    this.sheet.ready(LANE_LOOKS, (dev * LANE_FOLK_M) / 37, 'lane', ratio);
     if (Math.abs(dev - this.frontPpm) > 1e-6) {
       this.frontPpm = dev;
       this.fronts.clear();

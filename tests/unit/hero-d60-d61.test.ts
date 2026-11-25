@@ -86,7 +86,8 @@ describe('decision 60: the richer hero', () => {
             const w = watch();
             drawHero(w.g, look, { ...stand, face });
             expect(w.fills.get(SKINS[skin]!.face.lip.toLowerCase()), `${face} ${JSON.stringify(look)}`).toBe(1);
-            expect(w.used.has('#ffffff')).toBe(true);
+            // Style 1.8: solid eyes; the white is their catch-light, so only open eyes show it
+            if (face !== 'hurt' && face !== 'win') expect(w.used.has('#ffffff')).toBe(true);
             const r = boundsContext();
             drawHero(r.g, look, { ...stand, face });
             expect(r.bad).toEqual([]);
@@ -148,8 +149,11 @@ describe('decision 60: sprites at the screen scale', () => {
     // S3g1b perf: the garri suit fully on is kept as sprites of its own (it can stay on for a whole street).
     expect(spriteKey({ phase: 0.2, inAir: false, facing: 1, glow: false, suit: {} })).toMatch(/^s/);
     expect(spriteKey({ phase: 0.2, inAir: true, facing: 1, glow: false, suit: { on: 1 }, vy: 100 })).toMatch(/^sa/);
-    // Effects, standing and set moods draw live
+    // Effects and standing are not kept here (standing has its own sprite: momentKey)
     const base: HeroPose = { phase: 0.2, inAir: false, facing: 1, glow: false };
+    // A set mood (the wince, the beam of a win) is kept with its own face (qa ST-H4: the halls)
+    expect(spriteKey({ ...base, face: 'hurt' })).toBe('hurtr5l0');
+    expect(spriteKey({ ...base, face: 'win', inAir: true, vy: 0 })).toBe('wina0');
     for (const p of [
       { ...base, glow: true },
       { ...base, fast: true },
@@ -162,7 +166,6 @@ describe('decision 60: sprites at the screen scale', () => {
       { ...base, dust: 0.2 },
       { ...base, throwing: 0.3 },
       { ...base, rope: true },
-      { ...base, face: 'hurt' as const },
       { ...base, front: 1 },
       { ...base, push: 0.5 },
     ])
