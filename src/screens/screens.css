@@ -3151,6 +3151,44 @@ body.lane {
   }
 }
 
+/* K1c fix (qa O7 "every size fits"): Lagos, Ogun and Kano stacked need about 200 px. Where the
+   layer has less room than that inside its safe edges (320 x 240 with 24 px edges), the three
+   sit side by side, each with its words on short lines, so no place falls off the screen. */
+.travel-dim {
+  container-type: size;
+}
+@container (max-height: 200px) and (max-width: 479px) {
+  .travel-places.three {
+    flex-direction: row;
+  }
+  .travel-places.three .travel-place {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    min-width: 0;
+    gap: 0;
+    min-height: 48px;
+    padding: 2px 4px;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  .travel-places.three .travel-name {
+    font-size: 1rem;
+  }
+  /* The icons flow in the line with the words, so each place stays short. */
+  .travel-places.three .travel-place > :not(.travel-name),
+  .travel-places.three .travel-cog {
+    display: inline;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .travel-places.three .travel-place svg {
+    width: 13px;
+    height: 13px;
+    vertical-align: -2px;
+  }
+}
+
 /* MS-R4: with "Missions" the row holds five: "Challenge road" and "Nigeria's wheel" take two lines
    sooner, so all five stay in one row on a phone held sideways (the wheel moves into Settings only
    where even then they do not fit). */
