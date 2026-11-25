@@ -99,8 +99,9 @@ test('Kano from above: collect, buy with the one wallet, the boom, Travel, the C
   // The boards: road, lamps, mast, dye pits (the grain market waits for the road, the pyramid for the boom).
   expect(await city.locator('.city-board').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset['build']).sort())).toEqual(['dye', 'lightsOut', 'sandyRoad', 'slowInternet']);
   await expect(city.locator('[data-build="dye"]')).toHaveAttribute('aria-label', 'Dye pits. 5 naira left. You have 40 naira. Walk there.');
-  // The Play buttons, the Challenge road, Travel, Hero and the wheel; Sound and Settings at the top.
-  for (const b of ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau', 'Go to Borehole Hall', 'Challenge road', 'Travel', 'Hero', "Nigeria's wheel"]) await expect(city.locator('.city-bottom').getByRole('button', { name: b })).toBeVisible();
+  // The Play buttons, KM1 to KM5's Missions, the Challenge road, Travel, Hero and the wheel (MS-R4:
+  // in Settings where the row has no room); Sound and Settings at the top.
+  for (const b of ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau', 'Go to Borehole Hall', 'Missions', 'Challenge road', 'Travel', 'Hero']) await expect(city.locator('.city-bottom').getByRole('button', { name: b, exact: true })).toBeVisible();
   await expect(city.locator('.city-top').getByRole('button', { name: 'Settings' })).toBeVisible();
 
   // The still city draws nothing (its only place is full, so it rests).

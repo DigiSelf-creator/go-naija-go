@@ -12,7 +12,7 @@
  */
 import { KANO_WORDS, WORLD_PART_WORDS, addShortToasts } from '../screens/words';
 import type { StreetSkin } from '../game/skin';
-import type { ArenaRules, Run } from '../game/run';
+import type { ArenaRules, Run, StreetRules } from '../game/run';
 import type { Tune } from '../art/tunes';
 import type { CityKit, WorldCity, WorldCityHooks, WorldUi } from './ui';
 import type { HarmattanKit } from './kano/laneLook';
@@ -66,6 +66,8 @@ export interface WorldPart {
    * part has none for it yet. Optional in the shape check.
    */
   readonly street?: (level: Level) => StreetSkin | null;
+  /** K-size: the part's own street rules for each play (Kano's wind, gate and dust whirls). Optional. */
+  readonly rules?: (run: Run) => StreetRules;
   /** K2b: the part's own sound recipes (a part that imports only types cannot add them itself). Optional. */
   readonly sounds?: Readonly<Partial<Record<SoundName, Recipe>>>;
   /** K-size (kano.md 9.1): the words the first load's toasts, chips and cards show once the part is in. Optional. */

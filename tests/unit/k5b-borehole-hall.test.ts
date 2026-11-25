@@ -20,7 +20,8 @@
 import { describe, expect, it } from 'vitest';
 import hallRaw from '../../src/data/levels/kano-hall.json';
 import { parseLevel } from '../../src/game/level';
-import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { HAZARD_BOX, RULES, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { Run } from './kano-run';
 import { CRATE_RULES } from '../../src/game/crates';
 import { PHYSICS } from '../../src/engine/physics';
 import { KANO_WORDS } from '../../src/worlds/kano/words';

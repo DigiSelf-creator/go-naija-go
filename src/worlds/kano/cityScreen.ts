@@ -25,6 +25,7 @@ import { KURMI_CAST, KURMI_TRADER_LOOKS } from './kurmi';
 import { KOFAR_BEATERS, KOFAR_BUYER, KOFAR_DYERS, KOFAR_MATA_CAST } from './kofarMata';
 import { DAWANAU_CAST, DAWANAU_DRIVER, DAWANAU_MEASURERS, DAWANAU_PORTERS } from './dawanau';
 import { KANO_CITY_WORDS as KW } from './cityWords';
+import { KANO_WORDS } from './words';
 import {
   FIRST_BOOM,
   KANO_PLACE_LIST,
@@ -109,7 +110,8 @@ function pinTapBox(x: number, y: number, word: string): Box {
 /**
  * Kano's own page rules, put in the page once as the city first opens (they ride in this part,
  * never the first load's style sheet, kano.md 9.1): the streets' Play buttons share one row in
- * the bottom row (K3b to K5b), a little smaller on a narrow screen.
+ * the bottom row (K3b to K5b), a little smaller on a narrow screen. KM1 to KM5: with Missions in
+ * the row, "Challenge road" stays on one line (where five do not fit, the wheel moves into Settings, MS-R4).
  */
 export const KANO_CITY_STYLE = `.city-buttons .go-pair{display:flex;gap:8px;width:100%}
 .city-buttons .go-pair .go{flex:1 1 0;width:auto;min-width:0}
@@ -117,7 +119,8 @@ export const KANO_CITY_STYLE = `.city-buttons .go-pair{display:flex;gap:8px;widt
 @media (max-width:400px){.city-buttons .go-three .go{font-size:15px;line-height:1.1;min-height:48px}}
 .city-buttons .go-four .go{padding:4px 3px}
 @media (max-width:400px){.city-buttons .go-four .go{font-size:12px;padding:4px 1px}}
-@media (max-width:400px){.city-buttons .go-three .go .ic,.city-buttons .go-four .go .ic{display:none}}`;
+@media (max-width:400px){.city-buttons .go-three .go .ic,.city-buttons .go-four .go .ic{display:none}}
+@media (min-width:401px){.kano-city .city-buttons:has(.ms-button) .two-line{max-width:none;white-space:nowrap}}`;
 
 /** The painted still city, kept between visits (this page load only), and the last camera. */
 const painted = new Map<string, { img: HTMLCanvasElement; scale: number }>();
@@ -193,7 +196,22 @@ export class KanoCityScreen implements WorldCity {
   private chipText = '';
   private meterKey = '';
 
-  constructor(private readonly hooks: WorldCityHooks & { kit: CityKit }) {
+  /**
+   * K2b: the Play buttons first in the bottom row: Kurmi; K3b: Kofar Mata beside it (one row) once
+   * Kurmi is cleared; K4b: Dawanau too once Kofar Mata is. K5b: Borehole Hall last once Dawanau is.
+   * K-size: made here, not in the first load (they were menus.ts kanoPlays).
+   */
+  private plays(hall: boolean): HTMLElement[] {
+    const { h, button } = this.hooks.kit.dom;
+    const w = KANO_WORDS;
+    const row = [...w.place.plays, ...(hall ? [w.cleared.toHall] : [])].slice(0, Math.max(1, this.hooks.nextStreet ?? 1)).map((name, i) => button(name, 'go', (e) => this.hooks.play?.(i + 1, e), {}, 'play'));
+    return row.length === 1 ? row : [h('div', { class: ['go-pair', 'go-pair', 'go-pair go-three', 'go-pair go-three go-four'][row.length - 1]! }, ...row)];
+  }
+
+  constructor(
+    private readonly hooks: WorldCityHooks & { kit: CityKit },
+    hall = false,
+  ) {
     const k = (this.k = hooks.kit);
     const w = k.words.city;
     if (!document.getElementById('kano-city-style')) document.head.append(k.dom.h('style', { id: 'kano-city-style' }, KANO_CITY_STYLE));
@@ -221,7 +239,7 @@ export class KanoCityScreen implements WorldCity {
       h('div', { class: 'city-stage' }, this.map, this.signLayer, this.pinLayer),
       this.top,
       this.hintEl,
-      h('div', { class: 'city-bottom' }, h('div', { class: 'city-buttons' }, ...hooks.bottom), h('div', { class: 'city-zoom' }, zoomOut, zoomIn)),
+      h('div', { class: 'city-bottom' }, h('div', { class: 'city-buttons' }, ...this.plays(hall), ...hooks.bottom), h('div', { class: 'city-zoom' }, zoomOut, zoomIn)),
       this.banner,
       this.say,
       this.cardSpot,
@@ -1371,7 +1389,7 @@ export class KanoCityScreen implements WorldCity {
   }
 }
 
-/** The Kano part's city maker (WorldPart.city). Without the game's kit (never expected) nothing can draw. */
-export function kanoCity(hooks: WorldCityHooks): WorldCity {
-  return new KanoCityScreen(hooks as WorldCityHooks & { kit: CityKit });
+/** The Kano part's city maker (WorldPart.city); `hall`: Borehole Hall is in the part. Without the game's kit (never expected) nothing can draw. */
+export function kanoCity(hooks: WorldCityHooks, hall = false): WorldCity {
+  return new KanoCityScreen(hooks as WorldCityHooks & { kit: CityKit }, hall);
 }

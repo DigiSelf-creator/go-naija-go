@@ -11,7 +11,8 @@
 import { describe, expect, it } from 'vitest';
 import kano3 from '../../src/data/levels/kano-3.json';
 import { parseLevel, type Level } from '../../src/game/level';
-import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { HAZARD_BOX, RULES, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { Run } from './kano-run';
 import { pitsOf } from '../../src/game/pits';
 
 const DT = 1 / 60;

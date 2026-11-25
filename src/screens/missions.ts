@@ -53,7 +53,7 @@ export const useArt = (a: SharedArt): void => {
   art = a;
 };
 
-/** A later state's own goal pictures (the Ijebu garri parcel, the gravel); false: not one of its own. */
+/** A later state's own goal pictures (the Ijebu garri parcel, the gravel; Kano's wind, cloth and whirl); false: not one of its own. */
 export type OwnIcon = (g: CanvasRenderingContext2D, icon: MissionIcon, size: number) => boolean;
 
 /** A goal's picture, `px` square, drawn once. */
@@ -68,7 +68,7 @@ export function goalPic(icon: MissionIcon | FoodKind, px: number, own?: OwnIcon)
   const g = c.getContext('2d');
   if (!g) return c;
   g.scale(2, 2);
-  if ((icon === 'parcel' || icon === 'gravel') && own?.(g, icon, px)) return c;
+  if (own?.(g, icon as MissionIcon, px)) return c;
   const k = px / 32;
   g.scale(k, k);
   if (icon === 'coin') {

@@ -10,7 +10,8 @@
  * number. Merged, never overwritten: every number only goes up. A broken copy reads as no stars
  * and is left alone until a star fills (the progress.ts rule).
  */
-import type { FoodKind } from './level';
+import type { FoodKind, Level } from './level';
+import type { GameEvent } from './game';
 import type { Store } from '../storage';
 
 export const KEY_MISSIONS = 'missions';
@@ -19,9 +20,10 @@ export const STAR_KOBO = 200;
 /** A mission's `at` for the state's lane run. */
 export const LANE = 0;
 
-export type Goal = 'coins' | 'foods' | 'goats' | 'wells' | 'bulbs' | 'potholes' | 'garri' | 'gravel' | 'chips';
-/** The goal's picture (each already drawn for the HUD, the street or the buttons). */
-export type MissionIcon = 'coin' | 'foods' | 'goat' | 'well' | 'power' | 'fufu' | 'parcel' | 'gravel' | 'tech';
+/** KM2 to KM4 (kano.md 6.2): Kano's kobo arcs in a tailwind, cloth bounces and whirls puffed. */
+export type Goal = 'coins' | 'foods' | 'goats' | 'wells' | 'bulbs' | 'potholes' | 'garri' | 'gravel' | 'chips' | 'arcs' | 'bounces' | 'whirls';
+/** The goal's picture (each already drawn for the HUD, the street or the buttons; Kano's wind, cloth and whirl by its part). */
+export type MissionIcon = 'coin' | 'foods' | 'goat' | 'well' | 'power' | 'fufu' | 'parcel' | 'gravel' | 'tech' | 'wind' | 'cloth' | 'whirl';
 
 export interface MissionDef {
   /** e.g. "lagos-coins": its save key. */
@@ -43,6 +45,11 @@ export interface MissionDef {
   readonly help?: readonly string[];
   /** The city's helper who says thank you after a star (Mama Put, the garri mill). */
   readonly thanks?: string;
+  /**
+   * A later state's own count (Kano's KM2 to KM4), so the first load needs no rule for it: a run
+   * event that counts one more (true), one more once per key (a kobo arc's pit), or nothing.
+   */
+  readonly tally?: (e: GameEvent, level: Level) => boolean | string;
 }
 
 /** One star at each place, not a count in one go. */
@@ -116,6 +123,8 @@ export class MissionGo {
   done = false;
   /** Stars won in this go (for the end card's line). */
   won = 0;
+  /** The keys a `tally` counted once this go (KM2: each arc's pit). */
+  private readonly keys = new Set<string>();
 
   constructor(
     readonly def: MissionDef,
@@ -157,6 +166,14 @@ export class MissionGo {
 
   add(): number {
     return this.count(this.have + 1);
+  }
+
+  /** The def's own `tally` for a run event: one more, or one more the first time for its key. */
+  tally(e: GameEvent, level: Level): number {
+    const k = this.def.tally?.(e, level);
+    if (!k || (typeof k === 'string' && this.keys.has(k))) return 0;
+    if (typeof k === 'string') this.keys.add(k);
+    return this.add();
   }
 
   food(kind: FoodKind): number {
