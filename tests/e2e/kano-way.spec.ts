@@ -89,7 +89,11 @@ test.describe('on the web, before the Kano part is on the phone', () => {
     await expect.poll(() => screenNow(page)).toBe('kano');
     await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
     await expect(page.getByRole('dialog', { name: 'Welcome to Kano!' })).toHaveCount(0);
-    expect(await page.evaluate(() => window.__game!.kanoHome?.draws)).toBe(1);
+    // K6b: Kano's city (it replaced the still home): once it settles, a still city draws nothing.
+    await page.waitForTimeout(2500);
+    const d0 = await page.evaluate(() => window.__game!.kanoHome?.draws ?? -1);
+    await page.waitForTimeout(1500);
+    expect(await page.evaluate(() => window.__game!.kanoHome?.draws)).toBe(d0);
 
     // Back to Lagos: Kano's ride, the other way.
     await page.locator('.kano-city').getByRole('button', { name: 'Travel' }).tap();

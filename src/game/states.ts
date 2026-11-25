@@ -131,6 +131,8 @@ export function walletOf(part: Readonly<Obj>): Partial<Record<(typeof WALLET_KEY
  * before the Ogun part has loaded this visit. The Ogun part keeps its own copy (a test pins them).
  */
 export const OGUN_TRAYS: Readonly<Record<string, readonly [number, number, number, string]>> = { adire: [8, 10, 120, ''], mill: [15, 30, 240, 'potholes'], kola: [12, 20, 120, ''] };
+/** K6b (kano.md 6.3): Kano's, the same way (the Kano part keeps its own copy, KANO_TAX; a test pins them). */
+export const KANO_TRAYS: Readonly<Record<string, readonly [number, number, number, string]>> = { leather: [8, 10, 120, ''], dye: [12, 20, 120, ''], grain: [15, 30, 240, 'sandyRoad'], pyramid: [12, 20, 120, ''] };
 
 /**
  * O6b: a later state's own city part (`states.<id>.city`: fixes, trays, Booming meter, where the

@@ -188,7 +188,7 @@ test('Dawanau by hand from Kano\'s home: whirls, sacks, fura da nono, the secret
 test('Kano\'s home at 320 x 240 with Dawanau open: every button on screen, 44 px tall, none overlapping', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
   await openKano(page, KOFAR_DONE);
-  const boxes = await page.locator('.kano-city button').evaluateAll((els) =>
+  const boxes = await page.locator('.kano-city .city-top button, .kano-city .city-bottom button').evaluateAll((els) =>
     els.filter((e) => (e as HTMLElement).offsetParent !== null).map((e) => ({ name: e.getAttribute('aria-label') ?? e.textContent ?? '', ...JSON.parse(JSON.stringify(e.getBoundingClientRect())) as DOMRect })),
   );
   if (process.env['K4B_HOME_SHOT']) await page.screenshot({ path: process.env['K4B_HOME_SHOT'] });

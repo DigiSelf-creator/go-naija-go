@@ -7,6 +7,25 @@ import type { HeroLook } from '../art/hero';
 import type { Tune } from '../art/tunes';
 import type { CityLife } from '../game/cityLife';
 import type { StateCity } from '../game/states';
+import type { PeopleKit } from '../game/peopleLoad';
+
+/**
+ * K6b: the first-load pieces a part that imports only types (Kano, KN-R10) needs for its city
+ * and road: the Lagos city's words, pay spots, walker, Booming meter, money words and buttons,
+ * and the people kit once it has arrived (asking for it the first time).
+ */
+export interface CityKit {
+  words: typeof import('../screens/words').WORDS;
+  pay: Pick<typeof import('../art/payspot'), 'EDGE_ARROW' | 'MAT' | 'PAY' | 'boardWobble' | 'drawEdgeArrow' | 'drawFlyingMoney' | 'drawPayMat' | 'drawPriceBoard' | 'drawTrayBubble' | 'edgeArrowPlace' | 'flyingCount' | 'payTime' | 'priceBoardBox' | 'trayBubbleBox' | 'trayWords'>;
+  walk: Pick<typeof import('../art/walker'), 'WALKER' | 'drawCityHero' | 'drawWalkRing' | 'walkDir' | 'walkerSize'>;
+  boom: Pick<typeof import('../art/boomMeter'), 'boomBarSvg' | 'boomIconSvg'>;
+  icon: typeof import('../art/city').bucketIconSvg;
+  money: (kobo: number) => string;
+  spoken: typeof import('../game/money').spokenMoney;
+  dom: Pick<typeof import('../screens/dom'), 'h' | 'button'>;
+  /** The people kit (its walkers, sheets, size and look rule) once it has arrived, else null (it is asked for). */
+  people(): PeopleKit | null;
+}
 
 export interface RideOptions {
   look: HeroLook;
@@ -51,7 +70,7 @@ export interface WorldCityHooks {
   topRight: HTMLElement[];
   bottom: HTMLElement[];
   /** A problem card's challenge (Ota for the road; the Expressway for Power and Tech). */
-  run(spot: 'potholes' | 'dryTaps' | 'lightsOut' | 'slowInternet', e: MouseEvent): void;
+  run(spot: 'potholes' | 'dryTaps' | 'lightsOut' | 'slowInternet' | 'sandyRoad', e: MouseEvent): void;
   /** A problem card's "See the stop": the state's challenge road on that stop. */
   seeStop?(spot: string): void;
   ignoreTap(e: MouseEvent): boolean;
@@ -69,8 +88,10 @@ export interface WorldCityHooks {
   hallWon?: boolean;
   /** OG-R37: the next street to clear (1 Ota, 2 Abeokuta, 3 Sagamu), or 4 once all three are. */
   nextStreet?: number;
-  /** OG-R37: plays Ogun street n (4: Pothole Hall). */
+  /** OG-R37: plays Ogun street n (4: Pothole Hall). K6b: Kano's too. */
   play?(n: number, e: MouseEvent): void;
+  /** K6b: the first-load pieces Kano's city draws with (KN-R10). */
+  kit?: CityKit;
 }
 
 export interface WorldCity {

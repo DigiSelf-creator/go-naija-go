@@ -17,17 +17,8 @@
  * invited test.
  */
 export const KANO_WORDS = {
-  /**
-   * K1b: Kano's home until its city is built (K6b). gamedev's words for designer to check
-   * (kano.md part 1 leaves this screen open, as ogun.md did for Ogun's place).
-   */
+  /** K1b: Kano's home; K6b: Kano's city (its own words are in cityWords.ts) keeps these in its bottom row. */
   place: {
-    heading: 'Kano',
-    /** Plain words for about-5s (the board in the picture keeps "CENTRE OF COMMERCE"). */
-    line: 'Where people come to buy and sell',
-    soon: 'Kurmi, the first street, is just through the gate.',
-    /** The picture's spoken name. */
-    pic: 'The old red wall of Kano and its open gate.',
     /** K2b to K4b: each street's Play button (gamedev's words, for designer to check), opening in order. */
     plays: ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau'] as readonly string[],
   },
@@ -109,6 +100,8 @@ export const KANO_WORDS = {
     playAgain: 'Play again',
     road: 'Challenge road',
   },
+  /** K6b (kano.md 8): Harmattan Road's Pause card button (Lagos's says "Back to Lagos"). */
+  laneHome: 'Back to Kano',
   /**
    * Part 7: Kano's bubbles, split by language as WORDS.folk (decision 30), Hausa first since it
    * is Kano's home language.

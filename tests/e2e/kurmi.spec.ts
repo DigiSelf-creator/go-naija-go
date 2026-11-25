@@ -47,7 +47,8 @@ test('Kurmi by hand from Kano\'s home: the gate, wind, kilishi, the bus, the cle
   await expect.poll(() => screenNow(page)).toBe('kano');
   await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
   const home = page.locator('.kano-city');
-  await expect(home.getByText('Kurmi, the first street, is just through the gate.')).toBeVisible();
+  // K6b: Kano's city (it replaced the home), its Play buttons still in the bottom row.
+  await expect(home.locator('.city-pin[data-spot="sandyRoad"]')).toBeVisible();
   const play = home.getByRole('button', { name: 'Play Kurmi' });
   expect((await play.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await play.tap();
