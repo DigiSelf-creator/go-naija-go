@@ -1142,7 +1142,8 @@ export class Menus {
         h('p', {}, k.line),
         h('p', {}, OGUN_WORDS.win.money(this.summary.kobo)),
         // O6b: the Challenge road (Ogun's) and the wheel, as Lagos's Win screen.
-        first ? h('div', { class: 'actions' }, toKano, home, h('div', { class: 'minor-row' }, ...rest)) : this.actions(home, ...rest, toKano),
+        // K1c fix (qa-o7re): the two big buttons share a pair, side by side on short screens.
+        first ? h('div', { class: 'actions two-go' }, h('div', { class: 'go-pair' }, toKano, home), h('div', { class: 'minor-row' }, ...rest)) : this.actions(home, ...rest, toKano),
       );
     }
     const o = OGUN_WORDS.lagosWin;

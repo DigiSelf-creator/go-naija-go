@@ -17,6 +17,7 @@ import { part as kanoPart } from '../../src/worlds/kano';
 import { KANO_HOLD_JUMP_S, KANO_HOLD_S, rideClock } from '../../src/worlds/kano/ride';
 import { KANO_RIDE } from '../../src/worlds/kano/rideArt';
 import { KANO_WORDS as KANO_PART_WORDS } from '../../src/worlds/kano/words';
+import { GATE_WORDS } from '../../src/worlds/kano/gate';
 
 function fakeStorage(seed: Record<string, string> = {}): { storage: Storage; data: Map<string, string> } {
   const data = new Map<string, string>(Object.entries(seed));
@@ -144,6 +145,12 @@ describe('saves (kano.md 1.7)', () => {
 });
 
 describe('the lazy Kano part (kano.md 9.1, 9.2; KN-R10)', () => {
+  it("K1c fix: Kano's home says plainly what Kano is and that Kurmi is through the gate; the board keeps its words", () => {
+    expect(KANO_PART_WORDS.place.line).toBe('Where people come to buy and sell');
+    expect(KANO_PART_WORDS.place.soon).toBe('Kurmi, the first street, is just through the gate.');
+    expect(JSON.stringify(KANO_PART_WORDS.place)).not.toMatch(/coming next|Centre of Commerce/);
+    expect(GATE_WORDS).toEqual(['WELCOME TO KANO', 'CENTRE OF COMMERCE']);
+  });
   it('has the shape the loader reads: Kano\'s six level files only, the ride and Kano\'s home', () => {
     expect(checkPart({ part: kanoPart }, 'kano')).not.toBeNull();
     expect(Object.keys(kanoPart.levels).sort()).toEqual(['kano-1', 'kano-2', 'kano-3', 'kano-hall', 'kano-lane', 'kano-well']);

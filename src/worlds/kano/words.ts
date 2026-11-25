@@ -21,7 +21,8 @@ export const KANO_WORDS = {
    */
   place: {
     heading: 'Kano',
-    line: 'The Centre of Commerce',
+    /** Plain words for about-5s (the board in the picture keeps "CENTRE OF COMMERCE"). */
+    line: 'Where people come to buy and sell',
     soon: 'Kurmi, the first street, is just through the gate.',
     /** The picture's spoken name. */
     pic: 'The old red wall of Kano and its open gate.',

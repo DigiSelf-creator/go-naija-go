@@ -1094,6 +1094,56 @@
 }
 
 
+/* K1c fix (qa-o7re): Pothole Hall's first Win card has two big buttons ("On to Kano", "Take it
+   home"). Tall screens: one under the other, as before. Under 360 px tall: side by side in one
+   row, the words scroll and every button stays in view at the bottom. The small buttons take
+   only the room their words need, so no word spills (320 x 240 with safe edges). */
+.actions .go-pair {
+  display: contents;
+}
+@media (max-height: 360px) {
+  .card.event:has(.two-go) .two-go {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: #fffaf0;
+    box-shadow: 0 6px 0 #fffaf0;
+  }
+  .event .two-go .go-pair {
+    display: flex;
+    gap: 8px;
+  }
+  .event .two-go .go-pair .go {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    margin: 6px 0 0;
+  }
+  .event .two-go .minor-row .minor {
+    flex: 1 1 auto;
+    min-width: min-content;
+  }
+}
+/* Under 300 px the discs are gone, so the small buttons can sit closer to their words. */
+@media (max-height: 300px) {
+  .event .two-go .minor-row .minor {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+  .event .two-go .minor-row {
+    gap: 6px;
+  }
+}
+@media (max-height: 260px) and (min-width: 440px) and (orientation: landscape) {
+  .event .two-go .go-pair {
+    flex: 2 1 auto;
+    min-width: 0;
+  }
+  .event .two-go .go-pair .go {
+    margin: 0;
+  }
+}
+
 /* Nigeria's wheel (S2.8 "The wheel screen on every size"): the cream card fills the screen, the
    wheel as tall as it, the words in a rail beside it. Places and sizes are set by Menus.wheel
    (wheelFit in src/screens/streets.ts). The page never scrolls. */
@@ -1901,6 +1951,15 @@
   .screen .city-banner p {
     font-size: 0.8rem;
   }
+}
+
+/* K1c fix: Kano's home words panel, a little smaller where it must sit beside the gate board. */
+.screen .city-banner.tight {
+  padding: 3px 8px 4px;
+}
+.screen .city-banner.tight p {
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 /* city.md (d), d5: the Booming meter inside the "Lagos" heading box. Line 1: "Lagos", the
