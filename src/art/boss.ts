@@ -6,6 +6,7 @@
  *
  * World space. (x, groundY) is the bottom centre of the heap.
  */
+import { inkAtLeast } from './ink';
 import * as P from './palette';
 
 const TAU = Math.PI * 2;
@@ -52,12 +53,12 @@ const CARS: readonly CarSpot[] = [
 /** Which car leaves on each hit (top first), then the rest on defeat. */
 const LEAVE_ORDER = [5, 4, 3, 0, 1, 2] as const;
 
-function drawCar(g: CanvasRenderingContext2D, w: number, colour: string): void {
+function drawCar(g: CanvasRenderingContext2D, w: number, colour: string, ol = 1.4): void {
   // Wheels on y = 0, front to the right. No face.
   const h = w / 2;
   g.fillStyle = colour;
   g.strokeStyle = P.INK;
-  g.lineWidth = 1.4;
+  g.lineWidth = ol;
   g.beginPath();
   g.moveTo(-h * 0.55, -12);
   g.lineTo(-h * 0.3, -21);
@@ -95,11 +96,11 @@ function honkMarks(g: CanvasRenderingContext2D, x: number, y: number): void {
 
 type Face = 'grumpy' | 'wince' | 'honk' | 'sigh' | 'happy';
 
-function drawLightBox(g: CanvasRenderingContext2D, lit: 'red' | 'amber' | 'green' | 'none', face: Face): void {
+function drawLightBox(g: CanvasRenderingContext2D, lit: 'red' | 'amber' | 'green' | 'none', face: Face, ol = 1.5): void {
   // Housing centred on x = 0, from y -84 (top) to 0 (bottom)
   g.fillStyle = P.LIGHT_BOX;
   g.strokeStyle = P.INK;
-  g.lineWidth = 1.5;
+  g.lineWidth = ol;
   g.beginPath();
   g.roundRect(-18, -84, 36, 84, 7);
   g.fill();
@@ -199,6 +200,8 @@ export function drawBoss(g: CanvasRenderingContext2D, x: number, groundY: number
 
   g.save();
   g.translate(x + shake, groundY);
+  // Style 1.8 part 2: a boss's outline as the hero's, the larger of 1.6 u and 2 px.
+  const ol = inkAtLeast(g, 1.6, 2);
 
   // Pole and light: waves on defeat
   const happy = mode === 'defeat' && t >= 1.4;
@@ -206,7 +209,7 @@ export function drawBoss(g: CanvasRenderingContext2D, x: number, groundY: number
   if (happy) g.rotate(Math.sin((t - 1.4) * 5) * 0.1);
   g.fillStyle = '#6b7480';
   g.strokeStyle = P.INK;
-  g.lineWidth = 1.2;
+  g.lineWidth = ol;
   g.fillRect(-3, -86, 6, 86);
   g.strokeRect(-3, -86, 6, 86);
   g.translate(0, -76 + (mode === 'idle' ? wobble : 0));
@@ -226,7 +229,7 @@ export function drawBoss(g: CanvasRenderingContext2D, x: number, groundY: number
       face = 'happy';
     }
   }
-  drawLightBox(g, lit, face);
+  drawLightBox(g, lit, face, ol);
   g.restore();
 
   // Sigh puff during the blink
@@ -270,7 +273,7 @@ export function drawBoss(g: CanvasRenderingContext2D, x: number, groundY: number
     g.save();
     g.translate(cx, cy);
     g.rotate(rot);
-    drawCar(g, car.w, car.colour);
+    drawCar(g, car.w, car.colour, ol);
     g.restore();
     if (leaveT >= 0 && mode === 'defeat' && leaveT < 1.2) {
       // Happy two-note honk as it goes

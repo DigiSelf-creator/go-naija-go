@@ -31,6 +31,7 @@ import {
   type LampLook,
   type LaneView,
 } from './lane';
+export { drawLaneHero } from './lane-hero';
 import { LANE_HERO_POSES, drawLaneHero, drawLaneHeroAt, drawLaneShadow, laneRunFrame, laneStumbleFrame, laneTorchFrame, type LaneHeroPose } from './lane-hero';
 import {
   BURST_TIME,

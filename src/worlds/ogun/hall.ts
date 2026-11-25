@@ -35,6 +35,7 @@ import { folkLook } from '../../art/folkCasts';
 import type { FolkLook } from '../../art/folk';
 import { heroHeadTop, type HeroLook, type HeroPose } from '../../art/hero';
 import { INK, WHITE } from '../../art/palette';
+import { inkAtLeast } from '../../art/ink';
 import { drawCone } from '../../art/roadside';
 import { blitLayer, type PixelLayer } from '../../art/street';
 import type { Recipe } from '../../engine/sound';
@@ -1090,7 +1091,8 @@ export function drawKingPothole(g: G, x: number, floorY = POT_HALL.floorY, look:
   if (smooth < 1) {
     g.globalAlpha = 1 - smooth;
     g.strokeStyle = INK;
-    g.lineWidth = 1.6;
+    // Style 1.8 part 2: a boss's outline as the hero's, the larger of 1.6 u and 2 px.
+    g.lineWidth = inkAtLeast(g, 1.6, 2);
     rimPath(g, x0, x1, y, bottom, lift);
     g.stroke();
     g.fillStyle = PH.rimLight;

@@ -13,6 +13,7 @@ import { BURST_TIME, bakeLaneThings, bulbFrame, burstLookOf, coinFrame, drawLane
 import { bakeLaneHero, drawLaneShadow, laneHeroKey, laneRunFrame, laneStumbleFrame, laneTorchFrame, type LaneHeroPose } from '../art/lane-hero';
 import { ROAD, atScreen, bakeLaneScenery, bakeLaneSky, drawBlackout, drawBlackoutWash, drawFootbridge, drawLaneLamp, drawLaneRoad, LANE_SCENERY, type LampLook, type LaneView as ArtView } from '../art/lane';
 import { blitBaked, type Baked } from '../art/lane-shade';
+import { setInkRatio } from '../art/ink';
 import { HERO_HEIGHT, SIZE, isDodge, type ThingKind } from './level';
 import type { CoinSlot, LaneSim, Slot } from './sim';
 import { LaneFolk, type LaneFolkNow, type LaneProject } from './folk';
@@ -169,7 +170,13 @@ export class LaneView {
     }
     const key = `${look.skin},${look.hair},${look.outfit},${look.body ?? ''},${look.age ?? ''}`;
     if (!this.hero || key !== this.heroFor) {
-      this.hero = bakeLaneHero(look, this.nearPpm, true);
+      // Outlines in screen pixels at this canvas's own ratio (style 1.8 part 5; it can be under the page's, part 21).
+      setInkRatio(this.ratio);
+      try {
+        this.hero = bakeLaneHero(look, this.nearPpm, true);
+      } finally {
+        setInkRatio(null);
+      }
       this.heroFor = key;
     }
   }
@@ -369,9 +376,15 @@ export class LaneView {
       const yUp = y - pose.up * ppm;
       if (b) {
         this.dev(g);
-        g.translate(x * this.ratio, yUp * this.ratio);
-        if (pose.lean) g.rotate(pose.lean * 0.08);
-        blitBaked(g, b, 0, 0, ppm * this.ratio);
+        const k = (ppm * this.ratio) / b.ppm;
+        if (!pose.lean && Math.abs(k - 1) < 0.02) {
+          // Baked at the hero's own size: a 1:1 copy at whole device pixels (style 1.8 part 5).
+          g.drawImage(b.img as CanvasImageSource, Math.round(x * this.ratio - b.ax), Math.round(yUp * this.ratio - b.ay));
+        } else {
+          g.translate(x * this.ratio, yUp * this.ratio);
+          if (pose.lean) g.rotate(pose.lean * 0.08);
+          blitBaked(g, b, 0, 0, ppm * this.ratio);
+        }
         this.css(g);
       }
       if (boxes) {

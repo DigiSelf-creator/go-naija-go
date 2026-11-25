@@ -5,6 +5,7 @@
  * canvas; one screen shows at a time.
  */
 import { AGES, BODIES, HAIRS, OUTFITS, SKINS, drawHero, type HeroLook } from '../art/hero';
+import { setInkRatio } from '../art/ink';
 import { WHEEL_STATES, wheelSvg } from '../art/wheel';
 import { readSafeArea } from '../engine/view';
 import {
@@ -40,6 +41,9 @@ import type { Tune } from '../art/tunes';
 import { gateIconSvg } from '../art/gateway';
 import { arrivalCard, downloadCard, focusCard, noticeCard, partHeld, travelCard, wheelLine, type DownloadCard, type OgunView } from './travel';
 import { isNativeApp } from '../native/is-native';
+import type { BoardView } from './missionBoard';
+import { starSvg } from '../art/star';
+import type { MissionDef } from '../game/missions';
 
 export type MenuScreen = 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ride' | 'ogun' | null;
 
@@ -68,6 +72,26 @@ export function preloadRoad(): Promise<RoadModule> {
   );
   return roadLoading;
 }
+
+/**
+ * MS3b: the Missions board and cards are their own chunk too (missionBoard.ts), fetched while the
+ * city is idle; with them comes all a mission needs in the run (qa MS4: the first load stays light).
+ */
+export type BoardModule = typeof import('./missionBoard');
+let boardModule: BoardModule | null = null;
+let boardLoading: Promise<BoardModule> | null = null;
+export function preloadBoard(): Promise<BoardModule> {
+  boardLoading ??= import('./missionBoard').then(
+    (m) => (boardModule = m),
+    (err: unknown) => {
+      boardLoading = null;
+      throw err;
+    },
+  );
+  return boardLoading;
+}
+/** The board's chunk once it is in (every then on preloadBoard sees it), else null. */
+export const boardNow = (): BoardModule | null => boardModule;
 
 /**
  * The second tap of a double tap lands about where the first one did, very soon after.
@@ -178,6 +202,14 @@ export interface MenuHooks {
   playOgunStop(stop: PlanStop, at: TapPoint | null): void;
   /** O6b: what Ogun's challenge road reads. */
   ogunRoadView(): WorldRoadView;
+  /** MS3b: the state has a Missions button (Lagos once its first Mission is complete). */
+  hasMissions?(state: StateId): boolean;
+  /** MS3b: a state's Missions board, once the board's chunk is in (null: none yet). */
+  missions?(state: StateId): Omit<BoardView, 'play' | 'close' | 'still'> | null;
+  /** MS3b: a mission card's Play. */
+  playMission?(d: MissionDef, at: TapPoint | null): void;
+  /** MS3c: every star of the state is won and its card has not shown yet (true once: it is saved as shown). */
+  everyDue?(state: StateId): boolean;
 }
 
 /** What the game over and win screens show. */
@@ -190,6 +222,8 @@ export interface RunSummary {
   firstHall?: boolean;
   /** O2b: lost on an Ogun street: "You keep {money} for Ogun..."; Challenge road goes to Ogun's (OG-R35). */
   ogun?: boolean;
+  /** MS3b: "You got a star!" (stars won in this go of a mission), or null. */
+  stars?: string | null;
 }
 
 /** What the Street cleared screen shows (S2.10). */
@@ -205,6 +239,8 @@ export interface ClearedSummary {
   ogun?: boolean;
   /** O3b: an Ogun street with the next one built (Ota to Abeokuta): "Next street". */
   ogunNext?: boolean;
+  /** MS3b: "You got a star!", or null. */
+  stars?: string | null;
 }
 
 export class Menus {
@@ -281,7 +317,10 @@ export class Menus {
       true,
     );
     parent.append(this.layer);
-    window.addEventListener('resize', () => this.refit?.());
+    window.addEventListener('resize', () => {
+      this.fitRow();
+      this.refit?.();
+    });
   }
 
   get current(): MenuScreen {
@@ -459,6 +498,7 @@ export class Menus {
       return;
     }
     this.layer.append(card);
+    this.fitRow();
     const next = this.overlayNext;
     this.overlayNext = null;
     if (next) this.openOverlay(next);
@@ -601,6 +641,66 @@ export class Menus {
     );
   }
 
+  /** MS3b: "Missions", first in the city's bottom row once the state has missions to show. */
+  private missionsButton(state: StateId): HTMLButtonElement[] {
+    if (!this.hooks.hasMissions?.(state)) return [];
+    const b = this.guarded(WORDS.missions.button, 'minor ms-button', () => this.openMissions(state), {}, 'settings');
+    // The star stands in the icon disc (art's star, MS2, replaces starSvg).
+    const disc = b.querySelector<HTMLElement>('.ic');
+    if (disc) disc.innerHTML = starSvg(true, 20);
+    return [b];
+  }
+
+  /** MS-R4: the city's "Nigeria's wheel" button, while it is out of its row (it goes into Settings). */
+  private wheelOut: HTMLElement | null = null;
+
+  /**
+   * MS-R4: where the five bottom buttons (with Missions) do not fit in one row, "Nigeria's wheel"
+   * moves into Settings, with the same words. Checked as the city opens and on every resize
+   * (before the city measures what its signs keep clear of).
+   */
+  private fitRow(): void {
+    const row = this.layer.querySelector<HTMLElement>('.city-buttons');
+    if (!row?.querySelector('.ms-button')) return;
+    const wheel = row.querySelector<HTMLElement>('[data-wheel]') ?? this.wheelOut;
+    if (!wheel) return;
+    row.append(wheel);
+    const tops = [...row.children].map((e) => e.getBoundingClientRect().top);
+    this.wheelOut = Math.max(...tops) > Math.min(...tops) + 20 ? wheel : null;
+    this.wheelOut?.remove();
+  }
+
+  /** MS3b: the Missions board over the city (its chunk is usually in already: preloadBoard). */
+  private openMissions(state: StateId): void {
+    const from = this.screen;
+    void preloadBoard().then(({ missionBoard }) => {
+      const v = this.hooks.missions?.(state);
+      if (!v || this.screen !== from || this.overlay) return;
+      this.openOverlay(
+        missionBoard({
+          ...v,
+          still: this.hooks.stillWanted(),
+          play: (d, e) => {
+            this.closeOverlay();
+            this.hooks.playMission?.(d, tapPoint(e));
+          },
+          close: () => this.closeOverlay(),
+        }),
+      );
+    }, () => undefined);
+  }
+
+  /** MS3c: "Every Lagos star!" once, over the city, with the highlife sting. */
+  private everyNext(state: StateId): void {
+    // Every city visit fetches the board's chunk while idle (it is small); the card waits for it.
+    const from = this.screen;
+    void preloadBoard().then(({ everyCard }) => {
+      if (this.screen !== from || this.overlay || !this.hooks.everyDue?.(state)) return;
+      this.openOverlay(everyCard(state === 'ogun' ? OGUN_WORDS.travel.ogun : OGUN_WORDS.travel.lagos, () => this.closeOverlay()));
+      this.hooks.playSound('sting');
+    }, () => undefined);
+  }
+
   /** The city's (and Ogun's) "Travel" button, with its small danfo icon. */
   private travelButton(): HTMLButtonElement {
     return this.guarded(OGUN_WORDS.travel.button, 'minor travel-button', () => this.openTravel(), {}, 'travel');
@@ -645,10 +745,11 @@ export class Menus {
       look: () => this.look,
       topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('ogun'), {}, 'settings')],
       bottom: [
+        ...this.missionsButton('ogun'),
         button(w.road, 'minor two-line', () => this.showOgunRoad(), {}, 'road'),
         this.travelButton(),
         button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
-        button(w.wheel, 'minor two-line', () => this.showWheel('ogun'), {}, 'wheel'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('ogun'), { 'data-wheel': true }, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runOgunSpot(spot, tapPoint(e)),
       seeStop: (spot) => this.showOgunRoad(spot === 'potholes' ? 'ota' : spot === 'badRoad' ? 'hall' : 'expressway', true),
@@ -674,7 +775,7 @@ export class Menus {
         this.hooks.arrived();
         this.closeOverlay();
       });
-    }
+    } else this.everyNext('ogun');
     return screen.el;
   }
 
@@ -904,6 +1005,7 @@ export class Menus {
       'div',
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
+      this.summary.stars && h('p', { class: 'ms-line' }, this.summary.stars),
       h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
@@ -923,6 +1025,7 @@ export class Menus {
       'div',
       { class: 'card narrow event', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
+      c.stars && h('p', { class: 'ms-line' }, c.stars),
       h('p', {}, w.text(c.name, c.kobo)),
       c.parcel && h('p', { class: 'parcel-line' }, c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
@@ -1195,6 +1298,8 @@ export class Menus {
         this.laneButtonsSwitch(),
         this.tiltRow('settings'),
         ogunOpen && this.busRideSwitch(),
+        // MS-R4: "Nigeria's wheel" is here while the city's bottom row has no room for it.
+        this.wheelOut && this.settingsBack !== 'title' && button(WORDS.city.wheel, 'minor', () => this.showWheel(this.settingsBack), {}, 'wheel'),
         button(w.story, 'minor', (e) => this.showIntro('replay', () => this.showSettings(this.settingsBack), e)),
         button(w.back, 'go', () => this.show(this.settingsBack), {}, 'back'),
       ),
@@ -1236,11 +1341,12 @@ export class Menus {
       mission,
       topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('city'), {}, 'settings')],
       bottom: [
+        ...this.missionsButton('lagos'),
         button(w.road, 'minor two-line', () => this.showRoad(), {}, 'road'),
         // O1b2 (ogun.md 1.2): "Travel" once Ogun is open.
         ...(this.hooks.states().ogun.open ? [this.travelButton()] : []),
         button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'),
-        button(w.wheel, 'minor two-line', () => this.showWheel('city'), {}, 'wheel'),
+        button(w.wheel, 'minor two-line', () => this.showWheel('city'), { 'data-wheel': true }, 'wheel'),
       ],
       run: (spot, e) => this.hooks.runSpot(spot, tapPoint(e)),
       // S3e0 part 7: the road, scrolled to that stop with its card open, "for" that card's fix.
@@ -1250,6 +1356,7 @@ export class Menus {
     });
     this.cityScreen = screen;
     this.cleanup = () => screen.close();
+    this.everyNext('lagos');
     // CO3: fetch the road's chunk while the city sits idle, so the road opens at once.
     const idle = (window as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 200));
     idle(() => void preloadRoad().catch(() => undefined));
@@ -1376,7 +1483,13 @@ export class Menus {
           g.beginPath();
           g.ellipse(0, 0, 13, 3, 0, 0, Math.PI * 2);
           g.fill();
-          drawHero(g, this.look, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, blink: t % 3.2 < 0.15, time: t });
+          // Drawn at the canvas's own device pixels, outlines set for its ratio (style 1.8 part 5).
+          setInkRatio(dpr);
+          try {
+            drawHero(g, this.look, { phase: 0, inAir: false, facing: 1, glow: false, standing: true, blink: t % 3.2 < 0.15, time: t });
+          } finally {
+            setInkRatio(null);
+          }
         }
       }
       this.previewFrame = requestAnimationFrame(frame);

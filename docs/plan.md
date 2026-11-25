@@ -73,12 +73,12 @@ qa checks every CO row; po accepts.
 
 ## Slice P: Picture style (decision 85; designer note docs/style.md)
 
-A richer picture style, all our own: chunky buttons and one building shading recipe first, then angled cities with bigger people and soft shadows, then everyday detail. The evening look waits (style.md part 7). Not to be mixed up with the store rows (ST0 to ST6): these ids start with ST-A to ST-D.
+A richer picture style, all our own: chunky buttons and one building shading recipe first, then angled cities with bigger people and soft shadows, then everyday detail. The evening look waits (style.md part 7). Not to be mixed up with the store rows (ST0 to ST6): these ids start with ST-A to ST-D, plus step ST-H (crisp characters, decision 88), which comes before ST-B because Tp asked for characters first.
 
 Rules for the whole slice:
 - Everything follows docs/style.md: exact colours and numbers in part 1, limits in part 2, the qa checks in part 5.
 - Drawn once and reused. Nothing new is drawn per frame on streets: street frame draw calls equal or fewer than before, fps at 4x CPU equal or better. City drag at least 45 fps at 4x CPU; idle draws nothing; each bake under 50 ms per block at 4x CPU. No `shadowBlur`, canvas `filter` or CSS blur anywhere.
-- Budget (gzip): first load grows 16 KB at most and the Ogun part 9 KB at most for the whole slice, per phase as style.md 2.2. First load stays under 3 MB, Ogun under 150 KB.
+- Budget (gzip): first load grows 19 KB at most and the Ogun part 9.5 KB at most for the whole slice (ST-H's 3 KB and 0.5 KB included), per phase as style.md 2.2. First load stays under 3 MB, Ogun under 150 KB.
 - Every button keeps its words, a 44 x 44 px tap area and text of 15 px or more, at all six sizes (320 x 240, 568 x 320, 640 x 200, 851 x 393, 1280 x 720, 1920 x 1080), with and without the 24 px safe area.
 - Each phase ends with qa, po and before and after screenshots for Tp (851 x 393 and 320 x 240) before the next phase starts. Merging to the live link stays Tp's call (decision 64).
 
@@ -89,9 +89,14 @@ Rules for the whole slice:
 | 3 | ST-A3 | gamedev | City top and bottom rows and zoom in Lagos and Ogun; road screen buttons and stop card; run HUD counters as cream status chips (no bigger than today). Run pads, the HUD Pause and Sound buttons, the well and throw buttons stay (style.md 4.2) | ST-A1 | rows fit at all six sizes with the safe area; no pin, sign or edge arrow newly covered; street fps at 4x CPU not lower | 0.5 KB first load |
 | 4 | ST-A4 | qa | Phase 1 pass | ST-A2, ST-A3 | style.md part 5; greyscale shots of every changed screen; first load +3 KB at most | |
 | 5 | ST-A5 | po | Accept phase 1; Tp sees the screenshots | ST-A4 | note in docs/questions.md | |
-| 6 | ST-B1 | art | Shared shading helpers in src/art/shade.ts (`wall()`, `zincRoof()`, `flatRoof()`, `softShadow()`, `mix()`), warm ink in palette.ts; gallery page `?gallery=style-shading` | ST-A5 | numbers match style.md 1.3 and 1.5; helpers draw only into bake canvases | 1 KB first load |
-| 7 | ST-B2 | gamedev | Streets: shopfronts with the recipe, baked into cached strips with their soft shadow, in every Lagos and Ogun street, well rooms and both halls; street people take the warm outline and face recipe | ST-B1, SP-Q1 | frame draw calls equal or fewer, fps at 4x CPU equal or better on Alausa, Ota and Go-Slow Hall; strip memory under 4 MB a street; level tests and e2e pass; hero, kobo, food and hazards read as before | 1.5 KB first load, 1 KB Ogun |
-| 8 | ST-B3 | gamedev | Cities: the recipe on every Lagos and Ogun block, kiosk and stall, still top-down; warm outlines; zinc and concrete roofs in place of big grey | ST-B1 | bake under 50 ms a block at 4x CPU; drag at least 45 fps; idle draws nothing; tap areas unchanged; tired and bright still told apart without colour | 0.5 KB first load |
+| 5a | ST-H1 | designer | Crisp characters recipe, docs/style.md 1.8: what makes characters soft today, shape, outline, colour, face, pixel and size numbers | none | done 24 Nov; po checks the note | 0 |
+| 5b | ST-H2 | art | Redraw to 1.8: the run hero (src/art/hero.ts, every skin, hair, outfit, age and body, every pose), the lane hero (lane-hero.ts), the people kit (folk.ts; folkCasts looks unchanged), the Alausa helper and other one-off street people; outline width taken as a bake setting in px; gallery page `?gallery=style-people` with before and after at 851 x 393 and 320 x 240 scale, at 1x and 2x, every skin tone | ST-H1 | numbers match 1.8; hero still 50 u with the same hit box; heads 3.3 (hero) and 3.1 (adults) tall; every skin, hair and outfit still there; our own, copying no game; mock no one; dark-skin rules 2.3 and 1.8 part 7; listed in docs/assets.md | 2 KB first load, 0.5 KB Ogun |
+| 5c | ST-H3 | gamedev | Wire it in: bake hero and people at view scale x devicePixelRatio (cap 2) with the outline in px; copy 1 to 1 at whole device pixels; people sheets split into a second sheet instead of shrinking; run, jump and fall baked during the opening card; builder preview and galleries at devicePixelRatio; bosses, goats and birds get the 1.8 outline minimum where they are baked | ST-H2 | no sprite drawn bigger than baked (test); frame draw calls equal or fewer and fps at 4x CPU equal or better on Alausa, Ota, Go-Slow Hall and the lane run; people bake under 40 ms at 4x CPU; memory as 1.8 part 6; level tests and e2e pass | 1 KB first load |
+| 5d | ST-H4 | qa | Step ST-H pass | ST-H3 | the 1.8 crisp check at 400 percent on 851 x 393 (1x, 2.75x) and 320 x 240 (1x, 2x); every skin tone in greyscale; hero reads first; first load +3 KB, Ogun +0.5 KB at most | |
+| 5e | ST-H5 | po | Accept step ST-H; Tp sees before and after (851 x 393 and 320 x 240, run and builder) | ST-H4 | note in docs/questions.md. **Accepted by po, 24 Nov (f54e0a1).** | |
+| 6 | ST-B1 | art | Shared shading helpers in src/art/shade.ts (`wall()`, `zincRoof()`, `flatRoof()`, `softShadow()`, `mix()`), warm ink in palette.ts; gallery page `?gallery=style-shading` | ST-H2 | numbers match style.md 1.3 and 1.5; helpers draw only into bake canvases | 1 KB first load |
+| 7 | ST-B2 | gamedev | Streets: shopfronts with the recipe, baked into cached strips with their soft shadow, in every Lagos and Ogun street, well rooms and both halls (street people already done in ST-H) | ST-B1, ST-H5, SP-Q1 | frame draw calls equal or fewer, fps at 4x CPU equal or better on Alausa, Ota and Go-Slow Hall; strip memory under 4 MB a street; level tests and e2e pass; hero, kobo, food and hazards read as before | 1.5 KB first load, 1 KB Ogun |
+| 8 | ST-B3 | gamedev | Cities: the recipe on every Lagos and Ogun block, kiosk and stall, still top-down; warm outlines; zinc and concrete roofs in place of big grey | ST-B1, ST-H5 | bake under 50 ms a block at 4x CPU; drag at least 45 fps; idle draws nothing; tap areas unchanged; tired and bright still told apart without colour | 0.5 KB first load |
 | 9 | ST-B4 | qa | Phase 2 pass | ST-B2, ST-B3 | style.md part 5; first load +3 KB, Ogun +1 KB at most | |
 | 10 | ST-B5 | po | Accept phase 2; Tp sees the screenshots | ST-B4 | note in docs/questions.md | |
 | 11 | ST-C1 | designer | Angled city note in docs/city.md: how far fronts reach (40 percent of block depth at most), labels, signs, pins and edge arrows, people per zoom step | ST-B5 (may start during phase 2) | po checks the note | |
@@ -109,7 +114,7 @@ Question for Tp (style.md part 6), id SP-Q1: should ST-B2 also swap the old mark
 
 Order and what runs side by side:
 - ST-A1 can start now beside slice O; ST-A2 and ST-A3 fit in gamedev's gaps (one task at a time, slice O and the speed task from decision 83 first, unless Tp says otherwise).
-- Art runs one phase ahead: ST-B1 may be drawn while phase 1 is in qa, but no gamedev ST-B row starts before ST-A5.
+- Characters first (decision 88): ST-H runs after ST-A5 and before any gamedev ST-B row. Art may draw ST-B1 once ST-H2 is done, but no gamedev ST-B row starts before ST-H5.
 - ST-C3 before ST-C4: Lagos proves the angled view and its tap areas; Ogun reuses it.
 - The evening look is not in this slice.
 
@@ -460,7 +465,7 @@ In the store app the game updates through the store, so U1 does not fire there (
 | ST1b | gamedev | CI: `.github/workflows/app.yml` (deploy.yml untouched) builds the debug APK and keeps it as "gbese-debug.apk" | ST1a | **Done except one gap.** Checked 15 Nov against the row: runs on every push to main and to claude/serene-hopper-ydve2g and by hand (workflow_dispatch), runs `npm test` first, uploads "gbese-debug.apk" for 14 days, no keys. Gap: README has no 5-step how-to (download, allow "install unknown apps", install, play) yet; that is task ST1b-r. Then Tp side-loads it |
 | ST1c | gamedev | iOS build in CI: iOS project in `ios/`, a new job or workflow on GitHub's Mac machines (`macos-latest`), never the company Mac (po 10 Nov). Builds for the iPhone simulator only, unsigned, no keys or secrets. iPhone only, not iPad (decision 57); backup off (decision 59). TestFlight comes in ST4b | ST1a (done); **ready now** | the Mac CI job passes on push and by hand; the simulator starts the game sideways and offline (screenshot kept as an artifact); deploy.yml and app.yml's Android job unchanged; web first load unchanged within 2 KB |
 | ST2 | art | App icons and splash screens at every store size, our own art (`npm run app-icons`, app-assets/) | ST0 | done; po accepted 14 Nov; merged main 15 Nov, PR #11 |
-| ST3 | designer and po | Store listing in docs/store.md: short and long words, keywords; age rating answers (everyone 10 and up, not the kids section, decision 41; Apple gives 4+ or 9+ on honest answers); privacy page, a short page on the test link's site (decision 56): no accounts, trackers, ads or data collected, saves stay on this phone and backup is off (decision 59); Play data safety and Apple privacy answers; 8 sideways screenshots from the real game at the sizes both stores ask, iPhone only (decision 57) | ST0 (done); **ready now** for words and privacy; screenshots best after S3e1b | words plain for a 10 year old; po approved; privacy page builds with the site and passes the size check; screenshots show only what is built; a 3D hero render may be used for store pictures (decision 65) |
+| ST3 | designer and po | Store listing in docs/store.md: short and long words, keywords; age rating answers (children generally, about 5 and up, decision 86; not the kids section, decision 41; Apple gives 4+ or 9+ on honest answers); privacy page, a short page on the test link's site (decision 56): no accounts, trackers, ads or data collected, saves stay on this phone and backup is off (decision 59); Play data safety and Apple privacy answers; 8 sideways screenshots from the real game at the sizes both stores ask, iPhone only (decision 57) | ST0 (done); **ready now** for words and privacy; screenshots best after S3e1b | words plain for a 10 year old; po approved; privacy page builds with the site and passes the size check; screenshots show only what is built; a 3D hero render may be used for store pictures (decision 65) |
 | ST4a | gamedev | ST4, Android: signing and Play upload. Release build (AAB) signed in CI from GitHub secrets Tp types in; upload to Play internal testing | ST1b, ST2, ST3; **blocked on Tp's Google Play account** | the AAB is accepted by Play Console internal testing and installs from the Play test link on Tp's phone |
 | ST4b | gamedev | ST4, iOS: signing and TestFlight upload from the Mac CI job | ST1c, ST2, ST3; **blocked on Tp's Apple developer account** | the build is in TestFlight and installs on Tp's iPhone |
 | ST5 | qa | Test each ST row on an emulator and, when there is one, a real cheap Android phone: offline, sideways, saves, back button, background, size, originality | each row | three-line report per row |
@@ -476,6 +481,28 @@ Order (15 Nov): ST0, ST1a, ST2 done; ST1b done but for the README steps. Next ST
 4. For ST4a: in Play Console, create the app "Gbese!" with the app id from ST-Q1. gamedev gives Tp a short guide to make the upload key and add it, the key password and a Play service account as GitHub Actions secrets, typed in by Tp on github.com.
 5. For ST4b: in App Store Connect, create the app with the same id, make an App Store Connect API key, and add it as GitHub Actions secrets the same way.
 6. **Never paste keys, passwords, key files or codes in chat, in a file or in a PR.** If one is ever pasted, tell the lead at once: it must be replaced.
+
+## Slice MS: Quick missions in Lagos and Ogun (decision 89; designer note docs/missions.md)
+
+Tp's 6 year old has played everything. Ten quick missions (five in Lagos, five in Ogun, 28 stars) on streets and lane runs already built: one goal on top, stars kept the moment they fill. No new level, hazard, food, boss or tune. Runs beside slice P and the Kano design; gamedev fits it between slice P rows (it touches the HUD chip and the city bottom row, so it follows ST-A3's look).
+
+Rules for the whole slice:
+- Budget (gzip): first load grows 4 KB at most, the Ogun part 0.5 KB at most.
+- Words exactly as docs/missions.md part 2; every word in words.ts (Ogun's in `OGUN_WORDS`).
+- No calendar, no streaks, no network (MS-R1). Saves on the phone under `gidi-missions` only.
+- Every row: qa passes it, on the slow phone profile (4x CPU) too, then po accepts.
+
+| # | id | owner | task | depends on | done when | size (gzip) |
+|---|----|-------|------|------------|-----------|-------------|
+| 1 | MS1 | designer | Mission note docs/missions.md: ten missions, stars, words, saves, rulings MS-R1 to MS-R5, question MS-Q1 | none | done 24 Nov; po checks the note | 0 |
+| 2 | MS2 | art | Our own star icon, outline and filled (missions.md part 4), in src/art/icons.ts; shown in `?gallery=style-buttons` | MS1 | reads at 26 px and in greyscale; no face, never like any game's star; listed in docs/assets.md | 0.3 KB first load |
+| 3 | MS3a | gamedev | Missions core: the list, a watcher fed by street and lane events, the `gidi-missions` save, ₦2 a new star into the wallet, unit tests that work every star number out from the level files | MS1 | every star reachable from level data (test); a star survives game over and reload; never paid twice | 1.5 KB first load |
+| 4 | MS3b | gamedev | Missions board, mission card, the run chip, end card lines, the "Missions" button (first in the city bottom row, after the first Mission complete), the wheel-into-Settings rule (MS-R4), Lagos's five missions | MS2, MS3a, ST-A3 | missions.md part 2 words exact; 44 px tap areas (tiles 56 px) at all six sizes with and without the safe area; nothing newly covered | 1.5 KB first load |
+| 5 | MS3c | gamedev | Ogun's five missions (words in the Ogun part), the parcel-in-mission rule, the wells help line, the helpers' thank-you lines and cheer, the "Every {state} star!" card | MS3b | never two parcels saved; help line only after two goes; Ogun part +0.5 KB at most | 0.5 KB first load, 0.5 KB Ogun |
+| 6 | MS4 | qa | Slice MS pass, missions.md part 8 | MS3c | all ten checks pass; Alausa, Ota and lane run fps at 4x CPU not lower with the chip | |
+| 7 | MS5 | po | Accept slice MS; Tp sees the board and a star being won (851 x 393 and 320 x 240) | MS4 | note in docs/questions.md. **Accepted by po, 24 Nov (f54e0a1).** | |
+
+Order: MS2 and MS3a side by side now; MS3b after ST-A3 (already done) and MS2; then MS3c, MS4, MS5. Merging to the live link stays Tp's call (decision 64).
 
 ## Known facts
 

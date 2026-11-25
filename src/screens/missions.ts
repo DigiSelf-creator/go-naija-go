@@ -1,0 +1,148 @@
+/**
+ * MS3b: Lagos's five, the goal pictures and the run's goal chip (docs/missions.md part 2). Not in
+ * the first load: they come with the board's chunk (missionBoard.ts), fetched while the city sits
+ * idle, as the road is, and a mission is only played from its card. Ogun's five come with its
+ * part. Every picture is drawn once, when its card or chip is made.
+ */
+import type { drawKobo as DrawKobo, drawFoodIcon as DrawFood } from '../art/items';
+import type { drawFufuIcon as DrawFufu } from '../art/fufu';
+import type { drawGoat as DrawGoat } from '../art/hazards';
+import { drawWell } from '../art/well';
+import { drawParcelIcon } from '../art/wellRoom';
+import { iconSvg } from '../art/icons';
+import type { FoodKind } from '../game/level';
+import { starSvg } from '../art/star';
+import { coinStars, type MissionDef, type MissionGo, type MissionIcon } from '../game/missions';
+import { h } from './dom';
+import { BOARD_WORDS as W } from './boardWords';
+
+/** Lagos's five, easiest first (part 1). Coin catch's stars come from Alausa's level file. */
+export function lagosMissions(): MissionDef[] {
+  const l = W.lagos;
+  const d = (id: string, goal: MissionDef['goal'], at: number[], stars: number[], icon: MissionIcon, words: { name: string; line: string }, places: string[], more: Partial<MissionDef> = {}): MissionDef => ({
+    id: `lagos-${id}`, state: 'lagos', goal, at, stars, icon, name: words.name, line: words.line, places, ...more,
+  });
+  return [
+    d('coins', 'coins', [1], [], 'coin', l.coins, ['Alausa']),
+    d('lunch', 'foods', [1], [1, 2, 3], 'foods', l.lunch, ['Alausa'], { foods: ['corn', 'fufu', 'amala'], thanks: l.lunch.thanks }),
+    d('goats', 'goats', [2], [1, 2, 3], 'goat', l.goats, ['Computer Village']),
+    d('wells', 'wells', [2, 3], [1, 2], 'well', l.wells, ['Computer Village', 'Ikeja'], { help: l.wells.help }),
+    d('bulbs', 'bulbs', [0], [4, 8, 12], 'power', l.bulbs, ['Lane run']),
+  ];
+}
+
+/** Coin catch's stars, worked out from its street's coins (40, 65 and 85 percent). */
+export const withCoins = (defs: readonly MissionDef[], coinsAt: (n: number) => number): MissionDef[] =>
+  defs.map((d) => (d.goal === 'coins' && d.stars.length === 0 ? { ...d, stars: coinStars(coinsAt(d.at[0]!)) } : d));
+
+/**
+ * The coin, food, fufu and goat pictures, handed in from the first load (main.ts): importing
+ * art/items.ts, art/fufu.ts or art/hazards.ts here would split them, and what they share a file
+ * with, out of the hero's file into a file of their own (a bigger first load). The well's and
+ * the parcel's art are in the first load's main file, so they are imported.
+ */
+export interface SharedArt {
+  kobo: typeof DrawKobo;
+  food: typeof DrawFood;
+  fufu: typeof DrawFufu;
+  goat: typeof DrawGoat;
+}
+const NO_ART = (): void => undefined;
+let art: SharedArt = { kobo: NO_ART, food: NO_ART, fufu: NO_ART, goat: NO_ART };
+export const useArt = (a: SharedArt): void => {
+  art = a;
+};
+
+/** A later state's own goal pictures (the Ijebu garri parcel, the gravel); false: not one of its own. */
+export type OwnIcon = (g: CanvasRenderingContext2D, icon: MissionIcon, size: number) => boolean;
+
+/** A goal's picture, `px` square, drawn once. */
+export function goalPic(icon: MissionIcon | FoodKind, px: number, own?: OwnIcon): HTMLElement {
+  if (icon === 'power' || icon === 'tech') {
+    const s = h('span', { class: `ms-pic ms-${icon}`, 'aria-hidden': 'true' });
+    s.innerHTML = iconSvg(icon, px);
+    return s;
+  }
+  const c = h('canvas', { class: 'ms-pic', width: String(px * 2), height: String(px * 2), 'aria-hidden': 'true' });
+  c.style.width = c.style.height = `${px}px`;
+  const g = c.getContext('2d');
+  if (!g) return c;
+  g.scale(2, 2);
+  if ((icon === 'parcel' || icon === 'gravel') && own?.(g, icon, px)) return c;
+  const k = px / 32;
+  g.scale(k, k);
+  if (icon === 'coin') {
+    g.translate(16, 16);
+    g.scale(1.25, 1.25);
+    art.kobo(g, 0, 0, 0);
+  } else if (icon === 'foods') {
+    for (const [f, x, y] of [['corn', 9, 13], ['amala', 23, 12], ['fufu', 16, 22]] as const) f === 'fufu' ? art.fufu(g, x, y, 19) : art.food(g, f, x, y, 0.6);
+  } else if (icon === 'corn' || icon === 'amala') art.food(g, icon, 16, 16, 0.85);
+  else if (icon === 'fufu') art.fufu(g, 16, 16, 26);
+  else if (icon === 'goat') {
+    g.translate(16, 29);
+    g.scale(0.46, 0.46);
+    art.goat(g, 0, 0, 0, 'walk', 1);
+  } else if (icon === 'well') {
+    g.translate(16, 31);
+    g.scale(0.32, 0.32);
+    drawWell(g, 0, 0, { kind: 'entrance', arrow: false });
+  } else drawParcelIcon(g, 16, 16, 26);
+  return c;
+}
+
+/**
+ * The run's goal chip (part 2, "In the run"): the goal's picture, "{have} / {next star}" and
+ * the star slots; after the last star, the number and a tick. DOM only, touched when the count
+ * changes. A star filling is spoken by the game's polite line (main.ts runSaid).
+ */
+export class MissionChip {
+  readonly el: HTMLElement;
+  private go: MissionGo | null = null;
+  private saved = 0;
+  private last = '';
+  private foods: HTMLElement[] = [];
+
+  constructor() {
+    this.el = h('span', { class: 'ms-chip', hidden: true });
+  }
+
+  /** A new go (or none): the chip's picture is drawn now, once. `saved`: stars won before. */
+  set(go: MissionGo | null, saved: number, own?: OwnIcon): void {
+    this.go = go;
+    this.saved = saved;
+    this.last = '';
+    this.el.hidden = go === null;
+    if (!go) return;
+    const d = go.def;
+    this.foods = d.foods ? d.foods.map((f) => h('span', { class: 'ms-food' }, goalPic(f, 22))) : [];
+    this.el.replaceChildren(...(this.foods.length ? this.foods : [goalPic(d.icon, 22, own), h('span', { class: 'ms-n' })]), h('span', { class: 'ms-stars' }));
+    this.update();
+  }
+
+  /** The count or the stars changed (cheap when nothing did). */
+  update(): void {
+    const go = this.go;
+    if (!go) return;
+    const d = go.def;
+    const won = Math.min(d.stars.length, Math.max(this.saved, go.stars));
+    const next = go.next;
+    const key = `${go.shown}|${next}|${won}|${[...go.foods].join()}`;
+    if (key === this.last) return;
+    this.last = key;
+    const n = this.el.querySelector('.ms-n');
+    if (n) {
+      n.textContent = next === null ? String(go.shown) : `${go.shown} / ${next}`;
+      if (next === null) n.insertAdjacentHTML('beforeend', iconSvg('tick', 16));
+    }
+    d.foods?.forEach((f, i) => this.foods[i]?.classList.toggle('got', go.foods.has(f)));
+    this.el.querySelector('.ms-stars')!.innerHTML = Array.from({ length: d.stars.length }, (_, i) => starSvg(i < won, 16)).join('');
+  }
+
+  /** A star filled: it pops once (0.3 s; none with reduced motion, screens.css). Returns its spoken words. */
+  star(total: number, of: number): string {
+    this.update();
+    this.el.querySelector('.ms-stars')?.children[total - 1]?.classList.add('pop');
+    return W.starSpoken(total, of);
+  }
+}

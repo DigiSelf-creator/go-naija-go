@@ -587,7 +587,18 @@ export class Game {
     return this.camX;
   }
 
+  /**
+   * Makes the hero's run steps, jump and fall ahead at this view's pixel scale, for at most `ms`
+   * ms (style 1.8 part 6 rule 2: while a card is on screen, so a run's first seconds never draw
+   * the hero live). True once they are all made.
+   */
+  prewarmHero(view: View, ms = 4): boolean {
+    this.heroSprites.ratio = view.ratio ?? null;
+    return this.heroSprites.prewarm(this.look, view.scale, ms);
+  }
+
   render(g: CanvasRenderingContext2D, view: View): void {
+    this.heroSprites.ratio = view.ratio ?? null;
     if (view.width !== this.viewW) this.setView(view);
     if (this.run.below) this.renderRoom(g, view);
     else if (this.level.hall) this.renderHall(g, view);

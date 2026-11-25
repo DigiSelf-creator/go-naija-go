@@ -18,6 +18,7 @@ import type { WorldCity, WorldCityHooks, WorldUi } from './ui';
 import type { RoadPlan, PlanStop } from '../screens/road';
 import type { LaneLook } from '../lane/view';
 import type { Obj, StateProgress } from '../game/progress';
+import type { MissionDef, MissionIcon } from '../game/missions';
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
 export const WORLD_PART_VERSION = 1;
@@ -53,6 +54,11 @@ export interface WorldPart {
   };
   /** O6b: what is left to pay on a city spot (own units: kobo for Naira), for a win's prize. */
   readonly left?: (own: Readonly<Obj>, spot: string) => number;
+  /**
+   * MS3c: the state's quick missions (coin catch's stars left empty: the first load works them
+   * out from the level file) and the goal pictures only the part draws (false: not one of its own).
+   */
+  readonly missions?: { readonly list: readonly MissionDef[]; icon?(g: CanvasRenderingContext2D, icon: MissionIcon, size: number): boolean };
 }
 
 /** O6b: what a state's challenge road reads (its own streets, city part, the wallet and its lane best). */

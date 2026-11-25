@@ -23,6 +23,7 @@ import { ogunCity } from './cityScreen';
 import { ogunRoad, expresswayFor } from './roadPlan';
 import { EXPRESSWAY_LOOK } from './laneLook';
 import { OGUN_PRICES, leftOn, readOgunCity, readWallet } from './cityRules';
+import { OGUN_MISSIONS, ogunMissionIcon } from './missions';
 
 const files = import.meta.glob<unknown>('../../data/levels/ogun-*.json', { eager: true, import: 'default' });
 
@@ -74,6 +75,8 @@ export const part: WorldPart = {
     },
   },
   left: (own, spot) => (spot in OGUN_PRICES ? leftOn(readOgunCity(own), spot as keyof typeof OGUN_PRICES) : 0),
+  // MS3c: Ogun's five quick missions.
+  missions: { list: OGUN_MISSIONS, icon: ogunMissionIcon },
 };
 
 /** O6b: the debug galleries read the part's art from here (see galleryArt.ts). */
