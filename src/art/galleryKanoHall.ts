@@ -5,7 +5,7 @@
  * ?gallery=hall-kano2  Rusty's looks (grumpy, wheeze, puff, blow, hiccup, gargle, sneeze, clean),
  *                      the valves, the counter, the wash line calm and in a gust, the cans and the
  *                      cart, the door people (crisp, style 1.8) and his words.
- * The springy cloth frames are K3a's; the dust whirl (K4a) is not drawn yet. Same fixed 960 x 720 layout as the other pages; &t=1.5 holds the time;
+ * The springy cloth frames are K3a's; the dust whirls are K4a's (whirl.ts), rolling out from his feet at 60 u/s. Same fixed 960 x 720 layout as the other pages; &t=1.5 holds the time;
  * &still=1 shows the reduced-motion look.
  */
 import { drawBubble, drawFolkFrame, type FolkFrame, type FolkLook } from './folk';
@@ -27,6 +27,7 @@ import {
   drawBoreholeLine,
   drawClothFrame,
   drawDustStreaks,
+  drawDustWhirl,
   drawRustyBorehole,
   drawRustyWord,
   drawSneezePuff,
@@ -79,6 +80,8 @@ interface Scene {
   hero?: readonly [number, number, boolean];
   finish?: number;
   grey?: boolean;
+  /** K4a: whirls on the floor, as x where they would be at time 0 (they roll left at 60 u/s). */
+  whirls?: readonly number[];
 }
 
 /** One view of the hall at the game's 420-unit height, camera as the game sets it. */
@@ -125,6 +128,10 @@ function hall(g: G, x: number, y: number, w: number, h: number, time: number, st
   });
   drawRustyBorehole(g, BH_HALL.cx, BH_HALL.floorY, fin ? fin.rusty : { ...s.rusty, time, still });
   if (fin) drawSneezePuff(g, fin.puff);
+  for (const wx of s.whirls ?? []) {
+    const x = BH_HALL.heroMaxX - ((BH_HALL.heroMaxX - wx + time * 60) % (BH_HALL.heroMaxX - BH_HALL.heroMinX));
+    drawDustWhirl(g, x, BH_HALL.floorY, time, { still });
+  }
   if (s.hero) {
     const [hx, hy, air] = s.hero;
     g.save();
@@ -147,8 +154,8 @@ function hall(g: G, x: number, y: number, w: number, h: number, time: number, st
 
 const fight: Page = (g, time, still) => {
   label(g, 'K5a Borehole Hall: our own water yard. Rusty Borehole is an old pump clogged with dust, a problem, never a person.', 12, 6, 12);
-  hall(g, 12, 24, 600, 277, time, still, { open: 1, rusty: { mood: 'grumpy', flakes: 1 }, hero: [250, 160, true] }, '851 x 393 shape: valve 1 open (tick, drip), valve 2 STUCK and shaking, valve 3 waiting; one flake off');
-  hall(g, 628, 24, 320, 240, time, still, { open: 2, rusty: { mood: 'blow', flakes: 2 }, gust: 1, hero: [300, 300, false] }, '320 x 240 real size: the gust (cloth streams, streaks)');
+  hall(g, 12, 24, 600, 277, time, still, { open: 1, rusty: { mood: 'grumpy', flakes: 1 }, hero: [250, 160, true], whirls: [330] }, '851 x 393 shape: valve 1 open (tick, drip), valve 2 STUCK and shaking, valve 3 waiting; a dust whirl rolling');
+  hall(g, 628, 24, 320, 240, time, still, { open: 2, rusty: { mood: 'blow', flakes: 2 }, gust: 1, hero: [300, 300, false], whirls: [180, 400] }, '320 x 240 real size: the gust (cloth streams, streaks), two whirls');
   label(g, 'The finish (5.5), 568 x 320 at half size; greyscale last:', 12, 324, 11);
   const steps: [number, string][] = [
     [0.6, '0.6 s gargle, water wave'],
@@ -158,7 +165,7 @@ const fight: Page = (g, time, still) => {
     [4.6, '4.6 s door people fill up'],
   ];
   steps.forEach(([t, name], i) => hall(g, 12 + (i % 3) * 316, 342 + Math.floor(i / 3) * 186, 284, 160, time, still, { open: 3, rusty: {}, finish: still ? 9 : t }, name));
-  hall(g, 644, 528, 284, 160, time, still, { open: 1, rusty: { mood: 'wheeze', k: 0.6, flakes: 1 }, hero: [200, 300, false], grey: true }, 'Greyscale: hero, Rusty, STUCK valve by shape');
+  hall(g, 644, 528, 284, 160, time, still, { open: 1, rusty: { mood: 'wheeze', k: 0.6, flakes: 1 }, hero: [200, 300, false], grey: true, whirls: [300] }, 'Greyscale: hero, Rusty, STUCK valve, whirl by shape');
   label(g, 'Only words painted: BOREHOLE HALL and STUCK. No title, no ruler, nothing holy, no tall green tubes, no marked blocks.', 12, 704, 10);
   label(g, 'Under each valve: the springy cloth frame (K3a).', 628, 290, 10);
 };
