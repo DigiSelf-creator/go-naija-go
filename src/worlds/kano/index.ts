@@ -20,6 +20,7 @@ import { kanoStreet } from './kurmiStreet';
 import { KANO_WIND_SOUNDS } from './wind';
 import { KANO_CLOTH_SOUNDS } from './cloth';
 import { KANO_WHIRL_SOUNDS } from './whirl';
+import { KANO_WORDS } from './words';
 
 const files = import.meta.glob<unknown>('../../data/levels/kano-*.json', { eager: true, import: 'default' });
 
@@ -32,7 +33,8 @@ for (const [path, data] of Object.entries(files)) {
 // The long ride north and its welcome tune; Kano's home (the wall and gate, and Kurmi's button)
 // until its city (K6b). K2b: Kurmi's look, tune and whoosh. K3b: Kofar Mata's look and tune, the
 // groundnut store, the cloth's boing and the beaters' tok. K4b: Dawanau's look and tune, the whirl's fff and pff.
-export const part: WorldPart = { id: 'kano', version: 1, levels, ui, city: kanoHome, street: kanoStreet, sounds: { ...KANO_WIND_SOUNDS, ...KANO_CLOTH_SOUNDS, ...KANO_WHIRL_SOUNDS } };
+// K-size: the words the first load shows once the part is in (toasts, chips, cards, home buttons).
+export const part: WorldPart = { id: 'kano', version: 1, levels, ui, city: kanoHome, street: kanoStreet, sounds: { ...KANO_WIND_SOUNDS, ...KANO_CLOTH_SOUNDS, ...KANO_WHIRL_SOUNDS }, words: KANO_WORDS };
 
 /** The debug galleries read the part's art from here (see galleryArt.ts). */
 export * from './galleryArt';

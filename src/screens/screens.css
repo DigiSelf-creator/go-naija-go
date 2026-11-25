@@ -1015,6 +1015,14 @@
     min-height: 44px;
   }
 }
+/* o1c fix: 568 x 320 with 24 px safe edges leaves the card 272 px; the Lagos Win card ("On to
+   Ogun") was 275 and scrolled. Just above the short-screen sizes, a run card's lines sit a little
+   closer (8 px between them, now 5), so it fits with room to spare. */
+@media (min-height: 301px) and (max-height: 340px) and (orientation: landscape) {
+  .event p {
+    margin: 3px 0 5px;
+  }
+}
 /* QA-O7-2: when a run's card or a city's boom card is still taller than a short screen (320 x 240
    or 640 x 200 with safe edges), its words scroll and its buttons stay in view at the bottom. */
 @media (max-height: 300px) {
@@ -1728,28 +1736,6 @@
   flex-wrap: wrap;
   gap: 6px;
 }
-/* K3b: Kano's home: two streets' Play buttons share one row. */
-.city-buttons .go-pair {
-  display: flex;
-  gap: 6px;
-  width: 100%;
-}
-.city-buttons .go-pair .go {
-  flex: 1 1 0;
-  width: auto;
-  min-width: 0;
-}
-/* K4b: three streets in one row: tighter sides, so "Play Kofar Mata" takes two lines, not three. */
-.city-buttons .go-three .go {
-  padding: 4px 6px;
-}
-@media (max-width: 400px) {
-  .city-buttons .go-three .go {
-    font-size: 15px;
-    line-height: 1.1;
-    min-height: 48px;
-  }
-}
 .city-zoom {
   display: flex;
   flex-direction: column-reverse;
@@ -1973,15 +1959,6 @@
   .screen .city-banner p {
     font-size: 0.8rem;
   }
-}
-
-/* K1c fix: Kano's home words panel, a little smaller where it must sit beside the gate board. */
-.screen .city-banner.tight {
-  padding: 3px 8px 4px;
-}
-.screen .city-banner.tight p {
-  font-size: 12px;
-  line-height: 1.2;
 }
 
 /* city.md (d), d5: the Booming meter inside the "Lagos" heading box. Line 1: "Lagos", the

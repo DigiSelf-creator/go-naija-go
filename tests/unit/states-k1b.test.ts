@@ -166,6 +166,15 @@ describe('the lazy Kano part (kano.md 9.1, 9.2; KN-R10)', () => {
     expect(w.get('ogun')).toBeNull();
   });
 
+  it('K-size: its words ride in the part; once it loads, its toasts have their short words on a narrow bar', async () => {
+    const long = "Kilishi! Wind can't hold you back for 12 seconds.";
+    const w = new WorldParts({ kano: () => Promise.resolve({ part: kanoPart }) });
+    expect((await w.load('kano')).ok).toBe(true);
+    expect(kanoPart.words).toBe(KANO_PART_WORDS);
+    expect(barWords(long, 100)).toBe("Kilishi! Wind can't hold you back.");
+    expect(barWords(long, 200)).toBe(long);
+  });
+
   it('missing or broken: Kano\'s own plain words (Lagos and Ogun still work); the next try fetches again', async () => {
     let online = false;
     let calls = 0;
@@ -232,7 +241,7 @@ describe('part 1 and part 8 words, exact', () => {
       go: 'Go to Kano',
       locked: 'Win Pothole Hall to open the road to Kano.',
     });
-    expect(KANO_WORDS.arrival).toEqual({
+    expect(KANO_PART_WORDS.arrival).toEqual({
       heading: 'Welcome to Kano!',
       line1: 'Kano is the Centre of Commerce. People come here to buy and sell.',
       line2: 'The dust has dried up the borehole. Fix Kano, and the water will flow.',

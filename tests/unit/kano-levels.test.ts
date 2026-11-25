@@ -496,10 +496,12 @@ describe('Kano words (K0a)', () => {
   it('every toast and hall line over 35 characters has short words of 35 or fewer', () => {
     const lines = [...Object.values(KANO_WORDS.toast), KANO_WORDS.hall.parcelShield, KANO_WORDS.hall.start, KANO_WORDS.hall.hint, KANO_WORDS.hall.cross,
       KANO_WORDS.hall.open, KANO_WORDS.hall.left(2), KANO_WORDS.hall.left(1)];
+    // The Kano part adds its short words when it loads (load.ts); the Lagos ones are there already.
+    const table: Record<string, string> = { ...SHORT_TOAST, ...KANO_WORDS.short };
     for (const t of lines) {
       if (t.length <= SHORT_AT) continue;
-      expect(SHORT_TOAST[t], t).toBeDefined();
-      expect(SHORT_TOAST[t]!.length).toBeLessThanOrEqual(SHORT_AT);
+      expect(table[t], t).toBeDefined();
+      expect(table[t]!.length).toBeLessThanOrEqual(SHORT_AT);
     }
   });
 

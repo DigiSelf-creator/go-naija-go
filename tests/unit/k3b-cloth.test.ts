@@ -224,10 +224,12 @@ describe('K3b: the well goes to the groundnut store; the parcel is saved under s
     expect(saved.states.kano.parcel).toBe(true);
   });
 
-  it('the first load\'s words match the Kano part\'s word for word', () => {
-    expect(FIRST.street.parcel).toBe(KANO_WORDS.toast.parcel);
-    expect(FIRST.street.clearedParcel).toBe(KANO_WORDS.cleared.parcel);
-    expect(FIRST.street.play2).toBe(`Play ${KANO_WORDS.streets[1]}`);
+  it('the parcel words and Kofar Mata\'s button ride in the Kano part, handed to the first load', () => {
+    expect(part.words).toBe(KANO_WORDS);
+    expect(KANO_WORDS.toast.parcel).toBe('Groundnut garri parcel! Shield for the hall.');
+    expect(KANO_WORDS.cleared.parcel).toBe('Your garri parcel is saved for Borehole Hall.');
+    expect(KANO_WORDS.place.plays[1]).toBe(`Play ${KANO_WORDS.streets[1]}`);
+    expect(Object.keys(FIRST)).not.toContain('street');
   });
 });
 
