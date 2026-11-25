@@ -28,7 +28,7 @@ import { hasSavedLook, loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetOpen, streetRecord, switchedOn } from './game/progress';
 import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, canFix, isBuilt, leftOf, winPrize, withHint, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
-import { OGUN, OGUN_TRAYS, StateCity, arrived, openStates, statePart, stateOpen, stateProgress, wallet, whereNow } from './game/states';
+import { KANO, OGUN, OGUN_TRAYS, StateCity, arrived, openStates, statePart, stateOpen, stateProgress, wallet, whereNow } from './game/states';
 import { WorldParts } from './worlds/load';
 import type { BuildId } from './art/payspot';
 import type { Mission } from './screens/city';
@@ -103,7 +103,8 @@ function startGame(): void {
   /** S2.8: streets done, best kobo, the saved parcel and the hall, under gidi-progress. */
   const progress = new Progress(store);
   /** O1b1: later states' lazy parts (docs/ogun.md 9.2). Ogun's files are fetched only when asked for. */
-  const worlds = new WorldParts({ ogun: () => import('./worlds/ogun') }, () => navigator.onLine !== false);
+  // K1b: Kano's part the same way (it loads and plays without Ogun's, KN-R10).
+  const worlds = new WorldParts({ ogun: () => import('./worlds/ogun'), kano: () => import('./worlds/kano') }, () => navigator.onLine !== false);
   /** S3f0 part 25.5: can this phone tilt (a quiet 1.5 s check on Android; iPhones know at once). */
   const tilt = new TiltAccess();
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
@@ -235,7 +236,7 @@ function startGame(): void {
       // The city fills the whole screen and draws itself: the street under it is not drawn
       // (on a slow phone that was a second full-screen picture every frame while walking).
       // The intro story covers the whole screen too (city.md a2.9).
-      if (menus.current !== 'city' && menus.current !== 'intro' && menus.current !== 'ride' && menus.current !== 'ogun') {
+      if (menus.current !== 'city' && menus.current !== 'intro' && menus.current !== 'ride' && menus.current !== 'ogun' && menus.current !== 'kano') {
         game.render(g, view);
         streetUnder = true;
       } else if (streetUnder) {
@@ -526,6 +527,10 @@ function startGame(): void {
       // O1b2: the Win screen's "On to Ogun": from Lagos (where "Not now" leaves the player), by bus.
       menus.showCity();
       menus.travelTo(OGUN);
+    } else if (to === 'kano') {
+      // K1b: Pothole Hall's "On to Kano": from Ogun's city (where "Not now" leaves the player), by bus.
+      menus.ogunHome('city');
+      menus.travelTo(KANO);
     } else menus.show(to);
   }
 
@@ -764,6 +769,14 @@ function startGame(): void {
     OGUN_TRAYS,
   );
   cityLife.also = (dt) => void ogunCity.tick(dt);
+  /** K1b: Kano's own city part (`states.kano.city`, never the wallet); no trays until Kano's city (K6b). */
+  const kanoCity = new StateCity(
+    () => statePart(progress.raw, KANO)['city'],
+    (own) => {
+      if (!(progress.broken && progress.raw === null)) progress.saveStatePart(KANO, 'city', own);
+    },
+    {},
+  );
   /** O6b: the Ogun city spot a run from Ogun's city or road is for (its win brings what is left), or null. */
   let ogunFor: string | null = null;
   /** The music dip under the sting or the boom (city.md d7). */
@@ -984,20 +997,26 @@ function startGame(): void {
       const ogunBoom = typeof own['boom'] === 'number' ? own['boom'] : 0;
       const ogunSeen = typeof own['boomSeen'] === 'number' ? own['boomSeen'] : 0;
       const beaten = stateProgress(raw, OGUN).hall.done;
+      // K1b (kano.md 1.6): Kano's cog turns at its first boom or its first Borehole Hall win.
+      const kOwn = kanoCity.own;
+      const kanoBeaten = stateProgress(raw, KANO).hall.done;
+      const num = (x: unknown): number => (typeof x === 'number' ? x : 0);
       return {
         where: whereNow(raw),
         arrived: arrived(raw),
         lagos: { boom: cityLife.state.boom, turning: lagosTurning },
         ogun: { open: stateOpen(raw, OGUN), boom: ogunBoom, turning: beaten || ogunSeen >= FIRST_BOOM, beaten },
+        kano: { open: stateOpen(raw, KANO), boom: num(kOwn['boom']), turning: kanoBeaten || num(kOwn['boomSeen']) >= FIRST_BOOM, beaten: kanoBeaten, arrived: arrived(raw, KANO) },
       };
     },
+    kanoCity,
     worldPart: (id) => worlds.get(id),
     loadWorld: (id) => worlds.load(id),
     setWhere: (id) => {
       if (whereNow(progress.raw) !== id) progress.savePart('where', id);
     },
-    arrived: () => {
-      progress.saveStatePart(OGUN, 'arrived', true);
+    arrived: (id = OGUN) => {
+      progress.saveStatePart(id, 'arrived', true);
     },
     playTune: (tune) => {
       if (!musicAudible(menus.sound, menus.music) || document.hidden) return;
@@ -1044,7 +1063,7 @@ function startGame(): void {
     },
     ogunRoadView: () => {
       const l = readLane(statePart(progress.raw, OGUN)['lane']);
-      return { progress: progress.state(OGUN), own: ogunCity.own, wallet: cityLife.state, lane: { best: l.best, goals: l.goals } };
+      return { progress: progress.state(OGUN), own: ogunCity.own, wallet: cityLife.state, lane: { best: l.best, goals: l.goals }, kanoLit: stateProgress(progress.raw, KANO).hall.done };
     },
   });
   const hud = new Hud(document.body, {
@@ -1749,7 +1768,7 @@ function startGame(): void {
     // O1b1, for tests: the saved state list, and a way to load the Ogun part (players use the Travel card, O1b2).
     get states() {
       const raw = progress.raw;
-      return { where: whereNow(raw), open: openStates(raw), ogun: stateProgress(raw, OGUN), arrived: arrived(raw), wallet: wallet(raw), ogunLoaded: worlds.get(OGUN) !== null };
+      return { where: whereNow(raw), open: openStates(raw), ogun: stateProgress(raw, OGUN), arrived: arrived(raw), wallet: wallet(raw), ogunLoaded: worlds.get(OGUN) !== null, kano: stateProgress(raw, KANO), kanoArrived: arrived(raw, KANO), kanoLoaded: worlds.get(KANO) !== null };
     },
     loadOgun: async () => {
       const r = await worlds.load(OGUN);
@@ -1949,6 +1968,10 @@ function startGame(): void {
       };
     },
     /** O6b: Ogun from above now (its draws, hero and test boxes), or null. */
+    /** K1b: Kano's home now (its draws), or null. */
+    get kanoHome() {
+      return menus.kanoScreen;
+    },
     get ogunCity() {
       return menus.ogunScreen;
     },
@@ -2137,6 +2160,9 @@ declare global {
         arrived: boolean;
         wallet: { kobo: number; power: number; tech: number };
         ogunLoaded: boolean;
+        kano: import('./game/progress').StateProgress;
+        kanoArrived: boolean;
+        kanoLoaded: boolean;
       };
       /** O1b1: loads the Ogun part (dev only until O1b2); a failure shows its plain words on the toast. */
       loadOgun(): Promise<{ ok: true; levels: string[] } | { ok: false; why: 'missing' | 'broken'; message: string }>;
@@ -2221,6 +2247,8 @@ declare global {
       } | null;
       /** O6b: Ogun from above now, or null. */
       readonly ogunCity: import('./worlds/ui').WorldCity | null;
+      /** K1b: Kano's home now, or null. */
+      readonly kanoHome: import('./worlds/ui').WorldCity | null;
       /** Lagos from above now, or null when it is not showing. */
       readonly city: {
         readonly cam: { readonly zoom: 'far' | 'near'; readonly x: number; readonly y: number };

@@ -10,8 +10,14 @@ import type { StateCity } from '../game/states';
 
 export interface RideOptions {
   look: HeroLook;
-  /** Ogun to Lagos: under the arch's back ("SAFE JOURNEY"). */
+  /** Ogun to Lagos: under the arch's back ("SAFE JOURNEY"). K1b: on Kano's ride, Kano to Ogun or Lagos (the road the other way). */
   toLagos: boolean;
+  /**
+   * K1b: draws the hero standing at the bus window, feet at (0, 0), facing +x, and the Skip
+   * button: the Kano part imports no value from the first load (KN-R10), so the game passes them.
+   */
+  rider?(g: CanvasRenderingContext2D): void;
+  skipButton?(onTap: (e: MouseEvent) => void): HTMLButtonElement;
   /** King Pothole is beaten: the arch is bright. */
   lit: boolean;
   /** Reduced motion: the end picture only. */

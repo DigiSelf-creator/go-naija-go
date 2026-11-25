@@ -2954,6 +2954,12 @@ body.lane {
     flex-direction: column;
   }
 }
+/* K1b (kano.md 1.5): three places sit side by side from 480 px wide. */
+@media (max-width: 479px) {
+  .travel-places.three {
+    flex-direction: column;
+  }
+}
 .travel-place {
   flex: 1;
   display: flex;

@@ -16,7 +16,7 @@ import type { MusicPlace } from '../art/tunes';
 /** What the game shows now, as far as music cares. */
 export interface MusicScene {
   /** The menu screen showing, 'play' in a run with no card up, or null (between screens). */
-  screen: 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ogun' | 'ride' | 'play' | null;
+  screen: 'title' | 'builder' | 'credits' | 'road' | 'wheel' | 'pause' | 'gameover' | 'cleared' | 'win' | 'intro' | 'settings' | 'city' | 'ogun' | 'kano' | 'ride' | 'play' | null;
   /** The street being played (0 to 2) or 'hall'. */
   where: number | 'hall';
   /** Below the street, in the well room. */
@@ -46,6 +46,7 @@ export function musicCue(s: MusicScene): Cue | null | 'keep' {
     case 'city':
     // O1b2: Ogun's place keeps the menu tune too.
     case 'ogun':
+    case 'kano':
       return { place: 'menu', tempo: 0 };
     // O1b2: the bus ride is quiet but for its own welcome tune (ogun.md 1.3).
     case 'ride':

@@ -19,7 +19,8 @@ import { parseLevel } from '../../src/game/level';
 import { RULES, STEPS_PER_SECOND } from '../../src/game/run';
 import { parseRoom } from '../../src/game/well';
 import { checkChunk, checkFair, chunkRows, freeLanes, isDodge, parseLane, rowsOf, timeTo } from '../../src/lane/level';
-import { SHORT_AT, hintWords } from '../../src/screens/words';
+import { SHORT_AT, SHORT_TOAST, hintWords } from '../../src/screens/words';
+import { formatMoney } from '../../src/game/money';
 import { KANO_WORDS } from '../../src/worlds/kano/words';
 import { KANO_FOODS, playableKano } from './kano-level-data';
 
@@ -489,7 +490,7 @@ describe('Kano words (K0a)', () => {
   it('the three street names (decision 91), in order', () => {
     expect(KANO_WORDS.streets).toEqual([KURMI.name, KOFAR_MATA.name, DAWANAU.name]);
     expect(KANO_WORDS.streets).toEqual(['Kurmi', 'Kofar Mata', 'Dawanau']);
-    expect(KANO_WORDS.cleared.text('Kurmi', 1500)).toMatch(/^Kurmi is moving again, thanks to you! You got .+15\.$/);
+    expect(KANO_WORDS.cleared.text('Kurmi', formatMoney(1500))).toMatch(/^Kurmi is moving again, thanks to you! You got .+15\.$/);
   });
 
   it('every toast and hall line over 35 characters has short words of 35 or fewer', () => {
@@ -497,8 +498,8 @@ describe('Kano words (K0a)', () => {
       KANO_WORDS.hall.open, KANO_WORDS.hall.left(2), KANO_WORDS.hall.left(1)];
     for (const t of lines) {
       if (t.length <= SHORT_AT) continue;
-      expect(KANO_WORDS.short[t], t).toBeDefined();
-      expect(KANO_WORDS.short[t]!.length).toBeLessThanOrEqual(SHORT_AT);
+      expect(SHORT_TOAST[t], t).toBeDefined();
+      expect(SHORT_TOAST[t]!.length).toBeLessThanOrEqual(SHORT_AT);
     }
   });
 

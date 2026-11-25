@@ -10,7 +10,7 @@
  *   the promise never rejects. It resolves with `ok: false` and plain words to show, and the next
  *   try loads afresh. The game never crashes on it.
  */
-import { WORLD_PART_WORDS } from '../screens/words';
+import { KANO_WORDS, WORLD_PART_WORDS } from '../screens/words';
 import type { StreetSkin } from '../game/skin';
 import type { ArenaRules, Run } from '../game/run';
 import type { Tune } from '../art/tunes';
@@ -67,6 +67,8 @@ export interface WorldRoadView {
   own: Readonly<Obj>;
   wallet: { kobo: number; power: number; tech: number };
   lane: { best: number; goals: number };
+  /** K1b: Rusty Borehole is beaten (Ogun's "To Kano" stop shows the bright gate). */
+  kanoLit?: boolean;
 }
 
 export type WorldLoad = { ok: true; part: WorldPart } | { ok: false; why: 'missing' | 'broken'; message: string };
@@ -105,14 +107,16 @@ export class WorldParts {
     const busy = this.loading.get(id);
     if (busy) return busy;
     const importer = this.importers[id];
+    // K1b: Kano's own words (Lagos and Ogun still work); every other part says Ogun's.
+    const w = id === 'kano' ? { broken: KANO_WORDS.broken, noInternet: KANO_WORDS.download.noNet } : WORLD_PART_WORDS;
     const run: Promise<WorldLoad> = new Promise<unknown>((done) => done(importer ? importer() : Promise.reject(new Error(`no part ${id}`)))).then(
       (mod): WorldLoad => {
         const part = checkPart(mod, id);
-        if (!part) return { ok: false, why: 'broken', message: WORLD_PART_WORDS.broken };
+        if (!part) return { ok: false, why: 'broken', message: w.broken };
         this.loaded.set(id, part);
         return { ok: true, part };
       },
-      (): WorldLoad => ({ ok: false, why: 'missing', message: this.online() ? WORLD_PART_WORDS.broken : WORLD_PART_WORDS.noInternet }),
+      (): WorldLoad => ({ ok: false, why: 'missing', message: this.online() ? w.broken : w.noInternet }),
     );
     this.loading.set(id, run);
     // A failed try is forgotten, so the next tap tries again.

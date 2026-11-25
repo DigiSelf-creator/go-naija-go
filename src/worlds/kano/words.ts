@@ -1,19 +1,31 @@
 /**
  * K0a: every Kano word the streets, the well room and Borehole Hall need (docs/kano.md parts 3,
  * 4, 5, 7 and 8), word for word. Kept in the Kano folder so it rides in the lazy Kano part
- * (kano.md 9.1); when gamedev builds K1b, the few lines the first load must show (the "On to
- * Kano" button, the Travel card, the "To Kano" stop, the wheel lines, the download card) move to
- * src/screens/words.ts, as Ogun's did. Nothing here is shown yet: the street files carry the
+ * (kano.md 9.1). K1b moved the lines the first load shows (the "On to Kano" button, the Travel
+ * card, the "To Kano" stop, the arrival card, the wheel lines, the download card) and the short
+ * toast words (SHORT_TOAST) to src/screens/words.ts, as Ogun's did. The street files carry the
  * hints, and tests/unit/kano-levels.test.ts checks they match.
+ *
+ * Like every file in this folder it imports no value from outside it (the Kano part works on its
+ * own, KN-R10), so the money lines take the money as words the game has already written.
  *
  * Rules for every line (kano.md 2.3 and 7, decisions 86 and 91): plain words for children about
  * 5 and up; no line names God (KN-R7); no title words for rulers; every Hausa line is fine for
  * the team's test link and is read by Tp or a Hausa speaker Tp trusts before the closed
  * invited test.
  */
-import { formatMoney } from '../../game/money';
-
 export const KANO_WORDS = {
+  /**
+   * K1b: Kano's home until its city is built (K6b). gamedev's words for designer to check
+   * (kano.md part 1 leaves this screen open, as ogun.md did for Ogun's place).
+   */
+  place: {
+    heading: 'Kano',
+    line: 'The Centre of Commerce',
+    soon: 'Kurmi, the first street through the gate, is coming next.',
+    /** The picture's spoken name. */
+    pic: 'The old red wall of Kano and its open gate.',
+  },
   /** Part 3.1 (decision 91): the three streets, in order from the gate. */
   streets: ['Kurmi', 'Kofar Mata', 'Dawanau'] as readonly string[],
   /** Part 3: each street's hints, word for word as in its level file (35 characters or fewer). */
@@ -32,19 +44,6 @@ export const KANO_WORDS = {
     furaWearingOff: 'Fura is wearing off!',
     parcel: 'Groundnut garri parcel! Shield for the hall.',
   },
-  /**
-   * Short words for a narrow bar (S2.2), for each toast over 35 characters. K1b adds these to
-   * SHORT_TOAST (or teaches barWords to read this list once the Kano part has loaded).
-   */
-  short: {
-    "Kilishi! Wind can't hold you back for 12 seconds.": "Kilishi! Wind can't hold you back.",
-    "Fura da nono! Dust can't stop you for 12 seconds.": "Fura da nono! Dust can't stop you.",
-    'Groundnut garri parcel! Shield for the hall.': 'Garri parcel! Shield for the hall.',
-    'Your garri parcel: the shield is on!': 'Garri parcel: shield on!',
-    "He's cross! Two whirls now. Jump them both.": 'Two whirls now! Jump them both.',
-    'The water is flowing! Kano is switched on!': 'The water is flowing!',
-    'Bounce, hold, and bump the valve!': 'Bounce, hold, bump the valve!',
-  } as Readonly<Record<string, string>>,
   /** HUD chips while a food works (icon, word, bar; never colour alone). */
   hud: {
     kilishi: (s: number) => `Kilishi ${s}`,
@@ -52,13 +51,13 @@ export const KANO_WORDS = {
   },
   /** Part 8: Street cleared on a Kano street. */
   cleared: {
-    text: (name: string, kobo: number) => `${name} is moving again, thanks to you! You got ${formatMoney(kobo)}.`,
+    text: (name: string, money: string) => `${name} is moving again, thanks to you! You got ${money}.`,
     parcel: 'Your garri parcel is saved for Borehole Hall.',
     toHall: 'Go to Borehole Hall',
   },
   /** Part 8: Out of lives in Kano. */
   gameOver: {
-    text: (kobo: number) => `You keep ${formatMoney(kobo)}. The street is still here. Try again!`,
+    text: (money: string) => `You keep ${money}. The street is still here. Try again!`,
     hallText: 'Rusty Borehole is still dry. Try again!',
   },
   /** Part 5: Borehole Hall. */
@@ -87,7 +86,7 @@ export const KANO_WORDS = {
   win: {
     heading: 'Kano is switched on!',
     line: 'The water is flowing. The markets of Kano are busy again.',
-    money: (kobo: number) => `You got ${formatMoney(kobo)}.`,
+    money: (money: string) => `You got ${money}.`,
     takeHome: 'Take it home',
     playAgain: 'Play again',
     road: 'Challenge road',
