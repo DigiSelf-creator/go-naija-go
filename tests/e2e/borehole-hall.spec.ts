@@ -204,7 +204,7 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
   expect(errors).toEqual([]);
 });
 
-test('Kano\'s home at 320 x 240 with Borehole Hall open: every button on screen, 44 px tall, none overlapping', async ({ page }) => {
+test('Kano\'s home at 320 x 240 with Borehole Hall open: every button on screen, 44 px tall, 8 px apart', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
   await openKano(page, false);
   const boxes = await page.locator('.kano-city button').evaluateAll((els) =>
@@ -219,5 +219,13 @@ test('Kano\'s home at 320 x 240 with Borehole Hall open: every button on screen,
     expect(b.bottom, b.name).toBeLessThanOrEqual(240);
     expect(b.height, b.name).toBeGreaterThanOrEqual(44);
   }
-  for (const [i, a] of boxes.entries()) for (const b of boxes.slice(i + 1)) expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top, `${a.name} and ${b.name}`).toBe(true);
+  // The Play buttons 8 px apart (kano.md 8; qa K4c), and each name reads whole.
+  const plays = boxes.filter((b) => /^(Play |Go to )/.test(b.name));
+  expect(plays).toHaveLength(4);
+  for (const [i, a] of plays.entries())
+    for (const b of plays.slice(i + 1)) expect(Math.max(b.left - a.right, a.left - b.right, b.top - a.bottom, a.top - b.bottom), `${a.name} and ${b.name}`).toBeGreaterThanOrEqual(8);
+  for (const n of ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau', 'Go to Borehole Hall']) {
+    const over = await page.locator('.kano-city').getByRole('button', { name: n }).evaluate((e) => e.scrollWidth > e.clientWidth + 1);
+    expect(over, n).toBe(false);
+  }
 });
