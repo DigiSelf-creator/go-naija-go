@@ -1,5 +1,7 @@
 # Open questions for the product owner
 
+## Answered by Tp, 25 Nov 2026: MS-Q1 a (decision 90); KN-Q1 a, KN-Q2 a, KN-Q3 a, KN-Q4 a (decision 91).
+
 ## po note, 24 Nov 2026 (newest): crisp characters (ST-H) and quick missions (MS) accepted (f54e0a1)
 
 - **Accepted (ST-H5, MS5):** step ST-H (style.md 1.8, decision 88) and slice MS (missions.md, decision 89) on claude/serene-hopper-ydve2g at f54e0a1, after qa passed ST-H4 and MS4 on re-check. Reported by qa, not re-run by po: hall fps at or above main 95676d6 (Go-Slow about 4 to 5 fps better in phase 1 and the finish, Pothole level or better); street-perf gap is noise (31.1 vs 32.2 avg, same-build runs vary up to 7 fps); missions board loads on its own, works offline, star rows sit inside their tiles at 320 x 240 and 568 x 320; vitest 1890 pass, tsc clean, missions, city, mission-qa and hall specs pass. Reasoned by po: MS-R1 to MS-R5 hold (no calendar, ₦2 once, stars kept after a loss, wheel moves only where five do not fit, no Booming points); nothing copies another game (our own star, MS2) and no real people.
