@@ -83,7 +83,7 @@ export function kofarMataCast(): StreetCast {
       { x: KOFAR_YARD.log + b1, look: KOFAR_BEATERS[1], flip: true, stool: true },
       { x: KOFAR_YARD.tailor + TAILOR_AT, look: KOFAR_TAILOR, stool: true },
     ],
-    keeper: { look: KANO_STORE_KEEPER, x: KANO_STORE_KEEPER_SPOT.x, words: KANO_WORDS.folk.storeKeeper },
+    keeper: KANO_KEEPER,
   };
 }
 
@@ -148,32 +148,44 @@ export function kofarMataSkin(level: Level): StreetSkin {
       landed.clear();
       lastBeat = -1;
     },
-    food(g, kind, x, y, time) {
-      // Fura da nono's own effect is K4b (Dawanau); drawn here if a street holds it.
-      if ((kind as string) !== 'fura') return false;
-      drawFura(g, x, y, time);
-      return true;
-    },
-    icon(g, kind, x, y, size) {
-      if ((kind as string) !== 'fura') return false;
-      drawFuraIcon(g, x, y, size);
-      return true;
-    },
-    room(g, room, camX, viewW, time, viewH, st) {
-      drawKanoWellRoom(g, camX, viewW, time, viewH, st);
-      // The shelves in file order: groundnut sacks, the kuli-kuli shelf (the parcel's), groundnut sacks.
-      room.terrain.platforms.forEach((p, i) => {
-        if (i === 1) drawKuliShelf(g, p.x, p.y, p.w);
-        else drawGroundnutSacks(g, p.x, p.y, p.w);
-      });
-      return true;
-    },
-    gift(g, x, y, time) {
-      drawKanoParcel(g, x, y, time);
-      return true;
-    },
-    parcelIcon(g, x, y, size) {
-      drawKanoParcelIcon(g, x, y, size);
-    },
+    ...FURA_LOOK,
+    ...KANO_STORE,
   };
 }
+
+/** K3b: the groundnut store under a Kano well (kano.md 3.7), its parcel and the parcel's HUD chip. K4b: Dawanau's too. */
+export const KANO_STORE: Pick<StreetSkin, 'room' | 'gift' | 'parcelIcon'> = {
+  room(g, room, camX, viewW, time, viewH, st) {
+    drawKanoWellRoom(g, camX, viewW, time, viewH, st);
+    // The shelves in file order: groundnut sacks, the kuli-kuli shelf (the parcel's), groundnut sacks.
+    room.terrain.platforms.forEach((p, i) => {
+      if (i === 1) drawKuliShelf(g, p.x, p.y, p.w);
+      else drawGroundnutSacks(g, p.x, p.y, p.w);
+    });
+    return true;
+  },
+  gift(g, x, y, time) {
+    drawKanoParcel(g, x, y, time);
+    return true;
+  },
+  parcelIcon(g, x, y, size) {
+    drawKanoParcelIcon(g, x, y, size);
+  },
+};
+
+/** K4b: fura da nono on the road and in the HUD (any Kano street that holds it; Dawanau first). */
+export const FURA_LOOK: Pick<StreetSkin, 'food' | 'icon'> = {
+  food(g, kind, x, y, time) {
+    if (kind !== 'fura') return false;
+    drawFura(g, x, y, time);
+    return true;
+  },
+  icon(g, kind, x, y, size) {
+    if (kind !== 'fura') return false;
+    drawFuraIcon(g, x, y, size);
+    return true;
+  },
+};
+
+/** K4b: the store keeper in a Kano well room (kano.md 3.7), for a street's cast. */
+export const KANO_KEEPER = { look: KANO_STORE_KEEPER, x: KANO_STORE_KEEPER_SPOT.x, words: KANO_WORDS.folk.storeKeeper } as const;

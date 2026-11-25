@@ -1739,6 +1739,17 @@
   width: auto;
   min-width: 0;
 }
+/* K4b: three streets in one row: tighter sides, so "Play Kofar Mata" takes two lines, not three. */
+.city-buttons .go-three .go {
+  padding: 4px 6px;
+}
+@media (max-width: 400px) {
+  .city-buttons .go-three .go {
+    font-size: 15px;
+    line-height: 1.1;
+    min-height: 48px;
+  }
+}
 .city-zoom {
   display: flex;
   flex-direction: column-reverse;

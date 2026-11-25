@@ -322,7 +322,7 @@ export class Game {
   /** A food on the road: the skin's own (ikokore, Ijebu garri), else the game's. */
   private drawFoodNow(g: CanvasRenderingContext2D, kind: Level['foods'][number]['kind'], x: number, y: number, t: number): void {
     if (this.skinDo((k) => k.food?.(g, kind, x, y, t))) return;
-    if (kind !== 'ikokore' && kind !== 'ofada' && kind !== 'kilishi') drawFood(g, kind, x, y, t);
+    if (kind !== 'ikokore' && kind !== 'ofada' && kind !== 'kilishi' && kind !== 'fura') drawFood(g, kind, x, y, t);
   }
   /** One object, filled again each call (no garbage a step). */
   private readonly folkNow = {} as PeopleNow;

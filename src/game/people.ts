@@ -248,6 +248,10 @@ export class GamePeople {
     }
     return this.traderList;
   }
+  /** K4b: the look of a person in `drawn` (by its look index), for a street look's own pieces over them (a porter's sack). */
+  lookOf(i: number): FolkLook | undefined {
+    return this.looks[i];
+  }
   private tradersOf: StreetCrowd | null = null;
   private traderList: { x: number; look: FolkLook; feetY: number }[] = [];
 

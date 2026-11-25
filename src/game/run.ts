@@ -36,6 +36,16 @@ export const RULES = {
   ofadaSteps: secs(12),
   /** K2b (kano.md 4.1): kilishi's strong legs last 12 s. */
   kilishiSteps: secs(12),
+  /** K4b (kano.md 4.1): fura da nono's cool and calm last 12 s. */
+  furaSteps: secs(12),
+  /**
+   * K4b (kano.md 3.3): a dust whirl drifts left at 50 u/s (Gentle: 40) and puffs apart over 0.45 s
+   * (art's WHIRL.puffS): landed on, touched with fura, smashed with amala, hit by a fufu ball, or
+   * at a pit's lip (dust never falls in).
+   */
+  whirlSpeed: 50,
+  whirlSpeedGentle: 40,
+  whirlPuffSteps: secs(0.45),
   /**
    * K2b (kano.md 3.3): in the air, a wind behind you adds a quarter to your speed forward; one in
    * your face takes a quarter away (Gentle mode: an eighth; kilishi: nothing). The ground is not changed.
@@ -135,13 +145,15 @@ export const HAZARD_BOX: Record<HazardKind, { halfW: number; h: number }> = {
   crow: { halfW: 11, h: 14 },
   /** O4b: hopping gravel, 18 wide and 16 tall; its y is its bottom (the road minus its hop). */
   gravel: { halfW: 9, h: 16 },
+  /** K4b: the dust whirl, 30 wide and 50 tall (its sway is the look only). */
+  whirl: { halfW: 15, h: 50 },
 };
 
 /** S2.16 B1: the crow's box bottom is this far above the road. */
 export const CROW_ABOVE = 20;
 
-/** eat: a goat chewing a fufu ball (S2.15); knocked: a tyre or drum tipping off the road. */
-export type HazardMode = 'wait' | 'move' | 'runAway' | 'falling' | 'eat' | 'knocked' | 'flyOff' | 'gone';
+/** eat: a goat chewing a fufu ball (S2.15); knocked: a tyre or drum tipping off the road. K4b puff: a dust whirl puffing apart (t steps). */
+export type HazardMode = 'wait' | 'move' | 'runAway' | 'falling' | 'eat' | 'knocked' | 'flyOff' | 'puff' | 'gone';
 
 export interface HazardState {
   readonly kind: HazardKind;
@@ -173,6 +185,8 @@ export interface GutterState {
 
 /** How a bird came to fly off (S2.16 B1). */
 export type BirdWhy = 'stomp' | 'fufu' | 'suit' | 'amala' | 'touch';
+/** K4b: why a dust whirl puffed apart. */
+export type WhirlWhy = 'stomp' | 'fura' | 'amala' | 'fufu' | 'pit';
 
 export interface CoinState {
   readonly x: number;
@@ -217,6 +231,8 @@ export type RunEvent =
   | { type: 'gravelHop'; x: number }
   /** O4b: a gravel crumbles into dust (bounced on, amala, ikokore). */
   | { type: 'crumble'; x: number; y: number }
+  /** K4b (kano.md 3.3): a dust whirl puffs apart (the soft "pff"); fura's puff pays nothing. */
+  | { type: 'whirlPuff'; x: number; why: WhirlWhy }
   | { type: 'gameOver' }
   /** S2.7: the hall fight starts (the boss words). With the parcel, 'parcelShield' comes first. */
   | { type: 'hallStart' }
@@ -294,13 +310,15 @@ export interface Power {
   ofada: number;
   /** K2b: steps of kilishi left (a headwind does not hold you back). */
   kilishi: number;
+  /** K4b: steps of fura da nono left (dust whirls puff apart on touch). */
+  fura: number;
   shield: boolean;
 }
 
 /** The foods that work for a time (they tick, warn and end). */
-export type TimedFood = 'corn' | 'amala' | 'ikokore' | 'ofada' | 'kilishi';
-const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore', 'ofada', 'kilishi'];
-const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, shield: false };
+export type TimedFood = 'corn' | 'amala' | 'ikokore' | 'ofada' | 'kilishi' | 'fura';
+const TIMED: readonly TimedFood[] = ['corn', 'amala', 'ikokore', 'ofada', 'kilishi', 'fura'];
+const NO_POWER: Readonly<Power> = { corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, fura: 0, shield: false };
 
 /**
  * O3b (ogun.md 3.3): a crack in this play. shut: a line in the road; opening: rumbling since step
@@ -1174,6 +1192,7 @@ export class Run {
         else if (f.kind === 'ikokore') this.power.ikokore = RULES.ikokoreSteps;
         else if (f.kind === 'ofada') this.power.ofada = RULES.ofadaSteps;
         else if (f.kind === 'kilishi') this.power.kilishi = RULES.kilishiSteps;
+        else if (f.kind === 'fura') this.power.fura = RULES.furaSteps;
         else if (f.kind === 'fufu') this.fufu = Math.min(FUFU_RULES.max, this.fufu + FUFU_RULES.give);
         else this.power.shield = true; // a second garri while shielded gives nothing extra
         ev.push({ type: 'food', kind: f.kind, x: f.x, y: f.y });
@@ -1249,6 +1268,7 @@ export class Run {
             z.t = 0;
             this.kobo += FUFU_RULES.knockKobo;
             ev.push({ type: 'fufuKnock', kind: z.kind, x: z.x, y: z.y });
+            if (z.kind === 'whirl') this.puff(z, 'fufu', ev); // K4b: a ball puffs it (+1 kobo, as every hazard)
             break;
           }
           case 'fufuGoat': {
@@ -1311,7 +1331,7 @@ export class Run {
         case 'wait':
           if (z.x - heroX <= wakeDistance) {
             z.mode = 'move';
-            z.vx = -speedOf(hazardSpeeds, z.kind); // towards the hero (an egret pecks first)
+            z.vx = z.kind === 'whirl' && this.gentle ? -RULES.whirlSpeedGentle : -speedOf(hazardSpeeds, z.kind); // towards the hero (an egret pecks first)
             if (z.kind === 'egret') z.t = RULES.egretPeckSteps;
             ev.push({ type: 'wake', kind: z.kind, x: z.x }); // the drum's "dum" (K1)
           }
@@ -1330,6 +1350,10 @@ export class Run {
             // Hovers in place over the pile: the box never moves.
           } else if (z.kind === 'gravel') {
             this.hopGravel(z, nx, ev);
+          } else if (z.kind === 'whirl') {
+            // K4b: dust never falls in a pit; it puffs apart at the lip.
+            if (!groundAt(terrain, nx - HAZARD_BOX.whirl.halfW)) this.puff(z, 'pit', ev);
+            else z.x = nx;
           } else {
             z.x = nx;
             z.rot += (z.vx * dt) / 11;
@@ -1356,6 +1380,9 @@ export class Run {
           break;
         case 'knocked':
           if (++z.t >= FUFU_RULES.knockSteps) z.mode = 'gone';
+          break;
+        case 'puff':
+          if (++z.t >= RULES.whirlPuffSteps) z.mode = 'gone';
           break;
         case 'flyOff': {
           // Up and to the right at 45 degrees; it has no box now and can hurt no one.
@@ -1385,16 +1412,23 @@ export class Run {
         continue;
       }
       const gravel = z.kind === 'gravel';
+      const whirl = z.kind === 'whirl';
       if (h.vy > 0 && h.prevY <= top + (gravel ? RULES.gravelStompSlack : RULES.stompSlack)) {
         // Landed on it: bounce. The goat runs off unhurt; the tyre is knocked away; gravel crumbles.
+        // K4b: a whirl puffs apart (the bounce is vy -480, as every hazard's).
         bounce(h);
         h.y = Math.min(h.y, top);
         this.knockAway(z);
         ev.push({ type: 'bounce', kind: z.kind, x: z.x, y: top });
+        if (whirl) this.puff(z, 'stomp', ev);
       } else if (this.power.amala > 0) {
         this.knockAway(z);
         this.kobo += RULES.smashKobo;
         ev.push({ type: 'smash', kind: z.kind, x: z.x, y: top });
+        if (whirl) this.puff(z, 'amala', ev);
+      } else if (whirl && this.power.fura > 0) {
+        // K4b (kano.md 4.1): with fura da nono a touch puffs it apart, no hurt, no kobo (as OG-R14).
+        this.puff(z, 'fura', ev);
       } else if (gravel && this.power.ikokore > 0) {
         // O4b (ogun.md 4.1): with ikokore's firm feet a touch crumbles it, no hurt.
         this.knockAway(z);
@@ -1489,6 +1523,13 @@ export class Run {
     z.y = k > 0 ? gy - RULES.gravelHop * 4 * k * (1 - k) : gy;
     if (p === 0) ev.push({ type: 'gravelHop', x: z.x });
     if (z.y >= gy && !groundAt(this.terrain, z.x)) z.mode = 'falling';
+  }
+
+  /** K4b: a dust whirl puffs apart where it is (no box from now on; gone after 0.45 s). */
+  private puff(z: HazardState, why: WhirlWhy, ev: RunEvent[]): void {
+    z.mode = 'puff';
+    z.t = 0;
+    ev.push({ type: 'whirlPuff', x: z.x, why });
   }
 
   private knockAway(z: HazardState): void {
@@ -1596,6 +1637,7 @@ function speedOf(speeds: Level['hazardSpeeds'], kind: HazardKind): number {
   if (kind === 'egret') return speeds.egret ?? EGRET_SPEED;
   if (kind === 'crow') return 0;
   if (kind === 'gravel') return speeds.gravel ?? RULES.gravelSpeed;
+  if (kind === 'whirl') return speeds.whirl ?? RULES.whirlSpeed;
   return speeds[kind];
 }
 

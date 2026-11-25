@@ -296,7 +296,7 @@ describe('ikokore (ogun.md 4.1): mud does not slow you for 12 s', () => {
     let fell = false;
     for (let i = 0; i < 2000 && !fell; i++) fell = run.step(DT).some((e) => e.type === 'fall');
     expect(fell).toBe(true);
-    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, shield: false });
+    expect(run.power).toEqual({ corn: 0, amala: 0, ikokore: 0, ofada: 0, kilishi: 0, fura: 0, shield: false });
     // Back at the start, it is there to pick up again.
     expect(run.foods[0]!.taken).toBe(false);
   });

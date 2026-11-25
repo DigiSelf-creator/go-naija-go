@@ -118,8 +118,8 @@ function startGame(): void {
   const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
   /** O2b: ?level=ogun-1 makes "Play" load the Ogun part and start Ota (for testing); O5b: ogun-hall, Pothole Hall. */
   const askedOgun = /^ogun-([1-3]|hall)$/.exec(asked ?? '');
-  /** K2b: ?level=kano-1 makes "Play" load the Kano part and start Kurmi (for testing); K3b: kano-2, Kofar Mata. */
-  const askedKano = /^kano-([12])$/.exec(asked ?? '');
+  /** K2b: ?level=kano-1 makes "Play" load the Kano part and start Kurmi (for testing); K3b: kano-2, Kofar Mata; K4b: kano-3, Dawanau. */
+  const askedKano = /^kano-([123])$/.exec(asked ?? '');
   const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
   let where: Where = firstStreet;
@@ -388,8 +388,8 @@ function startGame(): void {
   const lagosHallTune = TUNES.hall;
   /** K2b: a Kano street (Kurmi so far) being played, or null. */
   let kanoPlay: { level: Level; n: number } | null = null;
-  /** K3b: Kano streets built so far (Kurmi and Kofar Mata). */
-  const KANO_BUILT = 2;
+  /** K3b: Kano streets built so far (Kurmi, Kofar Mata; K4b: Dawanau). */
+  const KANO_BUILT = 3;
   /** K2b: the Lagos street tune; a later state's street tune (Kurmi's) stands in for it while that street is played. */
   const lagosStreetTune = TUNES.street;
   /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
@@ -480,7 +480,7 @@ function startGame(): void {
     menus.ogunRun = og !== null;
     menus.kanoRun = kp !== null;
     if (og) for (const f of ['ikokore', 'ofada'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)));
-    if (kp) hud.setIcon('kilishi', (g) => game.skinDo((k) => k.icon?.(g, 'kilishi', 16, 16, 0.85)));
+    if (kp) for (const f of ['kilishi', 'fura'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)));
     // O3b: the parcel chip shows the state's own parcel (Ijebu garri in Ogun).
     const parcelIcon = game.skin?.parcelIcon;
     hud.setParcelIcon(parcelIcon ? (g) => game.skinDo((k) => k.parcelIcon?.(g, 16, 16, 26)) : null);
@@ -1202,6 +1202,8 @@ function startGame(): void {
   let mudB = false;
   /** K3b: springy cloth bounces since the page opened (tests). */
   let clothBounces = 0;
+  /** K4b: dust whirls puffed apart since the page opened (tests). */
+  let whirlPuffs = 0;
   /** OG-R15: the gravel "tk" on screen only, one for two close landings. */
   const gravelTk = new TkGate();
   /** O5b: the state whose hall is being played. */
@@ -1230,7 +1232,7 @@ function startGame(): void {
         sound.play(e.kind === 'amala' ? 'strongPick' : e.kind === 'garri' ? 'suitOn' : 'food');
         // S2.15: fufu's words say which key or button throws.
         if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
-        else toast.show(e.kind === 'ikokore' || e.kind === 'ofada' ? OGUN_WORDS.toast[e.kind] : e.kind === 'kilishi' ? KANO_WORDS.street.kilishi : W[e.kind], 3200);
+        else toast.show(e.kind === 'ikokore' || e.kind === 'ofada' ? OGUN_WORDS.toast[e.kind] : e.kind === 'kilishi' || e.kind === 'fura' ? KANO_WORDS.street[e.kind] : W[e.kind], 3200);
         break;
       case 'fufuToss':
         sound.play('fufuToss');
@@ -1344,6 +1346,7 @@ function startGame(): void {
         else if (e.kind === 'ikokore') toast.show(OGUN_WORDS.toast.ikokoreWearingOff);
         else if (e.kind === 'ofada') toast.show(OGUN_WORDS.toast.ofadaWearingOff);
         else if (e.kind === 'kilishi') toast.show(KANO_WORDS.street.kilishiWearingOff);
+        else if (e.kind === 'fura') toast.show(KANO_WORDS.street.furaWearingOff);
         break;
       case 'crackOpen':
         // O3b (ogun.md 3.3): the low "krrk" as a crack rumbles open.
@@ -1361,6 +1364,11 @@ function startGame(): void {
         break;
       case 'crumble':
         sound.play('gravelCrumble');
+        break;
+      case 'whirlPuff':
+        // K4b (kano.md 3.3): a dust whirl puffs apart, the soft "pff" (its recipe comes with the Kano part).
+        sound.play('whirlPuff');
+        whirlPuffs++;
         break;
       case 'arch':
         // O2b (ogun.md 1.4): under the gateway arch on Ota.
@@ -1830,6 +1838,10 @@ function startGame(): void {
       // K3b: springy cloth bounces since the page opened.
       return clothBounces;
     },
+    get whirlPuffs() {
+      // K4b: dust whirls puffed apart since the page opened.
+      return whirlPuffs;
+    },
     get below() {
       // Cheap: below the street (the well room shows), for per-frame logs.
       return game.run.below;
@@ -2172,7 +2184,7 @@ declare global {
         readonly busTime: number;
         readonly checkpoint: boolean;
         readonly safe: number;
-        readonly power: { readonly corn: number; readonly amala: number; readonly ikokore: number; readonly ofada: number; readonly kilishi: number; readonly shield: boolean };
+        readonly power: { readonly corn: number; readonly amala: number; readonly ikokore: number; readonly ofada: number; readonly kilishi: number; readonly fura: number; readonly shield: boolean };
         readonly mud: boolean;
         readonly slowed: boolean;
         readonly fufu: number;
@@ -2235,6 +2247,8 @@ declare global {
       readonly below: boolean;
       /** K3b: springy cloth bounces since the page opened. */
       readonly clothBounces: number;
+      /** K4b: dust whirls puffed apart since the page opened. */
+      readonly whirlPuffs: number;
       /** The Throw button on screen now (touch box, CSS px) and its spoken label, or null. */
       readonly throwButton: { readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       /** The Go down / Go up button on screen now (CSS px), or null. */

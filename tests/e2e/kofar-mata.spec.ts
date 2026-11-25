@@ -3,7 +3,7 @@
  * player who has cleared Kurmi opens the game on Kano's home, taps "Play Kofar Mata" and plays
  * by hand with two thumbs: a bounce off the springy cloth, down the well into the groundnut store
  * for the garri parcel (the keeper claps), up at the exit well, on to the bus. The cleared card
- * (Kofar Mata's line, the parcel's line, no Next street yet), the save under states.kano with the
+ * (Kofar Mata's line, the parcel's line, K4b: "Next street" on to Dawanau), the save under states.kano with the
  * parcel and the money in the one wallet (decision 80). Kano plays with the Ogun part never
  * fetched (KN-R10). Also: at 320 x 240, a trader's bubble on Kurmi is never cut by the screen's
  * sides while it scrolls in.
@@ -164,14 +164,14 @@ test('Kofar Mata by hand from Kano\'s home: springy cloth, the groundnut store a
   expect(Math.abs(room.back - 4800)).toBeLessThan(40);
   expect(last.r.parcel).toBe(true);
 
-  // The cleared card: Kofar Mata's line and the parcel's; Take it home and Play again (Dawanau is not built).
+  // The cleared card: Kofar Mata's line and the parcel's; Take it home, Next street (K4b: on to Dawanau) and Play again.
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
   const money = (await page.evaluate(() => window.__game!.run.kobo)) * 10;
   await expect(dialog.getByText(`Kofar Mata is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
   await expect(dialog.getByText('Your garri parcel is saved for Borehole Hall.')).toBeVisible();
-  for (const b of ['Take it home', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
-  for (const b of ['Next street', 'Challenge road']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
+  for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
   const s = await saved(page);
   expect(s.states?.kano?.streets?.['2']).toEqual({ done: true, best: money });
   expect(s.states?.kano?.streets?.['1']).toEqual({ done: true, best: 900 });

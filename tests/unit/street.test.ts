@@ -260,9 +260,9 @@ const STREETS = [
   { L: parseLevel(playableOgun(ogun2)), bigPits: 1, dashGaps: 0, hints: 5 },
   // ogun.md 3.6 (O0a3): Sagamu. Gravel is read as a tyre here (same placing rules); its own rules are in ogun-levels.test.ts.
   { L: parseLevel(playableOgun(ogun3)), bigPits: 2, dashGaps: 0, hints: 3 },
-  // kano.md 3.4 to 3.6 (K0a): Kurmi, Kofar Mata, Dawanau. Whirls are read as tyres and sacks as rocks
-  // here (same placing rules) and fura is left out; K2b: wind, the gate and kilishi are read as the
-  // game reads them. Wind, springy cloth and the Kano foods are in kano-levels.test.ts and k2b-wind.test.ts.
+  // kano.md 3.4 to 3.6 (K0a): Kurmi, Kofar Mata, Dawanau, read as the game reads them (K4b: whirls keep
+  // the tyre's placing rules here, sacks are roofs, fura keeps the food rules). Wind, springy cloth, whirls
+  // and the Kano foods are in kano-levels.test.ts, k2b-wind.test.ts, k3b-cloth.test.ts and k4b-dawanau.test.ts.
   { L: parseLevel(playableKano(kano1)), bigPits: 1, dashGaps: 0, hints: 4 },
   { L: parseLevel(playableKano(kano2)), bigPits: 1, dashGaps: 0, hints: 2 },
   { L: parseLevel(playableKano(kano3)), bigPits: 1, dashGaps: 0, hints: 3 },

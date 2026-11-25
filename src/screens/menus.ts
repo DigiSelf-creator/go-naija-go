@@ -849,13 +849,17 @@ export class Menus {
     return screen.el;
   }
 
-  /** K2b: Kano's home's Play buttons: Kurmi; K3b: Kofar Mata beside it (one row) once Kurmi is cleared. */
+  /**
+   * K2b: Kano's home's Play buttons: Kurmi; K3b: Kofar Mata beside it (one row) once Kurmi is
+   * cleared; K4b: Dawanau too once Kofar Mata is.
+   */
   private kanoPlays(): HTMLElement[] {
     const play = this.hooks.playKano;
     if (!play) return [];
-    const kurmi = button(KANO_WORDS.street.play, 'go', (e) => play(1, tapPoint(e)), {}, 'play');
-    if (!this.hooks.kanoDone?.(1)) return [kurmi];
-    return [h('div', { class: 'go-pair' }, kurmi, button(KANO_WORDS.street.play2, 'go', (e) => play(2, tapPoint(e)), {}, 'play'))];
+    const w = KANO_WORDS.street;
+    const all = [w.play, w.play2, w.play3].map((name, i) => button(name, 'go', (e) => play(i + 1, tapPoint(e)), {}, 'play'));
+    const open = 1 + (this.hooks.kanoDone?.(1) ? 1 + (this.hooks.kanoDone?.(2) ? 1 : 0) : 0);
+    return open === 1 ? [all[0]!] : [h('div', { class: open === 3 ? 'go-pair go-three' : 'go-pair' }, ...all.slice(0, open))];
   }
 
   /** O6b: Ogun's challenge road (ogun.md 6.5), on a stop (with its card open from a city card). */
