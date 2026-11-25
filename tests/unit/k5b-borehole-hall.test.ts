@@ -999,6 +999,28 @@ describe('KN-R15: a whirl never appears touching the hero (as OG-R25); "Hmph!" i
     }
   });
 
+  it('the child (Forward held, Jump tapped about 3 a second, even bunny-hopping off a cloth) meets whirls, never on their first frame, and the try ends within a few minutes', () => {
+    for (const gentle of [false, true]) {
+      const p = play({ gentle });
+      let firstHurts = 0;
+      let i = 0;
+      for (; i < secs(300) && p.run.phase === 'arena'; i++) {
+        p.run.steer(1);
+        if (i % 18 === 0) p.run.press('k');
+        if (i % 18 === 4) p.run.release('k');
+        const n0 = p.f.whirlsOut;
+        const ev = p.run.step(DT);
+        if (p.f.whirlsOut > n0 && ev.some((e) => e.type === 'hit')) firstHurts++;
+      }
+      expect(p.run.phase, `gentle ${gentle}`).not.toBe('arena');
+      expect(i / STEPS_PER_SECOND, `gentle ${gentle}`).toBeLessThan(200);
+      expect(p.f.whirlsOut).toBeGreaterThan(3);
+      expect(p.f.huffs).toBeGreaterThan(0);
+      expect(firstHurts).toBe(0);
+      expect(p.f.touchedAtBirth).toBe(0);
+    }
+  });
+
   it('at his mouth (x above 407) the whirl waits, wheezing; it leaves 0.5 s after the hero steps clear, 11 u of floor away or more', () => {
     for (const gentle of [false, true]) {
       const r = stand(420, { gentle, forward: false }, 3.5);

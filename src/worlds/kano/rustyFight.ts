@@ -372,10 +372,12 @@ export class RustyFight implements ArenaRules {
     run.walls();
     // He holds his breath from a cloth bounce until the hero is down on the floor. A whirl that
     // waited at his mouth leaves heldWhirlDelay after the feet touch the floor.
-    if (h.sprung) {
+    if (h.sprung && !this.huffing) {
+      // (A cloth bounce in the "Hmph!" slide is his push, not the hero's own: he breathes as normal.)
       if (!this.holding) this.bounceFrom = s;
       this.holding = this.data.holdBreath;
-    } else if (h.grounded) {
+    } else if (h.grounded || h.y >= this.data.groundY) {
+      // Feet on the floor (also a hop that lands and leaves the floor in one step: a bunny-hopper is down too).
       this.holding = false;
       this.bounceFrom = -Infinity;
     }
