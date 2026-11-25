@@ -5,7 +5,12 @@
  * - Coughs every 2.8 / 2.4 / 2.0 s by phase (whirl; whirl, gust; whirl, whirl, gust), the first at
  *   2.0 s; a 0.5 s wheeze before a whirl, 0.6 s of puffing before a gust; a gust lasts 2 s and
  *   cuts the air speed toward him to 0.75. A whirl rolls at 60 u/s and puffs apart at the left wall.
- * - He holds his breath: no whirl leaves him while the hero is in the air after a cloth bounce.
+ * - He holds his breath: no whirl leaves him from a cloth bounce until the hero's feet touch the
+ *   floor; a whirl due then waits and leaves 0.5 s after the hero lands.
+ * - KN-R14: each phase's valve is shut tight ("WAIT", a head bump only goes "clonk") until the
+ *   phase's first whirl has left him (2.0 s, 3.9 s after hit 1, 3.5 s after hit 2); then it is
+ *   "STUCK" and stays ready. No sky-only win: the fastest clean win is about 11 s, 3 whirls met.
+ *   Bouncing 3 s on "WAIT": "Come down and let him cough!", once a try.
  * - A hit: every whirl puffs apart, no coughs for 1.5 s, then the next phase ("He's cross!" before 3).
  * - A whirl from the side: a life, back to x 50 (the shield takes one). From above: a bounce.
  * - Gentle: 5 lives, whirls 45 u/s, every cough 0.4 s later, gusts an eighth.
@@ -69,10 +74,19 @@ function heldJumpAt(p: Play, x: number, n: number): void {
   steps(p, n);
   p.run.release('k');
 }
-/** Puts the hero under a valve and bumps it with a held cloth bounce (no whirls about). */
+/** KN-R14: the hero stands on the floor by the door until his whirl has shaken the valve loose (whirls cleared). */
+function ready(p: Play): void {
+  for (let i = 0; i < 900 && !p.f.ready && p.run.phase === 'arena'; i++) {
+    p.run.hero = p.run.newHero(60);
+    p.ev.push(...p.run.step(DT));
+  }
+  for (const z of p.run.hazards) z.mode = 'gone';
+  expect(p.f.ready).toBe(true);
+}
+/** Puts the hero under a valve and bumps it with a held cloth bounce (no whirls about), once it is STUCK. */
 function bump(p: Play): void {
   const hits = p.f.hits;
-  for (const z of p.run.hazards) z.mode = 'gone';
+  ready(p);
   p.run.hero = p.run.newHero(DATA.valves.x[hits]!);
   p.run.press('k');
   for (let i = 0; i < 180 && p.f.hits === hits; i++) {
@@ -92,6 +106,8 @@ describe('kano.md 5.2 to 5.5: the hall file, read by the fight', () => {
     expect(DATA.body).toEqual([450, 540]);
     expect([DATA.leftLimit, DATA.rightLimit, DATA.spawnX, DATA.groundY]).toEqual([30, 440, 50, 300]);
     expect([DATA.startDelay, DATA.wheeze, DATA.breakAfterHit, DATA.taps, DATA.holdBreath]).toEqual([2.0, 0.5, 1.5, 8, true]);
+    // KN-R14
+    expect([DATA.valveNeedsWhirl, DATA.waitHintAfter, DATA.heldWhirlDelay]).toEqual([true, 3.0, 0.5]);
     expect(DATA.phases.map((p) => [p.every, p.pattern.join(','), p.bpm])).toEqual([
       [2.8, 'whirl', 120],
       [2.4, 'whirl,gust', 126],
@@ -137,6 +153,9 @@ describe('kano.md 5.2 to 5.5: the hall file, read by the fight', () => {
     expect(bad((b) => ((b['phases'] as unknown[]).length = 2))).toThrow(RustyDataError);
     expect(bad((b) => ((b['valves'] as { x: number[] }).x = [360, 250, 140]))).toThrow(RustyDataError);
     expect(bad((b) => ((b['gust'] as Record<string, unknown>)['lasts'] = 'long'))).toThrow(RustyDataError);
+    expect(bad((b) => (b['valveNeedsWhirl'] = 'yes'))).toThrow(RustyDataError);
+    expect(bad((b) => (b['heldWhirlDelay'] = -1))).toThrow(RustyDataError);
+    expect(bad((b) => (b['waitHintAfter'] = 0))).toThrow(RustyDataError);
     expect(() => parseRustyHall(null)).toThrow(RustyDataError);
   });
 });
@@ -152,6 +171,8 @@ describe('kano.md 5.3: bump each stuck valve from below', () => {
     const p = play();
     const h0 = p.run.hero;
     h0.x = 140;
+    untilWhirl(p); // KN-R14: his first whirl shakes the valve loose
+    for (const z of p.run.hazards) z.mode = 'gone';
     p.run.press('k');
     let sprung = 0;
     let headMin = Infinity;
@@ -193,6 +214,7 @@ describe('kano.md 5.3: bump each stuck valve from below', () => {
     const c = play();
     c.run.hero.x = 250;
     c.f.hits = 1; // the middle valve is the stuck one
+    c.f.ready = true;
     c.run.press('k');
     for (let i = 0; i < 60 && c.run.hero.vy < 0; i++) c.run.step(DT);
     c.run.release('k');
@@ -219,6 +241,7 @@ describe('kano.md 5.3: bump each stuck valve from below', () => {
     for (const [dx, hit] of [[0, true], [21, true], [23, false]] as const) {
       const p = play();
       p.run.terrain = { ...p.run.terrain, platforms: [] };
+      p.f.ready = true;
       const h = p.run.hero;
       h.x = 140 + dx;
       h.y = DATA.valves.bottom + RULES.heroH + 4;
@@ -482,36 +505,50 @@ describe('kano.md 5.3: he holds his breath while you bounce', () => {
     }
   });
 
-  it('a whirl due while the hero bounces waits; it rolls out the step after the hero is down', () => {
+  it('a whirl due while the hero bounces waits at his mouth, wheezing; it rolls out 0.5 s after the hero lands on the floor', () => {
     const p = play();
     p.run.hero = p.run.newHero(140);
+    untilWhirl(p);
+    for (const z of p.run.hazards) z.mode = 'gone';
     p.run.press('k');
     // Hold the jump until the held bounce bumps the valve, then let go: un-held bounces keep the hero up.
     for (let i = 0; i < secs(1.6) && p.f.hits === 0; i++) p.run.step(DT);
     p.run.release('k');
-    let upAt = -1;
-    while (p.run.steps < secs(2.0) + 30) {
-      p.run.step(DT);
-      if (upAt < 0 && p.f.holding) upAt = p.run.steps;
-    }
-    expect(p.f.hits).toBe(1); // that bounce bumped the first valve
-    // Now bouncing un-held on the frame: hold the hero there past the next cough.
+    expect(p.f.hits).toBe(1);
+    // Bouncing un-held on the frame past phase 2's first cough: he holds it, wheezing.
     const due = p.f.nextAt;
+    const out0 = p.f.whirlsOut;
     while (p.run.steps < due + secs(1)) {
       p.run.step(DT);
-      expect(p.f.whirlsOut).toBe(0);
+      expect(p.f.whirlsOut).toBe(out0);
     }
     expect(p.f.holding).toBe(true);
-    // Off the frame to the floor: the whirl comes out once the feet are down.
+    expect(p.f.waiting).toBe(true);
+    expect(rustyLook(p.f, 0, false).mood).toBe('wheeze');
+    // Off the frame to the floor: the whirl comes out 0.5 s after the feet are down.
     p.run.steer(-1);
     let downAt = -1;
-    for (let i = 0; i < secs(3) && p.f.whirlsOut === 0; i++) {
+    for (let i = 0; i < secs(4) && p.f.whirlsOut === out0; i++) {
       p.run.step(DT);
       if (downAt < 0 && p.run.hero.grounded) downAt = p.run.steps;
     }
     expect(downAt).toBeGreaterThan(0);
-    expect(p.f.whirlsOut).toBe(1);
-    expect(p.run.steps - downAt).toBeLessThanOrEqual(1);
+    expect(p.f.whirlsOut).toBe(out0 + 1);
+    expect(p.run.steps - downAt).toBe(secs(DATA.heldWhirlDelay));
+  });
+
+  it('landing on a cloth again does not count: only the floor lets the held whirl go', () => {
+    const p = play();
+    p.run.hero = p.run.newHero(DATA.valves.x[0]! + 30);
+    p.run.press('k');
+    p.run.step(DT);
+    p.run.release('k');
+    // Un-held bounces on the frame for 8 s: many landings on the cloth, never the floor.
+    let springs = 0;
+    for (let i = 0; i < secs(8); i++) if (p.run.step(DT).some((e) => e.type === 'spring')) springs++;
+    expect(springs).toBeGreaterThan(5);
+    expect(p.f.whirlsOut).toBe(0);
+    expect(p.f.waiting).toBe(true);
   });
 
   it('a whirl bounce (landing on one) is not a cloth bounce: he breathes as normal', () => {
@@ -610,9 +647,10 @@ describe('kano.md 5.5: the funny, kind finish', () => {
     const p = play();
     bump(p);
     bump(p);
+    ready(p);
     p.run.hero = p.run.newHero(360);
     p.run.press('k');
-    while (!p.f.defeated) p.run.step(DT);
+    for (let i = 0; i < 600 && !p.f.defeated; i++) p.run.step(DT);
     p.run.release('k');
     const at: Record<string, number[]> = {};
     for (let i = 0; i < secs(7) && p.run.phase === 'arena'; i++) {
@@ -630,9 +668,10 @@ describe('kano.md 5.5: the funny, kind finish', () => {
     const p = play();
     bump(p);
     bump(p);
+    ready(p);
     p.run.hero = p.run.newHero(360);
     p.run.press('k');
-    while (!p.f.defeated) p.run.step(DT);
+    for (let i = 0; i < 600 && !p.f.defeated; i++) p.run.step(DT);
     p.run.release('k');
     for (let i = 0; i < 90; i++) p.run.step(DT);
     expect(p.run.press('k')).toBe(null);
@@ -645,7 +684,7 @@ describe('Borehole Hall in the Kano part', () => {
     const k = kanoStreet(LEVEL);
     expect(k?.tune).toBe(BOREHOLE_HALL_TUNE);
     expect(typeof k?.hall).toBe('function');
-    expect(Object.keys(RUSTY_SOUNDS).sort()).toEqual(['rustyCough', 'rustyGargle', 'rustyGust', 'rustyHic', 'rustyHum', 'rustySneeze', 'rustyWheeze', 'tapSplash', 'valveGlug', 'valveSqueak']);
+    expect(Object.keys(RUSTY_SOUNDS).sort()).toEqual(['rustyCough', 'rustyGargle', 'rustyGust', 'rustyHic', 'rustyHum', 'rustySneeze', 'rustyWheeze', 'tapSplash', 'valveClonk', 'valveGlug', 'valveSqueak']);
     expect(boreholeHallSkin().backdrop).toBeTypeOf('function');
   });
 
@@ -680,14 +719,14 @@ describe('Borehole Hall in the Kano part', () => {
     bump(p);
     steps(p, secs(7));
     const W = KANO_WORDS.hall;
-    const ok = new Set([W.parcelShield, W.start, W.hint, W.left(2), W.left(1), W.cross, W.open]);
+    const ok = new Set([W.parcelShield, W.start, W.hint, W.waitHint, W.left(2), W.left(1), W.cross, W.open]);
     for (const s of says(p.ev)) expect(ok.has(s), s).toBe(true);
     expect(RUSTY_RULES.toastMs).toBeGreaterThan(0);
   });
 });
 
 describe('a plain player wins (the e2e bot plays the same plan by touch)', () => {
-  function botTry(opts: { gentle?: boolean; late?: number }): { won: boolean; lost: number; time: number; heldBreaks: number } {
+  function botTry(opts: { gentle?: boolean; late?: number }): { won: boolean; lost: number; time: number; heldBreaks: number; whirls: number; clonks: number } {
     const p = play({ gentle: opts.gentle ?? false });
     const m = newRustyMind();
     const late = opts.late ?? 0;
@@ -698,6 +737,7 @@ describe('a plain player wins (the e2e bot plays the same plan by touch)', () =>
       const d = decideRusty(m, {
         hero: { x: h.x, y: h.y, vx: h.vx, vy: h.vy, grounded: h.grounded, airJump: h.airJump },
         stuck: p.f.stuck,
+        ready: p.f.ready,
         hits: p.f.hits,
         valves: DATA.valves.x,
         defeated: p.f.defeated,
@@ -713,7 +753,7 @@ describe('a plain player wins (the e2e bot plays the same plan by touch)', () =>
       }
       p.run.step(DT);
     }
-    return { won: p.f.defeated, lost: lives0 - p.run.lives, time: p.run.time, heldBreaks: p.f.heldBreaks };
+    return { won: p.f.defeated, lost: lives0 - p.run.lives, time: p.run.time, heldBreaks: p.f.heldBreaks, whirls: p.f.whirlsOut, clonks: p.f.clonks };
   }
 
   for (const [gentle, late] of [[false, 0], [false, 3], [true, 0], [true, 4]] as const) {
@@ -721,6 +761,181 @@ describe('a plain player wins (the e2e bot plays the same plan by touch)', () =>
       const r = botTry({ gentle, late });
       expect(r.won, JSON.stringify(r)).toBe(true);
       expect(r.heldBreaks).toBe(0);
+      // KN-R14: he met a whirl in every phase, and never bumped a valve that said "WAIT".
+      expect(r.whirls).toBeGreaterThanOrEqual(3);
+      expect(r.clonks).toBe(0);
     });
   }
+});
+
+describe('KN-R14: the valve waits for his whirl, so the fight is never won from the air', () => {
+  /** A player who never comes down: held bounces on the stuck valve's cloth, for `t` s. */
+  function skyOnly(p: Play, t: number): void {
+    p.run.hero = p.run.newHero(DATA.valves.x[p.f.hits]!);
+    for (let i = 0; i < secs(t) && p.run.phase === 'arena'; i++) {
+      const k = i % 90;
+      if (k === 0) p.run.press('k');
+      if (k === 70) p.run.release('k');
+      p.ev.push(...p.run.step(DT));
+    }
+    p.run.release('k');
+  }
+
+  it('each phase starts shut tight ("WAIT"): a head bump only goes "clonk", no hit, no hurt', () => {
+    const p = play();
+    expect(p.f.valveState(0)).toBe('shut');
+    expect(p.f.valveState(1)).toBe('wait');
+    skyOnly(p, 6);
+    expect(p.f.hits).toBe(0);
+    expect(p.f.clonks).toBeGreaterThan(0);
+    expect(sounds(p.ev)).toContain('valveClonk');
+    expect(sounds(p.ev)).not.toContain('valveSqueak');
+    expect(p.ev.some((e) => e.type === 'hit')).toBe(false);
+    expect(p.run.lives).toBe(3);
+    expect(p.f.whirlsOut).toBe(0);
+    // The clonk is small and soft.
+    const c = RUSTY_SOUNDS.valveClonk;
+    for (const t of c.tones) {
+      expect(t.vol ?? 0).toBeLessThanOrEqual(0.05);
+      expect((t.at ?? 0) + t.len).toBeLessThanOrEqual(0.2);
+    }
+  });
+
+  it('the first whirl of the phase shakes it loose ("STUCK"); it stays ready, even after a hurt', () => {
+    const p = play();
+    p.run.hero = p.run.newHero(300);
+    untilWhirl(p);
+    expect(p.f.ready).toBe(true);
+    expect(p.f.readyAt).toBe(p.run.steps);
+    expect(p.f.valveState(0)).toBe('stuck');
+    const lives = p.run.lives;
+    steps(p, secs(4));
+    expect(p.run.lives).toBe(lives - 1); // the whirl met the hero from the side
+    expect(p.f.valveState(0)).toBe('stuck');
+    // After a hit the next valve is shut again, until that phase's first whirl.
+    bump(p);
+    expect(p.f.valveState(0)).toBe('open');
+    expect(p.f.valveState(1)).toBe('shut');
+  });
+
+  it('first whirls come at 2.0 s, 3.9 s after hit 1 and 3.5 s after hit 2 (Gentle: each cough 0.4 s later)', () => {
+    for (const gentle of [false, true]) {
+      const later = gentle ? 0.4 : 0;
+      const p = play({ gentle });
+      p.run.hero = p.run.newHero(60);
+      expect(untilWhirl(p)).toBe(secs(2.0 + later));
+      for (const gap of [3.9, 3.5]) {
+        bump(p);
+        const at = p.f.hitAt[p.f.hits - 1]!;
+        const n0 = p.f.whirlsOut;
+        for (let i = 0; i < 600 && p.f.whirlsOut === n0; i++) {
+          p.run.hero = p.run.newHero(60);
+          p.run.step(DT);
+        }
+        expect(p.run.steps - at, `gentle ${gentle} gap ${gap}`).toBe(secs(1.5) + secs(gap - 1.5 + later));
+      }
+    }
+  });
+
+  it('the fastest clean win is about 11 s, with a whirl met in every phase', () => {
+    // A quick player: stands under the valve, double jumps the moment it says STUCK, steers off the
+    // cloth to the floor, walks under the next valve and waits there.
+    const p = play();
+    let phase = 0;
+    let wasReady = false;
+    let jumpAt = -1;
+    for (let i = 0; i < secs(30) && !p.f.defeated; i++) {
+      const h = p.run.hero;
+      const target = DATA.valves.x[p.f.hits]!;
+      if (p.f.ready && h.grounded && Math.abs(h.x - target) <= 3 && jumpAt < 0) {
+        p.run.steer(0);
+        p.run.press('k');
+        jumpAt = p.run.steps;
+      } else if (jumpAt >= 0 && h.vy >= 0 && h.airJump && !h.grounded) {
+        p.run.release('k');
+        p.run.press('k');
+      } else if (jumpAt < 0 || p.f.hits > phase) {
+        if (p.f.hits > phase) {
+          p.run.release('k');
+          phase = p.f.hits;
+          jumpAt = -1;
+        }
+        // Off the cloth to the floor, then under the valve.
+        if (!h.grounded) p.run.steer(Math.abs(h.x - (target - 55)) <= 3 ? 0 : h.x < target - 55 ? 1 : -1);
+        else p.run.steer(Math.abs(h.x - target) <= 3 ? 0 : h.x < target ? 1 : -1);
+      }
+      for (const z of p.run.hazards) if (z.kind === 'whirl' && z.mode === 'move' && Math.abs(z.x - h.x) < 60) z.mode = 'gone'; // the whirl jumped
+      wasReady ||= p.f.ready;
+      p.ev.push(...p.run.step(DT));
+    }
+    expect(wasReady).toBe(true);
+    expect(p.f.defeated).toBe(true);
+    const t = p.f.defeatAt / STEPS_PER_SECOND;
+    if (process.env['RDEBUG']) console.log(`fastest win ${t} s`);
+    expect(t).toBeGreaterThan(10.4);
+    expect(t).toBeLessThan(11.8);
+    expect(p.f.whirlsOut).toBeGreaterThanOrEqual(3);
+    expect(p.f.clonks).toBe(0);
+    expect(p.f.heldBreaks).toBe(0);
+    // Never faster than the three first whirls allow.
+    expect(t).toBeGreaterThanOrEqual(2.0 + 3.9 + 3.5);
+  });
+
+  it('a sky-only player never wins and no whirl lands mid-bounce; "Come down and let him cough!" shows once a try', () => {
+    for (const gentle of [false, true]) {
+      const p = play({ gentle });
+      skyOnly(p, 20);
+      expect(p.f.hits).toBe(0);
+      expect(p.f.whirlsOut).toBe(0);
+      expect(p.f.heldBreaks).toBe(0);
+      expect(says(p.ev).filter((x) => x === KANO_WORDS.hall.waitHint)).toHaveLength(1);
+      expect(p.f.waitHints).toBe(1);
+      // A new try: the hint again, once.
+      const q = play({ gentle });
+      skyOnly(q, 10);
+      expect(says(q.ev).filter((x) => x === 'Come down and let him cough!')).toHaveLength(1);
+    }
+  });
+
+  it('the hint waits 3 s of bouncing on "WAIT"; a short bounce, or bouncing on "STUCK", says nothing', () => {
+    const p = play();
+    skyOnly(p, 2.9);
+    expect(p.f.waitHints).toBe(0);
+    const q = play();
+    let at = -1;
+    q.run.hero = q.run.newHero(DATA.valves.x[0]! + 30); // beside the valve: no clonk, no hit
+    q.run.press('k');
+    q.run.step(DT);
+    q.run.release('k');
+    let from = -1;
+    for (let i = 0; i < secs(5) && at < 0; i++) {
+      const e = q.run.step(DT);
+      if (from < 0 && e.some((x) => x.type === 'spring')) from = q.run.steps;
+      if (q.f.waitHints > 0) at = q.run.steps;
+    }
+    expect(from).toBeGreaterThan(0);
+    expect(at - from).toBeGreaterThanOrEqual(secs(DATA.waitHintAfter) - 2);
+    expect(at - from).toBeLessThanOrEqual(secs(DATA.waitHintAfter) + 1);
+    // After the valve is STUCK, no hint for bouncing.
+    const r = play();
+    ready(r);
+    r.run.hero = r.run.newHero(DATA.valves.x[0]! + 30);
+    r.run.press('k');
+    r.run.step(DT);
+    r.run.release('k');
+    steps(r, secs(6));
+    expect(r.f.waitHints).toBe(0);
+  });
+
+  it('Gentle mode still plays the same rule: shut until his whirl, then a hit', () => {
+    const p = play({ gentle: true });
+    expect(p.run.lives).toBe(5);
+    skyOnly(p, 3);
+    expect(p.f.hits).toBe(0);
+    bump(p);
+    bump(p);
+    bump(p);
+    expect(p.f.defeated).toBe(true);
+    expect(p.f.whirlsOut).toBeGreaterThanOrEqual(3);
+  });
 });

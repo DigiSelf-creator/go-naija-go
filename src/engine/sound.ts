@@ -166,7 +166,8 @@ export type KanoSoundName =
   | 'beaterTok'
   | 'whirlFff'
   | 'whirlPuff'
-  // K5b: Borehole Hall (art's RUSTY_SOUNDS, in the Kano part's `sounds`)
+  // K5b: Borehole Hall (art's RUSTY_SOUNDS, in the Kano part's `sounds`); KN-R14: the shut valve's clonk
+  | 'valveClonk'
   | 'valveSqueak'
   | 'valveGlug'
   | 'rustyWheeze'

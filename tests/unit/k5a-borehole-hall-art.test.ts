@@ -19,6 +19,7 @@ import {
   BH_HALL,
   BH_SIGN,
   BH_STUCK,
+  BH_WAIT,
   BOREHOLE_HALL_TUNE,
   RUSTY_FINISH,
   RUSTY_SOUNDS,
@@ -29,6 +30,7 @@ import {
   drawRustyWord,
   drawSneezePuff,
   drawTapWater,
+  drawPipeDust,
   drawValve,
   drawValveCounter,
   drawWashLine,
@@ -113,11 +115,12 @@ describe('K5a the yard matches kano-hall.json (kano.md 5.2)', () => {
 });
 
 describe('K5a Rusty Borehole is a problem, never a person (5.1, decision 91)', () => {
-  it('writes only the hall words: the sign, the STUCK tag and his own sound words', () => {
+  it('writes only the hall words: the sign, the STUCK and WAIT tags and his own sound words', () => {
     expect(BH_SIGN).toBe('BOREHOLE HALL');
     expect(BH_STUCK).toBe('STUCK');
+    expect(BH_WAIT).toBe('WAIT');
     const texts = [...src('src/worlds/kano/boreholeHall.ts').matchAll(/fillText\(([^,]+),/g)].map((m) => m[1]!.trim());
-    expect(texts.sort()).toEqual(['BH_SIGN', 'BH_STUCK', 'text']);
+    expect(texts.sort()).toEqual(['BH_SIGN', 'BH_STUCK', 'BH_WAIT', 'text']);
   });
 
   it('has nothing royal, holy, dangerous or from another game', () => {
@@ -165,6 +168,8 @@ describe('K5a the hall pieces draw at phone sizes', () => {
     for (const still of [false, true]) {
       for (const open of [0, 1, 2, 3]) drawBoreholeLine(c.g, open, open / 3, 2.1, still);
       for (const st of ['wait', 'stuck', 'open'] as ValveState[]) for (const freed of [-1, 0.3, 2, Number.NaN]) drawValve(c.g, 250, st, { time: 1.1, still, freed });
+      drawValve(c.g, 250, 'wait', { time: 1.1, still, tag: true });
+      for (const k of [-1, 0, 0.5, 1, Number.NaN]) drawPipeDust(c.g, 250, k);
       for (const k of [0, 0.5, 1, Number.NaN]) drawWashLine(c.g, k, 0.7, still);
       drawTapWater(c.g, [-1, 0, 0.1, 0.5, 2, Number.NaN, 9, 0.3], 1.2, still);
     }
@@ -174,7 +179,7 @@ describe('K5a the hall pieces draw at phone sizes', () => {
     for (const k of [-1, 0, 0.5, 1, Number.NaN]) drawSneezePuff(c.g, k);
     for (const w of Object.values(KANO_WORDS.hall.rusty)) drawRustyWord(c.g, w, 400, 120);
     expect(c.bad).toEqual([]);
-    expect(new Set(c.words)).toEqual(new Set([BH_STUCK, ...Object.values(KANO_WORDS.hall.rusty)]));
+    expect(new Set(c.words)).toEqual(new Set([BH_STUCK, BH_WAIT, ...Object.values(KANO_WORDS.hall.rusty)]));
   });
 
   it('the STUCK tag hangs beside the valve, never under it where the head bumps', () => {

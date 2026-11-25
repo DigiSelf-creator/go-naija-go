@@ -5,6 +5,8 @@
  * in rusty-brain.ts (the unit bot plays the same plan on the rules): walk under the STUCK valve,
  * press and hold so the cloth bounces the hero up to bump it, steer to the next valve in the air,
  * come down on the whirls. Rusty never lets a whirl go while the hero is up after a cloth bounce.
+ * KN-R14: each valve says "WAIT" until that phase's first whirl, so the plan comes down to the
+ * floor after each glug and waits under the next valve for his cough: it meets three whirls or more.
  * Then the kind finish, the Win screen ("Kano is switched on!", "You got ₦15.", big Take it home,
  * small Play again), the save under states.kano.hall (the parcel used up, the one wallet), and
  * Kano's home after it with "You brought ₦15 home." Only the Kano part is fetched (KN-R10).
@@ -31,6 +33,8 @@ const partOf = (url: string): string | null => /\/worlds\/([^/]+)\//.exec(new UR
 interface Arena {
   hits: number;
   stuck: number;
+  ready: boolean;
+  clonks: number;
   valves: number[];
   defeated: boolean;
   finishT: number;
@@ -67,7 +71,7 @@ async function openKano(page: Page, parcel: boolean): Promise<void> {
 }
 
 /** One try by touch, by the plan, until the third valve or the try is over. */
-async function playRusty(page: Page, shot: boolean): Promise<{ won: boolean; lost: number; log: string[]; toasts: Set<string>; heldBreaks: number; held: number; shotTaken: boolean }> {
+async function playRusty(page: Page, shot: boolean): Promise<{ won: boolean; lost: number; log: string[]; toasts: Set<string>; heldBreaks: number; held: number; shotTaken: boolean; whirlsOut: number; clonks: number }> {
   const pad = await touchPad(page);
   const m = newRustyMind();
   const log: string[] = [];
@@ -99,7 +103,7 @@ async function playRusty(page: Page, shot: boolean): Promise<{ won: boolean; los
       await pad.move(0);
       continue;
     }
-    const d = decideRusty(m, { hero: s.h, stuck: a.stuck, hits: a.hits, valves: a.valves, defeated: a.defeated, whirls: a.whirls, time: a.time }, late);
+    const d = decideRusty(m, { hero: s.h, stuck: a.stuck, ready: a.ready, hits: a.hits, valves: a.valves, defeated: a.defeated, whirls: a.whirls, time: a.time }, late);
     if (d.why !== lastWhy) log.push(`${a.time.toFixed(2)} s x ${s.h.x.toFixed(0)} y ${s.h.y.toFixed(0)} hits ${a.hits} whirls ${a.whirls.map((z) => Math.round(z.x)).join(',')}: ${d.why}`);
     lastWhy = d.why;
     await pad.move(d.move);
@@ -107,7 +111,7 @@ async function playRusty(page: Page, shot: boolean): Promise<{ won: boolean; los
     if (d.press) await pad.jumpDown();
   }
   await pad.done();
-  return { won: s.a?.defeated === true, lost: lives0 - (s.a?.lives ?? 0), log, toasts, heldBreaks, held, shotTaken };
+  return { won: s.a?.defeated === true, lost: lives0 - (s.a?.lives ?? 0), log, toasts, heldBreaks, held, shotTaken, whirlsOut: s.a?.whirlsOut ?? 0, clonks: s.a?.clonks ?? 0 };
 }
 
 test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, the Win screen, the save, home with the money', async ({ page, context }) => {
@@ -143,6 +147,7 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
   let heldBreaks = 0;
   let held = 0;
   let shot = false;
+  let last = { whirlsOut: 0, clonks: 0 };
   while (tries < 3 && !won) {
     tries++;
     const r = await playRusty(page, !shot);
@@ -152,6 +157,7 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
     held = Math.max(held, r.held);
     all.push(`try ${tries}: won ${r.won}, lives lost ${r.lost}`, ...r.log.slice(-14));
     won = r.won;
+    last = r;
     if (!won) {
       const over = page.getByRole('dialog', { name: 'Out of lives' });
       await expect(over).toBeVisible();
@@ -166,6 +172,9 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
   expect(tries).toBeLessThanOrEqual(3);
   // He holds his breath: no whirl ever left him while the hero was up after a cloth bounce.
   expect(heldBreaks).toBe(0);
+  // KN-R14: the winning try met a whirl in every phase and never bumped a valve that said "WAIT".
+  expect(last.whirlsOut).toBeGreaterThanOrEqual(3);
+  expect(last.clonks).toBe(0);
   for (const t of ['Rusty Borehole has gone dry!', 'Glug! 2 more valves.', 'Glug! 1 more valve.']) expect(toasts).toContain(t);
 
   // Saved from the third valve, before the finish ends.

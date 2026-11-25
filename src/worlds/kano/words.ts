@@ -80,10 +80,14 @@ export const KANO_WORDS = {
     /** Painted over the left door, and the tag on the valve to hit now. */
     sign: 'BOREHOLE HALL',
     stuckTag: 'STUCK',
+    /** KN-R14: the tag on the next valve while it is shut tight, before his first whirl of the phase. */
+    waitTag: 'WAIT',
     parcelShield: 'Your garri parcel: the shield is on!',
     start: 'Rusty Borehole has gone dry!',
     /** First try of each visit. */
     hint: 'Bounce, hold, and bump the valve!',
+    /** KN-R14: after 3 s of bouncing while the valve says "WAIT", once a try. */
+    waitHint: 'Come down and let him cough!',
     /** A hit. */
     glug: 'SQUEAK... GLUG!',
     /** "Glug! 2 more valves." / "Glug! 1 more valve." */

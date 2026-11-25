@@ -103,9 +103,10 @@ export const BH = {
   dial: '#f7f2e4',
 } as const;
 
-/** The only words painted in the hall: its name over the left door and the stuck valve's tag. */
+/** The only words painted in the hall: its name over the left door and the next valve's tag (STUCK, or WAIT while shut tight). */
 export const BH_SIGN = KANO_WORDS.hall.sign;
 export const BH_STUCK = KANO_WORDS.hall.stuckTag;
+export const BH_WAIT = KANO_WORDS.hall.waitTag;
 
 /**
  * The boss outline (style 1.8 part 2): the larger of `w` u and `px` screen px, in whole device
@@ -397,8 +398,9 @@ export type ValveState = 'wait' | 'stuck' | 'open';
  * One round valve wheel on the water line, its middle at x, bottom at BH_HALL.valveBottom. The
  * stuck one shakes, puffs dust and wears the STUCK tag (words and shaking, never colour alone);
  * an open one shows a tick and drips. `freed`: seconds since it spun free (spins, then rests).
+ * KN-R14: `tag` on a waiting valve: it is the next one, shut tight, still, with the WAIT tag.
  */
-export function drawValve(g: G, x: number, state: ValveState, o: { time?: number; still?: boolean; freed?: number } = {}): void {
+export function drawValve(g: G, x: number, state: ValveState, o: { time?: number; still?: boolean; freed?: number; tag?: boolean } = {}): void {
   const H = BH_HALL;
   const t = o.still ? 0 : num(o.time);
   const r = H.valveR;
@@ -457,11 +459,34 @@ export function drawValve(g: G, x: number, state: ValveState, o: { time?: number
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.fillText(BH_STUCK, x + 44, cy - 1, 42);
+  } else if (state === 'wait' && o.tag) {
+    // Shut tight (KN-R14): still, no dust, the WAIT tag hung on the right
+    line(g, INK, 1, [x + 7, cy - 4, x + 22, cy - 2]);
+    box(g, x + 21, cy - 10, 46, 17, KANO.cream, 1.4, 3);
+    g.fillStyle = '#3a2618';
+    g.font = 'bold 11px sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(BH_WAIT, x + 44, cy - 1, 42);
   } else if (state === 'open') {
     drawTick(g, x + r - 2, cy - r + 2);
     const k = o.still ? 0.4 : (t * 1.4 + x * 0.01) % 1;
     disc(g, x - 2, H.valveBottom + 3 + k * 40, 2.4, BH.water);
   }
+}
+
+/**
+ * KN-R14: the puff of dust that runs along the water line from his top to the valve as his first
+ * whirl of the phase shakes it loose; k 0 to 1 over its run (nothing outside that).
+ */
+export function drawPipeDust(g: G, toX: number, k: number): void {
+  if (!(k >= 0 && k <= 1)) return;
+  const H = BH_HALL;
+  const x = H.riseX - (H.riseX - num(toX)) * k;
+  const fade = k < 0.8 ? 1 : (1 - k) / 0.2;
+  g.globalAlpha = 0.85 * fade;
+  for (let i = 0; i < 3; i++) disc(g, x + i * 6, H.lineY - 9 - i * 2 - k * 3, 4.5 - i, BH.dust);
+  g.globalAlpha = 1;
 }
 
 /** The hit counter: three small wheels at the top; each open one is full with a tick. */
@@ -877,8 +902,10 @@ export const BH_DOOR_CHEERS = KANO_WORDS.folk.doorCheers;
 // ---------------------------------------------------------------- sounds
 
 /** Borehole Hall's sounds (code-made, our own; no voice). Gamedev adds them with the part's `sounds`. */
-export type RustySoundName = 'valveSqueak' | 'valveGlug' | 'rustyWheeze' | 'rustyCough' | 'rustyGust' | 'rustyHic' | 'rustyGargle' | 'rustySneeze' | 'rustyHum' | 'tapSplash';
+export type RustySoundName = 'valveClonk' | 'valveSqueak' | 'valveGlug' | 'rustyWheeze' | 'rustyCough' | 'rustyGust' | 'rustyHic' | 'rustyGargle' | 'rustySneeze' | 'rustyHum' | 'tapSplash';
 export const RUSTY_SOUNDS: Readonly<Record<RustySoundName, Recipe>> = {
+  /** KN-R14: a head bump on a valve shut tight: one small, soft, dull metal "clonk"; 0.12 s. */
+  valveClonk: { tones: [{ f: 330, len: 0.07, wave: 'triangle', to: 240, vol: 0.04 }, { f: 165, len: 0.1, wave: 'sine', to: 130, vol: 0.03 }], hiss: [{ len: 0.02, lp: 900, vol: 0.02 }] },
   /** The valve spinning free: a rising rusty squeak; 0.25 s. */
   valveSqueak: { tones: [{ f: 900, len: 0.22, wave: 'triangle', peak: 1400, to: 1250, vol: 0.035, vib: { hz: 30, depth: 0.03 } }] },
   /** Water getting through: three round glugs falling a little; 0.4 s. */
