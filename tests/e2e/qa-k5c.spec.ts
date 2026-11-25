@@ -588,19 +588,31 @@ for (const seedN of [3, 5, 9]) {
   });
 }
 
+/**
+ * K7 recheck: a game the child bot neither wins nor loses (it never aims, and at Rusty's mouth it
+ * can dodge whirls for minutes: qa saw one last life over 330 s) ends the bot here, logged as
+ * capped, so three games fit the test's time limit.
+ */
+const CHILD_CAP_S = 200;
+
 /** The child bot: Forward held, Jump tapped about 3 a second, never aimed; up to 3 games. */
 async function childHall(page: Page, kind: 'borehole' | 'pothole') {
   const h = hands(await page.context().newCDPSession(page));
   const btn = await buttonCentres(page);
   await h.down(LEFT, btn.forward.x, btn.forward.y);
-  const games: { hits: number; secs: number; won: boolean; hurtX: number[] }[] = [];
-  let cur = { hits: 0, secs: 0, won: false, hurtX: [] as number[] };
+  const games: { hits: number; secs: number; won: boolean; hurtX: number[]; capped?: boolean }[] = [];
+  let cur: (typeof games)[number] = { hits: 0, secs: 0, won: false, hurtX: [] };
   let lives = Infinity;
   for (let i = 0; i < 6000; i++) {
     const s = await page.evaluate(() => ({ a: window.__game!.arena as unknown as { hits: number; defeated: boolean; time: number; lives: number; runPhase: string } | null, screen: window.__game!.screen, x: window.__game!.hero.x }));
     if (s.a && s.screen === 'play') {
       cur.hits = Math.max(cur.hits, s.a.hits);
       cur.secs = s.a.time;
+      if (cur.secs >= CHILD_CAP_S && !s.a.defeated) {
+        cur.capped = true;
+        games.push(cur);
+        break;
+      }
       if (s.a.lives < lives && lives !== Infinity) cur.hurtX.push(Math.round(s.x));
       lives = s.a.lives;
       if (s.a.defeated) {
@@ -650,7 +662,7 @@ test('qa K5c: the child bot (about 5) in Pothole Hall and Borehole Hall, to comp
   await home(page);
   await enterBorehole(page);
   const bore = await childHall(page, 'borehole');
-  for (const r of [pot, bore]) console.log(`qa K5c child ${r.kind}: ${r.games.map((g) => `hits ${g.hits}, ${g.secs.toFixed(1)} s, won ${g.won}, hurt at x ${g.hurtX.join('/')}`).join(' | ')}`);
+  for (const r of [pot, bore]) console.log(`qa K5c child ${r.kind}: ${r.games.map((g) => `hits ${g.hits}, ${g.secs.toFixed(1)} s, won ${g.won}${g.capped ? ' (capped)' : ''}, hurt at x ${g.hurtX.join('/')}`).join(' | ')}`);
   const sum = (r: typeof pot) => ({ hits: r.games.reduce((n, g) => n + g.hits, 0), secs: r.games.reduce((n, g) => n + g.secs, 0) / r.games.length });
   const p = sum(pot);
   const b = sum(bore);
