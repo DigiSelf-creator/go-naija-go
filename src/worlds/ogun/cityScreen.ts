@@ -548,6 +548,26 @@ export class OgunCityScreen implements WorldCity {
     const vh = this.view.h;
     const inView = (b: Box): boolean => b.x >= 0 && b.y >= 0 && b.x + b.w <= vw && b.y + b.h <= vh;
     const strict = (b: Box): boolean => inView(b) && !hard.some((t) => near(t, b, 2)) && !taken.some((t) => near(t, b, 2));
+    const pinBoxes = hard.slice(0, this.pins.length);
+    // No clear room near its place: anywhere on the map that is clear of every pin, button and sign,
+    // with no gap (a sign on a small screen never covers a shown pin; K7 as Kano).
+    const snug = (b: Box): boolean => inView(b) && !pinBoxes.some((t) => near(t, b, 0)) && !this.covers.some((t) => near(t, b, 2)) && !(this.hintWant && near(this.hintWant, b, 0)) && !taken.some((t) => near(t, b, 0));
+    /** The clear spot nearest its own place, 8 px apart over the whole map. */
+    const scan = (want: Box): Box | null => {
+      let best: Box | null = null;
+      let bestD = Infinity;
+      for (let y = 0; y + want.h <= vh; y += 8)
+        for (let x = 0; x + want.w <= vw; x += 8) {
+          const d = Math.hypot(x - want.x, (y - want.y) / 0.75);
+          if (d >= bestD) continue;
+          const c = { ...want, x, y };
+          if (snug(c)) {
+            best = c;
+            bestD = d;
+          }
+        }
+      return best;
+    };
     // A tiny screen with no clear room: never over a button or off the map; a pin or sign may be under it.
     const loose = (b: Box): boolean => inView(b) && !this.covers.some((t) => near(t, b, 2));
     /** Its own place, its last place, then rings round its own place, 8 px apart (the nearest clear one). */
@@ -595,7 +615,7 @@ export class OgunCityScreen implements WorldCity {
         else if (ctx) {
           // No room at full size: the short stick (W15).
           const short = at(foot, this.relBox(`b|${b}|${left}|${done}|s`, () => priceBoardBox(ctx, 0, 0, boardOf(b), left, { done, short: true })));
-          const s2 = fit(`b|${b}`, short) ?? fit(`b|${b}`, short, loose);
+          const s2 = fit(`b|${b}`, short) ?? fit(`b|${b}`, short, snug) ?? scan(short) ?? fit(`b|${b}`, short, loose);
           if (s2) {
             box = s2;
             this.boardShort.add(b);
@@ -614,7 +634,7 @@ export class OgunCityScreen implements WorldCity {
       const box0 = ctx ? at(foot, this.relBox(`t|${text}|${full}`, () => trayBubbleBox(ctx, 0, 0, text, full))) : { x: foot.x - 50, y: foot.y - 34, w: 100, h: 34 };
       let box = box0;
       if (!offScreen(box0)) {
-        box = fit(`t|${p}`, box0) ?? fit(`t|${p}`, box0, loose) ?? hide(p, box0);
+        box = fit(`t|${p}`, box0) ?? fit(`t|${p}`, box0, snug) ?? scan(box0) ?? fit(`t|${p}`, box0, loose) ?? hide(p, box0);
         keep(`t|${p}`, box0, box);
       }
       taken.push(box);
