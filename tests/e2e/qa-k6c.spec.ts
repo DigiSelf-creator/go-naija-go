@@ -218,26 +218,57 @@ const layoutFaults = (page: Page) =>
       const spot = pin.dataset['spot']!;
       const arrow = [...city.querySelectorAll<HTMLElement>(`.city-arrow[data-for="${WORD[spot]}"]`)].find((a) => shown(a) && tappable(a));
       if (shown(pin)) {
-        const r = pin.getBoundingClientRect();
-        // The word tag: 16 px tall, 14 px up from the box's bottom; the round's middle 50 px up.
+        // The picture (the button is the tap area only): the word tag is 16 px tall, 14 px up
+        // from the bottom; the round's middle 50 px up.
+        const r = pin.querySelector('canvas')!.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
         const word = new DOMRect(r.left + 4, r.bottom - 30, r.width - 8, 16);
-        const under = rows.find((t) => hit(word, t.r) || (r.left + r.width / 2 > t.r.left && r.left + r.width / 2 < t.r.right && r.bottom - 50 > t.r.top && r.bottom - 50 < t.r.bottom));
+        const under = rows.find((t) => hit(word, t.r) || (cx > t.r.left && cx < t.r.right && r.bottom - 50 > t.r.top && r.bottom - 50 < t.r.bottom));
         if (under) out.push(`pin ${spot} shown under "${under.name}"`);
-        else if (!tappable(pin) && !arrow) out.push(`pin ${spot} cannot be tapped and has no arrow`);
+        // A tap on its word or its round opens this pin, never a neighbour.
+        let own = 0;
+        for (const [part, y] of [['word', r.bottom - 22], ['round', r.bottom - 50]] as const) {
+          const at = document.elementFromPoint(cx, y)?.closest<HTMLElement>('.city-pin');
+          if (at === pin) own++;
+          else if (at) out.push(`a tap on pin ${spot}'s ${part} opens pin ${at.dataset['spot']}`);
+        }
+        if (!own && !arrow) out.push(`pin ${spot} cannot be tapped and has no arrow`);
       } else if (!arrow) out.push(`pin ${spot} hidden with no edge arrow`);
     }
+    // Pin tap areas never overlap.
+    const taps = [...city.querySelectorAll<HTMLElement>('.city-pin')].filter(shown).map((e) => ({ spot: e.dataset['spot'], r: e.getBoundingClientRect() }));
+    for (const [i, a] of taps.entries()) for (const b of taps.slice(i + 1)) if (hit(a.r, b.r)) out.push(`pin ${a.spot}'s tap area on pin ${b.spot}'s`);
+    // Edge arrows keep off the hero.
+    const t = (window.__game!.kanoHome as unknown as { test: { heroBox: { x: number; y: number; w: number; h: number }; arrows: { x: number; y: number; tap: number; for: string }[] } }).test;
+    const hb = t.heroBox;
+    for (const a of t.arrows) if (a.x + a.tap / 2 > hb.x && hb.x + hb.w > a.x - a.tap / 2 && a.y + a.tap / 2 > hb.y && hb.y + hb.h > a.y - a.tap / 2) out.push(`arrow for ${a.for} on the hero`);
     return out;
   });
 
 const POOR = { ...save({ streets: {}, city: { ...FRESH, hints: ['pin', 'walk'] } }), city: { ...CITY, kobo: 0, power: 0, tech: 0 } };
 const RICH = save({ streets: { 1: K(1) }, city: { ...FRESH, paid: { dye: 300 }, hints: ['pin', 'walk'] } });
 for (const size of [{ width: 320, height: 240 }, { width: 568, height: 320 }, { width: 640, height: 200 }]) {
-  test(`K7: at ${size.width} x ${size.height} no board is on another board or the top row, and every pin shows or has an edge arrow`, async ({ page }) => {
+  test(`K7: at ${size.width} x ${size.height} no board is on another board or the top row, and every pin shows (a tap on it opens it) or has an edge arrow off the hero`, async ({ page }) => {
     for (const [name, s] of [['poor', POOR], ['rich', RICH]] as const) {
       const errors = await open(page, s, size);
       await page.waitForTimeout(1500);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/k7-${name}-${size.width}.png` });
       expect(await layoutFaults(page), `${name} ${size.width}x${size.height}`).toEqual([]);
+      // A real tap on each shown pin's word opens that pin's card.
+      const words = await page.locator('.kano-city .city-pin:not([hidden])').evaluateAll((els) =>
+        els.map((e) => {
+          const r = e.querySelector('canvas')!.getBoundingClientRect();
+          return { spot: (e as HTMLElement).dataset['spot']!, x: r.left + r.width / 2, y: r.bottom - 22 };
+        }),
+      );
+      for (const w of words) {
+        await page.touchscreen.tap(w.x, w.y);
+        await expect(page.locator('.city-problem'), `${name} ${size.width}: tap on ${w.spot}'s word`).toHaveAttribute('data-spot', w.spot);
+        await waitOutTapLock(page);
+        await page.locator('.city-problem').getByRole('button', { name: 'Back' }).tap();
+        await expect(page.locator('.city-problem')).toHaveCount(0);
+        await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+      }
       // Zoomed in, the camera moves: still no board on a board or the top row.
       await page.locator('.kano-city').getByRole('button', { name: /zoom in/i }).tap();
       await page.waitForTimeout(800);

@@ -75,6 +75,8 @@ export const KANO_MATS: Readonly<Record<KanoBoard, Pt>> = {
 };
 
 const EDGE = 40;
+/** K7: the most a pin is nudged sideways from its spot to keep clear of the pin beside it (screen px). */
+const PIN_SPREAD = 44;
 const NEAR = 2;
 const HOLD_PX = 8;
 const HOLD_MS = 150;
@@ -170,7 +172,11 @@ export class KanoCityScreen implements WorldCity {
   private wobble: { board: KanoBoard; t: number } | null = null;
   private lines: { text: string; t: number; head?: string }[] = [];
   private hintUntil = 0;
-  private pins: { spot: KanoSpotId; el: HTMLButtonElement; word: string }[] = [];
+  private pins: { spot: KanoSpotId; el: HTMLButtonElement; word: string; pic: HTMLCanvasElement }[] = [];
+  /** K7: how far each shown pin is nudged sideways (screen px) so pins on a small screen do not overlap. */
+  private readonly pinShift = new Map<KanoSpotId, number>();
+  /** K7: each shown pin's tap area: its box, split down the middle where two still overlap. */
+  private readonly pinTap = new Map<KanoSpotId, Box>();
   private readonly hallWon: boolean;
   private folk: { walkers: InstanceType<PeopleKit['CityWalkers']>; sheet: InstanceType<PeopleKit['CastSheet']>; kit: PeopleKit } | null = null;
   private folkOff = false;
@@ -355,6 +361,8 @@ export class KanoCityScreen implements WorldCity {
       boards: Object.fromEntries(this.boardBox),
       bubbles: Object.fromEntries(this.bubbleBox),
       pins,
+      pinTaps: Object.fromEntries(this.pinTap),
+      heroBox: this.heroBox(),
       hero: { x: this.hero.x, y: this.hero.y },
       paying: this.pay !== null || this.building !== null,
       open: this.open,
@@ -486,23 +494,96 @@ export class KanoCityScreen implements WorldCity {
           el.classList.add('first');
           pic.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-7px)' }], { duration: 450, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' });
         }
-        return { spot, el, word };
+        // K7: the button is the tap area only; the picture may reach past it and never takes a tap.
+        el.style.overflow = 'visible';
+        pic.style.position = 'absolute';
+        pic.style.pointerEvents = 'none';
+        return { spot, el, word, pic };
       });
     this.pinLayer.replaceChildren(...this.pins.map((p) => p.el));
   }
-  private pinBox(spot: KanoSpotId, word: string): Box {
+  private pinBase(spot: KanoSpotId, word: string): Box {
     const at = this.toScreen(KANO_SPOTS[spot].pin);
     return pinTapBox(at.x, at.y, word);
   }
+  private pinBox(spot: KanoSpotId, word: string): Box {
+    const b = this.pinBase(spot, word);
+    return { ...b, x: b.x + (this.pinShift.get(spot) ?? 0) };
+  }
+  /**
+   * K7: shown pins that overlap are pushed apart sideways, half each (at most PIN_SPREAD px from
+   * their spot, never off the map's sides), so each pin's word and round take their own taps.
+   */
+  private spreadPins(): void {
+    const vw = this.view.w;
+    const list = this.pins.map((p) => ({ spot: p.spot, b: this.pinBase(p.spot, p.word), dx: 0 })).filter((q) => !this.pinOff(q.b));
+    const at = (q: (typeof list)[number]): Box => ({ ...q.b, x: q.b.x + q.dx });
+    for (let round = 0; round < 8; round++) {
+      let moved = false;
+      for (let i = 0; i < list.length; i++)
+        for (let j = i + 1; j < list.length; j++) {
+          const [A, B] = [at(list[i]!), at(list[j]!)];
+          const ox = Math.min(A.x + A.w, B.x + B.w) - Math.max(A.x, B.x) + 2;
+          const oy = Math.min(A.y + A.h, B.y + B.h) - Math.max(A.y, B.y);
+          if (ox <= 0.5 || oy <= 0) continue;
+          const [l, r] = A.x + A.w / 2 <= B.x + B.w / 2 ? [list[i]!, list[j]!] : [list[j]!, list[i]!];
+          l.dx -= ox / 2;
+          r.dx += ox / 2;
+          moved = true;
+        }
+      for (const q of list) q.dx = Math.min(Math.max(q.dx, -PIN_SPREAD, -q.b.x), PIN_SPREAD, vw - q.b.x - q.b.w);
+      if (!moved) break;
+    }
+    this.pinShift.clear();
+    for (const q of list) if (q.dx) this.pinShift.set(q.spot, Math.round(q.dx));
+  }
   private placePins(): void {
+    // K7: tap areas never overlap: two that still do (no room to spread) split the overlap down the middle.
+    const shown = this.pins.map((p) => ({ p, b: this.pinBox(p.spot, p.word) })).filter((q) => !this.pinOff(q.b));
+    const taps = shown.map((q) => ({ ...q.b }));
+    for (let i = 0; i < taps.length; i++)
+      for (let j = i + 1; j < taps.length; j++) {
+        const [A, B] = [taps[i]!, taps[j]!];
+        const ox = Math.min(A.x + A.w, B.x + B.w) - Math.max(A.x, B.x);
+        const oy = Math.min(A.y + A.h, B.y + B.h) - Math.max(A.y, B.y);
+        if (ox <= 0 || oy <= 0) continue;
+        if (ox <= oy) {
+          const [l, r] = A.x <= B.x ? [A, B] : [B, A];
+          const mid = (Math.max(A.x, B.x) + Math.min(A.x + A.w, B.x + B.w)) / 2;
+          l.w = mid - l.x;
+          r.w = r.x + r.w - mid;
+          r.x = mid;
+        } else {
+          const [u, d] = A.y <= B.y ? [A, B] : [B, A];
+          const mid = (Math.max(A.y, B.y) + Math.min(A.y + A.h, B.y + B.h)) / 2;
+          u.h = mid - u.y;
+          d.h = d.y + d.h - mid;
+          d.y = mid;
+        }
+      }
+    this.pinTap.clear();
+    shown.forEach((q, i) => this.pinTap.set(q.p.spot, taps[i]!));
     for (const p of this.pins) {
       const b = this.pinBox(p.spot, p.word);
-      const t = `translate(${Math.round(b.x)}px, ${Math.round(b.y)}px)`;
+      const tap = this.pinTap.get(p.spot) ?? b;
+      const t = `translate(${Math.round(tap.x)}px, ${Math.round(tap.y)}px)`;
       if (p.el.style.transform !== t) p.el.style.transform = t;
+      const [w, h, l, top] = [`${Math.round(tap.w)}px`, `${Math.round(tap.h)}px`, `${Math.round(b.x) - Math.round(tap.x)}px`, `${Math.round(b.y) - Math.round(tap.y)}px`];
+      if (p.el.style.width !== w) p.el.style.width = w;
+      if (p.el.style.height !== h) p.el.style.height = h;
+      if (p.pic.style.left !== l) p.pic.style.left = l;
+      if (p.pic.style.top !== top) p.pic.style.top = top;
       // K6c: a pin under the bottom rows cannot be tapped there: its edge arrow stands in for it.
-      const off = this.pinOff(b);
+      const off = !this.pinTap.has(p.spot);
       if (p.el.hidden !== off) p.el.hidden = off;
     }
+  }
+  /** K7: the hero's box on screen (edge arrows keep off it). */
+  private heroBox(): Box {
+    const s = this.scale(this.cam.zoom);
+    const h = this.k.walk.walkerSize(s) * s;
+    const f = this.toScreen(this.hero);
+    return { x: f.x - h * 0.3, y: f.y - h, w: h * 0.6, h };
   }
   /**
    * K6c: a pin is off once its middle is under the bottom rows (a tap there hits a button).
@@ -579,6 +660,7 @@ export class KanoCityScreen implements WorldCity {
    */
   private placeSigns(g: G): void {
     this.measureCovers();
+    this.spreadPins();
     const P = this.k.pay;
     const shownPins = this.pins.map((p) => this.pinBox(p.spot, p.word)).filter((b) => !this.pinOff(b));
     // K7: every hidden pin's edge arrow is placed first, so the boards make room for it.
@@ -687,7 +769,7 @@ export class KanoCityScreen implements WorldCity {
     const inset = this.arrowInset();
     this.arrowEls.forEach((el, i) => {
       const a = want[i];
-      const spot = a ? (a.spot ?? this.arrowSpot(this.arrowBase(a.at, inset), avoid, inset)) : null;
+      const spot = a ? (a.spot ?? this.clearSpot(this.arrowBase(a.at, inset), avoid, inset)) : null;
       el.hidden = !a || !spot;
       if (!a || !spot) return;
       const r = spot.tap / 2;
@@ -737,7 +819,7 @@ export class KanoCityScreen implements WorldCity {
       const b = this.pinBox(p.spot, p.word);
       if (!this.pinOff(b)) continue;
       const at = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
-      const spot = this.arrowSpot(this.arrowBase(at, inset), avoid, inset);
+      const spot = this.clearSpot(this.arrowBase(at, inset), avoid, inset);
       if (!spot) continue;
       const box = { x: spot.x - spot.tap / 2, y: spot.y - spot.tap / 2, w: spot.tap, h: spot.tap };
       avoid.push(box);
@@ -745,6 +827,11 @@ export class KanoCityScreen implements WorldCity {
       this.pinArrows.push({ spot: p.spot, at, ...spot });
     }
     return out;
+  }
+
+  /** K7: an arrow's place off the hero too (nudged along the edge); only with no such place may it touch the hero. */
+  private clearSpot(base: Pt, avoid: readonly Box[], inset: number): { x: number; y: number; tap: number } | null {
+    return this.arrowSpot(base, [...avoid, this.heroBox()], inset) ?? this.arrowSpot(base, avoid, inset);
   }
 
   /** The nearest clear place for an arrow on the edge band (then bands nearer the edge, then anywhere on the map), 48 px tap first. */
