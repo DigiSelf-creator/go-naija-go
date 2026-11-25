@@ -79,6 +79,8 @@ export const KANO_WORDS = {
     hint: 'Bounce, hold, and bump the valve!',
     /** KN-R14: after 3 s of bouncing while the valve says "WAIT", once a try. */
     waitHint: 'Come down and let him cough!',
+    /** KN-R15: the first "Hmph!" puff of a try, when the hero stood at his mouth too long. */
+    stepBack: 'Step back so he can cough!',
     /** A hit. */
     glug: 'SQUEAK... GLUG!',
     /** "Glug! 2 more valves." / "Glug! 1 more valve." */
