@@ -105,8 +105,13 @@ test('KM5 Power for the market: bulbs count, ₦2 a star at once, the Blackout k
   await fourBulbs(page);
   await expect.poll(async () => (await saved(page)).m?.stars['kano-power'] ?? 0).toBe(1);
   // The lane run banks its coins as it goes; on top of them, ₦2 for the star.
-  const coins1 = await page.evaluate(() => window.__lane!.haul.kobo);
-  expect((await saved(page)).p.city['kobo'], '₦2 at once').toBe(wallet0 + coins1 + 200);
+  // Both read in one go. The ₦2 is written to the save at once; coins picked up during the run are
+  // counted at once but written in batches, so mid-run the save holds the ₦2 and some of the coins.
+  // The exact sum is checked once the run ends (below).
+  const read = () => page.evaluate(() => ({ coins: window.__lane!.haul.kobo, wallet: (JSON.parse(localStorage.getItem('gidi-progress') ?? '{}') as { city: { kobo: number } }).city.kobo }));
+  const now = await read();
+  expect(now.wallet, '₦2 at once').toBeGreaterThanOrEqual(wallet0 + 200);
+  expect(now.wallet, '₦2 at once, no more').toBeLessThanOrEqual(wallet0 + now.coins + 200);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/k6c-km5.png` });
   // The Blackout catches the hero: the run is lost, the star stays.
   await page.evaluate(() => window.__lane!.setGap(0));
@@ -116,8 +121,9 @@ test('KM5 Power for the market: bulbs count, ₦2 a star at once, the Blackout k
   await expect(end.getByText('You got a star!')).toBeVisible();
   let s = await saved(page);
   expect(s.m?.stars['kano-power'], 'the star stays after a lost run').toBe(1);
-  const wallet1 = s.p.city['kobo'] as number;
-  expect(wallet1, 'nothing more but the coins').toBeGreaterThanOrEqual(wallet0 + coins1 + 200);
+  const ended = await read();
+  const wallet1 = ended.wallet;
+  expect(wallet1, 'the run\'s coins and the ₦2, nothing more').toBe(wallet0 + ended.coins + 200);
   expect(s.p.states['kano']!['lane'], 'Harmattan Road saves under Kano').toBeTruthy();
   expect(s.p['lane'], "Lagos's lane run save as it was").toEqual(LAGOS_LANE);
   // Run again: the same four bulbs pay nothing again.
