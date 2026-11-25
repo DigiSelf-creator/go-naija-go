@@ -2,7 +2,7 @@
  * KN-R16 (docs/kano.md part 11): Borehole Hall's hint arrows. Once the next valve has said "STUCK"
  * for 8.0 s (Gentle 5.0 s) with no hit, an arrow over the hero's head points to that valve's cloth
  * and a down arrow points at the valve; both hide while the hero is over that cloth and go on the
- * hit; they come back each phase. "Go back. Bounce under it!" once a try, with the first arrows.
+ * hit; they come back each phase. "Go back! Bounce under the valve!" once a try, with the first arrows.
  * No rule, speed or life changes.
  */
 import { describe, expect, it } from 'vitest';
@@ -12,7 +12,7 @@ import { STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
 import { Run } from './kano-run';
 import { KANO_WORDS } from '../../src/worlds/kano/words';
 import { RustyDataError, RustyFight, parseRustyHall, type RustyData } from '../../src/worlds/kano/rustyFight';
-import { BH_ARROW, BH_LOOK, hintArrows } from '../../src/worlds/kano/boreholeHallSkin';
+import { BH_ARROW, BH_LOOK, hintArrowBox, hintArrows } from '../../src/worlds/kano/boreholeHallSkin';
 
 const DT = 1 / STEPS_PER_SECOND;
 const DATA = parseRustyHall(hallRaw);
@@ -210,12 +210,45 @@ describe('KN-R16: hidden over the cloth, gone on the hit, back each phase', () =
     expect(new Set(ys.map((b) => b.valve.y)).size).toBeGreaterThan(1);
     expect(a.valve.k).toBe(1);
     // A screen whose top is close over the valves: the down arrow is smaller, and stays on screen.
-    for (const top of [0, 10]) {
-      const b = hintArrows(p.f, 0.15, false, top)!;
-      expect(b.valve.k).toBeLessThan(1);
-      expect(b.valve.k).toBeGreaterThanOrEqual(BH_LOOK.arrowSmallest);
-      if (b.valve.k > BH_LOOK.arrowSmallest) expect(b.valve.y - BH_ARROW.len * b.valve.k).toBeGreaterThanOrEqual(top);
-      expect(b.valve.y).toBeLessThan(DATA.valves.bottom - DATA.valves.h);
+    const screen = (top: number, left = -1e4, right = 1e4, bottom = 1e4) => ({ left, right, top, bottom });
+    const inside = (r: { x: number; y: number; w: number; h: number }, v: ReturnType<typeof screen>) => r.x >= v.left && r.x + r.w <= v.right && r.y >= v.top && r.y + r.h <= v.bottom;
+    for (const top of [-10, -3]) {
+      for (const c of [0, 0.15, 0.3, 0.45]) {
+        const b = hintArrows(p.f, c, false, screen(top))!;
+        expect(b.valve.dy).toBe(1);
+        expect(b.valve.k).toBeLessThan(1);
+        expect(b.valve.k).toBeGreaterThanOrEqual(BH_LOOK.arrowSmallest);
+        expect(inside(hintArrowBox(b.valve.x, b.valve.y, b.valve.dx, b.valve.dy, b.valve.k), screen(top))).toBe(true);
+        expect(b.valve.y).toBeLessThan(DATA.valves.bottom - DATA.valves.h);
+      }
+    }
+    // qa (640 x 200): less room than the smallest down arrow: it stands beside the valve, pointing
+    // at it sideways, away from the hero (here on the right), fully on screen, off the valve.
+    for (const c of [0, 0.15, 0.3, 0.45]) {
+      const v = screen(20);
+      const b = hintArrows(p.f, c, false, v)!;
+      expect(b.valve.dy).toBe(0);
+      expect(b.valve.dx).toBe(1);
+      const box = hintArrowBox(b.valve.x, b.valve.y, b.valve.dx, b.valve.dy, b.valve.k);
+      expect(inside(box, v)).toBe(true);
+      expect(box.x + box.w).toBeLessThanOrEqual(vx - DATA.valves.w / 2 + 4);
+      expect(inside(hintArrowBox(b.head.x, b.head.y, b.head.dx, b.head.dy, b.head.k), v)).toBe(true);
+      // No room on the left of the screen: the other side, still on screen.
+      const tight = screen(20, vx - 30, 1e4);
+      const d = hintArrows(p.f, c, false, tight)!;
+      expect(d.valve.dx).toBe(-1);
+      expect(inside(hintArrowBox(d.valve.x, d.valve.y, d.valve.dx, d.valve.dy, d.valve.k), tight)).toBe(true);
+    }
+    // Never over the STUCK tag: with the tag hanging right, the arrow stands left, wherever the hero is.
+    standAt(p, 60);
+    expect(hintArrows(p.f, 0, true, screen(20), 1)!.valve.dx).toBe(1);
+    expect(hintArrows(p.f, 0, true, screen(20), -1)!.valve.dx).toBe(-1);
+    standAt(p, 400);
+    // A hero up high near a screen edge: the head arrow stays on screen.
+    const edge = screen(0, 300, 420, 260);
+    for (const c of [0, 0.15, 0.3, 0.45]) {
+      const b = hintArrows(p.f, c, false, edge)!;
+      expect(inside(hintArrowBox(b.head.x, b.head.y, b.head.dx, b.head.dy, b.head.k), edge)).toBe(true);
     }
     standAt(p, 40);
     expect(hintArrows(p.f, 0, true)!.head.dx).toBe(1);

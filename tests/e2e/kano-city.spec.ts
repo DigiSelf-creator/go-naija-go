@@ -224,6 +224,41 @@ test('before Dawanau is cleared the Dry taps card sends you on to the next stree
   expect(errors).toEqual([]);
 });
 
+/** Kano before Borehole Hall is won: the Dry taps pin is on the map. */
+const DRY = { ...SAVE, states: { ...SAVE.states, kano: { arrived: true, streets: KANO_STREETS, parcel: false, city: { ...KANO_CITY, paid: {} } } } };
+for (const size of [{ width: 568, height: 320 }, { width: 851, height: 393 }]) {
+  test(`K7 (qa): at ${size.width} x ${size.height} no shown pin's round sits under a top button (within 10 px); a hidden pin has its edge arrow`, async ({ page }) => {
+    await page.setViewportSize(size);
+    const errors = await open(page, DRY);
+    await page.waitForTimeout(1200);
+    const out = await page.evaluate(() => {
+      const city = document.querySelector<HTMLElement>('.kano-city')!;
+      const tops = [...city.querySelectorAll<HTMLElement>('.city-top button')].filter((e) => e.offsetParent !== null).map((e) => ({ name: e.getAttribute('aria-label') ?? e.textContent ?? '', r: e.getBoundingClientRect() }));
+      const WORD: Record<string, string> = { sandyRoad: 'Sandy road', lightsOut: 'Lights out', slowInternet: 'Slow internet', dryTaps: 'Dry taps' };
+      const faults: string[] = [];
+      const spots: string[] = [];
+      for (const pin of city.querySelectorAll<HTMLElement>('.city-pin')) {
+        const spot = pin.dataset['spot']!;
+        spots.push(spot);
+        if (pin.hidden) {
+          const arrow = [...city.querySelectorAll<HTMLElement>(`.city-arrow[data-for="${WORD[spot]}"]`)].some((a) => !a.hidden);
+          if (!arrow) faults.push(`pin ${spot} hidden with no edge arrow`);
+          continue;
+        }
+        // The round's middle: 50 px up from the picture's bottom (as qa-k6c reads it).
+        const r = pin.querySelector('canvas')!.getBoundingClientRect();
+        const x = r.left + r.width / 2;
+        const y = r.bottom - 50;
+        for (const t of tops) if (x > t.r.left - 10 && x < t.r.right + 10 && y > t.r.top - 10 && y < t.r.bottom + 10) faults.push(`pin ${spot}'s round under "${t.name}"`);
+      }
+      return { faults, spots };
+    });
+    expect(out.spots).toContain('dryTaps');
+    expect(out.faults).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}
+
 test('Kano from above at 320 x 240: the top and bottom rows on screen, 44 px tall', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 240 });
   await open(page, SAVE);

@@ -82,7 +82,7 @@ export const KANO_WORDS = {
     /** KN-R15: the first "Hmph!" puff of a try, when the hero stood at his mouth too long. */
     stepBack: 'Step back so he can cough!',
     /** KN-R16: with the first hint arrows of a try, after the valve has said "STUCK" 8 s (Gentle 5 s). */
-    valveHint: 'Go back. Bounce under it!',
+    valveHint: 'Go back! Bounce under the valve!',
     /** A hit. */
     glug: 'SQUEAK... GLUG!',
     /** "Glug! 2 more valves." / "Glug! 1 more valve." */

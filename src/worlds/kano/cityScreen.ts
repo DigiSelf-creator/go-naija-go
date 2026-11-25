@@ -100,6 +100,8 @@ const PEOPLE: readonly FolkLook[] = [
 const PEOPLE_AT: ReadonlyMap<FolkLook, number> = new Map(PEOPLE.map((l, i) => [l, i]));
 
 /** Two boxes come closer than `gap` px. */
+/** K7 (qa): a pin's round is hidden (its edge arrow stands in) once its middle is this near a top button, px. */
+export const PIN_BUTTON_GAP = 10;
 const near = (a: Box, b: Box, gap: number): boolean => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
 const boardUnits = (b: KanoBoard, own: number): number => (KANO_PRICES[b].bucket === 'naira' ? own / 100 : own);
 /** The tap area of a pin at screen (x, y), its word tag included (as src/game/cityCamera.ts pinTapBox). */
@@ -198,6 +200,8 @@ export class KanoCityScreen implements WorldCity {
   private covers: Box[] = [];
   /** K7: each heading, chip and button box, top and bottom: a pin whose word or round is under one hides. */
   private pinCovers: Box[] = [];
+  /** K7 (qa): the top row's buttons (Sound, Pause, Back): a pin round whose middle comes this near one is hidden. */
+  private topButtons: Box[] = [];
   /** K7: this frame's edge arrows for hidden pins, placed before the boards so a pin always gets one. */
   private pinArrows: { spot: KanoSpotId; at: Pt; x: number; y: number; tap: number }[] = [];
   private coversDirty = true;
@@ -425,6 +429,7 @@ export class KanoCityScreen implements WorldCity {
         .map((b) => ({ x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height }));
     const bottom = boxes(this.el.querySelectorAll<HTMLElement>('.city-bottom button'));
     this.pinCovers = [...boxes(this.top.querySelectorAll<HTMLElement>('.city-head, .city-chip, button')), ...bottom];
+    this.topButtons = boxes(this.top.querySelectorAll<HTMLElement>('button'));
     this.covers = [...boxes(this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button')), ...bottom];
   }
 
@@ -595,7 +600,8 @@ export class KanoCityScreen implements WorldCity {
     if (this.offMap(b) || b.y + b.h / 2 >= this.view.h - this.view.bot - 2) return true;
     const word = { x: b.x + 4, y: b.y + b.h - 30, w: b.w - 8, h: 16 };
     const round = { x: b.x + b.w / 2, y: b.y + b.h - 50, w: 0, h: 0 };
-    return this.pinCovers.some((t) => near(t, word, 0) || near(t, round, 0));
+    // K7 (qa): a round whose middle is within PIN_BUTTON_GAP px of a top button sits mostly under it.
+    return this.pinCovers.some((t) => near(t, word, 0) || near(t, round, 0)) || this.topButtons.some((t) => near(t, round, PIN_BUTTON_GAP));
   }
   /** Off the map, or under the bottom rows (as good as off: it cannot be tapped there). */
   private offMap(b: Box): boolean {

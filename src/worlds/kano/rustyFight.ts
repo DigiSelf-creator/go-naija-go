@@ -30,7 +30,7 @@
  * - KN-R16: once the valve has said "STUCK" for boss.valveHint.after s (Gentle gentleAfter) with
  *   no hit, the hint arrows show (one over the hero's head pointing to that valve's cloth, one
  *   pointing down at the valve), hidden while the hero is over that cloth, gone on the hit, back
- *   each phase. The first arrows of a try bring "Go back. Bounce under it!". No rule changes.
+ *   each phase. The first arrows of a try bring "Go back! Bounce under the valve!". No rule changes.
  * - A hit: every whirl puffs apart, the gust ends, no coughs for 1.5 s, then the next phase.
  *   Gentle mode: every cough 0.4 s later.
  * - The third valve: the funny, kind finish (5.5), the Win at 6 s. Nothing can hurt the hero.
@@ -38,7 +38,7 @@
 import type { ArenaRules, HazardState, Run, RunEvent } from '../../game/run';
 import type { SoundName } from '../../engine/sound';
 import { rustyTapTimes } from './boreholeHall';
-import { boreholeHallSeen } from './boreholeHallSkin';
+import { boreholeArrowsSeen, boreholeHallSeen } from './boreholeHallSkin';
 import { KANO_WORDS } from './words';
 
 /**
@@ -202,7 +202,7 @@ export class RustyFight implements ArenaRules {
   /** Head bumps on the "WAIT" valve ("clonk"), and the hint to come down (once a try). */
   clonks = 0;
   waitHints = 0;
-  /** KN-R16: the phases (hits before) the hint arrows have shown in this try, and "Go back. Bounce under it!" (once a try). */
+  /** KN-R16: the phases (hits before) the hint arrows have shown in this try, and "Go back! Bounce under the valve!" (once a try). */
   readonly arrowPhases: number[] = [];
   arrowWords = 0;
   /** KN-R16: the step the valve to hit began to say "STUCK" (after the last hit, or from the start without KN-R14). */
@@ -644,6 +644,8 @@ export class RustyFight implements ArenaRules {
       runPhase: this.run.phase,
       // K5c: how the hall was last drawn (its size on screen; CSS px boxes of the valves, tags, pipe and counter).
       screen: boreholeHallSeen(),
+      // KN-R16: the hint arrows' CSS px boxes as last drawn (null while hidden).
+      arrowBoxes: boreholeArrowsSeen(),
     };
   }
 }

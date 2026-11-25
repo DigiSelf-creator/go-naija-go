@@ -220,7 +220,7 @@ test('Borehole Hall from Kano\'s home by touch: three valves, the kind finish, t
 /** Half the cloth frame's width (kano-hall.json boss.springs.w / 2): the arrows hide over it. */
 const DATA_CLOTH_HALF = 40;
 
-test('KN-R16: holding Forward and mashing Jump, the hint arrows come 8 s after STUCK, with "Go back. Bounce under it!"; hidden over the cloth', async ({ page }) => {
+test('KN-R16: holding Forward and mashing Jump, the hint arrows come 8 s after STUCK, with "Go back! Bounce under the valve!"; hidden over the cloth', async ({ page }) => {
   test.setTimeout(120_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -251,9 +251,49 @@ test('KN-R16: holding Forward and mashing Jump, the hint arrows come 8 s after S
   await expect.poll(async () => {
     const t = (await hint()).toast;
     if (t) toasts.add(t);
-    return toasts.has('Go back. Bounce under it!');
+    return toasts.has('Go back! Bounce under the valve!');
   }).toBe(true);
   if (process.env['R16_SHOT']) await page.screenshot({ path: process.env['R16_SHOT'] });
+  // qa: both arrows wholly on screen on a roomy phone and on the short screens (the valve arrow
+  // stands beside the valve where there is no room above it).
+  type Box = { x: number; y: number; w: number; h: number };
+  // (Forward let go first: the phone buttons move as the screen changes size.)
+  await pad.move(0);
+  // po's words fit the hint bar whole (never cut, 11 px or more) on the short screens, while they show.
+  for (const size of [{ width: 320, height: 240 }, { width: 640, height: 200 }]) {
+    await page.setViewportSize(size);
+    await page.waitForTimeout(120);
+    const bar = await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>('.toast')!;
+      return { text: el.textContent, show: el.classList.contains('show'), px: parseFloat(getComputedStyle(el).fontSize), fits: el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight };
+    });
+    const at = `${size.width} x ${size.height}: ${JSON.stringify(bar)}`;
+    expect(bar.text, at).toBe('Go back! Bounce under the valve!');
+    expect(bar.show, at).toBe(true);
+    expect(bar.fits, at).toBe(true);
+    expect(bar.px, at).toBeGreaterThanOrEqual(11);
+  }
+  for (const size of [{ width: 851, height: 393 }, { width: 640, height: 200 }, { width: 320, height: 240 }]) {
+    await page.setViewportSize(size);
+    await page.waitForTimeout(100);
+    let seen = 0;
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(50);
+      const boxes = await page.evaluate(() => (window.__game!.arena as unknown as { arrowBoxes: Record<string, Box> | null }).arrowBoxes);
+      if (!boxes) continue;
+      seen++;
+      for (const [name, b] of Object.entries(boxes)) {
+        const at = `${size.width} x ${size.height}, ${name} arrow ${JSON.stringify(b)}`;
+        expect(b.x, at).toBeGreaterThanOrEqual(0);
+        expect(b.y, at).toBeGreaterThanOrEqual(0);
+        expect(b.x + b.w, at).toBeLessThanOrEqual(size.width);
+        expect(b.y + b.h, at).toBeLessThanOrEqual(size.height);
+      }
+    }
+    expect(seen, `${size.width} x ${size.height}`).toBeGreaterThan(5);
+    if (process.env['R16_SHOT']) await page.screenshot({ path: process.env['R16_SHOT'].replace(/\.png$/, `-${size.width}x${size.height}.png`) });
+  }
+  await page.setViewportSize({ width: 851, height: 393 });
   // Back to the first valve's cloth: the arrows hide there.
   const vx = s.a.valves[s.a.stuck]!;
   await pad.move(-1);

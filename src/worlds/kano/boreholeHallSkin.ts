@@ -110,24 +110,84 @@ export function drawHintArrow(g: CanvasRenderingContext2D, x: number, y: number,
   g.fill();
 }
 
+/** KN-R16: the world box an arrow covers (tip at x, y, pointing along dx, dy, size k), its edge stroke included. */
+export function hintArrowBox(x: number, y: number, dx: number, dy: number, k = 1): BhRect {
+  const A = BH_ARROW;
+  const pad = 3.5;
+  const len = A.len * k;
+  const half = (A.head * k) / 2;
+  const x0 = dx !== 0 ? Math.min(x, x - dx * len) : x - half;
+  const x1 = dx !== 0 ? Math.max(x, x - dx * len) : x + half;
+  const y0 = dy !== 0 ? Math.min(y, y - dy * len) : y - half;
+  const y1 = dy !== 0 ? Math.max(y, y - dy * len) : y + half;
+  return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+}
+
+/** The world box the hall shows on screen (hintArrows keeps both arrows inside it). */
+export interface BhBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+export interface HintArrow {
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  k: number;
+}
+
 /**
- * KN-R16: where the two hint arrows are drawn now (world u), or null while hidden. `top` is the
- * world y at the screen's top: the down arrow is made smaller (k) to fit between it and the valve.
+ * KN-R16: where the two hint arrows are drawn now (world u), or null while hidden; `view` is the
+ * world box on screen. The head arrow points from over the hero's head to the valve's cloth (kept
+ * on screen). The valve arrow points down at the valve from above it, made smaller (to
+ * arrowSmallest) where the hall's top is close; with less room than that (qa: 640 x 200) it stands
+ * beside the valve and points at it sideways: on the side its STUCK tag does not hang (`tagSide`, -1 left,
+ * 1 right), else away from the hero (and the head arrow); the other side if that one runs off the screen.
  */
-export function hintArrows(f: RustyFight, clock: number, still: boolean, top = -Infinity): { head: { x: number; y: number; dx: number }; valve: { x: number; y: number; k: number } } | null {
+export function hintArrows(f: RustyFight, clock: number, still: boolean, view: BhBounds = { left: -Infinity, right: Infinity, top: -Infinity, bottom: Infinity }, tagSide = 0): { head: HintArrow; valve: HintArrow } | null {
   if (!f.arrows) return null;
+  const A = BH_ARROW;
+  const pad = 4;
   const h = f.heroAt;
   const vx = f.data.valves.x[f.stuck]!;
-  const bob = still ? 0 : BH_LOOK.arrowBob * (0.5 + 0.5 * Math.sin(clock * BH_LOOK.arrowHz * 2 * Math.PI));
+  const B = BH_LOOK.arrowBob;
+  const bob = still ? 0 : B * (0.5 + 0.5 * Math.sin(clock * BH_LOOK.arrowHz * 2 * Math.PI));
   const dx = vx < h.x ? -1 : 1;
-  const midY = h.head - BH_LOOK.arrowOverHead;
-  const tip = f.data.valves.bottom - f.data.valves.h - BH_LOOK.arrowOverValve;
-  const room = tip - BH_LOOK.arrowBob - (top + 2);
-  const k = Math.max(BH_LOOK.arrowSmallest, Math.min(1, room / BH_ARROW.len));
-  return {
-    head: { x: h.x + dx * (BH_ARROW.len / 2 + bob), y: midY, dx },
-    valve: { x: vx, y: tip - bob, k },
+  const clamp = (v: number, lo: number, hi: number): number => Math.min(Math.max(v, lo), Math.max(lo, hi));
+  // The head arrow: its tip len/2 (+ bob) ahead of the hero's middle, kept on screen with its bob.
+  const lo = dx < 0 ? view.left + pad + B : view.left + pad + A.len;
+  const hi = dx < 0 ? view.right - pad - A.len : view.right - pad - B;
+  const tipX = clamp(h.x + dx * (A.len / 2), lo, hi);
+  const headY = clamp(h.head - BH_LOOK.arrowOverHead, view.top + pad + A.head / 2, view.bottom - pad - A.head / 2);
+  const head = { x: tipX + dx * bob, y: headY, dx, dy: 0, k: 1 };
+  // The valve arrow: down at it from above, if there is room for the smallest one.
+  const V = f.data.valves;
+  const tip = V.bottom - V.h - BH_LOOK.arrowOverValve;
+  const room = tip - B - (view.top + pad);
+  if (room >= BH_LOOK.arrowSmallest * A.len) {
+    const k = Math.min(1, room / A.len);
+    return { head, valve: { x: vx, y: tip - bob, dx: 0, dy: 1, k } };
+  }
+  // Too little room above: beside the valve, pointing at it sideways.
+  const k = BH_LOOK.arrowSmallest;
+  const cy = clamp(V.bottom - V.h / 2, view.top + pad + (A.head * k) / 2, view.bottom - pad - (A.head * k) / 2);
+  const gap = V.w / 2 + BH_LOOK.arrowOverValve;
+  const fits = (side: number): boolean => {
+    const far = vx + side * (gap + B + A.len * k);
+    return side < 0 ? far >= view.left + pad : far <= view.right - pad;
   };
+  const away = tagSide !== 0 ? -tagSide : dx;
+  const side = fits(away) || !fits(-away) ? away : -away;
+  return { head, valve: { x: vx + side * (gap + bob), y: cy, dx: -side, dy: 0, k } };
+}
+
+/** KN-R16, for qa: the CSS px boxes of the two hint arrows as last drawn (null while hidden). */
+let lastArrows: { head: BhRect; valve: BhRect } | null = null;
+export function boreholeArrowsSeen(): { head: BhRect; valve: BhRect } | null {
+  return lastArrows;
 }
 
 /**
@@ -352,10 +412,16 @@ export function boreholeHallSkin(): StreetSkin {
       hero();
       drawBoreholeHallFront(g, camX, viewW, H);
       // KN-R16: the hint arrows (to the valve's cloth over the hero's head, and down at the valve).
-      const arrows = fin ? null : hintArrows(f, clock, still, lift);
+      const arrows = fin ? null : hintArrows(f, clock, still, { left: camX, right: camX + viewW, top: lift, bottom: H }, f.stuck >= 0 && fit.tagLeft[f.stuck] ? -1 : 1);
+      lastArrows = null;
       if (arrows) {
-        drawHintArrow(g, arrows.head.x, arrows.head.y, arrows.head.dx, 0);
-        drawHintArrow(g, arrows.valve.x, arrows.valve.y, 0, 1, arrows.valve.k);
+        const { head: a, valve: b } = arrows;
+        drawHintArrow(g, a.x, a.y, a.dx, a.dy, a.k);
+        drawHintArrow(g, b.x, b.y, b.dx, b.dy, b.k);
+        // CSS px on screen: world u less the screen's left and top, times the hall's size, over u per CSS px.
+        const c = (view.scale * z) / (view.ratio ?? 1);
+        const css = (r: BhRect): BhRect => ({ x: (r.x - camX) * c, y: (r.y - lift) * c, w: r.w * c, h: r.h * c });
+        lastArrows = { head: css(hintArrowBox(a.x, a.y, a.dx, a.dy, a.k)), valve: css(hintArrowBox(b.x, b.y, b.dx, b.dy, b.k)) };
       }
       // His words: "hic!" after a hit, his finish words; the valve's "SQUEAK... GLUG!".
       const W = KANO_WORDS.hall;
