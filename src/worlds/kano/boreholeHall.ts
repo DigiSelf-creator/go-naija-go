@@ -399,8 +399,10 @@ export type ValveState = 'wait' | 'stuck' | 'open';
  * stuck one shakes, puffs dust and wears the STUCK tag (words and shaking, never colour alone);
  * an open one shows a tick and drips. `freed`: seconds since it spun free (spins, then rests).
  * KN-R14: `tag` on a waiting valve: it is the next one, shut tight, still, with the WAIT tag.
+ * `side`: where the tag hangs, right (as drawn by art) or left (K5c: clear of the HUD's Sound and
+ * Pause on a short screen; BH_TAG holds its box).
  */
-export function drawValve(g: G, x: number, state: ValveState, o: { time?: number; still?: boolean; freed?: number; tag?: boolean } = {}): void {
+export function drawValve(g: G, x: number, state: ValveState, o: { time?: number; still?: boolean; freed?: number; tag?: boolean; side?: 'left' | 'right' } = {}): void {
   const H = BH_HALL;
   const t = o.still ? 0 : num(o.time);
   const r = H.valveR;
@@ -452,27 +454,53 @@ export function drawValve(g: G, x: number, state: ValveState, o: { time?: number
         disc(g, x + dx + (i - 1) * 12, cy - r - k * 14, 3 + k * 4, BH.dust);
       }
     g.globalAlpha = 1;
-    line(g, INK, 1, [x + 7, cy - 4, x + 22, cy - 2]);
-    box(g, x + 21, cy - 10, 46, 17, KANO.cream, 1.4, 3);
-    g.fillStyle = '#3a2618';
-    g.font = 'bold 11px sans-serif';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(BH_STUCK, x + 44, cy - 1, 42);
+    hangTag(g, x, cy, true, o.side === 'left' ? -1 : 1);
   } else if (state === 'wait' && o.tag) {
-    // Shut tight (KN-R14): still, no dust, the WAIT tag hung on the right
-    line(g, INK, 1, [x + 7, cy - 4, x + 22, cy - 2]);
-    box(g, x + 21, cy - 10, 46, 17, KANO.cream, 1.4, 3);
-    g.fillStyle = '#3a2618';
-    g.font = 'bold 11px sans-serif';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(BH_WAIT, x + 44, cy - 1, 42);
+    // Shut tight (KN-R14): still, no dust, the WAIT tag
+    hangTag(g, x, cy, false, o.side === 'left' ? -1 : 1);
   } else if (state === 'open') {
     drawTick(g, x + r - 2, cy - r + 2);
     const k = o.still ? 0.4 : (t * 1.4 + x * 0.01) % 1;
     disc(g, x - 2, H.valveBottom + 3 + k * 40, 2.4, BH.water);
   }
+}
+
+/** A valve's tag box (world u, from the valve's middle x and its bottom y), hung right; a left one is its mirror. */
+export const BH_TAG = { dx0: 21, dx1: 67, dy0: -BH_HALL.valveR - 10, dy1: -BH_HALL.valveR + 7 } as const;
+
+/** The STUCK or WAIT tag on a string from the wheel's hub, hung right (s 1) or left (s -1). */
+function hangTag(g: G, x: number, cy: number, stuck: boolean, s: 1 | -1): void {
+  const T = BH_TAG;
+  line(g, INK, 1, [x + 7 * s, cy - 4, x + 22 * s, cy - 2]);
+  const bx = s > 0 ? x + T.dx0 : x - T.dx1;
+  box(g, bx, cy - 10, T.dx1 - T.dx0, 17, KANO.cream, 1.4, 3);
+  g.fillStyle = '#3a2618';
+  g.font = 'bold 11px sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  const mid = bx + (T.dx1 - T.dx0) / 2;
+  if (stuck) g.fillText(BH_STUCK, mid, cy - 1, 42);
+  else g.fillText(BH_WAIT, mid, cy - 1, 42);
+}
+
+/**
+ * K5c: on a short screen the hall is drawn a little smaller (boreholeHallSkin's fit), so some sky
+ * shows above y 0: the woven shade roof carries on up to `top` (world u, below 0), x0 to x1.
+ */
+export function drawBoreholeRoofAbove(g: G, x0: number, x1: number, top: number): void {
+  if (!(top < 0) || !(x1 > x0)) return;
+  g.fillStyle = BH.roof;
+  g.fillRect(x0, top, x1 - x0, -top + 1);
+  g.strokeStyle = BH.roofDark;
+  g.lineWidth = 1;
+  g.beginPath();
+  const a = Math.floor(x0 / 9) * 9 + 4;
+  for (let y = 0; y > top; y -= 20)
+    for (let x = a; x < x1 + 9; x += 9) {
+      g.moveTo(x, y - 17);
+      g.lineTo(x - 4, y - 1);
+    }
+  g.stroke();
 }
 
 /**

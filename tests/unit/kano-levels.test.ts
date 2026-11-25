@@ -405,7 +405,7 @@ describe('kano.md 5.2 to 5.5: Borehole Hall (kano-hall.json)', () => {
     expect(B.breakAfterHit).toBe(1.5);
     expect(B.holdBreath).toBe(true);
     expect(rise(PHYSICS.jumpVy, false)).toBeGreaterThan(B.whirl.h);
-    expect(B.whirl).toEqual({ speed: 60, w: 30, h: 50, fromX: H.rightLimit, bounceVy: PHYSICS.bounceVy });
+    expect(B.whirl).toEqual({ speed: 60, w: 30, h: 50, fromX: H.rightLimit, bounceVy: PHYSICS.bounceVy, clearGap: 11 });
     expect(B.gust).toEqual({ lasts: 2.0, warn: 0.6, airScale: 1 - WIND });
     // A whirl from his feet takes over 6 s to cross the yard to the start: time to see it.
     expect((B.whirl.fromX - H.spawnX) / B.whirl.speed).toBeGreaterThan(6);

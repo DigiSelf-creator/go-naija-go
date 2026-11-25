@@ -16,6 +16,10 @@
  * - He holds his breath: no new whirl leaves him from a cloth bounce until the hero's feet touch
  *   the floor (landing on a cloth again does not count). A whirl due then waits at his mouth,
  *   wheezing, and rolls out 0.5 s after the hero lands (boss.heldWhirlDelay).
+ * - KN-R15 (as Pothole Hall's OG-R25): a whirl never appears touching the hero. While the hero
+ *   stands (or hops) within whirl.clearGap u of the whirl's box at his mouth, a whirl due waits
+ *   there, wheezing, and rolls out heldWhirlDelay after the hero has stepped clear; so it is
+ *   always seen leaving him before it can reach anyone.
  * - KN-R14: each phase's valve is shut tight ("WAIT": a head bump only goes "clonk") until the
  *   phase's first whirl has left him; then it shakes loose ("STUCK") and stays ready for the
  *   phase (boss.valveNeedsWhirl). So every phase has a whirl to beat, and he only coughs once
@@ -27,6 +31,7 @@
 import type { ArenaRules, HazardState, Run, RunEvent } from '../../game/run';
 import type { SoundName } from '../../engine/sound';
 import { rustyTapTimes } from './boreholeHall';
+import { boreholeHallSeen } from './boreholeHallSkin';
 import { KANO_WORDS } from './words';
 
 /**
@@ -67,7 +72,8 @@ export interface RustyData {
   /** KN-R14: the "Come down and let him cough!" hint after this long bouncing on a "WAIT" valve, s. */
   waitHintAfter: number;
   phases: readonly RustyPhase[];
-  whirl: { speed: number; w: number; h: number; fromX: number; bounceVy: number };
+  /** KN-R15: clearGap, u of clear floor a whirl needs between its box and the hero's to leave him (0: none). */
+  whirl: { speed: number; w: number; h: number; fromX: number; bounceVy: number; clearGap: number };
   gust: { lasts: number; warn: number; airScale: number };
   fall: { backTo: number };
   finish: { glugTo: number; sneeze: number; shine: number; tapsFrom: number; tapsTo: number; toast: number; win: number };
@@ -103,6 +109,7 @@ export function parseRustyHall(raw: unknown): RustyData {
     return { every: pos(p['every'], `boss.phases[${i}].every`), pattern: pattern as RustyCough[], bpm: num(p['bpm'], `boss.phases[${i}].bpm`) };
   });
   const xs = (vx as unknown[]).map((x, i) => num(x, `boss.valves.x[${i}]`));
+  const whirlRaw = obj(b['whirl'], 'boss.whirl');
   if (phases.length !== xs.length) bad('boss.phases', 'one phase per valve');
   const d: RustyData = {
     leftLimit: num(r['leftLimit'], 'leftLimit'),
@@ -121,13 +128,14 @@ export function parseRustyHall(raw: unknown): RustyData {
     valveNeedsWhirl: b['valveNeedsWhirl'] === undefined ? false : typeof b['valveNeedsWhirl'] === 'boolean' ? b['valveNeedsWhirl'] : bad('boss.valveNeedsWhirl', 'true or false'),
     waitHintAfter: b['waitHintAfter'] === undefined ? 3 : pos(b['waitHintAfter'], 'boss.waitHintAfter'),
     phases,
-    whirl: nums(obj(b['whirl'], 'boss.whirl'), 'boss.whirl', ['speed', 'w', 'h', 'fromX', 'bounceVy']) as RustyData['whirl'],
+    whirl: { ...nums(whirlRaw, 'boss.whirl', ['speed', 'w', 'h', 'fromX', 'bounceVy']), clearGap: whirlRaw['clearGap'] === undefined ? 0 : num(whirlRaw['clearGap'], 'boss.whirl.clearGap') } as RustyData['whirl'],
     gust: nums(obj(b['gust'], 'boss.gust'), 'boss.gust', ['lasts', 'warn', 'airScale']) as RustyData['gust'],
     fall: { backTo: num(obj(b['fall'], 'boss.fall')['backTo'], 'boss.fall.backTo') },
     finish: nums(obj(b['finish'], 'boss.finish'), 'boss.finish', ['glugTo', 'sneeze', 'shine', 'tapsFrom', 'tapsTo', 'toast', 'win']) as RustyData['finish'],
     gentle: nums(obj(b['gentle'], 'boss.gentle'), 'boss.gentle', ['whirlSpeed', 'later', 'gustAirScale']) as RustyData['gentle'],
   };
   if (d.heldWhirlDelay < 0) bad('boss.heldWhirlDelay', '0 or more');
+  if (d.whirl.clearGap < 0) bad('boss.whirl.clearGap', '0 or more');
   if (d.springs.vy >= 0) bad('boss.springs.vy', 'below 0 (up)');
   if (d.body[0] <= d.rightLimit) bad('boss.body', 'right of the hero limit');
   if (xs.some((x, i) => x - d.springs.w / 2 <= d.leftLimit || x + d.springs.w / 2 >= d.rightLimit || (i > 0 && x <= xs[i - 1]!))) bad('boss.valves.x', 'left to right, each frame inside the limits');
@@ -169,7 +177,7 @@ export class RustyFight implements ArenaRules {
   gustUntil = 0;
   /** The hero is in the air after a cloth bounce: he holds his breath (no new whirl). */
   holding = false;
-  /** A whirl came due while he held his breath and waits at his mouth for the hero to land. */
+  /** A whirl came due while he held his breath, or the hero stood at his mouth (KN-R15), and waits there. */
   waiting = false;
   /** KN-R14: the valve to hit now has shaken loose ("STUCK"); false while it says "WAIT". */
   ready: boolean;
@@ -186,6 +194,9 @@ export class RustyFight implements ArenaRules {
   /** Whirls out so far, and how many times a whirl waited for the hero to come down. */
   whirlsOut = 0;
   held = 0;
+  /** KN-R15: times a whirl waited because the hero stood at his mouth; whirls that came out touching the hero (tests: always 0). */
+  crowded = 0;
+  touchedAtBirth = 0;
   /** Step of the last cloth bounce, and of the last hurt (back at x 50). */
   springAt = -Infinity;
   hurtAt = -Infinity;
@@ -233,6 +244,16 @@ export class RustyFight implements ArenaRules {
   /** Seconds between coughs in phase i. */
   everyOf(i: number): number {
     return this.data.phases[Math.min(i, this.data.phases.length - 1)]!.every + this.later;
+  }
+
+  /**
+   * KN-R15: the hero is at his mouth: their box within whirl.clearGap u of a whirl's box as it
+   * would leave him (on the floor or in the air above it), so a whirl now would come out touching
+   * them, or too close to see it leave.
+   */
+  atMouth(heroX: number): boolean {
+    const gap = this.data.whirl.fromX - RUN_NUMBERS.whirlHalfW - (heroX + RUN_NUMBERS.heroHalfW);
+    return gap < this.data.whirl.clearGap;
   }
 
   /** The cough due next. */
@@ -312,10 +333,11 @@ export class RustyFight implements ArenaRules {
     } else if (h.grounded) {
       this.holding = false;
       this.bounceFrom = -Infinity;
-      if (this.waiting) {
-        this.waiting = false;
-        this.nextAt = Math.max(this.nextAt, s + secs(this.data.heldWhirlDelay));
-      }
+    }
+    // KN-R15: it waits, too, while the hero is at his mouth; it goes heldWhirlDelay after both are over.
+    if (this.waiting && !this.holding && !this.atMouth(h.x)) {
+      this.waiting = false;
+      this.nextAt = Math.max(this.nextAt, s + secs(this.data.heldWhirlDelay));
     }
     if (this.defeated) {
       this.finish(run, ev);
@@ -411,9 +433,13 @@ export class RustyFight implements ArenaRules {
     const kind = this.nextKind;
     if (s === this.nextAt - secs(this.warnOf(kind))) this.cue(ev, kind === 'whirl' ? 'rustyWheeze' : undefined);
     if (s < this.nextAt) return;
-    if (kind === 'whirl' && this.holding) {
-      // He holds his breath: the whirl waits at his mouth until the hero is down.
-      if (!this.waiting) this.held++;
+    if (kind === 'whirl' && (this.holding || this.atMouth(run.hero.x))) {
+      // He holds his breath: the whirl waits at his mouth until the hero is down (KN-R14), and
+      // until the hero is clear of his mouth (KN-R15).
+      if (!this.waiting) {
+        if (this.holding) this.held++;
+        else this.crowded++;
+      }
       this.waiting = true;
       return;
     }
@@ -427,6 +453,7 @@ export class RustyFight implements ArenaRules {
     const x = this.data.whirl.fromX;
     run.hazards.push({ kind: 'whirl', x0: x, x, y: this.data.groundY, vx: -(run.gentle ? this.data.gentle.whirlSpeed : this.data.whirl.speed), mode: 'move', t: 0, rot: 0, face: -1, fufu: false });
     this.whirlsOut++;
+    if (Math.abs(run.hero.x - x) <= RUN_NUMBERS.heroHalfW + RUN_NUMBERS.whirlHalfW) this.touchedAtBirth++;
     if (!run.hero.grounded && this.holding) this.heldBreaks++;
     this.cue(ev, 'rustyCough');
     // KN-R14: the phase's first whirl shakes the valve loose (a puff of dust along the pipe).
@@ -493,12 +520,16 @@ export class RustyFight implements ArenaRules {
       waiting: this.waiting,
       heldBreaks: this.heldBreaks,
       held: this.held,
+      crowded: this.crowded,
+      touchedAtBirth: this.touchedAtBirth,
       whirlsOut: this.whirlsOut,
       whirls: this.whirls.filter((z) => z.mode === 'move').map((z) => ({ x: z.x, vx: z.vx })),
       hero: { x: h.x, y: h.y, vy: h.vy, grounded: h.grounded },
       lives: this.run.lives,
       time: this.run.time,
       runPhase: this.run.phase,
+      // K5c: how the hall was last drawn (its size on screen; CSS px boxes of the valves, tags, pipe and counter).
+      screen: boreholeHallSeen(),
     };
   }
 }
