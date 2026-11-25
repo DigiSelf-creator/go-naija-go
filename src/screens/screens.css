@@ -3135,7 +3135,7 @@ body.lane {
   .travel-card:has(.travel-places) .travel-places {
     grid-column: 1 / -1;
     grid-row: 2;
-    gap: 6px;
+    gap: 4px;
   }
   .travel-card:has(.travel-places) .actions .minor {
     margin-top: 0;
@@ -3147,6 +3147,8 @@ body.lane {
     column-gap: 10px;
     min-height: 52px;
     padding: 4px 10px;
+    /* K6c: a little tighter, so two places and Back fit 320 x 240 with 24 px safe edges, no scroll. */
+    line-height: 1.15;
   }
 }
 
@@ -3167,18 +3169,19 @@ body.lane {
     gap: 0;
     min-height: 48px;
     padding: 2px 4px;
-    font-size: 13px;
-    line-height: 1.2;
+    font-size: 15px;
+    line-height: 1.15;
   }
   .travel-places.three .travel-name {
     font-size: 1rem;
   }
-  /* The icons flow in the line with the words, so each place stays short. */
+  /* The icons flow in the line with the words, so each place stays short. The words stay 15 px
+     (style.md 1.2): they take more short lines instead. */
   .travel-places.three .travel-place > :not(.travel-name),
   .travel-places.three .travel-cog {
     display: inline;
-    font-size: 12px;
-    line-height: 1.2;
+    font-size: 15px;
+    line-height: 1.15;
     text-align: center;
   }
   .travel-places.three .travel-place svg {

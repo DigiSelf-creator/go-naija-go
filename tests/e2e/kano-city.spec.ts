@@ -230,7 +230,8 @@ test('Kano from above at 320 x 240: the top and bottom rows on screen, 44 px tal
   const boxes = await page.locator('.kano-city .city-top button, .kano-city .city-bottom button').evaluateAll((els) =>
     els.filter((e) => (e as HTMLElement).offsetParent !== null).map((e) => ({ name: e.getAttribute('aria-label') ?? e.textContent ?? '', ...(JSON.parse(JSON.stringify(e.getBoundingClientRect())) as DOMRect) })),
   );
-  expect(boxes.length).toBeGreaterThanOrEqual(10);
+  // Sound, Settings; K6c: one Play button, Missions, Challenge road, Travel, Hero and the zoom pair.
+  expect(boxes.length).toBeGreaterThanOrEqual(9);
   for (const b of boxes) {
     expect(b.left, b.name).toBeGreaterThanOrEqual(0);
     expect(b.right, b.name).toBeLessThanOrEqual(320);

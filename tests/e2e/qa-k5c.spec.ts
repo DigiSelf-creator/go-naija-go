@@ -497,7 +497,7 @@ test('qa K5c Gentle: 5 lives, whirls 45 u/s, first whirls 2.4 / 4.3 / 3.9 s, gus
   expect(errors).toEqual([]);
 });
 
-test('qa K5c by hand at 320 x 240: Dawanau to the bus, its card\'s "Go to Borehole Hall", the hall in 3 tries, the Win, home with N15 and four Play buttons', async ({ page }) => {
+test('qa K5c by hand at 320 x 240: Dawanau to the bus, its card\'s "Go to Borehole Hall", the hall in 3 tries, the Win, home with N15 and its Play button (one on a short screen, K6c)', async ({ page }) => {
   test.setTimeout(600_000);
   const errors = errorsOf(page);
   await page.setViewportSize({ width: 320, height: 240 });
@@ -546,8 +546,10 @@ test('qa K5c by hand at 320 x 240: Dawanau to the bus, its card\'s "Go to Boreho
   expect(tries).toBeLessThanOrEqual(3);
   expect((await recNow(page)).bad).toEqual([]);
   await finishAndHome(page, kobo0, 320, 240);
-  // Kano's home at 320 x 240 with the hall won: four Play buttons on screen, 44 px, 8 px apart.
-  const names = ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau', 'Go to Borehole Hall'];
+  // Kano's home at 320 x 240 with the hall won: K6c (decision 64): one Play button on a screen
+  // this short, the hall's (the streets are on the Challenge road), on screen and 44 px.
+  for (const n of ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau']) await expect(page.locator('.kano-city').getByRole('button', { name: n })).toBeHidden();
+  const names = ['Go to Borehole Hall'];
   const boxes = [];
   for (const n of names) {
     const b = page.locator('.kano-city').getByRole('button', { name: n });

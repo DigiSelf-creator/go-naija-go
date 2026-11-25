@@ -134,7 +134,7 @@ export function noticeCard(message: string, ok: () => void, name: string = OGUN_
 }
 
 /** ogun.md 1.4, kano.md 1.4: the arrival card, first visit only. */
-export function arrivalCard(go: () => void, w: { readonly [K in keyof typeof OGUN_WORDS.arrival]: string } = OGUN_WORDS.arrival): HTMLElement {
+export function arrivalCard(go: (e?: MouseEvent) => void, w: { readonly [K in keyof typeof OGUN_WORDS.arrival]: string } = OGUN_WORDS.arrival): HTMLElement {
   const card = h(
     'div',
     { class: 'card narrow travel-card arrival-card', role: 'dialog', 'aria-label': w.heading },

@@ -264,6 +264,12 @@ export class Menus {
   private opener: (TapPoint & { t: number }) | null = null;
   /** The tap on a menu button just now: a screen it opens ignores that double tap's second half. */
   private lastTap: (TapPoint & { t: number }) | null = null;
+  /**
+   * K6c: the tap that closed a card over a city (the arrival card's "Let's go"). Taps that follow
+   * it fast on the same spot are the rest of a double (or many) tap, not taps on the pin under it;
+   * each one keeps the lock on for one more double-tap time.
+   */
+  private shutTap: (TapPoint & { t: number }) | null = null;
   private shownAt = 0;
   private summary: RunSummary = { kobo: 0, lives: 0 };
   private cleared: ClearedSummary = { name: '', kobo: 0, last: false, parcel: false };
@@ -547,8 +553,10 @@ export class Menus {
     this.hooks.cardChanged?.();
   }
 
-  private closeOverlay(): void {
+  private closeOverlay(e?: MouseEvent): void {
     if (!this.overlay) return;
+    const at = e ? tapPoint(e) : null;
+    this.shutTap = at ? { ...at, t: performance.now() } : null;
     this.overlay.remove();
     this.overlay = null;
     this.layer.querySelector<HTMLElement>('.go, button')?.focus({ preventScroll: true });
@@ -692,7 +700,14 @@ export class Menus {
     const wheel = row.querySelector<HTMLElement>('[data-wheel]') ?? this.wheelOut;
     if (!wheel) return;
     row.append(wheel);
-    const tops = [...row.querySelectorAll(':scope > :not(.go, .go-pair)')].map((e) => e.getBoundingClientRect().top);
+    // A full-width Play row has a row of its own; K6c: a Play button beside the others (Kano's
+    // on a short screen) counts as one of the row.
+    const full = row.getBoundingClientRect().width - 1;
+    const items = [...row.children].flatMap((e) => (e.classList.contains('go-pair') && e.getBoundingClientRect().width === 0 ? [...e.children] : [e]));
+    const tops = items
+      .map((e) => e.getBoundingClientRect())
+      .filter((b) => b.width > 0 && b.width < full)
+      .map((b) => b.top);
     this.wheelOut = Math.max(...tops) > Math.min(...tops) + 20 ? wheel : null;
     this.wheelOut?.remove();
   }
@@ -812,9 +827,9 @@ export class Menus {
     // CO3: the road's chunk while the city sits idle, as from Lagos.
     window.setTimeout(() => void preloadRoad().catch(() => undefined), 200);
     if (!(k ? v.kano.arrived : v.arrived)) {
-      this.overlayNext = arrivalCard(() => {
+      this.overlayNext = arrivalCard((e) => {
         this.hooks.arrived(id);
-        this.closeOverlay();
+        this.closeOverlay(e);
       }, k ? this.kanoWords?.arrival : undefined);
     } else this.everyNext(id);
     return screen.el;
@@ -854,7 +869,12 @@ export class Menus {
 
   /** A tap that should not count: the second half of a double tap, or too soon after the game opened a screen. */
   private ignoreTap(e: MouseEvent): boolean {
-    if (isSecondTap(this.opener, tapPoint(e))) return true;
+    const at = tapPoint(e);
+    if (isSecondTap(this.opener, at)) return true;
+    if (at && isSecondTap(this.shutTap, at)) {
+      this.shutTap = { ...at, t: performance.now() };
+      return true;
+    }
     return EVENT_SCREENS.includes(this.screen) && performance.now() - this.shownAt < EVENT_SCREEN_GUARD_MS;
   }
 

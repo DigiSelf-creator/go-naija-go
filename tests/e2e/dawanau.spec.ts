@@ -194,7 +194,9 @@ test('Kano\'s home at 320 x 240 with Dawanau open: every button on screen, 44 px
     els.filter((e) => (e as HTMLElement).offsetParent !== null).map((e) => ({ name: e.getAttribute('aria-label') ?? e.textContent ?? '', ...JSON.parse(JSON.stringify(e.getBoundingClientRect())) as DOMRect })),
   );
   if (process.env['K4B_HOME_SHOT']) await page.screenshot({ path: process.env['K4B_HOME_SHOT'] });
-  expect(boxes.map((b) => b.name)).toEqual(expect.arrayContaining(['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau']));
+  // K6c (decision 64): a screen 320 px tall or less shows one Play button, the next street's (the rest are on the Challenge road).
+  expect(boxes.map((b) => b.name)).toEqual(expect.arrayContaining(['Play Dawanau']));
+  expect(boxes.map((b) => b.name)).not.toContain('Play Kurmi');
   for (const b of boxes) {
     expect(b.left, b.name).toBeGreaterThanOrEqual(0);
     expect(b.right, b.name).toBeLessThanOrEqual(320);

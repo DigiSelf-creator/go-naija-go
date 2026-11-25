@@ -225,7 +225,8 @@ test('Kano\'s city at 320 x 240 with Borehole Hall open: every button on screen,
     els.filter((e) => (e as HTMLElement).offsetParent !== null).map((e) => ({ name: e.getAttribute('aria-label') ?? e.textContent ?? '', ...JSON.parse(JSON.stringify(e.getBoundingClientRect())) as DOMRect })),
   );
   if (process.env['K5B_HOME_SHOT']) await page.screenshot({ path: process.env['K5B_HOME_SHOT'] });
-  expect(boxes.map((b) => b.name)).toEqual(expect.arrayContaining(['Go to Borehole Hall', 'Play Kurmi', 'Play Kofar Mata', 'Play Dawanau']));
+  // K6c (decision 64): a screen 320 px tall or less shows one Play button, the hall's (the streets are on the Challenge road).
+  expect(boxes.map((b) => b.name)).toEqual(expect.arrayContaining(['Go to Borehole Hall']));
   for (const b of boxes) {
     expect(b.left, b.name).toBeGreaterThanOrEqual(0);
     expect(b.right, b.name).toBeLessThanOrEqual(320);
@@ -233,12 +234,10 @@ test('Kano\'s city at 320 x 240 with Borehole Hall open: every button on screen,
     expect(b.bottom, b.name).toBeLessThanOrEqual(240);
     expect(b.height, b.name).toBeGreaterThanOrEqual(44);
   }
-  // The Play buttons 8 px apart (kano.md 8; qa K4c), and each name reads whole.
+  // One Play button, and its name reads whole.
   const plays = boxes.filter((b) => /^(Play |Go to )/.test(b.name));
-  expect(plays).toHaveLength(4);
-  for (const [i, a] of plays.entries())
-    for (const b of plays.slice(i + 1)) expect(Math.max(b.left - a.right, a.left - b.right, b.top - a.bottom, a.top - b.bottom), `${a.name} and ${b.name}`).toBeGreaterThanOrEqual(8);
-  for (const n of ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau', 'Go to Borehole Hall']) {
+  expect(plays).toHaveLength(1);
+  for (const n of ['Go to Borehole Hall']) {
     const over = await page.locator('.kano-city').getByRole('button', { name: n }).evaluate((e) => e.scrollWidth > e.clientWidth + 1);
     expect(over, n).toBe(false);
   }

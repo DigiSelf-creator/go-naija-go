@@ -108,6 +108,13 @@ function pinTapBox(x: number, y: number, word: string): Box {
 }
 
 /**
+ * K6c: a screen this short (or shorter) shows one Play button, for the next street or the hall,
+ * beside the other bottom buttons, so the bottom block is two rows and the map keeps a clear strip.
+ * Every street stays on the Challenge road. 568 x 320 keeps its row of Play buttons.
+ */
+export const KANO_SHORT_PX = 319;
+
+/**
  * Kano's own page rules, put in the page once as the city first opens (they ride in this part,
  * never the first load's style sheet, kano.md 9.1): the streets' Play buttons share one row in
  * the bottom row (K3b to K5b), a little smaller on a narrow screen. KM1 to KM5: with Missions in
@@ -120,7 +127,15 @@ export const KANO_CITY_STYLE = `.city-buttons .go-pair{display:flex;gap:8px;widt
 .city-buttons .go-four .go{padding:4px 3px}
 @media (max-width:400px){.city-buttons .go-four .go{font-size:12px;padding:4px 1px}}
 @media (max-width:400px){.city-buttons .go-three .go .ic,.city-buttons .go-four .go .ic{display:none}}
-@media (min-width:401px){.kano-city .city-buttons:has(.ms-button) .two-line{max-width:none;white-space:nowrap}}`;
+@media (min-width:401px){.kano-city .city-buttons:has(.ms-button) .two-line{max-width:none;white-space:nowrap}}
+@media (max-height:${KANO_SHORT_PX}px){.kano-city .city-buttons .go-pair{display:contents}
+.kano-city .city-buttons .go-pair .go:not(:last-child){display:none}
+.kano-city .city-buttons .go,.kano-city .city-buttons .go-pair .go{flex:0 1 auto;width:auto;max-width:168px;min-width:0;min-height:44px;margin:0;padding:4px 10px;font-size:15px;line-height:1.1;white-space:normal}
+.kano-city .city-buttons .go .ic{display:none}
+.kano-city .city-buttons .two-line,.kano-city .city-buttons:has(.ms-button) .two-line{max-width:96px;padding-top:2px;padding-bottom:2px;line-height:1.1;white-space:normal}
+.kano-city .city-top{row-gap:4px}
+.kano-city .city-bottom{bottom:3px}}
+@media (max-height:260px) and (min-width:600px){.kano-city .city-zoom{flex-direction:row}}`;
 
 /** The painted still city, kept between visits (this page load only), and the last camera. */
 const painted = new Map<string, { img: HTMLCanvasElement; scale: number }>();
@@ -380,8 +395,10 @@ export class KanoCityScreen implements WorldCity {
   private measure(): void {
     const r = this.el.getBoundingClientRect();
     const t = this.top.getBoundingClientRect();
-    const low = Math.min(r.bottom, ...[...this.el.querySelectorAll<HTMLElement>('.city-buttons > *')].map((e) => e.getBoundingClientRect()).filter((b) => b.height > 0).map((b) => b.top));
-    this.view = { w: Math.max(1, r.width), h: Math.max(1, r.height), top: Math.max(0, Math.min(r.height / 2, t.bottom - r.top)), bot: Math.max(0, Math.min(r.height / 3, r.bottom - low)) };
+    // K6c: the bottom rows' real depth (one Play row and the rest, or two rows on a short screen).
+    const low = Math.min(r.bottom, ...[...this.el.querySelectorAll<HTMLElement>('.city-bottom button')].map((e) => e.getBoundingClientRect()).filter((b) => b.height > 0).map((b) => b.top));
+    const top = Math.max(0, Math.min(r.height / 2, t.bottom - r.top));
+    this.view = { w: Math.max(1, r.width), h: Math.max(1, r.height), top, bot: Math.max(0, Math.min(r.height - top - 1, r.bottom - low)) };
     this.coversDirty = true;
   }
   /** The top row's and bottom row's boxes, measured again once they may have moved. */
@@ -474,7 +491,23 @@ export class KanoCityScreen implements WorldCity {
       const b = this.pinBox(p.spot, p.word);
       const t = `translate(${Math.round(b.x)}px, ${Math.round(b.y)}px)`;
       if (p.el.style.transform !== t) p.el.style.transform = t;
+      // K6c: a pin under the bottom rows cannot be tapped there: its edge arrow stands in for it.
+      const off = this.pinOff(b);
+      if (p.el.hidden !== off) p.el.hidden = off;
     }
+  }
+  /** K6c: a pin is off once its middle is under the bottom rows (a tap there hits a button). */
+  private pinOff(b: Box): boolean {
+    return this.offMap(b) || b.y + b.h / 2 >= this.view.h - this.view.bot - 2;
+  }
+  /** Off the map, or under the bottom rows (as good as off: it cannot be tapped there). */
+  private offMap(b: Box): boolean {
+    const vw = this.view.w;
+    const vh = this.view.h - this.view.bot;
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
+    if (!(cx < 0 || cx > vw || cy < 0 || cy > vh)) return false;
+    return Math.max(0, Math.min(b.x + b.w, vw) - Math.max(b.x, 0)) * Math.max(0, Math.min(b.y + b.h, vh) - Math.max(b.y, 0)) < (b.w * b.h) / 4;
   }
 
   // ---------- Boards and bubbles ----------
@@ -536,7 +569,13 @@ export class KanoCityScreen implements WorldCity {
     const { w: vw, h: vh } = this.view;
     const inView = (b: Box): boolean => b.x >= 0 && b.y >= 0 && b.x + b.w <= vw && b.y + b.h <= vh;
     const strict = (b: Box): boolean => inView(b) && !hard.some((t) => near(t, b, 2)) && !taken.some((t) => near(t, b, 2));
-    const loose = (b: Box): boolean => inView(b) && !this.covers.some((t) => near(t, b, 2));
+    // Loose (no room otherwise): it may touch a pin or another sign, but its middle stays clear of
+    // every shown pin and sign, and no sign's middle goes under it (K6c: each one still takes a tap).
+    const mid = (b: Box): Pt => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    const inside = (p: Pt, b: Box): boolean => p.x >= b.x - 2 && p.x <= b.x + b.w + 2 && p.y >= b.y - 2 && p.y <= b.y + b.h + 2;
+    const shownPins = this.pins.map((p) => this.pinBox(p.spot, p.word)).filter((b) => !this.pinOff(b));
+    const loose = (b: Box): boolean =>
+      inView(b) && !this.covers.some((t) => near(t, b, 2)) && !shownPins.some((t) => inside(mid(b), t)) && !taken.some((t) => inside(mid(b), t) || inside(mid(t), b));
     const fit = (id: string, want: Box, clear = strict): Box | null => {
       const prev = this.signAt.get(id);
       if (clear(want)) return want;
@@ -602,17 +641,12 @@ export class KanoCityScreen implements WorldCity {
     // A thing under the bottom rows cannot be tapped: it counts as off the map.
     const vh = this.view.h - this.view.bot;
     const P = this.k.pay;
-    const off = (b: Box): boolean => {
-      const cx = b.x + b.w / 2;
-      const cy = b.y + b.h / 2;
-      if (!(cx < 0 || cx > vw || cy < 0 || cy > vh)) return false;
-      return Math.max(0, Math.min(b.x + b.w, vw) - Math.max(b.x, 0)) * Math.max(0, Math.min(b.y + b.h, vh) - Math.max(b.y, 0)) < (b.w * b.h) / 4;
-    };
+    const off = (b: Box): boolean => this.offMap(b);
     const onView = (b: Box): boolean => b.x + b.w > 0 && b.y + b.h > 0 && b.x < vw && b.y < vh;
     const mid = (b: Box): Pt => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
     const want: { icon: EdgeIcon; at: Pt; go: () => void; label: string }[] = [];
     const pinBoxes = this.pins.map((p) => this.pinBox(p.spot, p.word));
-    this.pins.forEach((p, i) => off(pinBoxes[i]!) && want.push({ icon: SPOT_ICON[p.spot], at: mid(pinBoxes[i]!), go: () => this.openPin(p.spot), label: KANO_SPOT_WORDS[p.spot] }));
+    this.pins.forEach((p, i) => this.pinOff(pinBoxes[i]!) && want.push({ icon: SPOT_ICON[p.spot], at: mid(pinBoxes[i]!), go: () => this.openPin(p.spot), label: KANO_SPOT_WORDS[p.spot] }));
     for (const [b, box] of this.boardBox) if (off(box) && !this.roomless.has(b)) want.push({ icon: KANO_PRICES[b].bucket, at: mid(box), go: () => this.goPay(b), label: KW.board[b] });
     for (const [p, box] of this.bubbleBox) if (off(box) && !this.roomless.has(p)) want.push({ icon: 'naira', at: mid(box), go: () => this.walkTo(KANO_MATS[p]), label: KW.board[p] });
     const avoid: Box[] = [...this.covers, ...(this.hintWant ? [this.hintWant] : []), ...[...this.boardBox.values(), ...this.bubbleBox.values(), ...pinBoxes].filter(onView)];
@@ -902,7 +936,10 @@ export class KanoCityScreen implements WorldCity {
     const l = this.lines[0];
     const { h } = this.k.dom;
     this.banner.hidden = !l;
-    if (l && this.banner.textContent !== `${l.head ?? ''}${l.text}`) this.banner.replaceChildren(...(l.head ? [h('p', { class: 'city-mission-head' }, h('b', {}, l.head))] : []), h('p', {}, l.text));
+    if (l && this.banner.textContent !== `${l.head ?? ''}${l.text}`) {
+      this.banner.replaceChildren(...(l.head ? [h('p', { class: 'city-mission-head' }, h('b', {}, l.head))] : []), h('p', {}, l.text));
+      this.placeHint();
+    }
   }
   private setHint(text: string | null, secs = 4): void {
     this.hintEl.hidden = !text;
@@ -918,7 +955,9 @@ export class KanoCityScreen implements WorldCity {
     const r = this.el.getBoundingClientRect();
     const rel = (b: DOMRect): Box => ({ x: b.left - r.left, y: b.top - r.top, w: b.width, h: b.height });
     const under = Math.max(this.view.top, ...[...this.top.querySelectorAll<HTMLElement>('.city-head, .city-chips, button')].map((e) => e.getBoundingClientRect().bottom - r.top));
-    this.banner.style.top = `${Math.round(under + (this.hintEl.hidden ? 4 : 40))}px`;
+    // K6c: on a short screen the banner moves up toward the top row rather than over a bottom button.
+    const rows = Math.min(r.height, ...[...this.el.querySelectorAll<HTMLElement>('.city-bottom button')].map((e) => e.getBoundingClientRect()).filter((b) => b.width > 0).map((b) => b.top - r.top));
+    this.banner.style.top = `${Math.round(Math.max(under + 4, Math.min(under + (this.hintEl.hidden ? 4 : 40), rows - this.banner.offsetHeight - 4)))}px`;
     this.hintWant = null;
     if (!this.hintEl.hidden) {
       const w = this.hintEl.offsetWidth;
