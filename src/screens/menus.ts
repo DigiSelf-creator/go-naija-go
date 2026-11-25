@@ -291,6 +291,8 @@ export class Menus {
   private rideNext: { ui: WorldUi; toLagos: boolean; first: boolean; then: () => void; kano?: boolean } | null = null;
   /** K1b: Kano's home showing now (tests), or null. */
   kanoScreen: WorldCity | null = null;
+  /** K5b: the line Kano's home shows as it next opens ("You brought ₦15 home."), or null. */
+  kanoLine: string | null = null;
   /** What follows the intro story (the builder, Play, or back to Settings). */
   private afterIntro: () => void = () => this.show('title');
   /** Stops the screen that is going away (the intro's drawing, the city's listeners). */
@@ -842,8 +844,10 @@ export class Menus {
       touch: () => this.touchWords(),
       cogOn: () => this.hooks.states().kano.turning,
       hallWon: v.kano.beaten,
-      line: null,
+      // K5b: "Take it home" from Borehole Hall's Win screen says what came home.
+      line: this.kanoLine,
     });
+    this.kanoLine = null;
     this.kanoScreen = screen;
     this.cleanup = () => screen.close();
     if (!v.kano.arrived) {
@@ -857,14 +861,17 @@ export class Menus {
 
   /**
    * K2b: Kano's home's Play buttons: Kurmi; K3b: Kofar Mata beside it (one row) once Kurmi is
-   * cleared; K4b: Dawanau too once Kofar Mata is.
+   * cleared; K4b: Dawanau too once Kofar Mata is. K5b: Borehole Hall last in the row once Dawanau is.
    */
   private kanoPlays(): HTMLElement[] {
     const play = this.hooks.playKano;
     if (!play) return [];
-    const all = (this.kanoWords?.place.plays ?? []).map((name, i) => button(name, 'go', (e) => play(i + 1, tapPoint(e)), {}, 'play'));
-    const open = 1 + (this.hooks.kanoDone?.(1) ? 1 + (this.hooks.kanoDone?.(2) ? 1 : 0) : 0);
-    return open === 1 ? [all[0]!] : [h('div', { class: open === 3 ? 'go-pair go-three' : 'go-pair' }, ...all.slice(0, open))];
+    const words = this.kanoWords;
+    const toHall = words?.cleared.toHall;
+    const all = [...(words?.place.plays ?? []), ...(toHall && this.hooks.worldPart('kano')?.hall ? [toHall] : [])].map((name, i) => button(name, 'go', (e) => play(i + 1, tapPoint(e)), {}, 'play'));
+    const open = this.hooks.kanoDone?.(1) ? (this.hooks.kanoDone?.(2) ? (this.hooks.kanoDone?.(3) ? 4 : 3) : 2) : 1;
+    const row = all.slice(0, open);
+    return row.length === 1 ? row : [h('div', { class: ['go-pair', 'go-pair', 'go-pair go-three', 'go-pair go-three go-four'][row.length - 1]! }, ...row)];
   }
 
   /** O6b: Ogun's challenge road (ogun.md 6.5), on a stop (with its card open from a city card). */
@@ -1096,7 +1103,7 @@ export class Menus {
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       this.summary.stars && h('p', { class: 'ms-line' }, this.summary.stars),
-      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.kano ? (this.kanoWords?.gameOver.text(formatMoney(this.summary.kobo)) ?? '') : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
+      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : this.summary.kano ? (this.kanoWords?.gameOver.hallText ?? w.hallText) : w.hallText) : this.summary.kano ? (this.kanoWords?.gameOver.text(formatMoney(this.summary.kobo)) ?? '') : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
       this.actions(
@@ -1124,7 +1131,8 @@ export class Menus {
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'),
         ...(c.kano
           ? [
-              ...(c.kanoNext ? [this.guarded(w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),
+              // K5b: Dawanau's card goes on to Borehole Hall.
+              ...(c.kanoNext ? [this.guarded(c.last ? (this.kanoWords?.cleared.toHall ?? w.next) : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),
               this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
             ]
           : c.ogun
@@ -1145,6 +1153,18 @@ export class Menus {
   /** S2.10 Win: lives left (no kobo), the cog line, "See Nigeria's wheel". */
   private win(): HTMLElement {
     const w = WORDS.win;
+    const kw = this.summary.kano ? this.kanoWords?.win : undefined;
+    if (kw) {
+      // K5b (kano.md 5.5): Borehole Hall's Win screen. Home is Kano's (its city and road come in K6b).
+      return h(
+        'div',
+        { class: 'card narrow event', role: 'dialog', 'aria-label': kw.heading },
+        h('h2', {}, kw.heading),
+        h('p', {}, kw.line),
+        h('p', {}, kw.money(formatMoney(this.summary.kobo))),
+        this.actions(this.guarded(kw.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'), this.guarded(kw.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry')),
+      );
+    }
     if (this.summary.ogun) {
       // O5b (ogun.md 5.5): Pothole Hall's Win screen. Ogun's challenge road comes with its city (O6b).
       const o = OGUN_WORDS.win;

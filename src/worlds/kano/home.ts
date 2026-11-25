@@ -49,13 +49,16 @@ export function paintKanoHome(g: CanvasRenderingContext2D, w: number, h: number,
 /**
  * Kano's home's own style, put in the page once as the home first opens.
  * K3b: two streets' Play buttons share one row; K4b: three in one row, tighter sides, so "Play
- * Kofar Mata" takes two lines, not three. K1c fix: the words panel a little smaller where it must
+ * Kofar Mata" takes two lines, not three; K5b: four with Borehole Hall, a little smaller on a
+ * narrow screen. K1c fix: the words panel a little smaller where it must
  * sit beside the gate board.
  */
 export const HOME_STYLE = `.city-buttons .go-pair{display:flex;gap:6px;width:100%}
 .city-buttons .go-pair .go{flex:1 1 0;width:auto;min-width:0}
 .city-buttons .go-three .go{padding:4px 6px}
 @media (max-width:400px){.city-buttons .go-three .go{font-size:15px;line-height:1.1;min-height:48px}}
+.city-buttons .go-four .go{padding:4px 3px}
+@media (max-width:400px){.city-buttons .go-four .go{font-size:13px}}
 .screen .city-banner.tight{padding:3px 8px 4px}
 .screen .city-banner.tight p{font-size:12px;line-height:1.2}`;
 
@@ -94,7 +97,8 @@ export function kanoHome(hooks: WorldCityHooks): WorldCity {
   const words = document.createElement('div');
   words.className = 'city-banner';
   words.style.top = 'calc(var(--safe-top, 0px) + 56px)';
-  for (const [k, line] of [w.line, w.soon].entries()) {
+  // K5b: a line as the home opens ("You brought ₦15 home." after Borehole Hall's "Take it home").
+  for (const [k, line] of [w.line, w.soon, ...(hooks.line ? [hooks.line] : [])].entries()) {
     const p = document.createElement('p');
     if (k === 0) {
       const b = document.createElement('b');

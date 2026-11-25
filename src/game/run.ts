@@ -1038,6 +1038,20 @@ export class Run {
     return b;
   }
 
+  /**
+   * K5b: one move of the hero for a later state's fight whose part imports no value from the
+   * first load (Borehole Hall, KN-R10): the run's own physics; beaten, it stands and watches.
+   */
+  heroStep(dt: number): void {
+    const h = this.hero;
+    if (this.beaten) {
+      steer(h, 0);
+      if (h.grounded) halt(h);
+    }
+    h.gait = this.gait();
+    step(h, this.terrain, dt);
+  }
+
   // ---------- Wind and kilishi (K2b, kano.md 3.3, 4.1) ----------
 
   /** The wind stretch at x (its start to its end), or null. */

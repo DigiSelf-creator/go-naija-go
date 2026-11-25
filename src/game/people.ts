@@ -29,6 +29,8 @@ const NONE: readonly never[] = [];
 const HALL_FULL: readonly CastCell[] = ['stand', 'walk0', 'walk1', 'walk2', 'walk3', 'cheer0', 'cheer1', 'clap0', 'clap1'];
 const HALL_DOOR: readonly CastCell[] = [...HALL_FULL, ...(['stand', 'cheer0', 'cheer1'] as const).map((frame) => ({ frame, size: 0.9 }))];
 const HALL_SIDE: readonly CastCell[] = [...HALL_FULL, ...(['stand', 'cheer0', 'cheer1'] as const).map((frame) => ({ frame, size: 0.95 }))];
+/** K5b: the frames a later state's own hall people are baked in (GamePeople.drawOwn). */
+const OWN_FRAMES: readonly FolkFrame[] = ['stand', 'walk0', 'walk1', 'walk2', 'walk3', 'cheer0', 'cheer1'];
 /** The cells baked for the hall's look `i`. */
 export const hallCells = (_l: FolkLook, i: number): readonly CastCell[] => (i < 3 ? HALL_DOOR : HALL_SIDE);
 
@@ -530,6 +532,43 @@ export class GamePeople {
       this.hallSheet.drawDevice(g, d, (d.x - n.camX) * k, (d.y - n.lift) * k, k);
     }
     if (set) g.restore();
+  }
+
+  /**
+   * K5b: a later state's own hall people (Borehole Hall's door people), whose part draws no
+   * person itself (KN-R10): each look baked once at `size` (standing, walking, cheering), then
+   * copied 1:1 at whole device pixels, as the hall's people. World space in, as the hall draws.
+   */
+  drawOwn(g: G, view: View, camX: number, lift: number, looks: readonly FolkLook[], size: number, list: readonly Omit<FolkDraw, 'size'>[]): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    try {
+      this.ownSize = size;
+      this.ownSheet.ready(looks, view.scale, `own|${size}`, view.ratio);
+      const k = view.scale;
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      for (const d of list) this.ownSheet.drawDevice(g, { ...d, size }, (d.x - camX) * k, (d.y - lift) * k, k);
+      g.restore();
+      this.drawn = list.map((d) => ({ ...d, size }));
+      this.seen = list.length;
+    } catch (err) {
+      this.fail(err);
+    }
+    this.spent += performance.now() - t0;
+  }
+  private ownSize = 1;
+  private readonly ownSheet = new CastSheet(() => OWN_FRAMES.map((frame) => ({ frame, size: this.ownSize })));
+
+  /** K5b: one bubble from a later state's hall (world space), kept off the hero and the HUD row. False: not drawn. */
+  say(g: G, view: View, text: string, x: number, y: number, hero: { x: number; y: number }, lift: number): boolean {
+    if (!this.on) return false;
+    const avoid: Rect[] = [
+      { x: hero.x - 18, y: hero.y - 62, w: 36, h: 66 },
+      { x: x - 2000, y: lift - 1000, w: 4000, h: 1000 + 78 + view.safe.top },
+    ];
+    this.bubbleBox = drawBubbleAt(g, { text, x, y, left: 1, who: 0 }, view.scale, avoid, screenRatio());
+    return this.bubbleBox !== null;
   }
 
   /* ------------------------------------------------------------ the one bubble */

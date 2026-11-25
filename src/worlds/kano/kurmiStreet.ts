@@ -22,6 +22,7 @@ import { drawWindSign, drawWindStreamers, windShow, type WindStretch } from './w
 import { KANO_WORDS } from './words';
 import { kofarMataSkin } from './kofarMataStreet';
 import { dawanauSkin } from './dawanauStreet';
+import { boreholeHallSkin } from './boreholeHallSkin';
 
 /** Each trader's stall stands this far to the right of where they stand (as Ota's). */
 const STALL_RIGHT = 40;
@@ -93,8 +94,8 @@ export function kurmiSkin(level: Level): StreetSkin {
   };
 }
 
-/** The Kano part's street looks by level id (load.ts WorldPart.street): Kurmi, K3b Kofar Mata, K4b Dawanau. */
+/** The Kano part's street looks by level id (load.ts WorldPart.street): Kurmi, K3b Kofar Mata, K4b Dawanau, K5b Borehole Hall. */
 export function kanoStreet(level: Level): StreetSkin | null {
   const id = level.id;
-  return id === 'kano-1' ? kurmiSkin(level) : id === 'kano-2' ? kofarMataSkin(level) : id === 'kano-3' ? dawanauSkin(level) : null;
+  return id === 'kano-1' ? kurmiSkin(level) : id === 'kano-2' ? kofarMataSkin(level) : id === 'kano-3' ? dawanauSkin(level) : id === 'kano-hall' ? boreholeHallSkin() : null;
 }

@@ -21,6 +21,8 @@ import { KANO_WIND_SOUNDS } from './wind';
 import { KANO_CLOTH_SOUNDS } from './cloth';
 import { KANO_WHIRL_SOUNDS } from './whirl';
 import { KANO_WORDS } from './words';
+import { BOREHOLE_HALL_TUNE, RUSTY_SOUNDS } from './boreholeHall';
+import { newRustyVisit, parseRustyHall, rustyArena } from './rustyFight';
 
 const files = import.meta.glob<unknown>('../../data/levels/kano-*.json', { eager: true, import: 'default' });
 
@@ -34,7 +36,28 @@ for (const [path, data] of Object.entries(files)) {
 // until its city (K6b). K2b: Kurmi's look, tune and whoosh. K3b: Kofar Mata's look and tune, the
 // groundnut store, the cloth's boing and the beaters' tok. K4b: Dawanau's look and tune, the whirl's fff and pff.
 // K-size: the words the first load shows once the part is in (toasts, chips, cards, home buttons).
-export const part: WorldPart = { id: 'kano', version: 1, levels, ui, city: kanoHome, street: kanoStreet, sounds: { ...KANO_WIND_SOUNDS, ...KANO_CLOTH_SOUNDS, ...KANO_WHIRL_SOUNDS }, words: KANO_WORDS };
+// K5b: Borehole Hall's fight, look (kurmiStreet.ts kanoStreet), sounds and tune.
+export const part: WorldPart = {
+  id: 'kano',
+  version: 1,
+  levels,
+  ui,
+  city: kanoHome,
+  street: kanoStreet,
+  sounds: { ...KANO_WIND_SOUNDS, ...KANO_CLOTH_SOUNDS, ...KANO_WHIRL_SOUNDS, ...RUSTY_SOUNDS },
+  words: KANO_WORDS,
+  ...hall(),
+};
+
+/** K5b: Rusty Borehole's fight from kano-hall.json (a broken file leaves the part with no hall). */
+function hall(): Pick<WorldPart, 'hall'> {
+  try {
+    return { hall: { arena: rustyArena(parseRustyHall(levels['kano-hall'])), tune: BOREHOLE_HALL_TUNE, newVisit: newRustyVisit } };
+  } catch (err) {
+    console.warn(err);
+    return {};
+  }
+}
 
 /** The debug galleries read the part's art from here (see galleryArt.ts). */
 export * from './galleryArt';

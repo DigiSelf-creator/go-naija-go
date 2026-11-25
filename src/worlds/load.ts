@@ -34,10 +34,12 @@ export interface PartWords {
   readonly hud: Readonly<Record<string, (s: number) => string>>;
   /** Short words for its toasts on a narrow bar (added to SHORT_TOAST when the part loads). */
   readonly short: Readonly<Record<string, string>>;
-  /** Out of lives on its street. */
-  readonly gameOver: { readonly text: (money: string) => string };
-  /** Street cleared, carrying the parcel. */
-  readonly cleared: { readonly parcel: string };
+  /** Out of lives on its street (K5b: and in its hall). */
+  readonly gameOver: { readonly text: (money: string) => string; readonly hallText?: string };
+  /** Street cleared, carrying the parcel (K5b: and the last street's button to its hall). */
+  readonly cleared: { readonly parcel: string; readonly toHall?: string };
+  /** K5b: its hall's Win screen. */
+  readonly win?: { readonly heading: string; readonly line: string; readonly money: (money: string) => string; readonly takeHome: string; readonly playAgain: string };
   /** Its arrival card, first visit only. */
   readonly arrival: { readonly heading: string; readonly line1: string; readonly line2: string; readonly go: string };
   /** The ride's spoken name, going and coming back. */

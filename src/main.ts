@@ -118,8 +118,8 @@ function startGame(): void {
   const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
   /** O2b: ?level=ogun-1 makes "Play" load the Ogun part and start Ota (for testing); O5b: ogun-hall, Pothole Hall. */
   const askedOgun = /^ogun-([1-3]|hall)$/.exec(asked ?? '');
-  /** K2b: ?level=kano-1 makes "Play" load the Kano part and start Kurmi (for testing); K3b: kano-2, Kofar Mata; K4b: kano-3, Dawanau. */
-  const askedKano = /^kano-([123])$/.exec(asked ?? '');
+  /** K2b: ?level=kano-1 makes "Play" load the Kano part and start Kurmi (for testing); K3b: kano-2, Kofar Mata; K4b: kano-3, Dawanau; K5b: kano-hall, Borehole Hall. */
+  const askedKano = /^kano-([123]|hall)$/.exec(asked ?? '');
   const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
   let where: Where = firstStreet;
@@ -390,6 +390,8 @@ function startGame(): void {
   let kanoPlay: { level: Level; n: number } | null = null;
   /** K3b: Kano streets built so far (Kurmi, Kofar Mata; K4b: Dawanau). */
   const KANO_BUILT = 3;
+  /** K5b: Borehole Hall, after Dawanau (kanoPlay.n). */
+  const KANO_HALL = 4;
   /** K2b: the Lagos street tune; a later state's street tune (Kurmi's) stands in for it while that street is played. */
   const lagosStreetTune = TUNES.street;
   /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
@@ -403,7 +405,7 @@ function startGame(): void {
     let level: Level | null = null;
     try {
       const part = worlds.get(KANO);
-      const raw = n <= KANO_BUILT ? part?.levels[`kano-${n}`] : undefined;
+      const raw = n <= KANO_BUILT ? part?.levels[`kano-${n}`] : n === KANO_HALL && part?.hall ? part.levels['kano-hall'] : undefined;
       level = raw === undefined ? null : parseLevel(raw);
       // K3b: Kano's well room (the groundnut store), from the Kano part, beside the others.
       const room = part?.levels['kano-well'];
@@ -422,7 +424,9 @@ function startGame(): void {
     kanoPlay = { level, n };
     missionFor = null;
     ogunFor = null;
-    startRun(at, n - 1);
+    // K5b: a new visit to Borehole Hall shows its first-try hint again (Play again does not come here).
+    if (n === KANO_HALL) worlds.get(KANO)?.hall?.newVisit?.();
+    startRun(at, n === KANO_HALL ? 'hall' : n - 1);
   }
   /** O2b: Ogun street n from its start (its part must have loaded; Ota and Abeokuta so far). */
   function ogunRun(at: TapPoint | null, n: number): void {
@@ -485,7 +489,8 @@ function startGame(): void {
     const parcelIcon = game.skin?.parcelIcon;
     hud.setParcelIcon(parcelIcon ? (g) => game.skinDo((k) => k.parcelIcon?.(g, 16, 16, 26)) : null);
     // O5b: Pothole Hall's fight and tune come from the Ogun part (the parcel is Ogun's own).
-    const ogHall = og && where === 'hall' ? worlds.get(OGUN)?.hall : undefined;
+    // K5b: Borehole Hall's from the Kano part.
+    const ogHall = where === 'hall' ? (og ? worlds.get(OGUN)?.hall : kp ? worlds.get(KANO)?.hall : undefined) : undefined;
     TUNES.hall = ogHall?.tune ?? lagosHallTune;
     // MS3c: in Garri for the mill the room always gives the parcel (still one saved at most: progress.ts).
     game.begin(menus.gentle, og ? og.level : kp ? kp.level : levelOf(where), where === 'hall' ? { parcel: own.parcel, arena: ogHall?.arena } : { parcelSaved: own.parcel && missionPlay?.goal !== 'garri', dash: dashSaved() });
@@ -529,6 +534,7 @@ function startGame(): void {
     const fromOgun = ogunPlay !== null || (lane !== null && laneOgun);
     // K2b: from a Kano street, Home goes back to Kano's home (Kano has no road or city yet, K6b).
     const fromKano = kanoPlay !== null;
+    const kanoAt = kanoPlay?.n === KANO_HALL ? 'hall' : null;
     const ogunAt = lane ? 'expressway' : ogunPlay ? (['ota', 'abeokuta', 'sagamu', 'hall'][ogunPlay.n - 1] ?? null) : null;
     // MS3c: back home after a star in a helper's mission, the helper says thank you (once it is built).
     const go = missionGo;
@@ -559,7 +565,11 @@ function startGame(): void {
     // OG-R39: Out of lives keeps the money (paid home at once): Home says so, with no heading.
     const lostLine = !mission && ogunAt !== 'expressway' && paidHome && brought > 0 ? WORDS.city.mission.brought(formatMoney(brought)) : null;
     const ogunLine = mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : lostLine;
-    if (fromKano && (to === 'city' || to === 'road')) menus.show('kano');
+    if (fromKano && (to === 'city' || to === 'road')) {
+      // K5b: "Take it home" from Borehole Hall's Win screen says what came home on Kano's home.
+      menus.kanoLine = mission && kanoAt === 'hall' ? WORDS.city.mission.brought(formatMoney(mission.kobo)) : null;
+      menus.show('kano');
+    }
     else if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, thanks ? (ogunLine ? `${ogunLine} ${thanks}` : thanks) : ogunLine, ogunAt, mission !== null && mission.plain !== true);
     else if (to === 'wheel') {
       menus.showWheel(fromKano ? 'kano' : fromOgun ? 'ogun' : 'city');
@@ -939,7 +949,7 @@ function startGame(): void {
       else if (askedOgun) {
         const n = askedOgun[1] === 'hall' ? OGUN_HALL : Number(askedOgun[1]);
         void worlds.load(OGUN).then((r) => (r.ok ? ogunRun(at, n) : toast.show(r.message, 4000)));
-      } else if (askedKano) void worlds.load(KANO).then((r) => (r.ok ? kanoRun(at, Number(askedKano[1])) : toast.show(r.message, 4000)));
+      } else if (askedKano) void worlds.load(KANO).then((r) => (r.ok ? kanoRun(at, askedKano[1] === 'hall' ? KANO_HALL : Number(askedKano[1])) : toast.show(r.message, 4000)));
       // O1b2 (ogun.md 1.6): the game opens on the city last used.
       else if (askedAt === null) menus.openHome();
       else lagosRun(at, firstStreet);
@@ -982,7 +992,8 @@ function startGame(): void {
       missionPlay = null;
       // K3b: Kurmi's card goes on to Kofar Mata.
       if (kanoPlay) {
-        if (kanoPlay.n < KANO_BUILT) kanoRun(at, kanoPlay.n + 1);
+        // K5b: Dawanau's card goes on to Borehole Hall.
+        if (kanoPlay.n < KANO_HALL) kanoRun(at, kanoPlay.n + 1);
         return;
       }
       // O3b, O4b: Ota's card goes on to Abeokuta, Abeokuta's to Sagamu.
@@ -1209,7 +1220,7 @@ function startGame(): void {
   /** OG-R15: the gravel "tk" on screen only, one for two close landings. */
   const gravelTk = new TkGate();
   /** O5b: the state whose hall is being played. */
-  const hallState = (): string => (ogunPlay ? OGUN : LAGOS);
+  const hallState = (): string => (ogunPlay ? OGUN : kanoPlay ? KANO : LAGOS);
   game.onEvent = (e) => {
     switch (e.type) {
       case 'kobo':
@@ -1488,7 +1499,7 @@ function startGame(): void {
           ogun: ogunPlay !== null,
           ogunNext: ogunPlay !== null && ogunPlay.n <= OGUN_BUILT,
           kano: kanoPlay !== null,
-          kanoNext: kanoPlay !== null && kanoPlay.n < KANO_BUILT,
+          kanoNext: kanoPlay !== null && (kanoPlay.n < KANO_BUILT || (kanoPlay.n === KANO_BUILT && worlds.get(KANO)?.hall !== undefined)),
           stars: starLine(),
         });
         missionGo?.end();
@@ -1549,7 +1560,7 @@ function startGame(): void {
         toast.hide();
         // S2.8: the hall is won, so Lagos (O5b: or Ogun) is switched on and its cog turns.
         progress.finish({ state: hallState(), hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
-        menus.showWin({ kobo: ogunPlay ? brought : game.run.kobo, lives: game.run.lives, firstHall: firstHallWin, ogun: ogunPlay !== null });
+        menus.showWin({ kobo: ogunPlay || kanoPlay ? brought : game.run.kobo, lives: game.run.lives, firstHall: firstHallWin, ogun: ogunPlay !== null, kano: kanoPlay !== null });
         firstHallWin = false;
         break;
     }

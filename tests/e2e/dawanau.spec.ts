@@ -4,7 +4,7 @@
  * by hand with two thumbs: over the dust whirls, up the sack steps, fura da nono and the row of
  * whirls it puffs apart, down the secret well behind the sacks into the groundnut store for the
  * garri parcel, up at the exit well, on to the bus. The cleared card (Dawanau's line, the parcel's
- * line, no Next street until Borehole Hall is built), the save under states.kano with the parcel
+ * line, K5b: a small "Go to Borehole Hall"), the save under states.kano with the parcel
  * and the money in the one wallet (decision 80). Kano plays with the Ogun part never fetched
  * (KN-R10). Also: Kano's home at 320 x 240 with all three streets open.
  */
@@ -161,13 +161,13 @@ test('Dawanau by hand from Kano\'s home: whirls, sacks, fura da nono, the secret
   expect(Math.abs(room.back - 5480)).toBeLessThan(40);
   expect(last.r.parcel).toBe(true);
 
-  // The cleared card: Dawanau's line and the parcel's; Take it home and Play again (Borehole Hall is not built).
+  // The cleared card: Dawanau's line and the parcel's; Take it home, K5b: Go to Borehole Hall, and Play again.
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
   const money = (await page.evaluate(() => window.__game!.run.kobo)) * 10;
   await expect(dialog.getByText(`Dawanau is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
   await expect(dialog.getByText('Your garri parcel is saved for Borehole Hall.')).toBeVisible();
-  for (const b of ['Take it home', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  for (const b of ['Take it home', 'Go to Borehole Hall', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
   for (const b of ['Next street', 'Challenge road']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
   const s = await saved(page);
   expect(s.states?.kano?.streets?.['3']).toEqual({ done: true, best: money });
