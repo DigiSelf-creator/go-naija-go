@@ -1,0 +1,27 @@
+{
+  "schema": 2,
+  "type": "room",
+  "id": "kano-well",
+  "name": "Groundnut store",
+  "schemaNote": "See docs/kano.md 3.7 and docs/design.md S2.5 (the room rules). Room x runs 0 to width. No hazards, no pits, no timer. Shelves are stacked groundnut sacks and baskets of kuli-kuli on planks; light comes through two holes in the ceiling. The store keeper, an elder woman, sits on a low stool by the back wall at room x 60 to 100 (look only, no hitbox, never on the walking line). The gift is the groundnut garri parcel (the same shield as the Lagos parcel, decision 18; KN-R11).",
+  "groundY": 300,
+  "width": 560,
+  "leftLimit": 30,
+  "rightLimit": 530,
+  "entryX": 60,
+  "exitX": 500,
+  "koboSpacing": 24,
+  "platforms": [
+    [100, 250, 90],
+    [230, 205, 100],
+    [390, 240, 90]
+  ],
+  "kobo": [
+    [70, 276, 3], [112, 226, 3], [180, 276, 2], [405, 216, 3], [440, 276, 3]
+  ],
+  "crates": [
+    [345, 204, "kobo"]
+  ],
+  "gift": [280, 181, "parcel"],
+  "giftIfCarried": [280, 181, 5]
+}
