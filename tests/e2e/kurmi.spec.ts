@@ -2,8 +2,8 @@
  * K2b (docs/kano.md 3.3, 3.4, 4.1 and 8): Kurmi, Kano street 1, on the phone profile. A player in
  * Kano (Pothole Hall won, the arrival card seen) opens the game on Kano's home, taps "Play Kurmi"
  * and plays by hand with two thumbs from the gate to the bus: the gate's welcome, the wind hints,
- * kilishi, Kurmi's own tune and look, the cleared card ("Take it home" back to Kano's home, no
- * Challenge road yet) and the save under states.kano with the money in the one wallet (decision 80).
+ * kilishi, Kurmi's own tune and look, the cleared card ("Take it home" back to Kano's home, K3b:
+ * "Next street" on to Kofar Mata, no Challenge road yet) and the save under states.kano with the money in the one wallet (decision 80).
  * Kano plays with the Ogun part never fetched (KN-R10).
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -80,13 +80,13 @@ test('Kurmi by hand from Kano\'s home: the gate, wind, kilishi, the bus, the cle
   for (const t of ['Welcome to Kano!', 'Wind behind you! You jump farther.', 'Wind in your face! Short jumps.', "Kilishi! Wind can't hold you back."]) expect(toasts).toContain(t);
   expect(seen.kilishi).toBe(true);
 
-  // The cleared card: Kurmi's line, Take it home and Play again (no Next street, no Challenge road yet).
+  // The cleared card: Kurmi's line, Take it home, Next street (K3b: on to Kofar Mata) and Play again (no Challenge road yet).
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
   const money = (await page.evaluate(() => window.__game!.run.kobo)) * 10;
   await expect(dialog.getByText(`Kurmi is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
-  for (const b of ['Take it home', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
-  for (const b of ['Next street', 'Challenge road']) await expect(dialog.getByRole('button', { name: b, exact: true })).toHaveCount(0);
+  for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
   const s = await saved(page);
   expect(s.states?.kano?.streets?.['1']?.done).toBe(true);
   expect(s.states?.kano?.streets?.['1']?.best).toBe(money);

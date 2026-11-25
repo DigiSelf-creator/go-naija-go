@@ -719,6 +719,12 @@ export const KANO_WORDS = {
     gameOver: (kobo: number) => `You keep ${formatMoney(kobo)}. The street is still here. Try again!`,
     /** Kano's home: Kurmi's button (gamedev's words, for designer to check). */
     play: 'Play Kurmi',
+    /** K3b: Kano's home once Kurmi is cleared (kano.md 3.2: the streets open in order). */
+    play2: 'Play Kofar Mata',
+    /** K3b (kano.md 3.7): the groundnut store's gift. */
+    parcel: 'Groundnut garri parcel! Shield for the hall.',
+    /** K3b (kano.md 8): Street cleared, carrying the parcel. */
+    clearedParcel: 'Your garri parcel is saved for Borehole Hall.',
   },
 } as const;
 

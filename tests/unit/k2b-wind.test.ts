@@ -290,11 +290,12 @@ describe('K2b: Kurmi\'s look from the Kano part', async () => {
   const { kanoStreet, kurmiCast } = await import('../../src/worlds/kano/kurmiStreet');
   const { KURMI_TUNE, KURMI_TRADER_LOOKS, KURMI_CAST } = await import('../../src/worlds/kano/kurmi');
 
-  it('kano-1 gets Kurmi\'s look and tune; other Kano levels none yet', () => {
+  it('kano-1 gets Kurmi\'s look and tune; K3b: kano-2 its own (Kofar Mata\'s); Dawanau none yet', () => {
     const skin = kanoStreet(parseLevel(kano1));
     expect(skin?.tune).toBe(KURMI_TUNE);
     expect(skin?.cast?.looks).toBe(KURMI_CAST);
-    expect(kanoStreet(parseLevel(playableKano(kano2)))).toBeNull();
+    expect(kanoStreet(parseLevel(playableKano(kano2)))?.tune?.name).toBe('kano-kofar-mata');
+    expect(kanoStreet(parseLevel(playableKano(kano3)))).toBeNull();
   });
 
   it('its three traders stand at their stalls and call their own lines; the welcome by the gate', () => {

@@ -18,6 +18,7 @@ import type { GamePeople } from './people';
 import type { HazardState, Run, RunEvent } from './run';
 import type { RoomData } from './well';
 import type { Tune } from '../art/tunes';
+import type { SoundName } from '../engine/sound';
 
 type G = CanvasRenderingContext2D;
 
@@ -70,6 +71,11 @@ export interface StreetSkin {
   front?(g: G, s: SkinNow): void;
   /** What happened this step. */
   hear?(events: readonly SkinEvent[], s: SkinNow): void;
+  /**
+   * K3b: once a step, a sound of the street's own scenery to play now (the cloth beaters' tok
+   * while their log is on screen), by its name in sound.ts, or null.
+   */
+  sound?(s: SkinNow): SoundName | null;
   /** O3b: the well room's back and shelves (room units). False: the Lagos room. */
   room?(g: G, room: RoomData, camX: number, viewW: number, time: number, viewH: number, still: boolean): boolean;
   /** O3b: the room's gift on its shelf. False: the game's garri parcel. */

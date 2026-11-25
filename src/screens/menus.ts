@@ -200,6 +200,8 @@ export interface MenuHooks {
   ogunDone(n: number): boolean;
   /** K2b: play Kano street n (Kurmi is 1) from Kano's home. */
   playKano?(n: number, at: TapPoint | null): void;
+  /** K3b: Kano street n is done (saved under states.kano): the next one opens. */
+  kanoDone?(n: number): boolean;
   /** O6b: Ogun's own city part in memory (its fixes, trays and Booming meter; never the wallet). */
   ogunCity: StateCity;
   /** O6b: an Ogun problem card's challenge (Ota for the road, the Expressway for Power and Tech). */
@@ -247,8 +249,10 @@ export interface ClearedSummary {
   ogun?: boolean;
   /** O3b: an Ogun street with the next one built (Ota to Abeokuta): "Next street". */
   ogunNext?: boolean;
-  /** K2b: a Kano street: home is Kano's; no Next street or Challenge road yet. */
+  /** K2b: a Kano street: home is Kano's; no Challenge road yet. */
   kano?: boolean;
+  /** K3b: a Kano street with the next one built (Kurmi to Kofar Mata): "Next street". */
+  kanoNext?: boolean;
   /** MS3b: "You got a star!", or null. */
   stars?: string | null;
 }
@@ -821,7 +825,7 @@ export class Menus {
       topRight: [this.soundSwitch(w), button(w.settings, 'minor', () => this.showSettings('kano'), {}, 'settings')],
       // K2b: Kurmi, the first street, from Kano's home (the full city is K6b).
       bottom: [
-        ...(this.hooks.playKano ? [button(KANO_WORDS.street.play, 'go', (e) => this.hooks.playKano?.(1, tapPoint(e)), {}, 'play')] : []),
+        ...this.kanoPlays(),
         this.travelButton(),
         button(w.hero, 'minor', (e) => this.show('builder', e), {}, 'hero'), button(w.wheel, 'minor two-line', () => this.showWheel('kano'), { 'data-wheel': true }, 'wheel')],
       run: () => undefined,
@@ -843,6 +847,15 @@ export class Menus {
       }, KANO_WORDS.arrival);
     }
     return screen.el;
+  }
+
+  /** K2b: Kano's home's Play buttons: Kurmi; K3b: Kofar Mata beside it (one row) once Kurmi is cleared. */
+  private kanoPlays(): HTMLElement[] {
+    const play = this.hooks.playKano;
+    if (!play) return [];
+    const kurmi = button(KANO_WORDS.street.play, 'go', (e) => play(1, tapPoint(e)), {}, 'play');
+    if (!this.hooks.kanoDone?.(1)) return [kurmi];
+    return [h('div', { class: 'go-pair' }, kurmi, button(KANO_WORDS.street.play2, 'go', (e) => play(2, tapPoint(e)), {}, 'play'))];
   }
 
   /** O6b: Ogun's challenge road (ogun.md 6.5), on a stop (with its card open from a city card). */
@@ -1095,13 +1108,16 @@ export class Menus {
       h('h2', {}, w.heading),
       c.stars && h('p', { class: 'ms-line' }, c.stars),
       h('p', {}, w.text(c.name, c.kobo)),
-      c.parcel && h('p', { class: 'parcel-line' }, c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
+      c.parcel && h('p', { class: 'parcel-line' }, c.kano ? KANO_WORDS.street.clearedParcel : c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
       // O2b: from Ogun it goes home to Ogun's city; O3b: Ota's card goes on to Abeokuta.
       this.actions(
         this.guarded(w.takeHome, 'go', () => this.hooks.takeHome(), {}, 'home'),
         ...(c.kano
-          ? [this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry')]
+          ? [
+              ...(c.kanoNext ? [this.guarded(w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),
+              this.guarded(w.playAgain, 'minor', (e) => this.hooks.restart(tapPoint(e)), {}, 'retry'),
+            ]
           : c.ogun
           ? [
               ...(c.ogunNext ? [this.guarded(c.last ? OGUN_WORDS.cleared.toHall : w.next, 'minor', (e) => this.hooks.next(tapPoint(e)), {}, 'next')] : []),

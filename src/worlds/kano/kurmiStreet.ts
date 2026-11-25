@@ -20,6 +20,7 @@ import { drawKanoGate } from './gate';
 import { KURMI_CAST, KURMI_TRADERS, KURMI_TRADER_LOOKS, KURMI_TUNE, drawKilishi, drawKilishiIcon, drawKurmiBackdrop, drawKurmiStall, drawKurmiTraderStall, type KurmiTrader } from './kurmi';
 import { drawWindSign, drawWindStreamers, windShow, type WindStretch } from './wind';
 import { KANO_WORDS } from './words';
+import { kofarMataSkin } from './kofarMataStreet';
 
 /** Each trader's stall stands this far to the right of where they stand (as Ota's). */
 const STALL_RIGHT = 40;
@@ -91,7 +92,7 @@ export function kurmiSkin(level: Level): StreetSkin {
   };
 }
 
-/** The Kano part's street looks by level id (load.ts WorldPart.street). Kurmi so far. */
+/** The Kano part's street looks by level id (load.ts WorldPart.street): Kurmi, K3b Kofar Mata. */
 export function kanoStreet(level: Level): StreetSkin | null {
-  return level.id === 'kano-1' ? kurmiSkin(level) : null;
+  return level.id === 'kano-1' ? kurmiSkin(level) : level.id === 'kano-2' ? kofarMataSkin(level) : null;
 }

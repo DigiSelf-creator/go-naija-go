@@ -159,8 +159,8 @@ export type OgunSoundName =
   | 'mudSplat'
   | 'rollerToot';
 
-/** K2b: Kano's street sounds; their recipes come with the lazy Kano part (load.ts adds them). */
-export type KanoSoundName = 'windWhoosh';
+/** K2b: Kano's street sounds (K3b: the cloth's boing, the beaters' tok); their recipes come with the lazy Kano part (load.ts adds them). */
+export type KanoSoundName = 'windWhoosh' | 'clothBoing' | 'beaterTok';
 
 export type SoundName = CoreSoundName | LaneSoundName | OgunSoundName | KanoSoundName;
 

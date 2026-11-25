@@ -34,6 +34,7 @@ import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
 import type { GamePeople, PeopleNow } from './people';
 import type { SkinEvent, SkinNow, StreetSkin } from './skin';
+import type { SoundName } from '../engine/sound';
 
 export { heroScreenX };
 /** Honk clouds fade over this last stretch before the hall's left wall, u. */
@@ -74,7 +75,9 @@ export type GameEvent =
   /** S2.16 B4: each 0.3 s of a dash on the ground, the fast soft footsteps. */
   | { type: 'dashSteps' }
   /** O2b (ogun.md 3.3): a foot met the mud (twice a run cycle): the "splosh", a print, a splash. */
-  | { type: 'mudStep'; x: number; y: number };
+  | { type: 'mudStep'; x: number; y: number }
+  /** K3b: a sound of the street skin's own scenery (the cloth beaters' tok on Kofar Mata). */
+  | { type: 'skinSound'; name: SoundName };
 
 /** S2.16 B4: the dash's fast footsteps sound this often, s. */
 export const DASH_STEPS_EVERY = 0.3;
@@ -400,7 +403,11 @@ export class Game {
     else this.gait = 'run';
     this.animateStride(x0, vy0, air0, dt);
     events.push(...this.looks(shield0, phase0, events));
-    if (this.skin) this.skinDo((k) => k.hear?.(events as readonly SkinEvent[], this.skinNow()));
+    if (this.skin) {
+      this.skinDo((k) => k.hear?.(events as readonly SkinEvent[], this.skinNow()));
+      const name = this.run.below ? null : this.skinDo((k) => k.sound?.(this.skinNow()));
+      if (name) events.push({ type: 'skinSound', name });
+    }
     if (events.some((e) => e.type === 'fall' || e.type === 'room' || e.type === 'wellBack')) this.clearMoves();
     if (this.run.below) {
       this.roomCamera(events.some((e) => e.type === 'room'), dt);

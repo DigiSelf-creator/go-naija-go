@@ -283,7 +283,7 @@ export class GamePeople {
     // O2b: a later state's people at their own spots (the travellers by the arch), if their look is in.
     for (const e of own?.extras ?? []) {
       const i = cast.looks.indexOf(e.look);
-      if (i >= 0) plan.stands.unshift({ x: e.x, look: i, kind: 'stand', flip: e.flip ?? false });
+      if (i >= 0) plan.stands.unshift({ x: e.x, look: i, kind: e.stool ? 'sit' : 'stand', flip: e.flip ?? false });
     }
     this.walkLooks = new Set(plan.walkers.map((w) => w.look));
     this.street = new StreetCrowd(plan, name ?? 'alausa', level.groundY, level, own ? { cast: own, looks: cast.looks } : null);
@@ -554,6 +554,9 @@ export class GamePeople {
       { x: n.camX - 1000, y: lift - 1000, w: n.viewW + 2000, h: 1000 + 78 + view.safe.top },
       { x: n.camX - 1000, y: 352, w: n.viewW + 2000, h: 1000 },
     ];
+    // K3b: on a street a bubble is never cut by the screen's sides (a trader's call scrolling in
+    // at 320 wide): it waits until all of it is on screen.
+    if (!run.below && !n.level.hall) avoid.push({ x: n.camX - 1000, y: -1000, w: 1000, h: 3000 }, { x: n.camX + n.viewW, y: -1000, w: 1000, h: 3000 });
     const L = n.camX - 40;
     const R = n.camX + n.viewW + 40;
     for (const z of run.hazards) if (z.mode !== 'gone' && z.x > L && z.x < R) avoid.push({ x: z.x - 24, y: z.y - 12, w: 48, h: 60 });

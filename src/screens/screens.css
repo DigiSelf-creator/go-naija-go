@@ -1728,6 +1728,17 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+/* K3b: Kano's home: two streets' Play buttons share one row. */
+.city-buttons .go-pair {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.city-buttons .go-pair .go {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
 .city-zoom {
   display: flex;
   flex-direction: column-reverse;

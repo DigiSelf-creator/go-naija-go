@@ -181,8 +181,8 @@ export interface StreetCast {
   readonly isTrader?: (look: FolkLook) => boolean;
   /** Greetings left of `to` use these lines (the welcome by the arch). */
   readonly welcome?: { readonly to: number; readonly lines: Lines };
-  /** People who stand at their own spots (the travellers by the arch). */
-  readonly extras?: readonly { readonly x: number; readonly look: FolkLook; readonly flip?: boolean }[];
+  /** People who stand at their own spots (the travellers by the arch). K3b: `stool`: they sit there (the cloth beaters). */
+  readonly extras?: readonly { readonly x: number; readonly look: FolkLook; readonly flip?: boolean; readonly stool?: boolean }[];
   /** O3b: the street's well room keeper (his look, room x and words on the parcel), or the Lagos one. */
   readonly keeper?: { readonly look: FolkLook; readonly x: number; readonly words: string };
 }

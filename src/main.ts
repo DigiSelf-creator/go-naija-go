@@ -118,8 +118,8 @@ function startGame(): void {
   const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
   /** O2b: ?level=ogun-1 makes "Play" load the Ogun part and start Ota (for testing); O5b: ogun-hall, Pothole Hall. */
   const askedOgun = /^ogun-([1-3]|hall)$/.exec(asked ?? '');
-  /** K2b: ?level=kano-1 makes "Play" load the Kano part and start Kurmi (for testing). */
-  const askedKano = asked === 'kano-1';
+  /** K2b: ?level=kano-1 makes "Play" load the Kano part and start Kurmi (for testing); K3b: kano-2, Kofar Mata. */
+  const askedKano = /^kano-([12])$/.exec(asked ?? '');
   const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
   let where: Where = firstStreet;
@@ -388,6 +388,8 @@ function startGame(): void {
   const lagosHallTune = TUNES.hall;
   /** K2b: a Kano street (Kurmi so far) being played, or null. */
   let kanoPlay: { level: Level; n: number } | null = null;
+  /** K3b: Kano streets built so far (Kurmi and Kofar Mata). */
+  const KANO_BUILT = 2;
   /** K2b: the Lagos street tune; a later state's street tune (Kurmi's) stands in for it while that street is played. */
   const lagosStreetTune = TUNES.street;
   /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
@@ -400,8 +402,15 @@ function startGame(): void {
   function kanoRun(at: TapPoint | null, n: number): void {
     let level: Level | null = null;
     try {
-      const raw = worlds.get(KANO)?.levels[`kano-${n}`];
+      const part = worlds.get(KANO);
+      const raw = n <= KANO_BUILT ? part?.levels[`kano-${n}`] : undefined;
       level = raw === undefined ? null : parseLevel(raw);
+      // K3b: Kano's well room (the groundnut store), from the Kano part, beside the others.
+      const room = part?.levels['kano-well'];
+      if (level && room !== undefined && !game.rooms.has('kano-well')) {
+        const r = parseRoom(room);
+        game.rooms = new Map([...game.rooms, [r.id, r]]);
+      }
     } catch (err) {
       console.warn(err);
     }
@@ -930,7 +939,7 @@ function startGame(): void {
       else if (askedOgun) {
         const n = askedOgun[1] === 'hall' ? OGUN_HALL : Number(askedOgun[1]);
         void worlds.load(OGUN).then((r) => (r.ok ? ogunRun(at, n) : toast.show(r.message, 4000)));
-      } else if (askedKano) void worlds.load(KANO).then((r) => (r.ok ? kanoRun(at, 1) : toast.show(r.message, 4000)));
+      } else if (askedKano) void worlds.load(KANO).then((r) => (r.ok ? kanoRun(at, Number(askedKano[1])) : toast.show(r.message, 4000)));
       // O1b2 (ogun.md 1.6): the game opens on the city last used.
       else if (askedAt === null) menus.openHome();
       else lagosRun(at, firstStreet);
@@ -971,8 +980,11 @@ function startGame(): void {
       missionFor = null;
       endGo();
       missionPlay = null;
-      // K2b: Kurmi is the only Kano street so far (its card has no "Next street").
-      if (kanoPlay) return;
+      // K3b: Kurmi's card goes on to Kofar Mata.
+      if (kanoPlay) {
+        if (kanoPlay.n < KANO_BUILT) kanoRun(at, kanoPlay.n + 1);
+        return;
+      }
       // O3b, O4b: Ota's card goes on to Abeokuta, Abeokuta's to Sagamu.
       if (ogunPlay) {
         // O5b: Sagamu's card goes on to Pothole Hall.
@@ -1065,6 +1077,7 @@ function startGame(): void {
     // O2b, OG-R37: Ogun's Bad road card ("Run Ota" ... "Go to Pothole Hall").
     playOgun: (n, at) => ogunRun(at, n),
     playKano: (n, at) => kanoRun(at, n),
+    kanoDone: (n) => streetRecord(progress.state(KANO), n).done,
     ogunDone: (n) => streetRecord(progress.state(OGUN), n).done,
     // O6b: Ogun's city and its challenge road.
     ogunCity,
@@ -1187,6 +1200,8 @@ function startGame(): void {
   const HINT_MS = 3500;
   /** O2b: the next mud step is the B sound. */
   let mudB = false;
+  /** K3b: springy cloth bounces since the page opened (tests). */
+  let clothBounces = 0;
   /** OG-R15: the gravel "tk" on screen only, one for two close landings. */
   const gravelTk = new TkGate();
   /** O5b: the state whose hall is being played. */
@@ -1359,6 +1374,15 @@ function startGame(): void {
         // K2b (kano.md 3.3): the soft whoosh in a wind stretch (its recipe comes with the Kano part).
         sound.play('windWhoosh');
         break;
+      case 'spring':
+        // K3b (kano.md 3.3): the springy cloth's "boing" (its recipe comes with the Kano part).
+        sound.play('clothBoing');
+        clothBounces++;
+        break;
+      case 'skinSound':
+        // K3b: the street's own scenery (Kofar Mata's cloth beaters, only while on screen).
+        sound.play(e.name);
+        break;
       case 'mudStep':
         // O2b (ogun.md 3.3): the soft "splosh", A, B, A, B.
         sound.play(mudB ? 'mudStepB' : 'mudStepA');
@@ -1411,7 +1435,7 @@ function startGame(): void {
         break;
       case 'parcel':
         sound.play('parcel');
-        toast.show(ogunPlay ? OGUN_WORDS.toast.parcel : W.parcel, HINT_MS);
+        toast.show(kanoPlay ? KANO_WORDS.street.parcel : ogunPlay ? OGUN_WORDS.toast.parcel : W.parcel, HINT_MS);
         break;
       case 'wellUp':
         sound.play('wellUp');
@@ -1455,6 +1479,7 @@ function startGame(): void {
           ogun: ogunPlay !== null,
           ogunNext: ogunPlay !== null && ogunPlay.n <= OGUN_BUILT,
           kano: kanoPlay !== null,
+          kanoNext: kanoPlay !== null && kanoPlay.n < KANO_BUILT,
           stars: starLine(),
         });
         missionGo?.end();
@@ -1800,6 +1825,10 @@ function startGame(): void {
         cracks: level.cracks.map((c) => [c.x, c.x + c.w] as const),
         waterPits: [...level.waterPits],
       };
+    },
+    get clothBounces() {
+      // K3b: springy cloth bounces since the page opened.
+      return clothBounces;
     },
     get below() {
       // Cheap: below the street (the well room shows), for per-frame logs.
@@ -2193,8 +2222,8 @@ declare global {
         readonly hall: { readonly width: number; readonly leftLimit: number; readonly rightLimit: number } | null;
         readonly groundY: number;
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
-        /** Roofs and other one-way platforms: top y, from x to x + w. */
-        readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
+        /** Roofs and other one-way platforms: top y, from x to x + w. K3b: `spring`, springy cloth's bounce vy. */
+        readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number; readonly spring?: number }[];
         readonly wells: readonly { readonly x: number; readonly exitX: number; readonly room: string }[];
         readonly gutters: readonly { readonly x: number; readonly w: number }[];
         readonly piles: readonly number[];
@@ -2204,6 +2233,8 @@ declare global {
       };
       /** Below the street: the well room shows (cheap, for per-frame logs). */
       readonly below: boolean;
+      /** K3b: springy cloth bounces since the page opened. */
+      readonly clothBounces: number;
       /** The Throw button on screen now (touch box, CSS px) and its spoken label, or null. */
       readonly throwButton: { readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       /** The Go down / Go up button on screen now (CSS px), or null. */
