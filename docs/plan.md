@@ -504,6 +504,16 @@ Rules for the whole slice:
 
 Order: MS2 and MS3a side by side now; MS3b after ST-A3 (already done) and MS2; then MS3c, MS4, MS5. Merging to the live link stays Tp's call (decision 64).
 
+## Slice K: Kano, the Centre of Commerce (decisions 89 to 91; designer note docs/kano.md)
+
+The rows K0a to K7 live in docs/kano.md part 10 (sizes there add up to the Kano part's about 85 KB; first load grows 4 KB at most). Not to be mixed up with slice 2's old K1 to K4 rows.
+
+- **K0b (po): done 25 Nov.** Ruling in docs/questions.md (po note, 25 Nov).
+- **Start now:** K0a (designer, level files and `KANO_WORDS`) and K1a (art, wall, gate, ride and its tune, "To Kano" stop, cog pennant). Then K1b after K1a; K2a, K3a, K4a and K5a after K0a; K6a after K1a.
+- ST-H is live (po accepted 24 Nov, f54e0a1), so all Kano art for people (street casts, the store keeper, the door people, city walkers) uses the style.md 1.8 crisp recipe.
+- Kano's quick missions KM1 to KM5 are fixed, never daily (decision 90).
+- Before the closed invited test: Tp or a Hausa speaker Tp trusts reads the Hausa lines and the three street names (decision 91; K7).
+
 ## Known facts
 
 1. Node 22 via nvm: ~/.nvm/versions/node/v22.19.0.
@@ -526,6 +536,7 @@ Blocked: ST4a and ST4b on Tp's store accounts.
 3. The people test: three first-time players (one aged 9 to 12) for the intro and the lane run. Feeds S3f5.
 4. Later, when pm says (near the end of ST3): make the Google Play and Apple developer accounts. Blocks ST4.
 5. Play streets 2 and 3 and Go-Slow Hall on a phone; say if any took more than 3 tries.
+6. Before the closed invited test: you, or a Hausa speaker you trust, read the Hausa lines in docs/kano.md part 7 and the three Kano street names (decision 91).
 
 ## Questions for po
 

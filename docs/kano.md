@@ -1,10 +1,10 @@
-# Kano, the Centre of Commerce (designer note, first draft, 24 Nov 2026)
+# Kano, the Centre of Commerce (designer note, 24 Nov 2026; Tp answered 25 Nov, decision 91; po checked in K0b)
 
 Owner: designer. Written for decision 89 (Tp, 24 Nov): the next state is Kano, the first in the North (decisions 81 and 82). This note is to Kano what docs/ogun.md is to Ogun, in the same shape but lean: it is the source for the K tasks in part 10. Where this note is silent, Ogun's rule holds with Kano's names (ogun.md parts 1 to 9), and Lagos's rules hold under that (city.md, design.md).
 
 Sources: decisions 7, 13 to 19, 29 to 38, 42 to 48, 62, 64, 66 to 89; docs/ogun.md (all parts, the model); docs/city.md (2C, 2D, 5W, W3, W18); docs/design.md (S2.2 jump numbers, S2.5 well, S2.6 street rules, S2.7 hall, S2.8 saves and the wheel, "People everywhere"); docs/style.md (1.2 buttons, 1.3 shading, 1.6 haze, 1.8 crisp characters).
 
-**Open for Tp:** KN-Q1 to KN-Q4 in docs/questions.md (street names, the boss, the two foods, who reads the Hausa). This note is built on the recommended answers; lines that change with a different answer carry the question's id. Small rulings KN-R1 to KN-R12 (part 11) follow the team's recommendation under decision 64 and are reported to Tp in one line each.
+**Settled by Tp (decision 91, 25 Nov):** KN-Q1 to KN-Q4 all took answer a (street names Kurmi, Kofar Mata and Dawanau, a Kano speaker checks them; the boss Rusty Borehole; the foods kilishi and fura da nono; the Hausa lines are fine for the team's test link and are read by Tp or a Hausa speaker Tp trusts before the closed invited test). Lines that carry a KN-Q id are now settled. Small rulings KN-R1 to KN-R12 (part 11) follow the team's recommendation under decision 64 and are reported to Tp in one line each.
 
 ---
 
@@ -41,7 +41,7 @@ A side view, drawn in code. Our own long-distance bus (cream and danfo yellow, n
 
 ### 1.4 The gate in the old wall (our own drawing, decision 19)
 
-A thick, smooth red-brown earth wall with a rounded top, running off both edges, and in it one wide, round-topped gateway with two plain wooden doors standing open. Small raised triangles along the wall's top as our own simple pattern. In front of the gate, on its own post (never carved into the wall), a plain board: **"WELCOME TO KANO"** and under it, smaller, **"CENTRE OF COMMERCE"** (Kano's well-known name, a phrase, not a crest; po check, KN-R2). The game's Wheel cog sits on the board's top, turning once Kano is switched on.
+A thick, smooth red-brown earth wall with a rounded top, running off both edges, and in it one wide, round-topped gateway with two plain wooden doors standing open. Small raised triangles along the wall's top as our own simple pattern. In front of the gate, on its own post (never carved into the wall), a plain board: **"WELCOME TO KANO"** and under it, smaller, **"CENTRE OF COMMERCE"** (Kano's well-known name, a phrase, not a crest; po checked, KN-R2). The game's Wheel cog sits on the board's top, turning once Kano is switched on.
 
 - Never a real gate's shape or name, never the state's crest, seal, flag or emblem, never a palace, never any writing but our two lines (no Arabic or Ajami script anywhere, KN-R3).
 - Faded but warm before Kano is switched on (decision 47); after Rusty Borehole, the wall glows warm red, the doors have fresh paint, lamps hang lit on both sides, and the cog turns.
@@ -99,14 +99,14 @@ The same key `gidi-progress` and rules as ogun.md 1.8, with a `states.kano` part
 ### 2.3 What we never show (CLAUDE.md rules 3 and 4; decision 19)
 
 - **Nothing religious.** No mosques, minarets, domes, prayer, prayer mats, prayer beads, Quranic schools, religious festivals, Arabic or Ajami writing, and no dress used as a sign of faith. Everyday clothes are just clothes (2.4). No greeting or bubble that names God (KN-R7).
-- **No royal or title likeness.** No emir or any real office-holder, no palace or palace walls, no palace guards, no big wrapped turban of office, no robes of office, no horses in regalia, no long royal trumpets. The Durbar is left out (KN-R8; po may reopen it).
+- **No royal or title likeness.** No emir or any real office-holder, no palace or palace walls, no palace guards, no big wrapped turban of office, no robes of office, no horses in regalia, no long royal trumpets. The Durbar is left out (KN-R8; po ruled in K0b that it stays out of version 1).
 - **No real people, no parties.** No politicians, officials, celebrities, party names, colours or logos. No real building, crest or brand.
 - **No danger story.** The North is never shown as dangerous: no soldiers, police, checkpoints, guns, uniforms, badges, guard groups or anything about crime. No child begging, alone on the street or at work (KN-R9).
 - **Mock no one.** No accent, tribe, faith or job is a joke. Hausa, Fulani, Kanuri, Yoruba, Igbo and everyone else who lives in Kano are shown the same way: busy, kind, proud. Water carriers, porters and traders are proud work, never the problem.
 
 ### 2.4 People's clothes (everyday, not symbols)
 
-Kaftans and trousers, a plain babban riga with an embroidered neck, a hula cap (a small round embroidered cap), wrappers and blouses, a light head shawl draped over the head and shoulders (gyale), ankara, school uniforms, work clothes, jeans and T-shirts. Elders stand tall (decision 21). A wheelchair user and an elder with a walking stick are in the city, as in every city (style 1.4).
+Kaftans and trousers, a plain babban riga with an embroidered neck, a hula cap (a small round embroidered cap), wrappers and blouses, a light head shawl draped over the head and shoulders (gyale), ankara, school uniforms, work clothes, jeans and T-shirts. Elders stand tall (decision 21). A wheelchair user is in the city, as in every city. Elders have no walking stick (decision 21).
 
 ### 2.5 The look (decision 47 and style.md)
 
@@ -122,12 +122,12 @@ Our own code-made tunes with a kalangu-style talking drum, a shaker, a light flu
 
 Every rule from design.md S2.2 and S2.6 and ogun.md part 3 holds: pit kinds and widths, 160 u clear run-up before every big pit, hazards at least 200 u from a pit, food at least 300 u from a pit, the corn rules, a warning sign before every pit 90 u or wider, hints at least 120 u apart and 35 characters or fewer, three lives (five in Gentle), one bus stop checkpoint, the yellow bus at the end. Ogun's mud, cracks and gravel do not appear in Kano (KN-R10), so the Kano part never needs Ogun's code.
 
-### 3.1 Street names (KN-Q1; decision 19)
+### 3.1 Street names (KN-Q1, settled: decision 91; decision 19)
 
-| Street | Theme | Name (recommended) | Backup | Why |
+| Street | Theme | Name (decision 91) | Backup (not used) | Why |
 |---|---|---|---|---|
 | 1 (kano-1.json) | morning, through the gate, the old market | **Kurmi** | Kantin Kwari | Kurmi Market is one of the oldest markets in West Africa, famous for leather and crafts. A market name, not a person |
-| 2 (kano-2.json) | midday, the dye pits | **Kofar Mata** | Yankaba | Home of Kano's famous dye pits. The name is a place (an old gate's name, "Women's Gate"), not a person or holy place. po and a Kano speaker check it (KN-Q1) |
+| 2 (kano-2.json) | midday, the dye pits | **Kofar Mata** | Yankaba | Home of Kano's famous dye pits. The name is a place (an old gate's name, "Women's Gate"), not a person or holy place. po checked it (K0b); a Kano speaker checks all three names before the closed invited test (decision 91) |
 | 3 (kano-3.json) | evening, the grain market | **Dawanau** | Sharada | Dawanau is one of the biggest grain markets in West Africa; trucks come from all over. A town name |
 
 Cleared words: "Kurmi is moving again, thanks to you! You got {money}." The same for Kofar Mata and Dawanau. A line that says something is wrong never names the place.
@@ -248,7 +248,7 @@ Schema 2 with `state: "kano"`, `street: 1 to 3`, `theme: "walls" | "dyepits" | "
 
 ## 4. Kano's foods
 
-### 4.1 The two new foods (KN-Q3)
+### 4.1 The two new foods (KN-Q3, settled: decision 91)
 
 | Food | Where from | Does | Lasts | Pickup words | Look (not colour alone) |
 |---|---|---|---|---|---|
@@ -281,7 +281,7 @@ After Kano the North has two (decision 81). The East still needs one more before
 
 ## 5. The boss: Rusty Borehole in Borehole Hall
 
-### 5.1 Who he is (KN-Q2)
+### 5.1 Who he is (KN-Q2, settled: decision 91)
 
 **Rusty Borehole is a problem, never a person.** He is a tall, old borehole pump and water tank on four short legs: a round tank for a body, two round pressure dials for eyes, a tap for a nose, a wide crack in his rust for a grumpy mouth, and a long pipe running from his top across the yard ceiling. The Harmattan dust has clogged him, so he is dry and he coughs dust instead of water. No arms, no clothes, no hat, no title, no face of anyone real. He is the Stopper who keeps the water in.
 
@@ -431,7 +431,7 @@ The five rules hold (never in the way, never hurt or scared, never the problem, 
 - **Borehole Hall:** 3 people wait at the left door: a woman with a water can, a water cart pusher with his cart of cans, an elder. On each glug they cheer ("Yauwa!", then "Well done!"). At the finish they come in and fill up at the running taps; the cart pusher fills his cans first and grins (his work gets easier; nobody is put out of work).
 - **The city:** walkers as Ogun; dyers; a queue at the water yard once it flows (adults and teens with cans, a child holding a parent's hand; never a child carrying heavy water alone).
 
-**Bubbles** (words in words.ts as `KANO_WORDS`; every Hausa line marked ✓? is checked by a Hausa speaker before the closed invited test, KN-Q4; plain words for children about 5 and up, decision 86):
+**Bubbles** (words in words.ts as `KANO_WORDS`; every Hausa line marked ✓? is fine for the team's test link and is read by Tp or a Hausa speaker Tp trusts before the closed invited test, KN-Q4 settled, decision 91; plain words for children about 5 and up, decision 86):
 
 | Kind | Words |
 |---|---|
@@ -498,31 +498,33 @@ As Ogun (OG-R6): on the web, fetched the first time the player opens Kano, then 
 
 ## 10. Build order (slice K)
 
-Lagos and Ogun quick missions (decision 89) and style step ST-H (decision 88) go first or beside; Kano art waits for ST-H so its people are born crisp. Each row passes qa, on the slow phone profile too, before it is done; po accepts.
+Lagos and Ogun quick missions (decision 89) and style step ST-H (decision 88) are done (po accepted both 24 Nov, f54e0a1). ST-H is live, so Kano art starts now, and every Kano person (street casts, the store keeper, the door people, the city walkers) is drawn with the style.md 1.8 crisp recipe from the first stroke. Kano's quick missions stay fixed, never daily (decision 90). Each row passes qa, on the slow phone profile too, before it is done; po accepts.
 
 | id | owner | task | depends on | done when | size |
 |----|-------|------|------------|-----------|------|
-| K0a | designer | Level files kano-1, kano-2, kano-3, kano-well, kano-hall, kano-lane, and `KANO_WORDS` list | Tp's answer to KN-Q1 | every rule in 3.3 and S2.6 passes the level test | 11 KB |
-| K0b | po | Check "Kofar Mata", "Centre of Commerce", the hall and the cast against the hard rules (2.3); rule on the Durbar if asked (KN-R8) | none | written ruling in questions.md | |
-| K1a | art | Wall and gate (faded, bright), the long ride north, "To Kano" stop, Kano cog pennant | ST-H | 1.4 rules; no real gate, crest or script | 6 KB |
+| K0a | designer | Level files kano-1, kano-2, kano-3, kano-well, kano-hall, kano-lane, and `KANO_WORDS` list | none (KN-Q1 settled, decision 91) | every rule in 3.3 and S2.6 passes the level test | 11 KB |
+| K0b | po | Check "Kofar Mata", "Centre of Commerce", the hall and the cast against the hard rules (2.3); rule on the Durbar if asked (KN-R8) | none | written ruling in questions.md. **Done 25 Nov (po).** | |
+| K1a | art | Wall and gate (faded, bright), the long ride north and its welcome tune, "To Kano" stop, Kano cog pennant | ST-H (done) | 1.4 rules; no real gate, crest or script | 6 KB |
 | K1b | gamedev | Lazy Kano part, download card, third Travel button, ride, arrival card, "On to Kano", "To Kano" stop, wheel lines, saves with an old-save test | K1a | part 1 words exact; old saves load; Lagos and Ogun play the same; first load grows 4 KB at most | 4 KB first load |
 | K1c | qa | K1 pass | K1b | part 1 at 320 x 240, 568 x 320, 640 x 200, 851 x 393; offline after one visit; Kano opens with the Ogun part absent | |
-| K2a | art | Kurmi backdrop, wind sign, streamers and dust streaks, kilishi, Kurmi cast | K0a | 2.2, 2.3, 7; haze on far rows only | 16 KB |
-| K2b | gamedev | Wind rules, kilishi, `gate` field, Kurmi plays | K0a, K1b, K2a | 3.3 wind rules in tests (no wide pit in a headwind, Gentle eighth) | 4 KB |
+| K2a | art | Kurmi backdrop, wind sign, streamers and dust streaks, kilishi, Kurmi cast, the street tune | K0a | 2.2, 2.3, 7; haze on far rows only; people to style 1.8 | 12 KB |
+| K2b | gamedev | Wind rules, kilishi, `gate` field, Kurmi plays | K0a, K1b, K2a | 3.3 wind rules in tests (no wide pit in a headwind, Gentle eighth) | 3 KB |
 | K2c | qa | Kurmi pass | K2b | an Ogun finisher clears Kurmi in 3 tries or fewer; wind reads in greyscale | |
-| K3a | art | Kofar Mata backdrop (dye pits behind the wall), cloth frames, fura da nono, groundnut store and keeper, cast | K0a | pits as scenery only; own patterns | 16 KB |
-| K3b | gamedev | Springy cloth, well room and parcel save, Kofar Mata plays | K2b, K3a | bounce numbers in tests; never over a pit | 4 KB |
+| K3a | art | Kofar Mata backdrop (dye pits behind the wall), cloth frames, fura da nono, groundnut store and keeper, cast, the street tune | K0a | pits as scenery only; own patterns; people to style 1.8 | 12 KB |
+| K3b | gamedev | Springy cloth, well room and parcel save, Kofar Mata plays | K2b, K3a | bounce numbers in tests; never over a pit | 3 KB |
 | K3c | qa | Kofar Mata pass | K3b | 4 tries or fewer | |
-| K4a | art | Dawanau backdrop, sack steps, groundnut pyramid, dust whirl, cast | K0a | whirl readable at 320 x 240 and in greyscale | 12 KB |
+| K4a | art | Dawanau backdrop, sack steps, groundnut pyramid, dust whirl, cast, the street tune | K0a | whirl readable at 320 x 240 and in greyscale; people to style 1.8 | 9 KB |
 | K4b | gamedev | Whirl hazard, fura da nono, sacks, secret well, Dawanau plays | K3b, K4a | whirl and corn rules in tests | 3 KB |
 | K4c | qa | Dawanau pass | K4b | 4 tries or fewer | |
-| K5a | art | Borehole Hall, Rusty Borehole (wheeze, gust, hiccup, sneeze, clean shine), valves, wash line, door people, hall tune | K0a, KN-Q2 | 5.1, 5.2; a problem, never a person | 10 KB |
-| K5b | gamedev | Valves and the bump hit, "holds his breath" rule, coughs, gusts, phases, finish, Win screen | K4b, K5a | 5.3 to 5.5 numbers; tests that no whirl leaves him during a bounce | 5 KB |
+| K5a | art | Borehole Hall, Rusty Borehole (wheeze, gust, hiccup, sneeze, clean shine), valves, wash line, door people, hall tune | K0a (KN-Q2 settled) | 5.1, 5.2; a problem, never a person; door people to style 1.8 | 10 KB |
+| K5b | gamedev | Valves and the bump hit, "holds his breath" rule, coughs, gusts, phases, finish, Win screen | K4b, K5a | 5.3 to 5.5 numbers; tests that no whirl leaves him during a bounce | 4 KB |
 | K5c | qa | Hall pass | K5b | a Dawanau finisher wins in 3 tries; Gentle wins in 3; never Nintendo-like | |
-| K6a | art | Kano city blocks (tired and bright), wall edge, places, pins, Harmattan Road look | K1a | 6.1; no real building or brand | 12 KB |
-| K6b | gamedev | Kano city, tax places, Booming meter and cog, challenge road, Harmattan Road | K1b, K6a | 6.2 to 6.5; money adds up; W18 words with Kano names | 4 KB |
+| K6a | art | Kano city blocks (tired and bright), wall edge, places, pins, Harmattan Road look | K1a | 6.1; no real building or brand; walkers to style 1.8 | 9 KB |
+| K6b | gamedev | Kano city, tax places, Booming meter and cog, challenge road, Harmattan Road | K1b, K6a | 6.2 to 6.5; money adds up; W18 words with Kano names | 3 KB |
 | K6c | qa | City, road and lane pass | K6b | 45 fps drag at 4x CPU; idle draws nothing | |
-| K7 | qa, then po | Kano full pass, then po accepts | K2c to K6c | Kano part 150 KB at most; offline; slow phone; originality, "mock no one" and nothing-religious check; Hausa lines checked (KN-Q4) | |
+| K7 | qa, then po | Kano full pass, then po accepts | K2c to K6c | Kano part 150 KB at most; offline; slow phone; originality, "mock no one" and nothing-religious check; before the closed invited test, Tp or a Hausa speaker Tp trusts has read the Hausa lines and the three street names (decision 91) | |
+
+Sizes: the Kano-part rows add up to part 9.1 (art and tunes 58, code 16, levels 11, so about 85 KB); K1b's 4 KB is first load. If K7 measures the part over 95 KB, the download card's "about 85 KB" is changed to the measured size.
 
 Order: K0a, K0b and K1 together; then K2, K3, K4 in order (each street teaches what the next and the hall use); K6 beside K3 to K5 once K1 is done; K5 last of the play.
 
@@ -531,13 +533,13 @@ Order: K0a, K0b and K1 together; then K2, K3, K4 in order (each street teaches w
 ## 11. Rulings under decision 64 (one line each for Tp)
 
 - **KN-R1.** Lagos to Kano plays one ride (the Kano one), not Lagos-to-Ogun then Ogun-to-Kano.
-- **KN-R2.** "Centre of Commerce" is Kano's well-known name, a phrase, not a crest (like "the Gateway State"); po confirms in K0b.
+- **KN-R2.** "Centre of Commerce" is Kano's well-known name, a phrase, not a crest (like "the Gateway State"). po confirmed in K0b (25 Nov).
 - **KN-R3.** No Arabic or Ajami writing anywhere in Kano, since a child or parent may read any script as religious; all signs are our own English shop words.
 - **KN-R4.** The dye pits are scenery behind a low wall, never a hazard or something to fall in; the craft is shown with pride.
 - **KN-R5.** The groundnut pyramid is our own small stack of sacks and a "long ago" line, not a copy of any photo.
 - **KN-R6.** The Harmattan haze is gold, never grey, and only on far rows, so Kano never looks run-down and the play line stays clear.
 - **KN-R7.** No greeting or bubble names God, even common everyday ones, to keep faith out of the game.
-- **KN-R8.** The Durbar is left out (it is tied to religious festivals and royal courts). po may rule on it later; nothing in this note needs it.
+- **KN-R8.** The Durbar is left out (it is tied to religious festivals and royal courts). po ruled in K0b (25 Nov): it stays out of version 1.
 - **KN-R9.** Nothing about danger or crime in the North, and no child begging, alone on the street or at work.
 - **KN-R10.** Kano's streets use none of Ogun's mud, cracks or gravel, so the Kano part works without the Ogun part.
 - **KN-R11.** The well parcel stays the garri parcel (decision 18), drawn with Kano's groundnuts and cloth; no new power.
