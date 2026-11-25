@@ -30,6 +30,7 @@ const GALLERIES: readonly { match: (v: string) => number | null; load: () => Pro
   { match: pages('folk'), load: () => import('./galleryFolk').then((m) => (g, w, h, t, p) => m.drawFolkGallery(g, w, h, t, p)) },
   { match: pages('ogun-city'), load: () => import('./galleryOgunCity').then((m) => (g, w, h, t, p, s) => m.drawOgunCityGallery(g, w, h, t, p, s)) },
   { match: pages('ogun'), load: () => import('./galleryOgun').then((m) => (g, w, h, t, p) => m.drawOgunGallery(g, w, h, t, p)) },
+  { match: pages('kano-city'), load: () => import('./galleryKanoCity').then((m) => (g, w, h, t, p) => m.drawKanoCityGallery(g, w, h, t, p)) },
   { match: pages('kano'), load: () => import('./galleryKano').then((m) => (g, w, h, t, p) => m.drawKanoGallery(g, w, h, t, p)) },
   { match: only('ota'), load: () => import('./galleryOta').then((m) => (g, w, h, t, _p, s) => m.drawOtaGallery(g, w, h, t, s)) },
   { match: only('abeokuta'), load: () => import('./galleryAbeokuta').then((m) => (g, w, h, t, _p, s) => m.drawAbeokutaGallery(g, w, h, t, s)) },
