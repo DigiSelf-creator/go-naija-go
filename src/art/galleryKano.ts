@@ -7,7 +7,8 @@
  * ?gallery=kano3  Kurmi (K2a): the street calm, in the tailwind, at the kilishi and headwind, at
  *                 320 x 240 real size, and the wind's look in greyscale;
  * ?gallery=kano4  Kurmi's pieces: wind signs, streamers, dust streaks, kilishi, the stalls, the
- *                 hoop and the whole cast, crisp (style 1.8).
+ *                 hoop and the whole cast, crisp (style 1.8);
+ * ?gallery=kano5, kano6  Kofar Mata (K3a): the street and its pieces (galleryKofarMata.ts).
  * Same fixed 960 x 720 layout as the other pages; &t=1.5 holds the time.
  */
 import { drawGateIcon } from './gateway';
@@ -39,6 +40,7 @@ import {
   type WindStretch,
 } from '../worlds/kano/galleryArt';
 import { KANO_WORDS } from '../worlds/kano/words';
+import { KOFAR_MATA_PAGES } from './galleryKofarMata';
 import { drawKanoGateIcon, drawMiniKanoGate, drawToKanoCard } from '../worlds/ogun/toKano';
 
 type Page = (g: CanvasRenderingContext2D, time: number) => void;
@@ -414,7 +416,7 @@ const kurmiPieces: Page = (g, time) => {
   label(g, 'Kurmi cast, 16 looks, crisp (style 1.8): sellers, reader, shopper, students, traders from other states, children, parent, elders (no stick), wheelchair user', 12, 696, 10);
 };
 
-export const KANO_PAGES: readonly Page[] = [gates, rides, kurmiStreet, kurmiPieces];
+export const KANO_PAGES: readonly Page[] = [gates, rides, kurmiStreet, kurmiPieces, ...KOFAR_MATA_PAGES];
 
 export function drawKanoGallery(g: CanvasRenderingContext2D, viewW: number, viewH: number, time: number, page: number): void {
   g.save();
