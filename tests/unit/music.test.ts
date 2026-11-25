@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CORN, G_PENTATONIC, TUNES, laneTempoAt, type MusicPlace, type Tune } from '../../src/art/tunes';
 import { GATEWAY_TUNE } from '../../src/art/ogunGate';
 import { POTHOLE_HALL_TUNE } from '../../src/worlds/ogun/hall';
+import { KANO_WELCOME_TUNE } from '../../src/worlds/kano/rideArt';
 import { LOOKAHEAD, MUSIC_GAIN, Music, midiHz, noteNumber, ringSeconds, stepSeconds, trackEvents, tuneEvents } from '../../src/engine/music';
 
 const PLACES = Object.keys(TUNES) as MusicPlace[];
@@ -217,6 +218,21 @@ describe('every tune is our own', () => {
         expect(n, `tempo ${tempo} step ${step}`).toBeLessThanOrEqual(6);
       }
     }
+  });
+
+  // K1a: Kano's welcome tune lives in the lazy Kano part, so it is checked here by name.
+  it("Kano's welcome tune: our own, in its key, about 1.5 s, not Ogun's welcome", () => {
+    const t = KANO_WELCOME_TUNE;
+    const mel = melody(t);
+    expect(mel.length).toBeGreaterThan(3);
+    for (const [name, notes] of Object.entries(KNOWN)) expect(copies(mel, notes.map((n) => noteNumber(n)!)), `close to the ${name}`).toBe(false);
+    expect(iv(mel)).not.toEqual(iv(melody(GATEWAY_TUNE)));
+    for (const tr of t.tracks) for (const e of trackEvents(tr)) for (const n of e.notes) expect(t.key).toContain(PC[n % 12]);
+    const st = stepSeconds(t);
+    const end = Math.max(...tuneEvents(t).map((e) => e.step * st + ringSeconds(e, st)));
+    expect(end).toBeGreaterThan(1.3);
+    expect(end).toBeLessThan(2.2);
+    expect(t.loop).toBe(false);
   });
 
   it('the four looping tunes each have their own melody', () => {
