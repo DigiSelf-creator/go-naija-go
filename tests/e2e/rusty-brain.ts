@@ -9,6 +9,11 @@
  * enough to bump the valve with the head. Then, still bouncing on the cloth, steer to the next
  * valve and, near the top of a bounce over it, press again (the jump in the air) to bump it. A
  * whirl coming along the floor: stop, and tap a small jump just in time to land on it (a bounce).
+ *
+ * KN-R14: the valve to hit is shut tight ("WAIT") until his first whirl of the phase leaves him,
+ * and he never coughs while the hero is up after a cloth bounce. So after each glug: let go,
+ * steer off the cloth to the floor beside it, walk back under the valve and stand there until it
+ * says "STUCK" (his whirl is out), then bounce, hold and bump.
  */
 
 export interface RustyHero {
@@ -24,6 +29,8 @@ export interface RustySight {
   hero: RustyHero;
   /** The valve to bump now (index), or -1. */
   stuck: number;
+  /** KN-R14: it has shaken loose ("STUCK"); false while it says "WAIT". */
+  ready: boolean;
   hits: number;
   valves: readonly number[];
   defeated: boolean;
@@ -54,7 +61,7 @@ export interface RustyDo {
  * watch a whirl from this far; tap so the hero comes down on it (a tap jump comes down through
  * the whirl's top about 0.42 s later, while it rolls in at 60 u/s); let go after this long.
  */
-export const RUSTY_BOT = { under: 4, overAir: 8, watch: 130, stompAt: 26, fall: 0.42, giveUp: 2.4 } as const;
+export const RUSTY_BOT = { under: 4, overAir: 8, watch: 130, stompAt: 26, fall: 0.42, giveUp: 2.4, offCloth: 55 } as const;
 
 /** What to do now. `late`: seconds between seeing and acting (the plan allows for it). */
 export function decideRusty(m: RustyMind, s: RustySight, late = 0): RustyDo {
@@ -85,6 +92,18 @@ export function decideRusty(m: RustyMind, s: RustySight, late = 0): RustyDo {
   for (const z of s.whirls) {
     const ahead = z.x - h.x;
     if (z.vx < 0 && ahead > -16 && ahead < d) d = ahead;
+  }
+  // KN-R14: the valve says "WAIT": come down off the cloth, stand under it on the floor, let him cough.
+  if (!s.ready) {
+    if (!h.grounded) {
+      const off = target - B.offCloth - h.x;
+      return out(Math.abs(off) <= B.under ? 0 : off > 0 ? 1 : -1, 'WAIT: come down off the cloth');
+    }
+    if (d < B.watch && d <= B.stompAt + 60 * late) {
+      m.tapped = true;
+      return out(0, 'tap: come down on the whirl', true);
+    }
+    return out(toward, toward === 0 ? 'WAIT: stand under it and let him cough' : 'WAIT: walk under the valve');
   }
   if (h.grounded) {
     if (d < B.watch) {

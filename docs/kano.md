@@ -317,7 +317,7 @@ Hall x runs 0 to 560, floor y 300 (S2.7).
 
 **Bump each stuck valve from below to let the water through.**
 
-1. The valve that is stuck now shakes, puffs dust, and carries a "STUCK" tag (words and shaking, never colour alone). The others wait, still.
+1. The valve that is next carries a tag. It is **shut tight** until Rusty has coughed: still, tagged "WAIT", and a head bump only goes "clonk" (the head stops, no hit, no hurt). When the first whirl of the phase leaves his feet, a puff of dust runs along the pipe and **shakes it loose**: from then on the valve shakes, puffs dust and is tagged "STUCK", and it stays ready for the rest of the phase. Words and shaking, never colour alone. The others wait, still. (KN-R14)
 2. Bounce on the cloth under it and keep holding jump, or double jump, and hit the valve from below with your head, the same move as opening a crate (design.md S2.4: the head stops, a small push down). The valve spins free: **"SQUEAK... GLUG!"** Water rushes a little way along the pipe. That is a hit.
 3. The order is left, middle, right: each valve is nearer Rusty, so his dust reaches it sooner. A done valve shows a tick and drips.
 
@@ -325,7 +325,9 @@ Hit counter: three valve shapes at the top that fill with a tick. Toasts: "Glug!
 
 **Built (K0a, 25 Nov):** src/data/levels/kano-hall.json holds every number in 5.2 to 5.5 in a `boss` block of kind "rusty-borehole" (body, valves, frames, phases, whirl, gust, finish times, Gentle), read by gamedev in K5b. kano-levels.test.ts checks the reach rule with the real jump numbers: a held jump puts the head at y 112, a held cloth bounce at y 48, a double jump at y 2, against the valves' bottom at y 70; an un-held bounce falls short, so the "hold" in the hint matters.
 
-**He holds his breath while you bounce.** No new whirl leaves Rusty while the hero is in the air after a cloth bounce, so the way up to the valve and back down is always clear of new dust. Landing on a whirl from above is always a bounce, never a hurt (3.3), so coming down on one is safe.
+**He holds his breath while you bounce.** No new whirl leaves Rusty from a cloth bounce until the hero's feet touch the floor (landing on a cloth again does not count), so the way up to the valve and back down is always clear of new dust. A cough that comes due while he holds his breath waits at his mouth: his dials keep spinning and his tank stays puffed out, and the whirl leaves 0.5 s after the hero lands on the floor. Landing on a whirl from above is always a bounce, never a hurt (3.3), so coming down on one is safe.
+
+**So every phase has a whirl to beat (KN-R14).** A valve opens only after its phase's first whirl has left him, and he only coughs once the hero is on the floor. First whirls come at 2.0 s (entry), and one `every` after the 1.5 s break (3.9 s after hit 1, 3.5 s after hit 2), as OG-R21. The fastest clean win is about 11 s with at least three whirls met. If the hero bounces on a cloth for 3 s while the valve says "WAIT", hint once per try: "Come down and let him cough!"
 
 ### 5.4 What he does, and how it gets harder
 
@@ -561,3 +563,4 @@ Order: K0a, K0b and K1 together; then K2, K3, K4 in order (each street teaches w
 - **KN-R11.** The well parcel stays the garri parcel (decision 18), drawn with Kano's groundnuts and cloth; no new power.
 - **KN-R12.** Kano's lane run is "Harmattan Road", with the Expressway's numbers and no new rule.
 - **KN-R13.** Dawanau's secret well sits before the bus stop (5150 to 5480), not after it, so the bus stop is never skipped (design.md S2.5 rule 5). K0a, 25 Nov.
+- **KN-R14.** No more sky-only win: the next valve stays shut ("WAIT", head bump goes "clonk") until that phase's first whirl has left Rusty, then shakes loose ("STUCK") and stays ready. The held breath is unchanged (no whirl leaves him from a cloth bounce until the hero's feet touch the floor; a due whirl waits at his mouth, wheezing, and leaves 0.5 s after landing), so a whirl still never lands on a child mid-bounce. Fastest win about 11 s with three whirls met. Hint after 3 s of bouncing on "WAIT": "Come down and let him cough!" Data: `boss.valveNeedsWhirl: true`, `boss.waitHintAfter: 3.0`, `boss.heldWhirlDelay: 0.5`. 25 Nov.

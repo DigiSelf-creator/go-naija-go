@@ -28,6 +28,7 @@ import {
   drawBoreholeHall,
   drawBoreholeHallFront,
   drawBoreholeLine,
+  drawPipeDust,
   drawRustyBorehole,
   drawRustyWord,
   drawSneezePuff,
@@ -60,6 +61,8 @@ export const BH_LOOK = {
   walkSpeed: 110,
   /** The soft "fff" again this often while a whirl is on screen. */
   fff: 0.5,
+  /** KN-R14: the dust puff runs along the pipe to the valve over this long as it shakes loose, s. */
+  pipeDust: 0.5,
 } as const;
 
 /** Rusty's look now (kano.md 5.4; the finish has its own): hiccup, blow, puff, wheeze or grumpy. */
@@ -149,11 +152,15 @@ export function boreholeHallSkin(): StreetSkin {
       if (walking) drawWaterCan(g, xs[0]! + BH_CAN_X - BH_DOOR_SPOTS[0]!, gy - 3);
       else drawWaterCan(g, BH_CAN_X, gy - 3);
       drawWaterCart(g, walking ? xs[1]! + BH_CART_AHEAD : BH_CART_X, gy - 2, walking && !still ? ft * 4 : 0);
-      // The water line and the valves: done ones tick and drip, the stuck one shakes with its tag.
+      // The water line and the valves: done ones tick and drip, the stuck one shakes with its tag;
+      // KN-R14: shut tight it waits, still, tagged WAIT, until his whirl's dust runs along the pipe.
       drawBoreholeLine(g, fin ? 3 : hits, fin?.wave ?? 0, t, still);
+      const loose = (f.steps - f.readyAt) / STEPS;
+      if (!fin && !still && f.stuck >= 0 && loose >= 0 && loose <= BH_LOOK.pipeDust) drawPipeDust(g, f.data.valves.x[f.stuck]!, loose / BH_LOOK.pipeDust);
       f.data.valves.x.forEach((vx, i) => {
         const at = f.hitAt[i];
-        drawValve(g, vx, fin || i < hits ? 'open' : i === hits ? 'stuck' : 'wait', { time: clock, still, freed: at === undefined ? -1 : (f.steps - at) / STEPS });
+        const v = fin ? 'open' : f.valveState(i);
+        drawValve(g, vx, v === 'shut' ? 'wait' : v, { time: clock, still, freed: at === undefined ? -1 : (f.steps - at) / STEPS, tag: v === 'shut' });
         const fx = vx - BH_HALL.springW / 2;
         drawClothFrame(g, fx, BH_HALL.springW, gy, { dip: clothDip(clock - (landed.get(fx) ?? -Infinity), still) });
       });
