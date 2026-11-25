@@ -2,7 +2,15 @@
 
 ## Answered by Tp, 25 Nov 2026: MS-Q1 a (decision 90); KN-Q1 a, KN-Q2 a, KN-Q3 a, KN-Q4 a (decision 91).
 
-## po note, 25 Nov 2026 (newest): Kano check K0b done
+## po note, 25 Nov 2026 (newest): Kano K7 accepted, on qa's 640 x 200 arrow re-check
+
+- **Accepted (K7):** Kano on claude/serene-hopper-ydve2g at 40f174b, on one condition: qa passes the last edge-arrow fix at 640 x 200. Verified by po: build and size check, Kano part 76.0 KB of 150 KB, so the download card's "about 85 KB" stays (part 10: change it only over 95 KB). Reported by qa: K2c to K6c and the K7 gate. Reasoned by po: no real person, party, ruler or faith sign; no tribe, region, accent or job mocked; nothing copies another game; the player words are plain.
+- **Size, under decision 64, one line:** first load is 925.5 KB, 10.8 KB more than at f54e0a1 (914.7 KB), against K1b's 4 KB. Still far under 3000 KB. Accepted as the team's call; pm to note where it went on the next size check.
+- **KN-R16 (child bot never wins Borehole Hall), ruled by po under decision 64, no Tp question:** the bot never aims, and part 5.4's bar (a Dawanau finisher wins in 3 tries, Gentle too) is met. Ship to the team test link as built. Before Tp's live link, watch 3 real children aged 5 to 8: each should open the first valve within about 60 s, and 2 of 3 should win in 3 tries. If not, first make the arrow come at 5 s for everyone (Gentle 3 s), then use part 5.4's tuning order.
+- **Small word fix suggested (gamedev's call, easy to undo):** the KN-R16 hint "Go back. Bounce under it!" becomes "Go back! Bounce under the valve!" (32 characters), so a child who misses the arrow, or hears it read aloud, knows what "it" is.
+- **Waits for Tp (not blocking the team link):** the Hausa check in docs/kano-hausa-check.md before the closed invited test. "Madalla!" is also used in Lagos and Ogun, so if the speaker says swap it, all three worlds change. Recommend: one sitting, about 15 minutes.
+
+## po note, 25 Nov 2026: Kano check K0b done
 
 - **Accepted (K0b):** docs/kano.md checked against the brief, decisions 19, 21, 81, 86, 89 to 91 and CLAUDE.md rules 2 to 7. Reasoned by po, from the note (no build yet): no real person, office-holder or party; nothing religious and no emir, palace, royal dress or Durbar (2.3); no tribe, faith, accent or job is a joke, the North is never shown as dangerous, water carriers keep their work (7); nothing copies another game (our own gate, boss and sounds; the valve bump is the crate bump players already know, and 5.4 rules out a head-stomp fight); player words are short and plain for children about 5 (hints 35 characters or fewer, the arrival card explains "Commerce" in its next sentence).
 - **po rulings (decision 64, small and easy to undo):** "Kofar Mata" reads well as a place name (an old gate, not a person or holy place; a Kano speaker still checks all three names, decision 91). "Centre of Commerce" is a phrase like "the Gateway State", fine on the board (KN-R2). The Durbar stays out of version 1 (KN-R8).
