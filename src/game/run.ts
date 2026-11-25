@@ -209,6 +209,8 @@ export type RunEvent =
   | { type: 'gate' }
   /** K2b (kano.md 3.3): in a wind stretch, every 0.9 s (the soft "whoosh"). */
   | { type: 'whoosh' }
+  /** K3b (kano.md 3.3): a bounce off the springy cloth frame at x (the "boing", the dip). */
+  | { type: 'spring'; x: number }
   /** O3b (ogun.md 3.3): a crack starts to rumble open (it is a pothole 0.4 s later). */
   | { type: 'crackOpen'; x: number; w: number }
   /** O4b (ogun.md 3.3): a hopping gravel lands on the road ("tk", a dust puff). */
@@ -612,6 +614,7 @@ export class Run {
       this.fall(ev);
       return ev;
     }
+    if (h.sprung) ev.push({ type: 'spring', x: h.sprung.x });
     if (h.manual) this.walls();
     if (this.wasMud) this.leftMud(h);
     if (dash0 && h.dash === 0) ev.push({ type: 'dashEnd' });

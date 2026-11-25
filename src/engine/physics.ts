@@ -101,6 +101,11 @@ export interface Platform {
   x: number;
   y: number;
   w: number;
+  /**
+   * K3b (kano.md 3.3): springy cloth. Landing on it from above never stands: the hero bounces up
+   * at this vy (u/s, negative = up), held for higher as a jump, with the second jump still there.
+   */
+  spring?: number;
 }
 
 export interface Terrain {
@@ -174,6 +179,8 @@ export interface Body {
    * it lands at the same speed. On the ground, and going back, it does nothing. 1: no wind.
    */
   wind: number;
+  /** K3b: the springy cloth bounced on in the last step, or null. */
+  sprung: Platform | null;
 }
 
 export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHYSICS): Body {
@@ -205,6 +212,7 @@ export function createBody(x: number, terrain: Terrain, cfg: PhysicsConfig = PHY
     restAtLanding: false,
     dashEase: false,
     wind: 1,
+    sprung: null,
   };
 }
 
@@ -375,6 +383,22 @@ export function headStop(b: Body, feetY: number, vy: number): void {
   b.holding = false;
 }
 
+/**
+ * K3b: landed on springy cloth from above. Like a jump from the ground at the cloth's vy: held
+ * (the finger still down) it rises on the lighter gravity; the second jump is there.
+ */
+function springUp(b: Body, p: Platform, vy: number): void {
+  leaveGround(b);
+  b.y = p.y;
+  b.vy = vy;
+  b.on = null;
+  b.coyote = 0;
+  b.buffer = 0;
+  b.airJump = true;
+  b.holding = b.down;
+  b.sprung = p;
+}
+
 function land(b: Body, y: number, on: Platform | null, cfg: PhysicsConfig): void {
   b.y = y;
   b.vy = 0;
@@ -387,6 +411,7 @@ function land(b: Body, y: number, on: Platform | null, cfg: PhysicsConfig): void
 
 /** One fixed step. dt is always 1/60 s in the game; tests may pass the same. */
 export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig = PHYSICS): void {
+  b.sprung = null;
   if (b.fallen) return;
 
   if (b.manual) {
@@ -425,7 +450,8 @@ export function step(b: Body, terrain: Terrain, dt: number, cfg: PhysicsConfig =
         best = p;
       }
     }
-    if (best) land(b, best.y, best, cfg);
+    if (best?.spring !== undefined) springUp(b, best, best.spring);
+    else if (best) land(b, best.y, best, cfg);
     else if (groundAt(terrain, b.x) && b.prevY <= terrain.groundY + cfg.groundSnap && b.y >= terrain.groundY) {
       land(b, terrain.groundY, null, cfg);
     }

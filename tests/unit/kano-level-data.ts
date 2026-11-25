@@ -1,7 +1,7 @@
 /**
  * K0a: Kano level files hold fields, foods and a hazard the game does not read yet (kano.md 3.8:
- * `springs`, `sacks`, the "whirl" hazard, the "fura" food). gamedev adds them in K3b and K4b
- * (K2b added `wind`, `gate` and kilishi, so the copy keeps those). Until then the S2.6 rule tests
+ * `sacks`, the "whirl" hazard, the "fura" food). gamedev adds them in K4b (K2b added `wind`,
+ * `gate` and kilishi, K3b `springs`, so the copy keeps those). Until then the S2.6 rule tests
  * (street.test.ts) read a copy:
  * - fura is left out (kano-levels.test.ts checks it by the same food rules);
  * - each whirl is read as a tyre, since its placing rules are the tyre's (kano.md 3.3);

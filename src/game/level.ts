@@ -123,6 +123,14 @@ export interface WindData {
   dir: 'back' | 'face';
 }
 
+/** K3b (kano.md 3.3): a springy cloth frame from x to x + w (80 to 120 wide), always on solid road. */
+export interface SpringData {
+  x: number;
+  w: number;
+}
+/** kano.md 3.3: the frame stands 30 u high; landing on it bounces you up at vy -640 (a jump is -576). */
+export const SPRING = { h: 30, vy: -640, minW: 80, maxW: 120 } as const;
+
 /** A well (S2.5): entrance x, exit x, room file id. */
 export interface WellData {
   x: number;
@@ -184,6 +192,8 @@ export interface Level {
   wind: readonly WindData[];
   /** K2b (kano.md 3.4): our own gate in the old wall (Kurmi only), or null. */
   gate: number | null;
+  /** K3b (kano.md 3.3): springy cloth frames, left to right (also in terrain.platforms, with their bounce). */
+  springs: readonly SpringData[];
   /** S2.16 B4: reaching this x turns the dash on (saved), or null. */
   dashFrom: number | null;
   /** Words shown when the hero reaches x. `needs`: a piece (features.ts) that must be on. */
@@ -323,6 +333,15 @@ export function parseLevel(raw: unknown): Level {
     return d;
   });
   const gate = r['gate'] === undefined ? null : num(r['gate'], 'gate');
+  // K3b (kano.md 3.3, 3.8): springs [x, width]; a frame never stands over a pit.
+  const springs: SpringData[] = opt('springs').map((q, i) => {
+    const [x, w] = tuple(q, `springs[${i}]`, 2).map((v, j) => num(v, `springs[${i}][${j}]`));
+    if (w! < SPRING.minW || w! > SPRING.maxW) fail(`springs[${i}][1]`, `should be ${SPRING.minW} to ${SPRING.maxW} wide`);
+    if (!ground.some(([a, b]) => x! >= a && x! + w! <= b)) fail(`springs[${i}]`, 'should stand on solid road, never over a pit');
+    return { x: x!, w: w! };
+  });
+  springs.sort((p, q) => p.x - q.x);
+  for (const k of springs) platforms.push({ x: k.x, y: groundY - SPRING.h, w: k.w, spring: SPRING.vy });
   for (const k of rocks) platforms.push({ x: k.x, y: groundY - k.h, w: k.w });
 
   const crates: CrateData[] =
@@ -391,6 +410,7 @@ export function parseLevel(raw: unknown): Level {
     waterPits,
     wind: wind.sort((p, q) => p.x - q.x),
     gate,
+    springs,
     dashFrom,
     hints: hints.sort((p, q) => p.x - q.x),
     checkpoint: num(r['checkpoint'], 'checkpoint'),
@@ -514,6 +534,7 @@ function parseHall(r: Record<string, unknown>, c: Check): Level {
     waterPits: [],
     wind: [],
     gate: null,
+    springs: [],
     dashFrom: null,
     hints: [],
     checkpoint: Infinity,
