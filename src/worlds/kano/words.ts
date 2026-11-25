@@ -1,10 +1,12 @@
 /**
  * K0a: every Kano word the streets, the well room and Borehole Hall need (docs/kano.md parts 3,
  * 4, 5, 7 and 8), word for word. Kept in the Kano folder so it rides in the lazy Kano part
- * (kano.md 9.1). K1b moved the lines the first load shows (the "On to Kano" button, the Travel
- * card, the "To Kano" stop, the arrival card, the wheel lines, the download card) and the short
- * toast words (SHORT_TOAST) to src/screens/words.ts, as Ogun's did. The street files carry the
- * hints, and tests/unit/kano-levels.test.ts checks they match.
+ * (kano.md 9.1). K1b moved the lines the first load shows before the part is in (the "On to
+ * Kano" button, the Travel card, the "To Kano" stop, the wheel lines, the download card) to
+ * src/screens/words.ts. Lines shown only once the part is in (the street toasts and chips, the
+ * Kano cards' lines, the arrival card, the ride's spoken name, Kano's home buttons and the short
+ * toast words) stay here: the part hands them to the first load as `part.words` (load.ts
+ * PartWords). The street files carry the hints, and tests/unit/kano-levels.test.ts checks they match.
  *
  * Like every file in this folder it imports no value from outside it (the Kano part works on its
  * own, KN-R10), so the money lines take the money as words the game has already written.
@@ -26,7 +28,18 @@ export const KANO_WORDS = {
     soon: 'Kurmi, the first street, is just through the gate.',
     /** The picture's spoken name. */
     pic: 'The old red wall of Kano and its open gate.',
+    /** K2b to K4b: each street's Play button (gamedev's words, for designer to check), opening in order. */
+    plays: ['Play Kurmi', 'Play Kofar Mata', 'Play Dawanau'] as readonly string[],
   },
+  /** Part 1.4: the arrival card, first visit only. */
+  arrival: {
+    heading: 'Welcome to Kano!',
+    line1: 'Kano is the Centre of Commerce. People come here to buy and sell.',
+    line2: 'The dust has dried up the borehole. Fix Kano, and the water will flow.',
+    go: "Let's go",
+  },
+  /** Part 1.3: the ride's spoken name, going and coming back (gamedev's words). */
+  ride: { spokenIn: 'A long bus drives north across the grassland to the old wall of Kano.', spokenOut: 'A long bus drives from Kano back down the road.' },
   /** Part 3.1 (decision 91): the three streets, in order from the gate. */
   streets: ['Kurmi', 'Kofar Mata', 'Dawanau'] as readonly string[],
   /** Part 3: each street's hints, word for word as in its level file (35 characters or fewer). */
@@ -121,6 +134,18 @@ export const KANO_WORDS = {
     /** The plain spelling, if a phone shows a tone mark as a box. */
     plain: { 'Ẹ káàbọ̀!': 'E kaabo!', 'Nnọọ!': 'Nnoo!', 'Ẹ n lẹ́ o!': 'E n le o!', 'Ẹ kú iṣẹ́!': 'E ku ise!' } as Readonly<Record<string, string>>,
   },
+  /**
+   * S2.2 "Short words for narrow bars" for Kano's toasts and hall lines over 35 characters (the
+   * first load adds them to SHORT_TOAST when the part loads).
+   */
+  short: {
+    "Kilishi! Wind can't hold you back for 12 seconds.": "Kilishi! Wind can't hold you back.",
+    "Fura da nono! Dust can't stop you for 12 seconds.": "Fura da nono! Dust can't stop you.",
+    'Groundnut garri parcel! Shield for the hall.': 'Garri parcel! Shield for the hall.',
+    "He's cross! Two whirls now. Jump them both.": 'Two whirls now! Jump them both.',
+    'The water is flowing! Kano is switched on!': 'The water is flowing!',
+    'Bounce, hold, and bump the valve!': 'Bounce, hold, bump the valve!',
+  } as Readonly<Record<string, string>>,
   /** Part 6.2: Kano's quick mission card lines (KM1 to KM5; stars are checked against the level files). */
   missions: {
     coins: 'Catch coins on Kurmi!',

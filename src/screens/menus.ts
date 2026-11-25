@@ -33,8 +33,9 @@ import { button, h, say, type IconName } from './dom';
 import { wheelFit } from './streets';
 import type { PlanStop, RoadOpen, RoadView, StopInfo } from './road';
 import { GAME_NAME, KANO_WORDS, OGUN_WORDS, WORDS, WORLD_PART_WORDS } from './words';
+import { formatMoney } from '../game/money';
 import type { StateId } from '../game/states';
-import type { WorldLoad, WorldPart, WorldRoadView } from '../worlds/load';
+import type { PartWords, WorldLoad, WorldPart, WorldRoadView } from '../worlds/load';
 import type { WorldCity, WorldUi } from '../worlds/ui';
 import type { StateCity } from '../game/states';
 import type { Tune } from '../art/tunes';
@@ -575,6 +576,11 @@ export class Menus {
     });
   }
 
+  /** K-size: Kano's own words, from its part once it is in (kano.md 9.1: they ride in it). */
+  private get kanoWords(): PartWords | undefined {
+    return this.hooks.worldPart('kano')?.words;
+  }
+
   /** K1b: the state whose screen (its city, or its challenge road) shows now. */
   private here(): StateId {
     return this.screen === 'kano' ? 'kano' : this.screen === 'ogun' || (this.screen === 'road' && this.roadState === 'ogun') ? 'ogun' : 'lagos';
@@ -737,7 +743,7 @@ export class Menus {
     if (!r) return null;
     const w = OGUN_WORDS.busRide;
     const v = this.hooks.states();
-    const said = r.kano ? KANO_WORDS.ride : w;
+    const said = (r.kano && this.kanoWords?.ride) || w;
     const ride = r.ui.busRide({
       look: this.look,
       toLagos: r.toLagos,
@@ -844,7 +850,7 @@ export class Menus {
       this.overlayNext = arrivalCard(() => {
         this.hooks.arrived('kano');
         this.closeOverlay();
-      }, KANO_WORDS.arrival);
+      }, this.kanoWords?.arrival);
     }
     return screen.el;
   }
@@ -856,8 +862,7 @@ export class Menus {
   private kanoPlays(): HTMLElement[] {
     const play = this.hooks.playKano;
     if (!play) return [];
-    const w = KANO_WORDS.street;
-    const all = [w.play, w.play2, w.play3].map((name, i) => button(name, 'go', (e) => play(i + 1, tapPoint(e)), {}, 'play'));
+    const all = (this.kanoWords?.place.plays ?? []).map((name, i) => button(name, 'go', (e) => play(i + 1, tapPoint(e)), {}, 'play'));
     const open = 1 + (this.hooks.kanoDone?.(1) ? 1 + (this.hooks.kanoDone?.(2) ? 1 : 0) : 0);
     return open === 1 ? [all[0]!] : [h('div', { class: open === 3 ? 'go-pair go-three' : 'go-pair' }, ...all.slice(0, open))];
   }
@@ -1091,7 +1096,7 @@ export class Menus {
       { class: 'card narrow event over', role: 'dialog', 'aria-label': w.heading },
       h('h2', {}, w.heading),
       this.summary.stars && h('p', { class: 'ms-line' }, this.summary.stars),
-      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.kano ? KANO_WORDS.street.gameOver(this.summary.kobo) : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
+      h('p', {}, this.summary.hall ? (this.summary.ogun ? OGUN_WORDS.gameOver.hallText : w.hallText) : this.summary.kano ? (this.kanoWords?.gameOver.text(formatMoney(this.summary.kobo)) ?? '') : this.summary.ogun ? OGUN_WORDS.gameOver.text(this.summary.kobo) : w.text(this.summary.kobo)),
       // Gentle mode is offered only while it is off; it counts from the next run (Q15).
       !this.settings.gentle && h('div', { class: 'gentle-row' }, h('p', { class: 'small' }, this.summary.hall ? w.hallGentleOffer : w.gentleOffer), this.gentleSwitch('over')),
       this.actions(
@@ -1112,7 +1117,7 @@ export class Menus {
       h('h2', {}, w.heading),
       c.stars && h('p', { class: 'ms-line' }, c.stars),
       h('p', {}, w.text(c.name, c.kobo)),
-      c.parcel && h('p', { class: 'parcel-line' }, c.kano ? KANO_WORDS.street.clearedParcel : c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
+      c.parcel && h('p', { class: 'parcel-line' }, c.kano ? (this.kanoWords?.cleared.parcel ?? '') : c.ogun ? OGUN_WORDS.cleared.parcel : w.parcel),
       // (c), 5W W5: the big button takes the win home to Lagos; "Next street" becomes small.
       // O2b: from Ogun it goes home to Ogun's city; O3b: Ota's card goes on to Abeokuta.
       this.actions(

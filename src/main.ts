@@ -480,7 +480,7 @@ function startGame(): void {
     menus.ogunRun = og !== null;
     menus.kanoRun = kp !== null;
     if (og) for (const f of ['ikokore', 'ofada'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)));
-    if (kp) for (const f of ['kilishi', 'fura'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)));
+    if (kp) for (const f of ['kilishi', 'fura'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)), worlds.get(KANO)?.words?.hud[f]);
     // O3b: the parcel chip shows the state's own parcel (Ijebu garri in Ogun).
     const parcelIcon = game.skin?.parcelIcon;
     hud.setParcelIcon(parcelIcon ? (g) => game.skinDo((k) => k.parcelIcon?.(g, 16, 16, 26)) : null);
@@ -1200,6 +1200,8 @@ function startGame(): void {
   const HINT_MS = 3500;
   /** O2b: the next mud step is the B sound. */
   let mudB = false;
+  /** K-size: a Kano street toast's words, from the Kano part (kano.md 9.1: they ride in it). */
+  const kanoSays = (name: string): string => worlds.get(KANO)?.words?.toast[name] ?? '';
   /** K3b: springy cloth bounces since the page opened (tests). */
   let clothBounces = 0;
   /** K4b: dust whirls puffed apart since the page opened (tests). */
@@ -1232,7 +1234,7 @@ function startGame(): void {
         sound.play(e.kind === 'amala' ? 'strongPick' : e.kind === 'garri' ? 'suitOn' : 'food');
         // S2.15: fufu's words say which key or button throws.
         if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
-        else toast.show(e.kind === 'ikokore' || e.kind === 'ofada' ? OGUN_WORDS.toast[e.kind] : e.kind === 'kilishi' || e.kind === 'fura' ? KANO_WORDS.street[e.kind] : W[e.kind], 3200);
+        else toast.show(e.kind === 'ikokore' || e.kind === 'ofada' ? OGUN_WORDS.toast[e.kind] : e.kind === 'kilishi' || e.kind === 'fura' ? kanoSays(e.kind) : W[e.kind], 3200);
         break;
       case 'fufuToss':
         sound.play('fufuToss');
@@ -1345,8 +1347,7 @@ function startGame(): void {
         if (e.kind === 'amala') toast.show(W.amalaWearingOff);
         else if (e.kind === 'ikokore') toast.show(OGUN_WORDS.toast.ikokoreWearingOff);
         else if (e.kind === 'ofada') toast.show(OGUN_WORDS.toast.ofadaWearingOff);
-        else if (e.kind === 'kilishi') toast.show(KANO_WORDS.street.kilishiWearingOff);
-        else if (e.kind === 'fura') toast.show(KANO_WORDS.street.furaWearingOff);
+        else if (e.kind === 'kilishi' || e.kind === 'fura') toast.show(kanoSays(`${e.kind}WearingOff`));
         break;
       case 'crackOpen':
         // O3b (ogun.md 3.3): the low "krrk" as a crack rumbles open.
@@ -1376,7 +1377,7 @@ function startGame(): void {
         break;
       case 'gate':
         // K2b (kano.md 3.4): through the gate in the old wall on Kurmi.
-        toast.show(KANO_WORDS.street.gate, HINT_MS);
+        toast.show(kanoSays('gate'), HINT_MS);
         break;
       case 'whoosh':
         // K2b (kano.md 3.3): the soft whoosh in a wind stretch (its recipe comes with the Kano part).
@@ -1443,7 +1444,7 @@ function startGame(): void {
         break;
       case 'parcel':
         sound.play('parcel');
-        toast.show(kanoPlay ? KANO_WORDS.street.parcel : ogunPlay ? OGUN_WORDS.toast.parcel : W.parcel, HINT_MS);
+        toast.show(kanoPlay ? kanoSays('parcel') : ogunPlay ? OGUN_WORDS.toast.parcel : W.parcel, HINT_MS);
         break;
       case 'wellUp':
         sound.play('wellUp');

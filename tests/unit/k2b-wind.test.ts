@@ -236,7 +236,7 @@ describe('kano.md 3.3 and 3.4: the whoosh and the gate', () => {
     const ev: RunEvent[] = [];
     for (let i = 0; i < 2000 && run.hero.x < 700; i++) ev.push(...run.step(DT));
     expect(ev.filter((e) => e.type === 'gate')).toHaveLength(1);
-    expect(FIRST.street.gate).toBe(KANO_WORDS.toast.gate);
+    expect(KANO_WORDS.toast.gate).toBe('Welcome to Kano!');
   });
 
   it('Lagos streets: no whoosh, no gate', () => {
@@ -277,12 +277,16 @@ describe('kano.md 3.3 fair rules on every Kano street (as parsed by the game)', 
   }
 });
 
-describe('first-load words for a Kano street match the Kano part', () => {
-  it('kilishi toast, wearing off and HUD chip; game over; the home line', () => {
-    expect(FIRST.street.kilishi).toBe(KANO_WORDS.toast.kilishi);
-    expect(FIRST.street.kilishiWearingOff).toBe(KANO_WORDS.toast.kilishiWearingOff);
-    expect(FIRST.street.hud(12)).toBe(KANO_WORDS.hud.kilishi(12));
-    expect(FIRST.street.gameOver(1500)).toBe(KANO_WORDS.gameOver.text(formatMoney(1500)));
+describe('a Kano street\'s words ride in the Kano part (kano.md 9.1)', () => {
+  it('kilishi toast, wearing off and HUD chip; game over: handed over as part.words, none in the first load', async () => {
+    const { part } = await import('../../src/worlds/kano');
+    expect(part.words).toBe(KANO_WORDS);
+    expect(KANO_WORDS.toast.kilishi).toBe("Kilishi! Wind can't hold you back for 12 seconds.");
+    expect(KANO_WORDS.toast.kilishiWearingOff).toBe('Kilishi is wearing off!');
+    expect(part.words!.hud['kilishi']!(12)).toBe('Kilishi 12');
+    expect(part.words!.gameOver.text(formatMoney(1500))).toBe(`You keep ${formatMoney(1500)}. The street is still here. Try again!`);
+    expect(part.words!.place.plays[0]).toBe(`Play ${KANO_WORDS.streets[0]}`);
+    expect(Object.keys(FIRST)).not.toContain('street');
   });
 });
 
