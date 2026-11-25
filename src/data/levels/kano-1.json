@@ -1,0 +1,77 @@
+{
+  "schema": 2,
+  "type": "street",
+  "id": "kano-1",
+  "state": "kano",
+  "street": 1,
+  "name": "Kurmi",
+  "theme": "walls",
+  "schemaNote": "See docs/kano.md 3.3, 3.4 and 3.8 (and docs/design.md S2.6 for the rest). New fields: gate: x of our own gate in the old wall (street 1 only); wind: [x, width, dir] stretches of Harmattan wind, dir \"back\" (air speed forward a quarter more) or \"face\" (a quarter less; Gentle an eighth). foods may hold \"kilishi\". No well on the arrival street.",
+  "groundY": 300,
+  "walkSpeed": 90,
+  "runSpeed": 156,
+  "cornWalkSpeed": 120,
+  "cornSpeed": 228,
+  "spawnX": 80,
+  "startWall": 20,
+  "koboSpacing": 24,
+  "wakeDistance": 520,
+  "hazardSpeeds": { "goat": 36, "tyre": 60, "drum": 84 },
+  "gate": 200,
+  "ground": [
+    [-400, 1100], [1140, 1450], [1510, 2700], [2800, 3900], [3940, 6000],
+    [6170, 7400], [7440, 8800], [8840, 10400], [10460, 11500], [11540, 12100]
+  ],
+  "platforms": [
+    [8500, 245, 120],
+    [9000, 245, 120]
+  ],
+  "wind": [
+    [2200, 800, "back"],
+    [3600, 600, "face"],
+    [6800, 800, "face"],
+    [10000, 600, "back"]
+  ],
+  "kobo": [
+    [300, 276, 5], [500, 276, 3], [680, 276, 3],
+    [940, 276, 4], [1108, 236, 2], [1200, 276, 4], [1468, 216, 2], [1580, 276, 4], [1700, 276, 3],
+    [2080, 276, 4], [2300, 276, 3], [2500, 276, 4],
+    [2690, 220, 2], [2730, 170, 2], [2790, 220, 2],
+    [2950, 276, 4], [3260, 276, 3],
+    [3500, 276, 4], [3700, 276, 4], [3908, 236, 2], [4000, 276, 4], [4500, 276, 3],
+    [4760, 276, 3], [5050, 276, 4], [5420, 276, 3], [5650, 276, 4],
+    [6040, 170, 2], [6090, 120, 2], [6140, 170, 2],
+    [6300, 276, 4], [6700, 276, 4], [7200, 276, 3], [7408, 236, 2], [7550, 276, 4], [7800, 276, 2], [8000, 276, 4],
+    [8300, 276, 5], [8510, 221, 2], [8600, 221, 1], [8808, 236, 2], [9010, 221, 2], [9100, 221, 1],
+    [9250, 276, 5], [9700, 276, 4], [10050, 276, 4], [10200, 276, 3], [10406, 216, 3],
+    [10550, 276, 4], [11000, 276, 4], [11508, 236, 2], [11600, 276, 4]
+  ],
+  "foods": [
+    [6600, 272, "kilishi"],
+    [8200, 272, "corn"],
+    [10900, 272, "fufu"]
+  ],
+  "crates": [
+    [800, 204, "kobo"],
+    [3200, 204, "kobo"],
+    [4900, 204, "garri"],
+    [8560, 149, "kobo"],
+    [9060, 149, "kobo"]
+  ],
+  "hazards": [
+    ["goat", 1800],
+    ["tyre", 5300],
+    ["goat", 7100],
+    ["tyre", 9800],
+    ["goat", 11200]
+  ],
+  "wells": [],
+  "hints": [
+    [2050, "Wind behind you! You jump farther."],
+    [3450, "Wind in your face! Short jumps."],
+    [4700, "Bus stop! Now you start here."],
+    [6540, "Kilishi! Wind can't hold you back."]
+  ],
+  "checkpoint": 4700,
+  "end": { "x": 11800, "wall": 12000 }
+}

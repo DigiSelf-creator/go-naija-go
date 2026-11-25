@@ -28,14 +28,14 @@ import { hasSavedLook, loadLook } from './game/save';
 import { KEY_DASH, LAGOS, Progress, streetOpen, streetRecord, switchedOn } from './game/progress';
 import { FIRST_BOOM, HALL_PRIZE, HERO_START, KEY_CITY, addKobo, canFix, isBuilt, leftOf, winPrize, withHint, writeCity } from './game/city';
 import { CityLife } from './game/cityLife';
-import { OGUN, OGUN_TRAYS, StateCity, arrived, openStates, statePart, stateOpen, stateProgress, wallet, whereNow } from './game/states';
+import { KANO, KANO_TRAYS, OGUN, OGUN_TRAYS, StateCity, arrived, openStates, statePart, stateOpen, stateProgress, wallet, whereNow } from './game/states';
 import { WorldParts } from './worlds/load';
 import type { BuildId } from './art/payspot';
 import type { Mission } from './screens/city';
 import { KOBO_PER_COIN, formatMoney } from './game/money';
 import { ThrowButton, TouchButtons, WellButton, hintBarBox, wellButtonBox, type HintBarBox, type WellButtonKind } from './screens/controls';
 import { CornCount, Hud, Toast } from './screens/hud';
-import { OGUN_WORDS, WORDS, WORLD_PART_WORDS, hintWords } from './screens/words';
+import { KANO_WORDS, OGUN_WORDS, WORDS, WORLD_PART_WORDS, hintWords } from './screens/words';
 import { Menus, boardNow, isSecondTap, type BoardModule, type LeaveTo, type MenuScreen, type TapPoint } from './screens/menus';
 import type { Where } from './screens/streets';
 import type { StopId } from './screens/road';
@@ -103,7 +103,8 @@ function startGame(): void {
   /** S2.8: streets done, best kobo, the saved parcel and the hall, under gidi-progress. */
   const progress = new Progress(store);
   /** O1b1: later states' lazy parts (docs/ogun.md 9.2). Ogun's files are fetched only when asked for. */
-  const worlds = new WorldParts({ ogun: () => import('./worlds/ogun') }, () => navigator.onLine !== false);
+  // K1b: Kano's part the same way (it loads and plays without Ogun's, KN-R10).
+  const worlds = new WorldParts({ ogun: () => import('./worlds/ogun'), kano: () => import('./worlds/kano') }, () => navigator.onLine !== false);
   /** S3f0 part 25.5: can this phone tilt (a quiet 1.5 s check on Android; iPhones know at once). */
   const tilt = new TiltAccess();
   // Lagos streets 1 to 3 by hand (S2.6), each loaded from its level file and drawn by its
@@ -117,6 +118,8 @@ function startGame(): void {
   const askedAt: Where | null = asked === hall.id ? 'hall' : streets.findIndex((l) => l.id === asked) >= 0 ? streets.findIndex((l) => l.id === asked) : null;
   /** O2b: ?level=ogun-1 makes "Play" load the Ogun part and start Ota (for testing); O5b: ogun-hall, Pothole Hall. */
   const askedOgun = /^ogun-([1-3]|hall)$/.exec(asked ?? '');
+  /** K2b: ?level=kano-1 makes "Play" load the Kano part and start Kurmi (for testing); K3b: kano-2, Kofar Mata; K4b: kano-3, Dawanau; K5b: kano-hall, Borehole Hall. */
+  const askedKano = /^kano-([123]|hall)$/.exec(asked ?? '');
   const firstStreet: Where = askedAt ?? 0;
   /** The street being played (index into streets), or 'hall' for Go-Slow Hall after street 3. */
   let where: Where = firstStreet;
@@ -235,7 +238,7 @@ function startGame(): void {
       // The city fills the whole screen and draws itself: the street under it is not drawn
       // (on a slow phone that was a second full-screen picture every frame while walking).
       // The intro story covers the whole screen too (city.md a2.9).
-      if (menus.current !== 'city' && menus.current !== 'intro' && menus.current !== 'ride' && menus.current !== 'ogun') {
+      if (menus.current !== 'city' && menus.current !== 'intro' && menus.current !== 'ride' && menus.current !== 'ogun' && menus.current !== 'kano') {
         game.render(g, view);
         streetUnder = true;
       } else if (streetUnder) {
@@ -383,22 +386,34 @@ function startGame(): void {
   const OGUN_HALL = 4;
   /** O5b: Go-Slow Hall's tune; an Ogun hall's tune stands in for it while that hall is played. */
   const lagosHallTune = TUNES.hall;
+  /** K2b: a Kano street (Kurmi so far) being played, or null. */
+  let kanoPlay: { level: Level; n: number } | null = null;
+  /** K3b: Kano streets built so far (Kurmi, Kofar Mata; K4b: Dawanau). */
+  const KANO_BUILT = 3;
+  /** K5b: Borehole Hall, after Dawanau (kanoPlay.n). */
+  const KANO_HALL = 4;
+  /** K2b: the Lagos street tune; a later state's street tune (Kurmi's) stands in for it while that street is played. */
+  const lagosStreetTune = TUNES.street;
   /** O2b: a Lagos street or hall from its start (an Ogun run ends here). */
   function lagosRun(at: TapPoint | null, to: Where): void {
     ogunPlay = null;
+    kanoPlay = null;
     startRun(at, to);
   }
-  /** O2b: Ogun street n from its start (its part must have loaded; Ota and Abeokuta so far). */
-  function ogunRun(at: TapPoint | null, n: number): void {
-    const part = worlds.get(OGUN);
+  /**
+   * O2b: Ogun street n from its start (its part must have loaded; 4: Pothole Hall). K2b: or
+   * Kano's (Kurmi is 1, K5b: 4 is Borehole Hall). Its well room (the Ijebu garri store, K3b: the
+   * groundnut store) comes from its part, beside Lagos's.
+   */
+  function stateRun(at: TapPoint | null, n: number, st: string = OGUN): void {
+    const part = worlds.get(st);
     const hall = n === OGUN_HALL;
-    const raw = hall && !part?.hall ? undefined : part?.levels[hall ? 'ogun-hall' : `ogun-${n}`];
+    const raw = hall && !part?.hall ? undefined : part?.levels[`${st}-${hall ? 'hall' : n}`];
     let level: Level | null = null;
     try {
       level = raw === undefined ? null : parseLevel(raw);
-      // O3b: Ogun's well room (the Ijebu garri store), from the Ogun part, beside Lagos's.
-      const room = part?.levels['ogun-well'];
-      if (level && room !== undefined && !game.rooms.has('ogun-well')) {
+      const room = part?.levels[`${st}-well`];
+      if (level && room !== undefined && !game.rooms.has(`${st}-well`)) {
         const r = parseRoom(room);
         game.rooms = new Map([...game.rooms, [r.id, r]]);
       }
@@ -406,12 +421,14 @@ function startGame(): void {
       console.warn(err);
     }
     if (!level) {
-      toast.show(WORLD_PART_WORDS.broken, 4000);
+      toast.show(st === KANO ? KANO_WORDS.broken : WORLD_PART_WORDS.broken, 4000);
       return;
     }
-    ogunPlay = { level, n };
-    if (hall) part?.hall?.newVisit?.(); // QA-O2-1: a new visit shows the first-try hints again (Play again does not come here)
-    missionFor = null; // Lagos's fixes are never an Ogun street's mission
+    ogunPlay = kanoPlay = null;
+    if (st === KANO) kanoPlay = { level, n };
+    else ogunPlay = { level, n };
+    if (hall) part?.hall?.newVisit?.(); // QA-O2-1, K5b: a new visit shows the first-try hints again (Play again does not come here)
+    missionFor = null; // Lagos's fixes are never a later state's street's mission
     ogunFor = null;
     startRun(at, hall ? 'hall' : n - 1);
   }
@@ -434,27 +451,33 @@ function startGame(): void {
     // well rooms show 5 kobo instead of a second parcel.
     void loadPeople().catch(() => undefined); // S3g1b: in case the title's early fetch was missed
     const og = ogunPlay;
-    const own = og ? progress.state(OGUN) : lagos;
+    const kp = kanoPlay;
+    const own = og ? progress.state(OGUN) : kp ? progress.state(KANO) : lagos;
     // O2b: an Ogun street brings its own look from the Ogun part (set before begin: it restarts it).
-    game.skin = og ? (worlds.get(OGUN)?.street?.(og.level) ?? null) : null;
+    // K2b: a Kano street from the Kano part, with its own tune.
+    game.skin = og ? (worlds.get(OGUN)?.street?.(og.level) ?? null) : kp ? (worlds.get(KANO)?.street?.(kp.level) ?? null) : null;
+    TUNES.street = game.skin?.tune ?? lagosStreetTune;
     menus.ogunRun = og !== null;
+    menus.kanoRun = kp !== null;
     if (og) for (const f of ['ikokore', 'ofada'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)));
+    if (kp) for (const f of ['kilishi', 'fura'] as const) hud.setIcon(f, (g) => game.skinDo((k) => k.icon?.(g, f, 16, 16, 0.85)), worlds.get(KANO)?.words?.hud[f]);
     // O3b: the parcel chip shows the state's own parcel (Ijebu garri in Ogun).
     const parcelIcon = game.skin?.parcelIcon;
     hud.setParcelIcon(parcelIcon ? (g) => game.skinDo((k) => k.parcelIcon?.(g, 16, 16, 26)) : null);
     // O5b: Pothole Hall's fight and tune come from the Ogun part (the parcel is Ogun's own).
-    const ogHall = og && where === 'hall' ? worlds.get(OGUN)?.hall : undefined;
+    // K5b: Borehole Hall's from the Kano part.
+    const ogHall = where === 'hall' ? (og ? worlds.get(OGUN)?.hall : kp ? worlds.get(KANO)?.hall : undefined) : undefined;
     TUNES.hall = ogHall?.tune ?? lagosHallTune;
     // MS3c: in Garri for the mill the room always gives the parcel (still one saved at most: progress.ts).
-    game.begin(menus.gentle, og ? og.level : levelOf(where), where === 'hall' ? { parcel: own.parcel, arena: ogHall?.arena } : { parcelSaved: own.parcel && missionPlay?.goal !== 'garri', dash: dashSaved() });
-    beginGo(og ? og.n : typeof where === 'number' ? where + 1 : -1);
+    game.begin(menus.gentle, og ? og.level : kp ? kp.level : levelOf(where), { ...(where === 'hall' ? { parcel: own.parcel, arena: ogHall?.arena } : { parcelSaved: own.parcel && missionPlay?.goal !== 'garri', dash: dashSaved() }), rules: kp ? worlds.get(KANO)?.rules : undefined });
+    beginGo(og ? og.n : kp ? kp.n : typeof where === 'number' ? where + 1 : -1);
     const mk = ms();
     if (mk) hud.setChip(mk.chip.el);
     // S2.8: once Lagos (or Ogun, for its streets) is switched on its streets show their fixed look.
     game.fixed = where !== 'hall' && switchedOn(own);
     // S3e0 part 6 (W17 C): the first screen is tired or bright to match the street's city spot.
     // Scenery only: the level and the run are the same either way.
-    const street = og ? null : firstStreetOf(game.level.id);
+    const street = og || kp ? null : firstStreetOf(game.level.id);
     const fix = street ? FIRST_FIX[street] : null;
     game.firstLook = street && fix ? { street, look: isBuilt(cityLife.state, fix) ? 'bright' : 'tired', still: reduceMotion.matches } : null;
     if (game.firstLook) {
@@ -484,7 +507,10 @@ function startGame(): void {
     // O6b, OG-R35: from an Ogun run, Home (and Take it home) go back to Ogun's city (from the first
     // visit), with the money brought home, and its road on the stop just played. OG-R39: a win
     // ("Take it home", a lane run won) puts "Mission complete!" over the line.
-    const fromOgun = ogunPlay !== null || (lane !== null && laneOgun);
+    const fromOgun = ogunPlay !== null || (lane !== null && laneIn === OGUN);
+    // K2b: from a Kano street, Home goes back to Kano's home; K6b: Kano's city, its road on the stop just played.
+    const fromKano = kanoPlay !== null || (lane !== null && laneIn === KANO);
+    const kanoAt = lane ? 'lane' : kanoPlay ? (['kurmi', 'kofarMata', 'dawanau', 'hall'][kanoPlay.n - 1] ?? null) : null;
     const ogunAt = lane ? 'expressway' : ogunPlay ? (['ota', 'abeokuta', 'sagamu', 'hall'][ogunPlay.n - 1] ?? null) : null;
     // MS3c: back home after a star in a helper's mission, the helper says thank you (once it is built).
     const go = missionGo;
@@ -495,10 +521,13 @@ function startGame(): void {
     if (thanks && to === 'city' && !fromOgun) mission = mission ? { ...mission, after: mission.after ? `${thanks} ${mission.after}` : thanks } : { build: null, kobo: 0, plain: true, line: thanks };
     closeLane();
     ogunPlay = null;
+    kanoPlay = null;
     ogunFor = null;
-    laneOgun = false;
+    laneIn = '';
     game.skin = null;
+    TUNES.street = lagosStreetTune;
     menus.ogunRun = false;
+    menus.kanoRun = false;
     playing = false;
     document.body.classList.remove('playing');
     hud.show(false);
@@ -512,9 +541,10 @@ function startGame(): void {
     // OG-R39: Out of lives keeps the money (paid home at once): Home says so, with no heading.
     const lostLine = !mission && ogunAt !== 'expressway' && paidHome && brought > 0 ? WORDS.city.mission.brought(formatMoney(brought)) : null;
     const ogunLine = mission ? (mission.line ?? WORDS.city.mission.brought(formatMoney(mission.kobo))) : lostLine;
-    if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, thanks ? (ogunLine ? `${ogunLine} ${thanks}` : thanks) : ogunLine, ogunAt, mission !== null && mission.plain !== true);
+    if (fromKano && (to === 'city' || to === 'road')) menus.ogunHome(to, ogunLine, kanoAt, mission !== null && mission.plain !== true, KANO);
+    else if (fromOgun && (to === 'city' || to === 'road')) menus.ogunHome(to, thanks ? (ogunLine ? `${ogunLine} ${thanks}` : thanks) : ogunLine, ogunAt, mission !== null && mission.plain !== true);
     else if (to === 'wheel') {
-      menus.showWheel(fromOgun ? 'ogun' : 'city');
+      menus.showWheel(fromKano ? 'kano' : fromOgun ? 'ogun' : 'city');
       // Lagos's cog turns on: a ratchet click, then a small bell (S2.12 sound 13).
       sound.play('cogRatchet');
       window.setTimeout(() => sound.play('cogBell'), 320);
@@ -526,6 +556,10 @@ function startGame(): void {
       // O1b2: the Win screen's "On to Ogun": from Lagos (where "Not now" leaves the player), by bus.
       menus.showCity();
       menus.travelTo(OGUN);
+    } else if (to === 'kano') {
+      // K1b: Pothole Hall's "On to Kano": from Ogun's city (where "Not now" leaves the player), by bus.
+      menus.ogunHome('city');
+      menus.travelTo(KANO);
     } else menus.show(to);
   }
 
@@ -552,8 +586,8 @@ function startGame(): void {
   let laneModule: Promise<typeof import('./lane/session')> | null = null;
   /** The fix the lane run was started for (Lights out or Slow internet), or null (part 2). */
   let laneFor: BuildId | null = null;
-  /** O6b: the lane run is Ogun's Expressway (its level, look and save from the Ogun part). */
-  let laneOgun = false;
+  /** O6b: the lane run is Ogun's Expressway (its level, look and save from the Ogun part); K6b: or Kano's Harmattan Road. '' for Lagos's. */
+  let laneIn = '';
   /** The corn count's place in the lane run (part 11); the streets put it back in their hint bar after. */
   let laneCountAt: HintBarBox | null = null;
   /** Part 25.4: the phone said no while the lane run's code was still loading. */
@@ -576,17 +610,17 @@ function startGame(): void {
     leave('city', build ? { build, kobo: haul.kobo, ...(after ? { after } : {}) } : { build: null, kobo: haul.kobo, plain: true, line, ...(after ? { after } : {}) });
   }
   /** Starts a lane run from 0 m ("3, 2, 1" first). Loads the lane run's code the first time. */
-  function startLane(fix: BuildId | null = laneFor, ogun = laneOgun): void {
+  function startLane(fix: BuildId | null = laneFor, ogun = laneIn): void {
     if (laneLoading) return;
-    const xw = ogun ? worlds.get(OGUN)?.lane : undefined;
+    const xw = ogun ? worlds.get(ogun)?.lane : undefined;
     if (ogun && !xw) {
-      toast.show(WORLD_PART_WORDS.broken, 4000);
+      toast.show(ogun === KANO ? KANO_WORDS.broken : WORLD_PART_WORDS.broken, 4000);
       return;
     }
     askTiltOnRun();
     laneFor = fix === 'lamps' || fix === 'mast' ? fix : null;
-    if (lane && laneOgun !== ogun) closeLane();
-    laneOgun = ogun;
+    if (lane && laneIn !== ogun) closeLane();
+    laneIn = ogun;
     if (lane) {
       menus.show(null);
       lane.start();
@@ -602,8 +636,9 @@ function startGame(): void {
     controls.releaseAll();
     laneLoading = true;
     menus.laneRun = true;
-    menus.ogunRun = ogun;
-    ogunPlay = null;
+    menus.ogunRun = ogun === OGUN;
+    menus.kanoRun = ogun === KANO;
+    ogunPlay = kanoPlay = null;
     laneModule ??= import('./lane/session');
     laneModule
       .then(({ LaneSession }) => {
@@ -636,14 +671,14 @@ function startGame(): void {
             director.switches(sound.enabled, menus.music);
           },
           // O6b: the Expressway's best and goals save under states.ogun.lane (the tilt marks stay Lagos's).
-          laneSave: () => readLane(ogun ? statePart(progress.raw, OGUN)['lane'] : progress.raw?.[KEY_LANE]),
+          laneSave: () => readLane(ogun ? statePart(progress.raw, ogun)['lane'] : progress.raw?.[KEY_LANE]),
           saveLane: (part) => {
             // A broken copy is left alone (the same rule as the city part). The tilt marks are
             // main's (saveTiltMarks): the run's copy never writes over them.
             if (progress.broken && progress.raw === null) return;
             const now = readLane(progress.raw?.[KEY_LANE]);
             const out = writeLane({ ...part, tiltOffered: now.tiltOffered, tiltNoes: now.tiltNoes });
-            if (ogun) progress.saveStatePart(OGUN, 'lane', out);
+            if (ogun) progress.saveStatePart(ogun, 'lane', out);
             else progress.savePart(KEY_LANE, out);
           },
           ...(xw ? { level: xw.level, laneLook: xw.look } : {}),
@@ -651,7 +686,7 @@ function startGame(): void {
           flush: () => cityLife.flush(),
           forFix: () => {
             if (xw) {
-              const f = xw.forFix(ogunCity.own, cityLife.state);
+              const f = xw.forFix((ogun === KANO ? kanoCity : ogunCity).own, cityLife.state);
               return f ? { bucket: f.bucket, left: f.left } : null;
             }
             if (!laneFor || isBuilt(cityLife.state, laneFor)) return null;
@@ -763,7 +798,18 @@ function startGame(): void {
     },
     OGUN_TRAYS,
   );
-  cityLife.also = (dt) => void ogunCity.tick(dt);
+  /** K1b: Kano's own city part (`states.kano.city`, never the wallet); K6b: its trays fill with the others'. */
+  const kanoCity = new StateCity(
+    () => statePart(progress.raw, KANO)['city'],
+    (own) => {
+      if (!(progress.broken && progress.raw === null)) progress.saveStatePart(KANO, 'city', own);
+    },
+    KANO_TRAYS,
+  );
+  cityLife.also = (dt) => {
+    ogunCity.tick(dt);
+    kanoCity.tick(dt);
+  };
   /** O6b: the Ogun city spot a run from Ogun's city or road is for (its win brings what is left), or null. */
   let ogunFor: string | null = null;
   /** The music dip under the sting or the boom (city.md d7). */
@@ -790,25 +836,24 @@ function startGame(): void {
     if (m) msMade = { m, book: new m.MissionBook(store), lagosDefs: m.withCoins(m.lagosMissions(), (n) => streets[n - 1]?.coins.length ?? 0), chip: new m.MissionChip() };
     return msMade;
   }
-  let ogunDefsMade: MissionDef[] | null = null;
-  /** Ogun's five, from its part once it has loaded (coin catch's stars from ogun-1.json). */
-  const ogunDefs = (m: BoardModule): MissionDef[] => {
-    if (ogunDefsMade) return ogunDefsMade;
-    const part = worlds.get(OGUN);
+  /** A later state's five (Ogun's, KM1 to KM5 Kano's), from its part once it has loaded (coin catch's stars from its street 1 file). */
+  const stateDefsMade: Record<string, MissionDef[]> = {};
+  const stateDefs = (m: BoardModule, state: string): MissionDef[] => {
+    const part = worlds.get(state);
     if (!part?.missions) return [];
     // A street's laid coins: each `kobo` row is [x, y, count] (the level file's own shape).
     const coinsAt = (n: number): number => {
-      const rows = (part.levels[`ogun-${n}`] as { kobo?: unknown } | undefined)?.kobo;
+      const rows = (part.levels[`${state}-${n}`] as { kobo?: unknown } | undefined)?.kobo;
       return Array.isArray(rows) ? rows.reduce((t: number, r) => t + (Number((r as unknown[])[2]) || 0), 0) : 0;
     };
-    return (ogunDefsMade = m.withCoins(part.missions.list, coinsAt));
+    return (stateDefsMade[state] ??= m.withCoins(part.missions.list, coinsAt));
   };
-  const defsOf = (k: NonNullable<typeof msMade>, state: string): MissionDef[] => (state === OGUN ? ogunDefs(k.m) : k.lagosDefs);
+  const defsOf = (k: NonNullable<typeof msMade>, state: string): MissionDef[] => (state === LAGOS ? k.lagosDefs : stateDefs(k.m, state));
   /** The mission chosen on its card: it carries on through Play again, ends on leaving the run. */
   let missionPlay: MissionDef | null = null;
   /** This go at it (a new one at each start), or null. */
   let missionGo: MissionGo | null = null;
-  const ownIcon = (d: MissionDef) => (d.state === OGUN ? worlds.get(OGUN)?.missions?.icon : undefined);
+  const ownIcon = (state: string) => worlds.get(state)?.missions?.icon;
   /** MS3a: a go starts at `place` (a street number, or LANE): the chip shows its goal. */
   function beginGo(place: number): void {
     missionGo?.end();
@@ -826,7 +871,7 @@ function startGame(): void {
           })
         : null;
     starKobo = 0;
-    k?.chip.set(missionGo, k && d ? k.book.stars(d.id) : 0, d ? ownIcon(d) : undefined);
+    k?.chip.set(missionGo, k && d ? k.book.stars(d.id) : 0, d ? ownIcon(d.state) : undefined);
   }
   /** Money from this go's new stars (already in the wallet), for the "You brought ... home" line. */
   let starKobo = 0;
@@ -847,19 +892,20 @@ function startGame(): void {
     else if (goal === 'foods' && e.type === 'food') go.food(e.kind);
     else if ((goal === 'goats' && e.type === 'goatEat') || (goal === 'potholes' && e.type === 'fufuPlug') || (goal === 'gravel' && e.type === 'crumble')) go.add();
     else if ((goal === 'wells' && e.type === 'room') || (goal === 'garri' && e.type === 'busBoard' && game.run.parcel)) go.found();
+    else go.tally(e, game.level);
     msMade?.chip.update();
   }
   /** A mission card's Play: its place (the first not done, for the wells and the garri). */
   function playMission(d: MissionDef, at: TapPoint | null): void {
     const k = ms();
     if (!k) return;
-    const ogun = d.state === OGUN;
-    const place = k.m.placeToPlay(d, k.book.save, (n) => n === LANE || streetOpen(progress.state(ogun ? OGUN : LAGOS), n));
+    const st = d.state;
+    const place = k.m.placeToPlay(d, k.book.save, (n) => n === LANE || streetOpen(progress.state(st), n));
     if (place === null) return;
     missionPlay = d;
-    if (place === LANE) startLane(null, ogun);
-    else if (ogun) ogunRun(at, place);
-    else lagosRun(at, (place - 1) as Where);
+    if (place === LANE) startLane(null, st === LAGOS ? '' : st);
+    else if (st === LAGOS) lagosRun(at, (place - 1) as Where);
+    else stateRun(at, place, st);
   }
   /** (c) Money from a run goes home to Lagos at once, saved. */
   function payHome(kobo: number): void {
@@ -878,8 +924,8 @@ function startGame(): void {
       if (askedLane) startLane(null);
       else if (askedOgun) {
         const n = askedOgun[1] === 'hall' ? OGUN_HALL : Number(askedOgun[1]);
-        void worlds.load(OGUN).then((r) => (r.ok ? ogunRun(at, n) : toast.show(r.message, 4000)));
-      }
+        void worlds.load(OGUN).then((r) => (r.ok ? stateRun(at, n) : toast.show(r.message, 4000)));
+      } else if (askedKano) void worlds.load(KANO).then((r) => (r.ok ? stateRun(at, askedKano[1] === 'hall' ? KANO_HALL : Number(askedKano[1]), KANO) : toast.show(r.message, 4000)));
       // O1b2 (ogun.md 1.6): the game opens on the city last used.
       else if (askedAt === null) menus.openHome();
       else lagosRun(at, firstStreet);
@@ -920,10 +966,16 @@ function startGame(): void {
       missionFor = null;
       endGo();
       missionPlay = null;
+      // K3b: Kurmi's card goes on to Kofar Mata.
+      if (kanoPlay) {
+        // K5b: Dawanau's card goes on to Borehole Hall.
+        if (kanoPlay.n < KANO_HALL) stateRun(at, kanoPlay.n + 1, KANO);
+        return;
+      }
       // O3b, O4b: Ota's card goes on to Abeokuta, Abeokuta's to Sagamu.
       if (ogunPlay) {
         // O5b: Sagamu's card goes on to Pothole Hall.
-        if (ogunPlay.n <= OGUN_BUILT) ogunRun(at, ogunPlay.n + 1);
+        if (ogunPlay.n <= OGUN_BUILT) stateRun(at, ogunPlay.n + 1);
         return;
       }
       startRun(at, typeof where === 'number' && where + 1 < streets.length ? where + 1 : 'hall');
@@ -984,54 +1036,61 @@ function startGame(): void {
       const ogunBoom = typeof own['boom'] === 'number' ? own['boom'] : 0;
       const ogunSeen = typeof own['boomSeen'] === 'number' ? own['boomSeen'] : 0;
       const beaten = stateProgress(raw, OGUN).hall.done;
+      // K1b (kano.md 1.6): Kano's cog turns at its first boom or its first Borehole Hall win.
+      const kOwn = kanoCity.own;
+      const kanoBeaten = stateProgress(raw, KANO).hall.done;
+      const num = (x: unknown): number => (typeof x === 'number' ? x : 0);
       return {
         where: whereNow(raw),
         arrived: arrived(raw),
         lagos: { boom: cityLife.state.boom, turning: lagosTurning },
         ogun: { open: stateOpen(raw, OGUN), boom: ogunBoom, turning: beaten || ogunSeen >= FIRST_BOOM, beaten },
+        kano: { open: stateOpen(raw, KANO), boom: num(kOwn['boom']), turning: kanoBeaten || num(kOwn['boomSeen']) >= FIRST_BOOM, beaten: kanoBeaten, arrived: arrived(raw, KANO) },
       };
     },
+    kanoCity,
     worldPart: (id) => worlds.get(id),
     loadWorld: (id) => worlds.load(id),
     setWhere: (id) => {
       if (whereNow(progress.raw) !== id) progress.savePart('where', id);
     },
-    arrived: () => {
-      progress.saveStatePart(OGUN, 'arrived', true);
+    arrived: (id = OGUN) => {
+      progress.saveStatePart(id, 'arrived', true);
     },
     playTune: (tune) => {
       if (!musicAudible(menus.sound, menus.music) || document.hidden) return;
       gateMusic.playTune(tune);
     },
     // O2b, OG-R37: Ogun's Bad road card ("Run Ota" ... "Go to Pothole Hall").
-    playOgun: (n, at) => ogunRun(at, n),
-    ogunDone: (n) => streetRecord(progress.state(OGUN), n).done,
+    playOgun: (n, at, st) => stateRun(at, n, st),
+    ogunDone: (n, st = OGUN) => streetRecord(progress.state(st), n).done,
     // O6b: Ogun's city and its challenge road.
     ogunCity,
-    runOgunSpot: (spot, at) => {
-      if (spot === 'potholes') {
-        ogunRun(at, 1);
-        ogunFor = 'potholes';
-      } else startLane(null, true);
+    // K6b: Kano's too (Kurmi for the Clean road, Harmattan Road for Power and Tech; its stops).
+    runOgunSpot: (spot, at, st = OGUN) => {
+      if (spot === 'potholes' || spot === 'sandyRoad') {
+        stateRun(at, 1, st);
+        ogunFor = spot;
+      } else startLane(null, st);
     },
-    playOgunStop: (stop, at) => {
-      const n = ['ota', 'abeokuta', 'sagamu', 'hall'].indexOf(String(stop.id));
-      if (stop.id === 'expressway') startLane(null, true);
+    playOgunStop: (stop, at, st = OGUN) => {
+      const n = (st === KANO ? ['kurmi', 'kofarMata', 'dawanau', 'hall'] : ['ota', 'abeokuta', 'sagamu', 'hall']).indexOf(String(stop.id));
+      if (stop.id === 'expressway' || stop.id === 'lane') startLane(null, st);
       else if (n >= 0) {
-        ogunRun(at, n === 3 ? OGUN_HALL : n + 1);
+        stateRun(at, n + 1, st);
         ogunFor = stop.forFix;
       }
     },
     // MS3b: the Missions board, shown once Lagos has had its first Mission complete (Ogun: always).
-    hasMissions: (state) => (state === OGUN ? (worlds.get(OGUN)?.missions?.list.length ?? 0) > 0 : cityLife.state.fixed.length > 0),
+    hasMissions: (state) => (state === LAGOS ? cityLife.state.fixed.length > 0 : (worlds.get(state)?.missions?.list.length ?? 0) > 0),
     missions: (state) => {
-      const ogun = state === OGUN;
       const k = ms();
-      if (!k || (!ogun && cityLife.state.fixed.length === 0)) return null;
+      if (!k || (state === LAGOS && cityLife.state.fixed.length === 0)) return null;
       const defs = defsOf(k, state);
       if (defs.length === 0) return null;
-      const p = progress.state(ogun ? OGUN : LAGOS);
-      return { state, defs, save: k.book.save, open: (n: number) => n === LANE || streetOpen(p, n), ...(ogun && worlds.get(OGUN)?.missions?.icon ? { own: worlds.get(OGUN)!.missions!.icon! } : {}) };
+      const p = progress.state(state);
+      const own = ownIcon(state);
+      return { state, defs, save: k.book.save, open: (n: number) => n === LANE || streetOpen(p, n), ...(own ? { own } : {}) };
     },
     playMission: (d, at) => playMission(d, at),
     everyDue: (state) => {
@@ -1042,9 +1101,9 @@ function startGame(): void {
       k.book.put({ helper: { [state]: 1 } }, true);
       return true;
     },
-    ogunRoadView: () => {
-      const l = readLane(statePart(progress.raw, OGUN)['lane']);
-      return { progress: progress.state(OGUN), own: ogunCity.own, wallet: cityLife.state, lane: { best: l.best, goals: l.goals } };
+    ogunRoadView: (st = OGUN) => {
+      const l = readLane(statePart(progress.raw, st)['lane']);
+      return { progress: progress.state(st), own: (st === KANO ? kanoCity : ogunCity).own, wallet: cityLife.state, lane: { best: l.best, goals: l.goals }, kanoLit: stateProgress(progress.raw, KANO).hall.done };
     },
   });
   const hud = new Hud(document.body, {
@@ -1127,10 +1186,16 @@ function startGame(): void {
   const HINT_MS = 3500;
   /** O2b: the next mud step is the B sound. */
   let mudB = false;
+  /** K-size: a Kano street toast's words, from the Kano part (kano.md 9.1: they ride in it). */
+  const kanoSays = (name: string): string => worlds.get(KANO)?.words?.toast[name] ?? '';
+  /** K3b: springy cloth bounces since the page opened (tests). */
+  let clothBounces = 0;
+  /** K4b: dust whirls puffed apart since the page opened (tests). */
+  let whirlPuffs = 0;
   /** OG-R15: the gravel "tk" on screen only, one for two close landings. */
   const gravelTk = new TkGate();
   /** O5b: the state whose hall is being played. */
-  const hallState = (): string => (ogunPlay ? OGUN : LAGOS);
+  const hallState = (): string => (ogunPlay ? OGUN : kanoPlay ? KANO : LAGOS);
   game.onEvent = (e) => {
     switch (e.type) {
       case 'kobo':
@@ -1155,7 +1220,7 @@ function startGame(): void {
         sound.play(e.kind === 'amala' ? 'strongPick' : e.kind === 'garri' ? 'suitOn' : 'food');
         // S2.15: fufu's words say which key or button throws.
         if (e.kind === 'fufu') toast.show(hintWords(game.run.inHall ? W.fufuHall : W.fufu, controls.lastKind), HINT_MS);
-        else toast.show(e.kind === 'ikokore' || e.kind === 'ofada' ? OGUN_WORDS.toast[e.kind] : W[e.kind], 3200);
+        else toast.show(e.kind === 'ikokore' || e.kind === 'ofada' ? OGUN_WORDS.toast[e.kind] : e.kind === 'kilishi' || e.kind === 'fura' ? kanoSays(e.kind) : W[e.kind], 3200);
         break;
       case 'fufuToss':
         sound.play('fufuToss');
@@ -1268,6 +1333,7 @@ function startGame(): void {
         if (e.kind === 'amala') toast.show(W.amalaWearingOff);
         else if (e.kind === 'ikokore') toast.show(OGUN_WORDS.toast.ikokoreWearingOff);
         else if (e.kind === 'ofada') toast.show(OGUN_WORDS.toast.ofadaWearingOff);
+        else if (e.kind === 'kilishi' || e.kind === 'fura') toast.show(kanoSays(`${e.kind}WearingOff`));
         break;
       case 'crackOpen':
         // O3b (ogun.md 3.3): the low "krrk" as a crack rumbles open.
@@ -1286,9 +1352,31 @@ function startGame(): void {
       case 'crumble':
         sound.play('gravelCrumble');
         break;
+      case 'whirlPuff':
+        // K4b (kano.md 3.3): a dust whirl puffs apart, the soft "pff" (its recipe comes with the Kano part).
+        sound.play('whirlPuff');
+        whirlPuffs++;
+        break;
       case 'arch':
         // O2b (ogun.md 1.4): under the gateway arch on Ota.
         toast.show(OGUN_WORDS.toast.arch, HINT_MS);
+        break;
+      case 'gate':
+        // K2b (kano.md 3.4): through the gate in the old wall on Kurmi.
+        toast.show(kanoSays('gate'), HINT_MS);
+        break;
+      case 'whoosh':
+        // K2b (kano.md 3.3): the soft whoosh in a wind stretch (its recipe comes with the Kano part).
+        sound.play('windWhoosh');
+        break;
+      case 'spring':
+        // K3b (kano.md 3.3): the springy cloth's "boing" (its recipe comes with the Kano part).
+        sound.play('clothBoing');
+        clothBounces++;
+        break;
+      case 'skinSound':
+        // K3b: the street's own scenery (Kofar Mata's cloth beaters, only while on screen).
+        sound.play(e.name);
         break;
       case 'mudStep':
         // O2b (ogun.md 3.3): the soft "splosh", A, B, A, B.
@@ -1310,7 +1398,7 @@ function startGame(): void {
         payHome(game.run.kobo * KOBO_PER_COIN);
         // MS-R3: a star won in this go is kept, and the card says so.
         missionGo?.end();
-        menus.showGameOver({ kobo: game.run.kobo * KOBO_PER_COIN, lives: 0, hall: game.run.inHall, ogun: ogunPlay !== null, stars: starLine() });
+        menus.showGameOver({ kobo: game.run.kobo * KOBO_PER_COIN, lives: 0, hall: game.run.inHall, ogun: ogunPlay !== null, kano: kanoPlay !== null, stars: starLine() });
         break;
       case 'parcelShield':
         // S2.7 t = 0 with a parcel: the shield is on; the boss words follow.
@@ -1342,7 +1430,7 @@ function startGame(): void {
         break;
       case 'parcel':
         sound.play('parcel');
-        toast.show(ogunPlay ? OGUN_WORDS.toast.parcel : W.parcel, HINT_MS);
+        toast.show(kanoPlay ? kanoSays('parcel') : ogunPlay ? OGUN_WORDS.toast.parcel : W.parcel, HINT_MS);
         break;
       case 'wellUp':
         sound.play('wellUp');
@@ -1357,12 +1445,14 @@ function startGame(): void {
         toast.hide();
         // S2.8: saved only now, when the bus is boarded (with the parcel, if carried).
         // N1: a coin is 10 kobo; bests and the card's money are whole kobo.
-        if (ogunPlay) {
-          // O2b: an Ogun street saves under states.ogun; the money goes to the one wallet (decision 80).
+        if (ogunPlay || kanoPlay) {
+          // O2b, K2b: an Ogun or Kano street saves under its state; the money goes to the one wallet (decision 80).
+          const st = kanoPlay ? KANO : OGUN;
           const coins = game.run.kobo * KOBO_PER_COIN;
-          progress.finish({ state: OGUN, street: ogunPlay.n, kobo: coins, parcel: game.run.parcel });
-          // O6b: a win from Ogun's Potholes card or the Ota stop brings home what is left on the New road.
-          const left = ogunFor ? (worlds.get(OGUN)?.left?.(ogunCity.own, ogunFor) ?? 0) : 0;
+          progress.finish({ state: st, street: (ogunPlay ?? kanoPlay)!.n, kobo: coins, parcel: game.run.parcel });
+          // O6b: a win from Ogun's Potholes card or the Ota stop brings home what is left on the New road
+          // (K6b: Kano's Sandy road card or the Kurmi stop, the Clean road).
+          const left = ogunFor ? (worlds.get(st)?.left?.((kanoPlay ? kanoCity : ogunCity).own, ogunFor) ?? 0) : 0;
           payHome(coins + winPrize(coins, { left }));
         } else {
           const coins = game.run.kobo * KOBO_PER_COIN;
@@ -1380,6 +1470,8 @@ function startGame(): void {
           parcel: game.run.parcel,
           ogun: ogunPlay !== null,
           ogunNext: ogunPlay !== null && ogunPlay.n <= OGUN_BUILT,
+          kano: kanoPlay !== null,
+          kanoNext: kanoPlay !== null && (kanoPlay.n < KANO_BUILT || (kanoPlay.n === KANO_BUILT && worlds.get(KANO)?.hall !== undefined)),
           stars: starLine(),
         });
         missionGo?.end();
@@ -1440,7 +1532,7 @@ function startGame(): void {
         toast.hide();
         // S2.8: the hall is won, so Lagos (O5b: or Ogun) is switched on and its cog turns.
         progress.finish({ state: hallState(), hall: true, kobo: game.run.kobo * KOBO_PER_COIN });
-        menus.showWin({ kobo: ogunPlay ? brought : game.run.kobo, lives: game.run.lives, firstHall: firstHallWin, ogun: ogunPlay !== null });
+        menus.showWin({ kobo: ogunPlay || kanoPlay ? brought : game.run.kobo, lives: game.run.lives, firstHall: firstHallWin, ogun: ogunPlay !== null, kano: kanoPlay !== null });
         firstHallWin = false;
         break;
     }
@@ -1726,6 +1818,14 @@ function startGame(): void {
         waterPits: [...level.waterPits],
       };
     },
+    get clothBounces() {
+      // K3b: springy cloth bounces since the page opened.
+      return clothBounces;
+    },
+    get whirlPuffs() {
+      // K4b: dust whirls puffed apart since the page opened.
+      return whirlPuffs;
+    },
     get below() {
       // Cheap: below the street (the well room shows), for per-frame logs.
       return game.run.below;
@@ -1749,7 +1849,7 @@ function startGame(): void {
     // O1b1, for tests: the saved state list, and a way to load the Ogun part (players use the Travel card, O1b2).
     get states() {
       const raw = progress.raw;
-      return { where: whereNow(raw), open: openStates(raw), ogun: stateProgress(raw, OGUN), arrived: arrived(raw), wallet: wallet(raw), ogunLoaded: worlds.get(OGUN) !== null };
+      return { where: whereNow(raw), open: openStates(raw), ogun: stateProgress(raw, OGUN), arrived: arrived(raw), wallet: wallet(raw), ogunLoaded: worlds.get(OGUN) !== null, kano: stateProgress(raw, KANO), kanoArrived: arrived(raw, KANO), kanoLoaded: worlds.get(KANO) !== null };
     },
     loadOgun: async () => {
       const r = await worlds.load(OGUN);
@@ -1803,7 +1903,8 @@ function startGame(): void {
     },
     get music() {
       // O2: the Music switch, whether music may sound (Music and Sound both on), the tune asked for.
-      return { on: menus.music, audible: music.enabled, place: music.place, tempo: music.tempoStep, held: music.held, started: musicAttached };
+      // K2b: `tune` is the name of the tune a place plays now (Kurmi's stands in for the street's).
+      return { on: menus.music, audible: music.enabled, place: music.place, tempo: music.tempoStep, held: music.held, started: musicAttached, tune: music.place ? TUNES[music.place].name : null };
     },
     get corn() {
       // S2.9 corn tune: the count showing, the tune (place, tempo step, loudness), the turn-down
@@ -1949,6 +2050,10 @@ function startGame(): void {
       };
     },
     /** O6b: Ogun from above now (its draws, hero and test boxes), or null. */
+    /** K1b: Kano's home now (its draws), or null. */
+    get kanoHome() {
+      return menus.kanoScreen;
+    },
     get ogunCity() {
       return menus.ogunScreen;
     },
@@ -2063,7 +2168,7 @@ declare global {
         readonly busTime: number;
         readonly checkpoint: boolean;
         readonly safe: number;
-        readonly power: { readonly corn: number; readonly amala: number; readonly ikokore: number; readonly ofada: number; readonly shield: boolean };
+        readonly power: { readonly corn: number; readonly amala: number; readonly ikokore: number; readonly ofada: number; readonly kilishi: number; readonly fura: number; readonly shield: boolean };
         readonly mud: boolean;
         readonly slowed: boolean;
         readonly fufu: number;
@@ -2113,8 +2218,8 @@ declare global {
         readonly hall: { readonly width: number; readonly leftLimit: number; readonly rightLimit: number } | null;
         readonly groundY: number;
         readonly lights: readonly { readonly x: number; readonly y: number; readonly w: number }[];
-        /** Roofs and other one-way platforms: top y, from x to x + w. */
-        readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number }[];
+        /** Roofs and other one-way platforms: top y, from x to x + w. K3b: `spring`, springy cloth's bounce vy. */
+        readonly platforms: readonly { readonly x: number; readonly y: number; readonly w: number; readonly spring?: number }[];
         readonly wells: readonly { readonly x: number; readonly exitX: number; readonly room: string }[];
         readonly gutters: readonly { readonly x: number; readonly w: number }[];
         readonly piles: readonly number[];
@@ -2124,6 +2229,10 @@ declare global {
       };
       /** Below the street: the well room shows (cheap, for per-frame logs). */
       readonly below: boolean;
+      /** K3b: springy cloth bounces since the page opened. */
+      readonly clothBounces: number;
+      /** K4b: dust whirls puffed apart since the page opened. */
+      readonly whirlPuffs: number;
       /** The Throw button on screen now (touch box, CSS px) and its spoken label, or null. */
       readonly throwButton: { readonly label: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
       /** The Go down / Go up button on screen now (CSS px), or null. */
@@ -2137,6 +2246,9 @@ declare global {
         arrived: boolean;
         wallet: { kobo: number; power: number; tech: number };
         ogunLoaded: boolean;
+        kano: import('./game/progress').StateProgress;
+        kanoArrived: boolean;
+        kanoLoaded: boolean;
       };
       /** O1b1: loads the Ogun part (dev only until O1b2); a failure shows its plain words on the toast. */
       loadOgun(): Promise<{ ok: true; levels: string[] } | { ok: false; why: 'missing' | 'broken'; message: string }>;
@@ -2191,6 +2303,7 @@ declare global {
         readonly tempo: number;
         readonly held: boolean;
         readonly started: boolean;
+        readonly tune: string | null;
       };
       /** Intro pictures drawn so far by every intro screen (city.md a2.9). */
       readonly introDraws: number;
@@ -2221,6 +2334,8 @@ declare global {
       } | null;
       /** O6b: Ogun from above now, or null. */
       readonly ogunCity: import('./worlds/ui').WorldCity | null;
+      /** K1b: Kano's home now, or null. */
+      readonly kanoHome: import('./worlds/ui').WorldCity | null;
       /** Lagos from above now, or null when it is not showing. */
       readonly city: {
         readonly cam: { readonly zoom: 'far' | 'near'; readonly x: number; readonly y: number };

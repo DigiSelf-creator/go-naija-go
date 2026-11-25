@@ -9,3 +9,5 @@ export { CityPeople } from './cityPeople';
 /** O6b2 (OG-R43 a): the pieces a later state's city uses for its own walkers (Ogun's, from its part). */
 export { CityWalkers, cityWalkerAt, ambientCount, CITY_FOLK } from './cityFolk';
 export { CastSheet } from './crowdDraw';
+/** K6b: the people's size and the "never the player's own look" rule, for a later state's city (Kano's, from its part). */
+export { CITY_FOLK_SCALE, isHeroLook } from '../art/folkCasts';

@@ -8,7 +8,7 @@
  * Each card sits on a dim layer over the screen it opened from; Escape (and Android back) is
  * the card's own way out.
  */
-import { OGUN_WORDS, WORDS } from './words';
+import { KANO_WORDS, OGUN_WORDS, WORDS } from './words';
 import { button, h } from './dom';
 import type { StateId } from '../game/states';
 
@@ -32,10 +32,14 @@ export interface OgunView {
   beaten: boolean;
 }
 
-/** ogun.md 1.7: the rail's line under the count. `n` is the number of cogs turning. */
-export function wheelLine(n: number, ogun: OgunView): string {
+/**
+ * ogun.md 1.7, kano.md 1.6: the rail's line under the count. `n` is the number of cogs turning.
+ * Kano opens at the same win that beats King Pothole, so once it is open Kano's lines lead.
+ */
+export function wheelLine(n: number, ogun: OgunView, kano?: OgunView): string {
   const w = OGUN_WORDS.wheel;
   if (n === 0) return WORDS.wheel.none;
+  if (kano?.open) return kano.beaten ? KANO_WORDS.wheel.flowing : kano.turning ? KANO_WORDS.wheel.kanoTurning : KANO_WORDS.wheel.kanoNext;
   if (ogun.beaten) return w.gatewayOpen;
   if (ogun.turning) return w.ogunTurning;
   if (ogun.open) return w.ogunNext;
@@ -81,7 +85,8 @@ export function travelCard(lines: readonly TravelLine[], pick: (id: StateId) => 
     'div',
     { class: 'card narrow travel-card', role: 'dialog', 'aria-label': w.heading },
     h('h2', {}, w.heading),
-    h('div', { class: 'travel-places' }, ...places),
+    // kano.md 1.5: three side by side from 480 px wide, else one above the other.
+    h('div', { class: `travel-places${places.length > 2 ? ' three' : ''}` }, ...places),
     h('div', { class: 'actions' }, button(w.back, 'minor', back, {}, 'back')),
   );
   return layer(card, back);
@@ -95,12 +100,14 @@ export interface DownloadCard {
   step(s: DownloadStep, message?: string): void;
 }
 
+/** The download card's words: Ogun's, or a later state's own over them (K1b: Kano's). */
+export type DownloadWords = { readonly [K in keyof typeof OGUN_WORDS.download]: string };
+
 /** "Ogun is ready to download (about 80 KB)." with Download / Not now; then Downloading..., or why it could not. */
-export function downloadCard(go: () => void, notNow: () => void): DownloadCard {
-  const w = OGUN_WORDS.download;
+export function downloadCard(go: () => void, notNow: () => void, name: string = OGUN_WORDS.travel.ogun, w: DownloadWords = OGUN_WORDS.download): DownloadCard {
   const body = h('div', { class: 'travel-body', 'aria-live': 'polite' });
   const row = h('div', { class: 'actions' });
-  const card = h('div', { class: 'card narrow travel-card download-card', role: 'dialog', 'aria-label': OGUN_WORDS.travel.ogun }, h('h2', {}, OGUN_WORDS.travel.ogun), body, row);
+  const card = h('div', { class: 'card narrow travel-card download-card', role: 'dialog', 'aria-label': name }, h('h2', {}, name), body, row);
   const el = layer(card, notNow);
   const step = (s: DownloadStep, message?: string): void => {
     card.dataset['step'] = s;
@@ -121,14 +128,13 @@ export function downloadCard(go: () => void, notNow: () => void): DownloadCard {
 }
 
 /** A plain card with one line and OK (the part could not open, where no download card shows). */
-export function noticeCard(message: string, ok: () => void): HTMLElement {
-  const card = h('div', { class: 'card narrow travel-card', role: 'dialog', 'aria-label': OGUN_WORDS.travel.ogun }, h('p', {}, message), h('div', { class: 'actions' }, button(OGUN_WORDS.download.ok, 'go', ok)));
+export function noticeCard(message: string, ok: () => void, name: string = OGUN_WORDS.travel.ogun): HTMLElement {
+  const card = h('div', { class: 'card narrow travel-card', role: 'dialog', 'aria-label': name }, h('p', {}, message), h('div', { class: 'actions' }, button(OGUN_WORDS.download.ok, 'go', ok)));
   return layer(card, ok);
 }
 
-/** ogun.md 1.4: the arrival card, first visit only. */
-export function arrivalCard(go: () => void): HTMLElement {
-  const w = OGUN_WORDS.arrival;
+/** ogun.md 1.4, kano.md 1.4: the arrival card, first visit only. */
+export function arrivalCard(go: (e?: MouseEvent) => void, w: { readonly [K in keyof typeof OGUN_WORDS.arrival]: string } = OGUN_WORDS.arrival): HTMLElement {
   const card = h(
     'div',
     { class: 'card narrow travel-card arrival-card', role: 'dialog', 'aria-label': w.heading },

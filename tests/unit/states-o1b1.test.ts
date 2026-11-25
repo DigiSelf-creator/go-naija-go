@@ -47,7 +47,8 @@ const OLD_SAVE = {
 
 describe('the state list', () => {
   it('Lagos first and in the first load; Ogun next, in its own part, opened by Lagos', () => {
-    expect(STATES.map((s) => s.id)).toEqual(['lagos', 'ogun']);
+    // K1b: Kano third, its own part, opened by Ogun (states-k1b.test.ts).
+    expect(STATES.map((s) => s.id)).toEqual(['lagos', 'ogun', 'kano']);
     expect(STATES[0]).toMatchObject({ part: null, after: null });
     expect(STATES[1]).toMatchObject({ id: 'ogun', part: 'ogun', after: 'lagos' });
   });

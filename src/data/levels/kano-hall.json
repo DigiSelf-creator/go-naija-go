@@ -1,0 +1,39 @@
+{
+  "schema": 2,
+  "type": "hall",
+  "id": "kano-hall",
+  "state": "kano",
+  "name": "Borehole Hall",
+  "schemaNote": "See docs/kano.md 5.2 to 5.5. Hall x runs 0 to width, floor at groundY. Rusty Borehole is an old pump and tank (a problem, never a person) standing from body[0] to body[1]; he never moves and is a wall to the hero (rightLimit). valves.x are the middles of three round valve wheels on his pipe and valves.bottom their lowest y; the stuck one shakes and wears the STUCK tag, in valves.x order. A head bump from below on the stuck valve is a hit. Under each valve stands a springy cloth frame (the Kofar Mata frame). Each cough is warned by a wheeze; a whirl rolls from whirl.fromX toward the hero and puffs apart at the left wall; a gust (from phase 2) cuts air speed toward him to gust.airScale for gust.lasts s, warned gust.warn s before. holdBreath: no new whirl leaves him from a cloth bounce until the hero's feet touch the floor (a cloth again does not count); a whirl due then waits at his mouth, wheezing, and leaves heldWhirlDelay s after the hero lands. whirl.clearGap (KN-R15): a whirl never appears touching the hero; while the hero's box is within clearGap u of the whirl's box at his mouth, a whirl due waits there, wheezing, and leaves heldWhirlDelay s after the hero is clear. huff (KN-R15): if that whirl has waited huff.after s (Gentle gentle.huffAfter) with the hero still at his mouth, he gives a soft, harmless Hmph! puff that slides the hero back left at huff.speed u/s (Forward is held only during the slide) until they have gone huff.back u and been clear heldWhirlDelay s; then the whirl rolls out; the first puff of a try shows the step-back hint. valveNeedsWhirl (KN-R14): the next valve is shut tight (tagged WAIT, a head bump only goes clonk) until that phase's first whirl has left him, then it shakes loose (STUCK) and stays ready for the phase; after waitHintAfter s of bouncing while it says WAIT, one hint a try. valveHint (KN-R16): once the valve has said STUCK valveHint.after s (Gentle gentleAfter) with no hit, an arrow over the hero points to that valve's cloth and a down arrow points at the valve, hidden while the hero is over that cloth, gone on the hit, back each phase; the first of a try says the hint. phases[0] is before any hit; one phase per valve, so 3 valves win. gentle numbers replace the normal ones in Gentle mode (5 lives there, as every hall).",
+  "groundY": 300,
+  "width": 560,
+  "spawnX": 50,
+  "leftLimit": 30,
+  "rightLimit": 440,
+  "boss": {
+    "kind": "rusty-borehole",
+    "body": [450, 540],
+    "valves": { "x": [140, 250, 360], "bottom": 70, "w": 36, "h": 36 },
+    "springs": { "w": 80, "h": 30, "vy": -640 },
+    "taps": 8,
+    "startDelay": 2.0,
+    "wheeze": 0.5,
+    "breakAfterHit": 1.5,
+    "holdBreath": true,
+    "heldWhirlDelay": 0.5,
+    "valveNeedsWhirl": true,
+    "waitHintAfter": 3.0,
+    "valveHint": { "after": 8.0, "gentleAfter": 5.0 },
+    "phases": [
+      { "every": 2.8, "pattern": ["whirl"], "bpm": 120 },
+      { "every": 2.4, "pattern": ["whirl", "gust"], "bpm": 126, "adds": "shaker" },
+      { "every": 2.0, "pattern": ["whirl", "whirl", "gust"], "bpm": 132, "adds": "drum" }
+    ],
+    "whirl": { "speed": 60, "w": 30, "h": 50, "fromX": 440, "bounceVy": -480, "clearGap": 11 },
+    "huff": { "after": 2.0, "back": 60, "speed": 75 },
+    "gust": { "lasts": 2.0, "warn": 0.6, "airScale": 0.75 },
+    "fall": { "backTo": 50 },
+    "finish": { "glugTo": 1.2, "sneeze": 1.2, "shine": 1.8, "tapsFrom": 2.4, "tapsTo": 3.6, "toast": 4.0, "win": 6.0 },
+    "gentle": { "whirlSpeed": 45, "later": 0.4, "gustAirScale": 0.875, "huffAfter": 2.4 }
+  }
+}

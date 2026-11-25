@@ -34,6 +34,7 @@ import { WELL_RULES, type RoomData } from './well';
 import { DEFAULT_LOOK } from './save';
 import type { GamePeople, PeopleNow } from './people';
 import type { SkinEvent, SkinNow, StreetSkin } from './skin';
+import type { SoundName } from '../engine/sound';
 
 export { heroScreenX };
 /** Honk clouds fade over this last stretch before the hall's left wall, u. */
@@ -74,7 +75,9 @@ export type GameEvent =
   /** S2.16 B4: each 0.3 s of a dash on the ground, the fast soft footsteps. */
   | { type: 'dashSteps' }
   /** O2b (ogun.md 3.3): a foot met the mud (twice a run cycle): the "splosh", a print, a splash. */
-  | { type: 'mudStep'; x: number; y: number };
+  | { type: 'mudStep'; x: number; y: number }
+  /** K3b: a sound of the street skin's own scenery (the cloth beaters' tok on Kofar Mata). */
+  | { type: 'skinSound'; name: SoundName };
 
 /** S2.16 B4: the dash's fast footsteps sound this often, s. */
 export const DASH_STEPS_EVERY = 0.3;
@@ -228,7 +231,7 @@ export class Game {
    * try that starts with the garri shield on (S2.7). parcelSaved: the state already has a saved
    * parcel, so well rooms show 5 kobo instead (S2.5 gift rule 6).
    */
-  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash' | 'arena'> = {}): void {
+  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash' | 'arena' | 'rules'> = {}): void {
     this.level = level;
     this.run = new Run(this.level, { gentle, rooms: this.rooms, ...opts });
     this.newCamera();
@@ -319,7 +322,7 @@ export class Game {
   /** A food on the road: the skin's own (ikokore, Ijebu garri), else the game's. */
   private drawFoodNow(g: CanvasRenderingContext2D, kind: Level['foods'][number]['kind'], x: number, y: number, t: number): void {
     if (this.skinDo((k) => k.food?.(g, kind, x, y, t))) return;
-    if (kind !== 'ikokore' && kind !== 'ofada') drawFood(g, kind, x, y, t);
+    if (kind !== 'ikokore' && kind !== 'ofada' && kind !== 'kilishi' && kind !== 'fura') drawFood(g, kind, x, y, t);
   }
   /** One object, filled again each call (no garbage a step). */
   private readonly folkNow = {} as PeopleNow;
@@ -400,7 +403,11 @@ export class Game {
     else this.gait = 'run';
     this.animateStride(x0, vy0, air0, dt);
     events.push(...this.looks(shield0, phase0, events));
-    if (this.skin) this.skinDo((k) => k.hear?.(events as readonly SkinEvent[], this.skinNow()));
+    if (this.skin) {
+      this.skinDo((k) => k.hear?.(events as readonly SkinEvent[], this.skinNow()));
+      const name = this.run.below ? null : this.skinDo((k) => k.sound?.(this.skinNow()));
+      if (name) events.push({ type: 'skinSound', name });
+    }
     if (events.some((e) => e.type === 'fall' || e.type === 'room' || e.type === 'wellBack')) this.clearMoves();
     if (this.run.below) {
       this.roomCamera(events.some((e) => e.type === 'room'), dt);
@@ -628,10 +635,12 @@ export class Game {
     const folk = this.peopleNow();
     // O2b: a later state's street brings its own backdrop (skin.ts).
     const skin = this.skin;
-    if (!skin || this.skinDo((k) => (k.backdrop(g, camX, W, t, H, gy, this.still), true)) === undefined) {
+    // K2b: the backdrop reads the run too (Kurmi's dust streaks follow the hero into the wind).
+    const sn0 = skin ? this.skinNow(L, R, H) : null;
+    if (!sn0 || this.skinDo((k) => (k.backdrop(g, camX, W, t, H, gy, this.still, sn0), true)) === undefined) {
       drawBackdrop(g, level.theme, camX, W, t, H, gy, this.fixed, first, this.people?.riders(view, folk));
     }
-    const sn = this.skin ? this.skinNow(L, R, H) : null;
+    const sn = this.skin ? sn0 : null;
     // S3g1b: an okada passing on the far road now and then.
     this.people?.drawOkada(g, view, folk);
 

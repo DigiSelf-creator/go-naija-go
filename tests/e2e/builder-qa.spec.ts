@@ -481,7 +481,9 @@ test('no network requests while using the builder, starting and changing hero', 
   await expect.poll(() => page.evaluate(() => window.__game!.steps)).toBeGreaterThan(30);
   await page.touchscreen.tap(600, 150);
   await page.waitForTimeout(1000);
-  expect(late).toEqual([]);
+  // The browser asks for the tab icon on its own, late; the service worker already holds it
+  // (break.spec.ts checks the cache), so it is no network call of the game's (as qa-k6c).
+  expect(late.filter((u) => !/favicon|icons\/icon-192\.png/.test(u))).toEqual([]);
 });
 
 test('the double-tap guard never blocks a real tap: elsewhere at once, or the same spot later', async ({ page }) => {

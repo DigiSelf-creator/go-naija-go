@@ -412,3 +412,108 @@ test('Ogun\'s board: its five missions from the Ogun part, coin stars from Ota',
   expect(await card.locator('.ms-goal-star').allTextContents()).toEqual(['60', '100', '135']);
   await shot(page, 'ogun-card-851x393');
 });
+
+/** KM1 to KM5: Kano with Kurmi cleared (Kofar Mata open, Dawanau not yet), one Ride the wind star won. */
+const KANO_SAVE = {
+  v: 2,
+  states: {
+    lagos: { streets: STREETS, parcel: false, hall: HALL },
+    ogun: { arrived: true, streets: STREETS, hall: HALL, parcel: false },
+    kano: { arrived: true, streets: { 1: D }, parcel: false },
+  },
+  city: CITY,
+  where: 'kano',
+};
+/** Set KM_SHOT to a file path to keep a picture of Kano's board at 851 x 393. */
+const KM_SHOT = process.env['KM_SHOT'];
+
+test('Kano\'s board: KM1 to KM5 from the Kano part, at 320 x 240 and 851 x 393; a mission plays its street', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('./');
+  await page.evaluate(
+    ({ look, p, m }) => {
+      localStorage.clear();
+      localStorage.setItem('gidi-look', look);
+      localStorage.setItem('gidi-intro', '"seen"');
+      localStorage.setItem('gidi-progress', p);
+      localStorage.setItem('gidi-missions', m);
+    },
+    { look: LOOK, p: JSON.stringify(KANO_SAVE), m: JSON.stringify({ v: 1, stars: { 'kano-wind': 1 } }) },
+  );
+  await page.reload();
+  await page.getByRole('button', { name: 'Play' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('kano');
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  for (const size of [{ width: 851, height: 393 }, { width: 320, height: 240 }]) {
+    const at = `${size.width}x${size.height}`;
+    await page.setViewportSize(size);
+    await settle(page);
+    // Missions sits in Kano's bottom row after its Play buttons, every button 44 px and on screen.
+    const missions = page.locator('.kano-city .city-bottom').getByRole('button', { name: 'Missions', exact: true });
+    await expect(missions).toBeVisible();
+    const b = await boxes(page, '.kano-city .city-bottom button');
+    for (const q of b) {
+      expect(q.h, `${at} ${q.t}`).toBeGreaterThanOrEqual(44);
+      expect(q.x >= -0.5 && q.y >= -0.5 && q.x + q.w <= size.width + 0.5 && q.y + q.h <= size.height + 0.5, `${at} ${q.t} on screen`).toBe(true);
+      for (const o of b) if (o !== q) expect(meets(q, o), `${at} ${q.t} / ${o.t}`).toBe(false);
+    }
+    await missions.tap();
+    const board = page.getByRole('dialog', { name: 'Missions' });
+    await expect(board.getByText('Stars: 1 of 14')).toBeVisible();
+    const tiles = board.locator('.ms-tile');
+    expect(await tiles.evaluateAll((t) => t.map((e) => e.getAttribute('aria-label')))).toEqual([
+      'Coin catch. Kurmi. 0 of 3 stars.',
+      'Ride the wind. Kurmi. 1 of 2 stars.',
+      'Bounce high. Kofar Mata. 0 of 3 stars.',
+      'Puff the dust. Locked. Open Dawanau first.',
+      'Power for the market. Harmattan Road. 0 of 3 stars.',
+    ]);
+    await expect(tiles.first()).toHaveClass(/next/);
+    await expect(tiles.nth(3)).toHaveClass(/locked/);
+    // Kano's own pictures (the wind sign, the cloth) are drawn: their canvases are not blank.
+    const inked = await board.locator('canvas.ms-pic').evaluateAll((cs) =>
+      (cs as HTMLCanvasElement[]).map((c) => c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data.filter((v, i) => i % 4 === 3 && v > 0).length),
+    );
+    expect(inked.length).toBe(3); // the coin, the wind sign, the cloth (the whirl's tile is locked; Power is a picture in words)
+    for (const n of inked) expect(n).toBeGreaterThan(20);
+    if (size.width === 851 && KM_SHOT) await page.screenshot({ path: KM_SHOT });
+    await shot(page, `kano-board-${at}`);
+    const keep = await boxes(page, '.ms-card h2, .ms-foot button');
+    for (const q of keep) expect(q.y >= -0.5 && q.y + q.h <= size.height + 0.5, `${at} ${q.t} shows`).toBe(true);
+    for (let i = 0; i < 5; i++) {
+      await tiles.nth(i).evaluate((e) => e.scrollIntoView({ block: 'nearest' }));
+      const tile = (await boxes(page, '.ms-tile'))[i]!;
+      const list = (await boxes(page, '.ms-tiles'))[0]!;
+      expect(tile.h, `${at} tile ${i + 1}`).toBeGreaterThanOrEqual(55.9);
+      expect(tile.y >= list.y - 0.5 && tile.y + tile.h <= list.y + list.h + 0.5, `${at}: tile ${i + 1} can be reached`).toBe(true);
+    }
+    expect(await smallest(page, '.ms-card'), at).toBeGreaterThanOrEqual(15);
+    // A card: Ride the wind's line and its two stars (1 won).
+    await board.getByRole('button', { name: /^Ride the wind\./ }).tap({ force: true });
+    const card = page.getByRole('dialog', { name: 'Ride the wind' });
+    await expect(card.getByText('Jump far with the wind!')).toBeVisible();
+    expect(await card.locator('.ms-goal-star').allTextContents()).toEqual(['1', '2']);
+    const fit = await page.evaluate(() => {
+      const c = document.querySelector<HTMLElement>('.ms-card')!;
+      return { sh: c.scrollHeight, ch: c.clientHeight };
+    });
+    expect(fit.sh, `${at}: the card shows with no scroll`).toBeLessThanOrEqual(fit.ch + 1);
+    for (const q of await boxes(page, '.ms-card button')) expect(q.h, `${at} ${q.t}`).toBeGreaterThanOrEqual(44);
+    await card.getByRole('button', { name: 'Back' }).tap();
+    await page.getByRole('dialog', { name: 'Missions' }).getByRole('button', { name: 'Back' }).tap();
+    await expect(page.locator('.ms-card')).toHaveCount(0);
+    await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  }
+  // Bounce high plays Kofar Mata, with its chip.
+  await page.setViewportSize({ width: 851, height: 393 });
+  await settle(page);
+  await page.locator('.kano-city .city-bottom').getByRole('button', { name: 'Missions', exact: true }).tap();
+  await page.getByRole('dialog', { name: 'Missions' }).getByRole('button', { name: /^Bounce high\./ }).tap({ force: true });
+  await page.getByRole('dialog', { name: 'Bounce high' }).getByRole('button', { name: 'Play' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('play');
+  expect(await page.evaluate(() => window.__game!.level.id)).toBe('kano-2');
+  await expect(page.locator('.ms-chip .ms-n')).toHaveText('0 / 3');
+  expect(errors).toEqual([]);
+});

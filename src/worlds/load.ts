@@ -10,15 +10,46 @@
  *   the promise never rejects. It resolves with `ok: false` and plain words to show, and the next
  *   try loads afresh. The game never crashes on it.
  */
-import { WORLD_PART_WORDS } from '../screens/words';
+import { KANO_WORDS, WORLD_PART_WORDS, addShortToasts } from '../screens/words';
 import type { StreetSkin } from '../game/skin';
-import type { ArenaRules, Run } from '../game/run';
+import type { ArenaRules, Run, StreetRules } from '../game/run';
 import type { Tune } from '../art/tunes';
-import type { WorldCity, WorldCityHooks, WorldUi } from './ui';
+import type { CityKit, WorldCity, WorldCityHooks, WorldUi } from './ui';
+import type { HarmattanKit } from './kano/laneLook';
 import type { RoadPlan, PlanStop } from '../screens/road';
 import type { LaneLook } from '../lane/view';
 import type { Obj, StateProgress } from '../game/progress';
 import type { MissionDef, MissionIcon } from '../game/missions';
+import type { Level } from '../game/level';
+import { addSounds, type Recipe, type SoundName } from '../engine/sound';
+
+/**
+ * K-size (kano.md 9.1): a part's own words that the first load shows only once the part is in
+ * (Kano's, so they ride in its part, not the first load). The part imports no value from the
+ * first load (KN-R10), so money comes in as words the game has already written.
+ */
+export interface PartWords {
+  /** Toasts on its streets by name: a timed food's pick up (`kilishi`) and end (`kilishiWearingOff`), `gate`, `parcel`. */
+  readonly toast: Readonly<Record<string, string>>;
+  /** A timed food's HUD chip words, by food ("Kilishi 9"). */
+  readonly hud: Readonly<Record<string, (s: number) => string>>;
+  /** Short words for its toasts on a narrow bar (added to SHORT_TOAST when the part loads). */
+  readonly short: Readonly<Record<string, string>>;
+  /** Out of lives on its street (K5b: and in its hall). */
+  readonly gameOver: { readonly text: (money: string) => string; readonly hallText?: string };
+  /** Street cleared, carrying the parcel (K5b: and the last street's button to its hall). */
+  readonly cleared: { readonly parcel: string; readonly toHall?: string };
+  /** K5b: its hall's Win screen. */
+  readonly win?: { readonly heading: string; readonly line: string; readonly money: (money: string) => string; readonly takeHome: string; readonly playAgain: string; readonly road?: string };
+  /** K6b: its lane run's Pause card button ("Back to Kano"). */
+  readonly laneHome?: string;
+  /** Its arrival card, first visit only. */
+  readonly arrival: { readonly heading: string; readonly line1: string; readonly line2: string; readonly go: string };
+  /** The ride's spoken name, going and coming back. */
+  readonly ride: { readonly spokenIn: string; readonly spokenOut: string };
+  /** Its home's Play buttons, one per street, opening in order. */
+  readonly place: { readonly plays: readonly string[] };
+}
 
 /** The shape every lazy state part exports (src/worlds/<id>/index.ts). Bump when it changes. */
 export const WORLD_PART_VERSION = 1;
@@ -34,7 +65,13 @@ export interface WorldPart {
    * O2b: a street's own look (skin.ts) by level id, made fresh for each play, or null when the
    * part has none for it yet. Optional in the shape check.
    */
-  readonly street?: (level: { readonly id: string; readonly arch: number | null }) => StreetSkin | null;
+  readonly street?: (level: Level) => StreetSkin | null;
+  /** K-size: the part's own street rules for each play (Kano's wind, gate and dust whirls). Optional. */
+  readonly rules?: (run: Run) => StreetRules;
+  /** K2b: the part's own sound recipes (a part that imports only types cannot add them itself). Optional. */
+  readonly sounds?: Readonly<Partial<Record<SoundName, Recipe>>>;
+  /** K-size (kano.md 9.1): the words the first load's toasts, chips and cards show once the part is in. Optional. */
+  readonly words?: PartWords;
   /**
    * O5b: the state's boss hall (its level file is `<id>-hall`): its fight, made fresh for each try,
    * and its tune (it stands in for the hall tune while that hall is played). Optional.
@@ -44,11 +81,12 @@ export interface WorldPart {
   /** O6b: the state's city from above (opens once its hall is won). Optional. */
   readonly city?: (hooks: WorldCityHooks) => WorldCity;
   /** O6b: the state's challenge road, for the road screen. Optional. */
-  readonly road?: (v: WorldRoadView, play: (st: PlanStop, e: MouseEvent) => void, still: () => boolean) => RoadPlan;
+  readonly road?: (v: WorldRoadView, play: (st: PlanStop, e: MouseEvent) => void, still: () => boolean) => RoadPlan | null;
   /** O6b: the state's lane run (its level file, look, and the fix a win is for). Optional. */
   readonly lane?: {
     readonly level: unknown;
-    readonly look: LaneLook;
+    /** K6b: or made from the lane pieces the game passes in (a part that imports only types). */
+    readonly look: LaneLook | ((kit: HarmattanKit) => LaneLook);
     /** The fix a win is for now (`fix`: the city's spot id), what bucket pays it and what is left, or null. */
     forFix(own: Readonly<Obj>, wallet: { kobo: number; power: number; tech: number }): { fix: string; bucket: 'power' | 'tech'; left: number } | null;
   };
@@ -67,6 +105,10 @@ export interface WorldRoadView {
   own: Readonly<Obj>;
   wallet: { kobo: number; power: number; tech: number };
   lane: { best: number; goals: number };
+  /** K1b: Rusty Borehole is beaten (Ogun's "To Kano" stop shows the bright gate). */
+  kanoLit?: boolean;
+  /** K6b: the first-load pieces Kano's road draws with (KN-R10). */
+  kit?: CityKit;
 }
 
 export type WorldLoad = { ok: true; part: WorldPart } | { ok: false; why: 'missing' | 'broken'; message: string };
@@ -105,14 +147,18 @@ export class WorldParts {
     const busy = this.loading.get(id);
     if (busy) return busy;
     const importer = this.importers[id];
+    // K1b: Kano's own words (Lagos and Ogun still work); every other part says Ogun's.
+    const w = id === 'kano' ? { broken: KANO_WORDS.broken, noInternet: KANO_WORDS.download.noNet } : WORLD_PART_WORDS;
     const run: Promise<WorldLoad> = new Promise<unknown>((done) => done(importer ? importer() : Promise.reject(new Error(`no part ${id}`)))).then(
       (mod): WorldLoad => {
         const part = checkPart(mod, id);
-        if (!part) return { ok: false, why: 'broken', message: WORLD_PART_WORDS.broken };
+        if (!part) return { ok: false, why: 'broken', message: w.broken };
+        if (part.sounds) addSounds(part.sounds);
+        if (part.words) addShortToasts(part.words.short);
         this.loaded.set(id, part);
         return { ok: true, part };
       },
-      (): WorldLoad => ({ ok: false, why: 'missing', message: this.online() ? WORLD_PART_WORDS.broken : WORLD_PART_WORDS.noInternet }),
+      (): WorldLoad => ({ ok: false, why: 'missing', message: this.online() ? w.broken : w.noInternet }),
     );
     this.loading.set(id, run);
     // A failed try is forgotten, so the next tap tries again.

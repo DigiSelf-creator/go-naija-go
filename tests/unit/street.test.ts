@@ -9,13 +9,18 @@ import lagos3 from '../../src/data/levels/lagos-3.json';
 import ogun1 from '../../src/data/levels/ogun-1.json';
 import ogun2 from '../../src/data/levels/ogun-2.json';
 import ogun3 from '../../src/data/levels/ogun-3.json';
+import kano1 from '../../src/data/levels/kano-1.json';
+import kano2 from '../../src/data/levels/kano-2.json';
+import kano3 from '../../src/data/levels/kano-3.json';
 import lagosWell from '../../src/data/levels/lagos-well.json';
 import lagosHall from '../../src/data/levels/lagos-hall.json';
 import { LevelError, parseLevel, type Level } from '../../src/game/level';
-import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { RULES, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { Run } from './kano-run';
 import { hintWords } from '../../src/screens/words';
 import { BUS_END, busEndAt } from '../../src/art/roadside';
 import { playableOgun } from './ogun-level-data';
+import { playableKano } from './kano-level-data';
 
 const DT = 1 / 60;
 const L1 = parseLevel(structuredClone(lagos1));
@@ -256,6 +261,12 @@ const STREETS = [
   { L: parseLevel(playableOgun(ogun2)), bigPits: 1, dashGaps: 0, hints: 5 },
   // ogun.md 3.6 (O0a3): Sagamu. Gravel is read as a tyre here (same placing rules); its own rules are in ogun-levels.test.ts.
   { L: parseLevel(playableOgun(ogun3)), bigPits: 2, dashGaps: 0, hints: 3 },
+  // kano.md 3.4 to 3.6 (K0a): Kurmi, Kofar Mata, Dawanau, read as the game reads them (K4b: whirls keep
+  // the tyre's placing rules here, sacks are roofs, fura keeps the food rules). Wind, springy cloth, whirls
+  // and the Kano foods are in kano-levels.test.ts, k2b-wind.test.ts, k3b-cloth.test.ts and k4b-dawanau.test.ts.
+  { L: parseLevel(playableKano(kano1)), bigPits: 1, dashGaps: 0, hints: 4 },
+  { L: parseLevel(playableKano(kano2)), bigPits: 1, dashGaps: 0, hints: 2 },
+  { L: parseLevel(playableKano(kano3)), bigPits: 1, dashGaps: 0, hints: 3 },
 ] as const;
 
 describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, dashGaps, hints }) => {
@@ -348,7 +359,7 @@ describe.each(STREETS)('S2.6 level rules: $L.id', ({ L, bigPits, dashGaps, hints
         expect(nearestPit(x), `well at ${x}`).toBeGreaterThanOrEqual(60);
       }
       expect(w.exitX).toBeLessThan(L.checkpoint);
-      // Each state has its own room: lagos-well, ogun-well (ogun.md 3.7).
+      // Each state has its own room: lagos-well, ogun-well (ogun.md 3.7), kano-well (kano.md 3.7).
       expect(w.room).toBe(`${L.id.split('-')[0]}-well`);
       for (const z of L.hazards) expect(Math.abs(z.x - w.exitX), `${z.kind} at ${z.x}`).toBeGreaterThanOrEqual(400);
     }

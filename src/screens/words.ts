@@ -671,6 +671,37 @@ export const OGUN_WORDS = {
 } as const;
 
 /**
+ * K1b: the Kano words the first load shows before the Kano part is in (docs/kano.md parts 1 and
+ * 8), word for word. The rest of Kano's words ride in the lazy Kano part (src/worlds/kano/words.ts):
+ * the part hands them over as `part.words` (src/worlds/load.ts PartWords).
+ */
+export const KANO_WORDS = {
+  name: 'Kano',
+  /** Part 1.2: Pothole Hall's Win screen gains a line and a button. */
+  ogunWin: { line: 'The road north to Kano is open.', onToKano: 'On to Kano', goToKano: 'Go to Kano' },
+  /** Part 8: the web download card (its buttons and line 2 are Ogun's words). */
+  download: {
+    line1: 'Kano is ready to download (about 85 KB).',
+    /** While it downloads (gamedev's words, as Ogun's). */
+    loading: 'Downloading Kano...',
+    noNet: 'Kano needs the internet once to download. Lagos and Ogun still work with no internet.',
+  },
+  /** A damaged or missing file (gamedev's words, as Ogun's, for designer to check). */
+  broken: 'Kano could not open just now. Lagos and Ogun still work. Try again later.',
+  /** Part 1.2: the "To Kano" stop on Ogun's challenge road, and its card. */
+  toKano: { stop: 'To Kano', lockedShort: 'Win Pothole Hall', line: 'The road to Kano is open.', go: 'Go to Kano', locked: 'Win Pothole Hall to open the road to Kano.' },
+  /** Part 1.6: the wheel's rail lines and the "All names" list. */
+  wheel: {
+    kanoNext: 'Next: Kano, the Centre of Commerce.',
+    kanoTurning: 'Kano is turning. Get the water flowing in Borehole Hall.',
+    flowing: 'The water is flowing in Kano. More states are coming soon.',
+    listNext: 'Kano, next',
+  },
+  /** Part 1.7: Settings, under "Saved on this phone". */
+  saved: 'Your hero, Lagos, Ogun and Kano are saved on this phone.',
+} as const;
+
+/**
  * S2.13 part 5: street hints whose words are not true in Gentle mode, and what they say there
  * instead (the bus stop is no longer where a fall puts you back).
  */
@@ -687,7 +718,7 @@ export const SHORT_AT = 35;
 export const NARROW_BAR = 160;
 
 /** S2.2 "Short words for narrow bars": full toast words, then the short words. */
-export const SHORT_TOAST: Readonly<Record<string, string>> = {
+const SHORT: Record<string, string> = {
   'Roasted corn! You run faster for 12 seconds.': 'Roasted corn! You run faster!',
   'Garri, sugar and epa (groundnut)! A shield takes one hit for you.': 'Garri, sugar and epa! Shield on!',
   'Amala, gbegiri and ewedu! Super strong for 12 seconds. Smash through!': 'Amala, gbegiri and ewedu! Strong!',
@@ -705,6 +736,13 @@ export const SHORT_TOAST: Readonly<Record<string, string>> = {
   "He's cross! Two gravel lumps now. Jump them both.": 'Two gravel lumps now! Jump both.',
   'The gateway is open! Ogun is switched on!': 'The gateway is open!',
 };
+
+export const SHORT_TOAST: Readonly<Record<string, string>> = SHORT;
+
+/** A later state's part adds its own short words when it loads (K1b: Kano's ride in its part). */
+export function addShortToasts(more: Readonly<Record<string, string>>): void {
+  Object.assign(SHORT, more);
+}
 
 /** The words a toast shows in a bar this wide (CSS px): the short words on a narrow bar. */
 export function barWords(words: string, barWidth: number): string {

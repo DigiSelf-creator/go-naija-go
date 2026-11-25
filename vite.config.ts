@@ -129,7 +129,10 @@ export default defineConfig(({ mode }) => ({
         chunkFileNames: (chunk) => {
           if (isDebugChunk(chunk.moduleIds)) return 'assets/debug/[name]-[hash].js';
           const id = worldOf(chunk.facadeModuleId) ?? worldOf(chunk.moduleIds.find((m) => worldOf(m)) ?? null);
-          return id ? `worlds/${id}/[name]-[hash].js` : 'assets/[name]-[hash].js';
+          // K3b: a part's own art shared with the debug galleries (src/worlds/kano/galleryArt.ts) is
+          // game code: named "art" so it is never taken for a gallery chunk (check-size).
+          const name = /galler(y|ies)/i.test(chunk.name) ? 'art' : '[name]';
+          return id ? `worlds/${id}/${name}-[hash].js` : 'assets/[name]-[hash].js';
         },
         assetFileNames: (asset) => {
           const id = (asset.originalFileNames ?? []).map((f) => worldOf(f)).find(Boolean);

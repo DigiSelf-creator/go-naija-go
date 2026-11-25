@@ -29,6 +29,8 @@ const NONE: readonly never[] = [];
 const HALL_FULL: readonly CastCell[] = ['stand', 'walk0', 'walk1', 'walk2', 'walk3', 'cheer0', 'cheer1', 'clap0', 'clap1'];
 const HALL_DOOR: readonly CastCell[] = [...HALL_FULL, ...(['stand', 'cheer0', 'cheer1'] as const).map((frame) => ({ frame, size: 0.9 }))];
 const HALL_SIDE: readonly CastCell[] = [...HALL_FULL, ...(['stand', 'cheer0', 'cheer1'] as const).map((frame) => ({ frame, size: 0.95 }))];
+/** K5b: the frames a later state's own hall people are baked in (GamePeople.drawOwn). */
+const OWN_FRAMES: readonly FolkFrame[] = ['stand', 'walk0', 'walk1', 'walk2', 'walk3', 'cheer0', 'cheer1'];
 /** The cells baked for the hall's look `i`. */
 export const hallCells = (_l: FolkLook, i: number): readonly CastCell[] => (i < 3 ? HALL_DOOR : HALL_SIDE);
 
@@ -248,6 +250,10 @@ export class GamePeople {
     }
     return this.traderList;
   }
+  /** K4b: the look of a person in `drawn` (by its look index), for a street look's own pieces over them (a porter's sack). */
+  lookOf(i: number): FolkLook | undefined {
+    return this.looks[i];
+  }
   private tradersOf: StreetCrowd | null = null;
   private traderList: { x: number; look: FolkLook; feetY: number }[] = [];
 
@@ -279,11 +285,11 @@ export class GamePeople {
     if ((!name && !own) || !level.manual) return;
     const cast = own ? ownCast(own, n.look) : streetCast(name!, n.look);
     this.looks = cast.looks;
-    const plan = own ? crowdSpots(level, n.crowdLook, cast.looks, cast.park, own.from) : crowdSpots(level, n.crowdLook, cast.looks, cast.park);
+    const plan = own ? crowdSpots(level, n.crowdLook, cast.looks, cast.park, own.from, own.isTrader) : crowdSpots(level, n.crowdLook, cast.looks, cast.park);
     // O2b: a later state's people at their own spots (the travellers by the arch), if their look is in.
     for (const e of own?.extras ?? []) {
       const i = cast.looks.indexOf(e.look);
-      if (i >= 0) plan.stands.unshift({ x: e.x, look: i, kind: 'stand', flip: e.flip ?? false });
+      if (i >= 0) plan.stands.unshift({ x: e.x, look: i, kind: e.stool ? 'sit' : 'stand', flip: e.flip ?? false });
     }
     this.walkLooks = new Set(plan.walkers.map((w) => w.look));
     this.street = new StreetCrowd(plan, name ?? 'alausa', level.groundY, level, own ? { cast: own, looks: cast.looks } : null);
@@ -528,6 +534,43 @@ export class GamePeople {
     if (set) g.restore();
   }
 
+  /**
+   * K5b: a later state's own hall people (Borehole Hall's door people), whose part draws no
+   * person itself (KN-R10): each look baked once at `size` (standing, walking, cheering), then
+   * copied 1:1 at whole device pixels, as the hall's people. World space in, as the hall draws.
+   */
+  drawOwn(g: G, view: View, camX: number, lift: number, looks: readonly FolkLook[], size: number, list: readonly Omit<FolkDraw, 'size'>[]): void {
+    if (!this.on) return;
+    const t0 = performance.now();
+    try {
+      this.ownSize = size;
+      this.ownSheet.ready(looks, view.scale, `own|${size}`, view.ratio);
+      const k = view.scale;
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      for (const d of list) this.ownSheet.drawDevice(g, { ...d, size }, (d.x - camX) * k, (d.y - lift) * k, k);
+      g.restore();
+      this.drawn = list.map((d) => ({ ...d, size }));
+      this.seen = list.length;
+    } catch (err) {
+      this.fail(err);
+    }
+    this.spent += performance.now() - t0;
+  }
+  private ownSize = 1;
+  private readonly ownSheet = new CastSheet(() => OWN_FRAMES.map((frame) => ({ frame, size: this.ownSize })));
+
+  /** K5b: one bubble from a later state's hall (world space), kept off the hero and the HUD row. False: not drawn. */
+  say(g: G, view: View, text: string, x: number, y: number, hero: { x: number; y: number }, lift: number): boolean {
+    if (!this.on) return false;
+    const avoid: Rect[] = [
+      { x: hero.x - 18, y: hero.y - 62, w: 36, h: 66 },
+      { x: x - 2000, y: lift - 1000, w: 4000, h: 1000 + 78 + view.safe.top },
+    ];
+    this.bubbleBox = drawBubbleAt(g, { text, x, y, left: 1, who: 0 }, view.scale, avoid, screenRatio());
+    return this.bubbleBox !== null;
+  }
+
   /* ------------------------------------------------------------ the one bubble */
 
   /** The bubble now (street, room or hall), if any. */
@@ -554,6 +597,9 @@ export class GamePeople {
       { x: n.camX - 1000, y: lift - 1000, w: n.viewW + 2000, h: 1000 + 78 + view.safe.top },
       { x: n.camX - 1000, y: 352, w: n.viewW + 2000, h: 1000 },
     ];
+    // K3b: on a street a bubble is never cut by the screen's sides (a trader's call scrolling in
+    // at 320 wide): it waits until all of it is on screen.
+    if (!run.below && !n.level.hall) avoid.push({ x: n.camX - 1000, y: -1000, w: 1000, h: 3000 }, { x: n.camX + n.viewW, y: -1000, w: 1000, h: 3000 });
     const L = n.camX - 40;
     const R = n.camX + n.viewW + 40;
     for (const z of run.hazards) if (z.mode !== 'gone' && z.x > L && z.x < R) avoid.push({ x: z.x - 24, y: z.y - 12, w: 48, h: 60 });

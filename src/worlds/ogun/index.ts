@@ -64,7 +64,7 @@ export const part: WorldPart = {
   ...(ogunHall ? { hall: ogunHall } : {}),
   // O6b: Ogun's city (after Pothole Hall), its challenge road and the Expressway run.
   city: ogunCity,
-  road: (v, play, still) => ogunRoad({ ogun: v.progress, city: readOgunCity(v.own), wallet: readWallet(v.wallet), lane: v.lane }, play, still),
+  road: (v, play, still) => ogunRoad({ ogun: v.progress, city: readOgunCity(v.own), wallet: readWallet(v.wallet), lane: v.lane, kanoLit: v.kanoLit === true }, play, still),
   lane: {
     level: levels['ogun-lane'],
     look: EXPRESSWAY_LOOK,

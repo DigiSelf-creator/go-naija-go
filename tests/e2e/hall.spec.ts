@@ -179,7 +179,9 @@ test('Go-Slow Hall from a fresh visit, by touch: hero, the fight, Lagos is switc
   expect(seen.indexOf('Green light! The hall is clear!')).toBeLessThan(seen.indexOf('Lagos is switched on!'));
   // P2: the toast is hidden at the third hit, so no fight hint shows over the kind finish.
   expect(await page.evaluate(() => (window as unknown as { __toastAtDefeat?: string }).__toastAtDefeat)).toBe('');
-  expect(late).toEqual([]);
+  // The browser asks for the tab icon on its own, late; the service worker already holds it
+  // (break.spec.ts checks the cache), so it is no network call of the game's (as builder-qa, qa-k6c).
+  expect(late.filter((u) => !/favicon|icons\/icon-192\.png/.test(u))).toEqual([]);
   expect(errors).toEqual([]);
 
   // Offline: reload, the saved hero comes back and the game plays.
