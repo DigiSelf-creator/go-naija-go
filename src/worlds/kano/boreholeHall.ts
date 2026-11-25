@@ -863,10 +863,10 @@ export const BH_DOOR_PEOPLE: readonly FolkLook[] = [
   { skin: 6, age: 'elder', sex: 'f', body: 'medium', hair: 'grey', head: 'headscarf', dress: 'wrapperBlouse', a: '#7d3c98', b: '#f4ead2', h: '#f4ead2', glasses: true },
 ];
 /** Where they stand in the left door (feet at floorY - 4): the woman, the cart pusher, the elder. */
-export const BH_DOOR_SPOTS: readonly number[] = [94, 22, 122];
+export const BH_DOOR_SPOTS: readonly number[] = [82, 14, 98];
 /** The woman's can stands at her feet here; the cart's middle stands here, in front of its pusher. */
-export const BH_CAN_X = 106;
-export const BH_CART_X = 56;
+export const BH_CAN_X = 72;
+export const BH_CART_X = 46;
 export const BH_DOOR_SCALE = 0.9;
 /** At the finish they walk to these taps (x) and fill up: the cart pusher first, at the tap nearest the door. */
 export const BH_CHEER_SPOTS: readonly number[] = [222, 150, 294];

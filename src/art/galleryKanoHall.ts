@@ -5,8 +5,7 @@
  * ?gallery=hall-kano2  Rusty's looks (grumpy, wheeze, puff, blow, hiccup, gargle, sneeze, clean),
  *                      the valves, the counter, the wash line calm and in a gust, the cans and the
  *                      cart, the door people (crisp, style 1.8) and his words.
- * The springy cloth frames (K3a) and the dust whirl (K4a) are other tasks: shown here as a plain
- * outline and left out. Same fixed 960 x 720 layout as the other pages; &t=1.5 holds the time;
+ * The springy cloth frames are K3a's; the dust whirl (K4a) is not drawn yet. Same fixed 960 x 720 layout as the other pages; &t=1.5 holds the time;
  * &still=1 shows the reduced-motion look.
  */
 import { drawBubble, drawFolkFrame, type FolkFrame, type FolkLook } from './folk';
@@ -26,6 +25,7 @@ import {
   drawBoreholeHall,
   drawBoreholeHallFront,
   drawBoreholeLine,
+  drawClothFrame,
   drawDustStreaks,
   drawRustyBorehole,
   drawRustyWord,
@@ -120,12 +120,8 @@ function hall(g: G, x: number, y: number, w: number, h: number, time: number, st
   BH_HALL.valves.forEach((vx, i) => {
     const st: ValveState = fin || i < s.open ? 'open' : i === s.open ? 'stuck' : 'wait';
     drawValve(g, vx, st, { time, still, freed: i === s.open - 1 ? (time % 2) : -1 });
-    // K3a's springy cloth frame stands here: a plain outline in this gallery only
-    g.strokeStyle = 'rgba(29,26,20,0.5)';
-    g.setLineDash([4, 3]);
-    g.lineWidth = 1;
-    g.strokeRect(vx - BH_HALL.springW / 2, BH_HALL.floorY - BH_HALL.springH, BH_HALL.springW, BH_HALL.springH);
-    g.setLineDash([]);
+    // K3a's springy cloth frame under each valve
+    drawClothFrame(g, vx - BH_HALL.springW / 2, BH_HALL.springW, BH_HALL.floorY);
   });
   drawRustyBorehole(g, BH_HALL.cx, BH_HALL.floorY, fin ? fin.rusty : { ...s.rusty, time, still });
   if (fin) drawSneezePuff(g, fin.puff);
@@ -164,7 +160,7 @@ const fight: Page = (g, time, still) => {
   steps.forEach(([t, name], i) => hall(g, 12 + (i % 3) * 316, 342 + Math.floor(i / 3) * 186, 284, 160, time, still, { open: 3, rusty: {}, finish: still ? 9 : t }, name));
   hall(g, 644, 528, 284, 160, time, still, { open: 1, rusty: { mood: 'wheeze', k: 0.6, flakes: 1 }, hero: [200, 300, false], grey: true }, 'Greyscale: hero, Rusty, STUCK valve by shape');
   label(g, 'Only words painted: BOREHOLE HALL and STUCK. No title, no ruler, nothing holy, no tall green tubes, no marked blocks.', 12, 704, 10);
-  label(g, 'Dashed boxes: where the springy cloth frames (K3a) stand.', 628, 290, 10);
+  label(g, 'Under each valve: the springy cloth frame (K3a).', 628, 290, 10);
 };
 
 const MOODS: [RustyLook, string][] = [

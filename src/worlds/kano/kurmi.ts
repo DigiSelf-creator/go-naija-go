@@ -42,7 +42,7 @@ export const KURMI = {
 /** Every word painted on Kurmi's row (made-up everyday shop words, KN-R3). */
 export const KURMI_SIGNS = ['FINE LEATHER', 'SANDALS', 'POS HERE', 'PROVISIONS', 'VULCANIZER'] as const;
 
-function box(g: G, x: number, y: number, w: number, h: number, fill: string, lw = 1.2): void {
+export function box(g: G, x: number, y: number, w: number, h: number, fill: string, lw = 1.2): void {
   g.fillStyle = fill;
   g.fillRect(x, y, w, h);
   if (lw > 0) {
@@ -52,7 +52,7 @@ function box(g: G, x: number, y: number, w: number, h: number, fill: string, lw 
   }
 }
 
-function disc(g: G, x: number, y: number, r: number, fill: string, lw = 0): void {
+export function disc(g: G, x: number, y: number, r: number, fill: string, lw = 0): void {
   g.fillStyle = fill;
   g.beginPath();
   g.arc(x, y, r, 0, TAU);
@@ -64,7 +64,7 @@ function disc(g: G, x: number, y: number, r: number, fill: string, lw = 0): void
   }
 }
 
-function board(g: G, cx: number, y: number, w: number, words: string, fill: string = KANO.cream): void {
+export function board(g: G, cx: number, y: number, w: number, words: string, fill: string = KANO.cream): void {
   g.fillStyle = fill;
   g.strokeStyle = INK;
   g.lineWidth = 1.2;
@@ -80,7 +80,7 @@ function board(g: G, cx: number, y: number, w: number, words: string, fill: stri
 }
 
 /** Our own flat-roofed earth house: smooth walls, a parapet with small raised corners, a raised zigzag band. */
-function house(g: G, x: number, base: number, w: number, h: number, wall: string, light: string, dark: string): void {
+export function house(g: G, x: number, base: number, w: number, h: number, wall: string, light: string, dark: string): void {
   const top = base - h;
   g.lineJoin = 'round';
   g.strokeStyle = INK;
@@ -113,7 +113,7 @@ function house(g: G, x: number, base: number, w: number, h: number, wall: string
 }
 
 /** Our own round earth building seen from the side: shaded sides, a flat roof with a lip. */
-function roundHouse(g: G, cx: number, base: number, rw: number, h: number, wall: string, light: string, dark: string): void {
+export function roundHouse(g: G, cx: number, base: number, rw: number, h: number, wall: string, light: string, dark: string): void {
   const top = base - h;
   g.strokeStyle = INK;
   g.lineWidth = 1.2;
@@ -140,7 +140,7 @@ function roundHouse(g: G, cx: number, base: number, rw: number, h: number, wall:
 }
 
 /** A neem-shaped shade tree of our own: a short trunk and a few round leaf clumps. */
-function neem(g: G, x: number, base: number, s: number, leaf: string): void {
+export function neem(g: G, x: number, base: number, s: number, leaf: string): void {
   g.fillStyle = '#7a5a3a';
   g.fillRect(x - 2 * s, base - 26 * s, 4 * s, 26 * s);
   for (const [dx, dy, r] of [[-10, -30, 11], [8, -32, 12], [0, -42, 12], [-4, -26, 9], [12, -24, 8]] as const) disc(g, x + dx * s, base + dy * s, r * s, leaf);
@@ -248,7 +248,7 @@ const UNITS = [140, 110, 130, 110, 140, 130] as const;
 export const KURMI_TILE_W = UNITS.reduce((a, b) => a + b, 0);
 const rowLayer: KanoSlot = { layer: null };
 
-function bag(g: G, x: number, y: number, col: string): void {
+export function bag(g: G, x: number, y: number, col: string): void {
   g.strokeStyle = '#5a3a22';
   g.lineWidth = 1;
   g.beginPath();
@@ -598,7 +598,7 @@ export function drawKilishiIcon(g: G, x: number, y: number, size: number): void 
 
 const AGES: Record<string, FolkAge> = { c: 'child', t: 'teen', a: 'adult', e: 'elder' };
 /** One look: skin, age letter, sex, body, hair, headwear, dress, cloth a, cloth b, then options. */
-function look(skin: number, age: string, sex: 'm' | 'f', body: 'slim' | 'medium' | 'round', hair: FolkHair, head: FolkHeadwear, dress: FolkDress, a: string, b: string, o: Partial<FolkLook> & { hold?: FolkHold } = {}): FolkLook {
+export function look(skin: number, age: string, sex: 'm' | 'f', body: 'slim' | 'medium' | 'round', hair: FolkHair, head: FolkHeadwear, dress: FolkDress, a: string, b: string, o: Partial<FolkLook> & { hold?: FolkHold } = {}): FolkLook {
   return { skin, age: AGES[age] ?? 'adult', sex, body, hair, head, dress, a, b, ...o };
 }
 

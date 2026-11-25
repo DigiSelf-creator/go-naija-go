@@ -245,6 +245,8 @@ describe('K5a the door people (kano.md 7)', () => {
       expect(x).toBeGreaterThan(d.x0);
       expect(x).toBeLessThan(d.x1);
     }
+    // Clear of the first springy cloth frame (under valve 1), so nobody stands in it
+    for (const x of BH_DOOR_SPOTS) expect(x + 6).toBeLessThan(BH_HALL.valves[0]! - BH_HALL.springW / 2 + 10);
     for (const x of BH_CHEER_SPOTS) {
       expect(x).toBeGreaterThan(d.x1);
       expect(x).toBeLessThan(BH_HALL.heroMaxX);

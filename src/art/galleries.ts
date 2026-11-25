@@ -9,7 +9,7 @@
  *   ?gallery=folk, folk2 … folk5       the people kit (S3g1a)
  *   ?gallery=ogun-city, ogun-city2, ogun-city3   Ogun's city, road and Expressway (O6a)
  *   ?gallery=ogun, ogun2, ogun3        Ogun's gateway pieces (O1a)
- *   ?gallery=kano, kano2 … kano4       Kano's wall, gate, "To Kano" stop, the ride north (K1a); Kurmi (K2a)
+ *   ?gallery=kano, kano2 … kano6       Kano's wall, gate, "To Kano" stop, the ride north (K1a); Kurmi (K2a); Kofar Mata (K3a)
  *   ?gallery=ota | abeokuta | sagamu   each Ogun street's pieces (O2a, O3a, O4a)
  *   ?gallery=hall-ogun                 Pothole Hall and King Pothole (O5a)
  *   ?gallery=hall-kano, hall-kano2     Borehole Hall and Rusty Borehole (K5a)
