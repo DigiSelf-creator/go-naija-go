@@ -9,6 +9,12 @@
  * the valves, the cloth frames, Rusty Borehole and his sneeze puff, the whirls, the hero, the
  * hall's front walls and his word, then the valve counter at the top of the screen.
  *
+ * K5c, short screens: the HUD row (lives and the parcel chip at the left, Sound and Pause at the
+ * right) must never cover a valve, its tag or the counter. Where it would (320 x 240), the hall is
+ * drawn a little smaller about the floor line, so its top comes down below the HUD row and the
+ * floor stays where it was, above the buttons; a tag that would run under Sound hangs left; the
+ * counter sits just under Sound and Pause. Every other screen draws exactly as before.
+ *
  * The door people: this part draws no person itself (KN-R10), so the game's people (GamePeople
  * drawOwn and say) bake them once and copy them 1:1, and put up their cheer.
  */
@@ -25,8 +31,10 @@ import {
   BH_DOOR_SPOTS,
   BH_HALL,
   BOREHOLE_HALL_TUNE,
+  BH_TAG,
   drawBoreholeHall,
   drawBoreholeHallFront,
+  drawBoreholeRoofAbove,
   drawBoreholeLine,
   drawPipeDust,
   drawRustyBorehole,
@@ -46,6 +54,7 @@ import { drawDustStreaks } from './wind';
 import { drawDustWhirl, whirlPuffK } from './whirl';
 import { KANO_WORDS } from './words';
 import type { RustyFight } from './rustyFight';
+import type { View } from '../../engine/view';
 
 const STEPS = 60;
 
@@ -64,6 +73,104 @@ export const BH_LOOK = {
   /** KN-R14: the dust puff runs along the pipe to the valve over this long as it shakes loose, s. */
   pipeDust: 0.5,
 } as const;
+
+/**
+ * The HUD row as screens.css lays it out (CSS px, measured in the hall): the lives chip and the
+ * parcel/shield chip from the left edge (widest with its word: 157 px), 41 px down with the lip;
+ * Sound and Pause, 44 px buttons, 110 px from the right edge and 50 px down. A little room more.
+ */
+export const BH_HUD = { leftW: 160, leftH: 41, rightW: 112, rightH: 50, gap: 3, smallest: 0.6 } as const;
+
+export interface BhRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** How the hall is drawn on this screen (boreholeFit). */
+export interface BhFit {
+  /** The hall's size on screen: 1 normally, below 1 on a short screen. */
+  z: number;
+  /** World x at the screen's left, world width shown, world y at the screen's top and bottom. */
+  camX: number;
+  viewW: number;
+  top: number;
+  bottom: number;
+  /** Each valve's tag hangs left (true) or right. */
+  tagLeft: boolean[];
+  /** The valve counter (screen world u, as drawValveCounter takes it: the middle wheel's x, top y). */
+  counter: { x: number; y: number };
+  /** For qa: CSS px boxes of each valve, each valve's tag, the pipe between the valves, and the counter. */
+  seen: { valves: BhRect[]; tags: BhRect[]; pipe: BhRect; counter: BhRect };
+}
+
+const overlaps = (a: BhRect, b: BhRect): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/**
+ * K5c: the largest size (1 or less) at which the valves, the shown tag's side and the pipe between
+ * the valves are all clear of the HUD row, the floor line staying where it is on screen. camX and
+ * lift are the game's (world x at the left, world y at the top); `valves` the hall file's x.
+ */
+export function boreholeFit(view: Pick<View, 'width' | 'height' | 'scale' | 'ratio' | 'safe'>, camX: number, lift: number, valves: readonly number[] = BH_HALL.valves): BhFit {
+  const H = BH_HALL;
+  const W = view.width;
+  // World u per CSS px.
+  const c = (view.ratio ?? 1) / view.scale;
+  const safe = view.safe;
+  const topPad = Math.max(6 * c, safe.top);
+  const hud = [
+    { x: -1e4, y: -1e4, w: 1e4 + Math.max(10 * c, safe.left) + (BH_HUD.leftW - 10) * c, h: 1e4 + topPad + (BH_HUD.leftH - 6 + BH_HUD.gap) * c },
+    { x: W - Math.max(10 * c, safe.right) - (BH_HUD.rightW - 10) * c, y: -1e4, w: 2e4, h: 1e4 + topPad + (BH_HUD.rightH - 6 + BH_HUD.gap) * c },
+  ];
+  const clear = (r: BhRect): boolean => !hud.some((z) => overlaps(r, z));
+  const floorS = H.floorY - lift;
+  const px = camX + W / 2;
+  const vb = H.valveBottom;
+  const r = H.valveR;
+  const T = BH_TAG;
+  let z = 1;
+  let fit: { tagLeft: boolean[]; valves: BhRect[]; tags: BhRect[]; pipe: BhRect } | null = null;
+  for (let i = 0; ; i++) {
+    z = Math.max(BH_HUD.smallest, 1 - i * 0.005);
+    const sx = (x: number): number => W / 2 + (x - px) * z;
+    const sy = (y: number): number => floorS + (y - H.floorY) * z;
+    const box = (x0: number, y0: number, x1: number, y1: number): BhRect => ({ x: sx(x0), y: sy(y0), w: (x1 - x0) * z, h: (y1 - y0) * z });
+    const vs = valves.map((x) => box(x - r, vb - 2 * r, x + r, vb));
+    const right = valves.map((x) => box(x + T.dx0, vb + T.dy0, x + T.dx1, vb + T.dy1));
+    const left = valves.map((x) => box(x - T.dx1, vb + T.dy0, x - T.dx0, vb + T.dy1));
+    const tagLeft = valves.map((_, k) => !clear(right[k]!) && clear(left[k]!));
+    const tags = valves.map((_, k) => (tagLeft[k] ? left[k]! : right[k]!));
+    const pipe = box(valves[0]! - r, H.lineY - 8, valves[valves.length - 1]! + r, H.lineY + 8);
+    fit = { tagLeft, valves: vs, tags, pipe };
+    if (z <= BH_HUD.smallest || [...vs, ...tags, pipe].every(clear)) break;
+  }
+  // The counter: under Sound and Pause (never in the HUD row), as before on a roomy screen.
+  const counter = { x: W - 48 - safe.right, y: Math.max(66 + safe.top, hud[1]!.y + hud[1]!.h + 2) };
+  const css = (b: BhRect): BhRect => ({ x: b.x / c, y: b.y / c, w: b.w / c, h: b.h / c });
+  return {
+    z,
+    camX: px - W / 2 / z,
+    viewW: W / z,
+    top: H.floorY - floorS / z,
+    bottom: H.floorY + (view.height - floorS) / z,
+    tagLeft: fit.tagLeft,
+    counter,
+    seen: {
+      valves: fit.valves.map(css),
+      tags: fit.tags.map(css),
+      pipe: css(fit.pipe),
+      counter: css({ x: counter.x - 24 - 9, y: counter.y - 3, w: 66, h: 21 }),
+    },
+  };
+}
+
+let lastFit: BhFit | null = null;
+let lastFitKey = '';
+/** The fit the hall was last drawn with (qa reads it through the fight's peek). */
+export function boreholeHallSeen(): BhFit | null {
+  return lastFit;
+}
 
 /** Rusty's look now (kano.md 5.4; the finish has its own): hiccup, blow, puff, wheeze or grumpy. */
 export function rustyLook(f: RustyFight, clock: number, still: boolean): RustyLook {
@@ -113,8 +220,20 @@ export function boreholeHallSkin(): StreetSkin {
     hall(g, s, hero, view) {
       const f = s.run.arena as RustyFight | null;
       if (!f) return false;
-      const { camX, viewW, H, clock, still } = s;
+      const { clock, still } = s;
       const gy = BH_HALL.floorY;
+      // K5c: the hall's size and place on this screen (1 and as before, except on a short screen).
+      const fitKey = `${view.width}|${view.height}|${view.scale}|${view.ratio}|${view.safe.top}|${view.safe.left}|${view.safe.right}|${s.camX}|${s.H}|${f.data.valves.x.join()}`;
+      if (fitKey !== lastFitKey || !lastFit) lastFit = boreholeFit(view, s.camX, s.H - view.height, f.data.valves.x);
+      lastFitKey = fitKey;
+      const fit = lastFit;
+      const { camX, viewW, z } = fit;
+      const H = fit.bottom;
+      const lift = fit.top;
+      const zv: View = z === 1 ? view : { ...view, scale: view.scale * z };
+      const k = view.scale * z;
+      g.setTransform(k, 0, 0, k, -camX * k, -lift * k);
+      if (lift < 0) drawBoreholeRoofAbove(g, camX - 2, camX + viewW + 2, lift);
       const t = still ? 0 : clock;
       const fin = f.defeated ? rustyFinishAt(f.finishT, still) : null;
       const hits = f.hits;
@@ -147,7 +266,7 @@ export function boreholeHallSkin(): StreetSkin {
           const frame: FolkFrame = moving ? (`walk${Math.floor(ft / 0.15) % 4}` as FolkFrame) : cheering ? (still || Math.floor(clock / 0.25 + i) % 2 ? 'cheer0' : 'cheer1') : 'stand';
           return { look: i, frame, x, y: gy - 4, flip: false };
         });
-        people.drawOwn(g, view, camX, H - view.height, BH_DOOR_PEOPLE, BH_DOOR_SCALE, list);
+        people.drawOwn(g, zv, camX, lift, BH_DOOR_PEOPLE, BH_DOOR_SCALE, list);
       }
       if (walking) drawWaterCan(g, xs[0]! + BH_CAN_X - BH_DOOR_SPOTS[0]!, gy - 3);
       else drawWaterCan(g, BH_CAN_X, gy - 3);
@@ -160,7 +279,7 @@ export function boreholeHallSkin(): StreetSkin {
       f.data.valves.x.forEach((vx, i) => {
         const at = f.hitAt[i];
         const v = fin ? 'open' : f.valveState(i);
-        drawValve(g, vx, v === 'shut' ? 'wait' : v, { time: clock, still, freed: at === undefined ? -1 : (f.steps - at) / STEPS, tag: v === 'shut' });
+        drawValve(g, vx, v === 'shut' ? 'wait' : v, { time: clock, still, freed: at === undefined ? -1 : (f.steps - at) / STEPS, tag: v === 'shut', side: fit.tagLeft[i] ? 'left' : 'right' });
         const fx = vx - BH_HALL.springW / 2;
         drawClothFrame(g, fx, BH_HALL.springW, gy, { dip: clothDip(clock - (landed.get(fx) ?? -Infinity), still) });
       });
@@ -184,12 +303,12 @@ export function boreholeHallSkin(): StreetSkin {
       }
       // The door people's cheer on each glug ("Yauwa!", then "Well done!").
       if (people && !fin && sinceHit < BH_LOOK.doorCheer && hits > 0) {
-        people.say(g, view, BH_DOOR_CHEERS[Math.min(BH_DOOR_CHEERS.length - 1, hits - 1)]!, xs[0]!, gy - 48, s.run.hero, H - view.height);
+        people.say(g, zv, BH_DOOR_CHEERS[Math.min(BH_DOOR_CHEERS.length - 1, hits - 1)]!, xs[0]!, gy - 48, s.run.hero, lift);
       }
       // The hit counter: three valve wheels under the HUD row at the right, clear of the valves
       // high in the middle (never read as a fourth valve), each gets a tick.
       g.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-      drawValveCounter(g, view.width - 48 - view.safe.right, 66 + view.safe.top, fin ? 3 : hits);
+      drawValveCounter(g, fit.counter.x, fit.counter.y, fin ? 3 : hits);
       return true;
     },
   };

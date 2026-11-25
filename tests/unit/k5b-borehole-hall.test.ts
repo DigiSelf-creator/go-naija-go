@@ -26,7 +26,9 @@ import { PHYSICS } from '../../src/engine/physics';
 import { KANO_WORDS } from '../../src/worlds/kano/words';
 import { BOREHOLE_HALL_TUNE, BH_HALL, RUSTY_FINISH, RUSTY_SOUNDS, rustyTapTimes } from '../../src/worlds/kano/boreholeHall';
 import { RUN_NUMBERS, RUSTY_RULES, RustyDataError, RustyFight, newRustyVisit, parseRustyHall } from '../../src/worlds/kano/rustyFight';
-import { boreholeHallSkin, gustLook, rustyLook } from '../../src/worlds/kano/boreholeHallSkin';
+import { boreholeFit, boreholeHallSkin, gustLook, rustyLook, type BhRect } from '../../src/worlds/kano/boreholeHallSkin';
+import { fitView } from '../../src/engine/view';
+import { buttonLayout } from '../../src/screens/controls';
 import { kanoStreet } from '../../src/worlds/kano/kurmiStreet';
 import { decideRusty, newRustyMind } from '../e2e/rusty-brain';
 
@@ -113,7 +115,7 @@ describe('kano.md 5.2 to 5.5: the hall file, read by the fight', () => {
       [2.4, 'whirl,gust', 126],
       [2.0, 'whirl,whirl,gust', 132],
     ]);
-    expect(DATA.whirl).toEqual({ speed: 60, w: 30, h: 50, fromX: 440, bounceVy: -480 });
+    expect(DATA.whirl).toEqual({ speed: 60, w: 30, h: 50, fromX: 440, bounceVy: -480, clearGap: 11 });
     expect(DATA.gust).toEqual({ lasts: 2.0, warn: 0.6, airScale: 0.75 });
     expect(DATA.fall.backTo).toBe(50);
     expect(DATA.gentle).toEqual({ whirlSpeed: 45, later: 0.4, gustAirScale: 0.875 });
@@ -937,5 +939,115 @@ describe('KN-R14: the valve waits for his whirl, so the fight is never won from 
     bump(p);
     expect(p.f.defeated).toBe(true);
     expect(p.f.whirlsOut).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('KN-R15: a whirl never appears touching the hero (as OG-R25)', () => {
+  /** Plays `t` s with the hero put at x (the wall stops them at 440), standing or holding Forward; each whirl's first step is checked. */
+  function stand(x: number, o: { gentle: boolean; forward: boolean }, t = 14): { p: Play; firstHurts: number; births: number } {
+    const p = play({ gentle: o.gentle });
+    p.run.hero = p.run.newHero(x);
+    if (o.forward) p.run.steer(1);
+    let firstHurts = 0;
+    let births = 0;
+    for (let i = 0; i < secs(t) && p.run.phase === 'arena' && p.f.hits === 0; i++) {
+      const n0 = p.f.whirlsOut;
+      const lives = p.run.lives;
+      const ev = p.run.step(DT);
+      p.ev.push(...ev);
+      if (p.f.whirlsOut > n0) {
+        births++;
+        if (ev.some((e) => e.type === 'hit') || p.run.lives < lives) firstHurts++;
+      }
+      if (o.forward) p.run.steer(1);
+    }
+    p.run.steer(0);
+    return { p, firstHurts, births };
+  }
+
+  it("a hero standing at every x from 400 to 480, or holding Forward there (Gentle too), never loses a life on a whirl's first frame", () => {
+    for (const gentle of [false, true])
+      for (const forward of [false, true])
+        for (let x = 400; x <= 480; x++) {
+          const r = stand(x, { gentle, forward });
+          expect(r.firstHurts, `x ${x} gentle ${gentle} forward ${forward}`).toBe(0);
+          expect(r.p.f.touchedAtBirth, `x ${x} gentle ${gentle} forward ${forward}`).toBe(0);
+          // Holding Forward against him: no whirl leaves him at all, so no life is lost.
+          if (forward) expect(r.p.run.lives, `x ${x} gentle ${gentle}`).toBe(gentle ? 5 : 3);
+        }
+  });
+
+  it('at his mouth (x above 407) the whirl waits, wheezing; it leaves 0.5 s after the hero steps clear, 11 u of floor away or more', () => {
+    for (const gentle of [false, true]) {
+      const r = stand(420, { gentle, forward: false }, 8);
+      expect(r.births).toBe(0);
+      expect(r.p.f.waiting).toBe(true);
+      expect(r.p.f.crowded).toBe(1);
+      expect(r.p.f.warn).toBe(1);
+      expect(rustyLook(r.p.f, 0, false).mood).toBe('wheeze');
+      // The hero steps back to x 380: the whirl rolls out 0.5 s later, with clear floor before it.
+      r.p.run.hero = r.p.run.newHero(380);
+      expect(untilWhirl(r.p)).toBe(secs(0.5) + 1);
+      const z = rolling(r.p)[0]!;
+      expect(z.x - RUN_NUMBERS.whirlHalfW - (r.p.run.hero.x + RUN_NUMBERS.heroHalfW)).toBeGreaterThanOrEqual(DATA.whirl.clearGap);
+    }
+    // x 407 is clear (11 u of floor): the first whirl leaves on time, at 2.0 s.
+    const p = play();
+    p.run.hero = p.run.newHero(407);
+    expect(untilWhirl(p)).toBe(secs(2.0));
+    expect(p.f.crowded).toBe(0);
+  });
+
+  it('a whirl that waited at his mouth still shakes the valve loose when it goes (KN-R14 unchanged)', () => {
+    const r = stand(440, { gentle: false, forward: true }, 6);
+    expect(r.p.f.ready).toBe(false);
+    r.p.run.hero = r.p.run.newHero(60);
+    untilWhirl(r.p);
+    expect(r.p.f.ready).toBe(true);
+  });
+});
+
+describe('K5c: on a short screen the HUD row covers no valve, tag or the counter', () => {
+  const HALL_W = 560;
+  /** The game's view, lift and hall camera for a screen (CSS px), and the hall's fit on it. */
+  function fitAt(w: number, h: number) {
+    const view = fitView(w, h, 2);
+    const lift = buttonLayout(w, h).lift;
+    const camX = view.width >= HALL_W ? (HALL_W - view.width) / 2 : 0;
+    return { view, lift, fit: boreholeFit(view, camX, lift, DATA.valves.x) };
+  }
+  /** The HUD row as measured in the hall (CSS px): the lives and shield chips with their lip, then Sound and Pause. */
+  const hudAt = (w: number, tight: boolean): BhRect[] => [
+    { x: 10, y: 6, w: (tight ? 91 : 157) - 10, h: 35 },
+    { x: w - 110, y: 6, w: 100, h: 44 },
+  ];
+  const meet = (a: BhRect, b: BhRect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  it('320 x 240: drawn a little smaller about the floor line (the floor stays put); valve 3 tags left; all clear', () => {
+    const { view, lift, fit } = fitAt(320, 240);
+    expect(fit.z).toBeLessThan(1);
+    expect(fit.z).toBeGreaterThanOrEqual(0.8);
+    expect(fit.tagLeft).toEqual([false, false, true]);
+    // The floor line is where it was on screen; the view shows more above (the roof) and either side.
+    expect((DATA.groundY - fit.top) * fit.z).toBeCloseTo(DATA.groundY - lift, 6);
+    expect(fit.top).toBeLessThan(0);
+    expect(fit.viewW).toBeCloseTo(view.width / fit.z, 6);
+    const s = fit.seen;
+    for (const t of [...s.valves, ...s.tags, s.pipe, s.counter]) for (const b of [...hudAt(320, true), ...hudAt(320, false)]) expect(meet(t, b)).toBe(false);
+  });
+
+  it('568 x 320, 640 x 200 and 851 x 393 draw as before (full size, tags right), the counter under Sound and Pause', () => {
+    for (const [w, h] of [[568, 320], [640, 200], [851, 393]] as const) {
+      const { view, lift, fit } = fitAt(w, h);
+      expect(fit.z, `${w} x ${h}`).toBe(1);
+      expect(fit.tagLeft).toEqual([false, false, false]);
+      expect(fit.top).toBeCloseTo(lift, 9);
+      expect(fit.bottom).toBeCloseTo(view.height + lift, 9);
+      const s = fit.seen;
+      for (const t of [...s.valves, ...s.tags, s.pipe, s.counter]) for (const b of hudAt(w, false)) expect(meet(t, b), `${w} x ${h}`).toBe(false);
+      expect(s.counter.x + s.counter.w).toBeLessThanOrEqual(w);
+    }
+    // 851 x 393: the counter stays where it was (66 u down).
+    expect(fitAt(851, 393).fit.counter.y).toBe(66);
   });
 });

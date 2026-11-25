@@ -735,3 +735,64 @@ test('qa K5c break: switch apps mid-bounce, turn the phone, mash Jump on WAIT, a
   expect(r.last!.heldBreaks).toBe(0);
   expect(errors).toEqual([]);
 });
+
+/** K5c fix: where to save the 320 x 240 picture of the hall with the HUD clear of it, if set. */
+const FIT_SHOT = process.env['K5C_FIT_SHOT'];
+
+type Box = { x: number; y: number; w: number; h: number; name?: string };
+const overlap = (a: Box, b: Box): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+test('qa K5c fix: at 320 x 240 the HUD covers no valve, tag (WAIT or STUCK, any valve), the pipe between them or the counter; 568 x 320, 640 x 200 and 851 x 393 too', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = errorsOf(page);
+  for (const [w, hgt] of [[320, 240], [568, 320], [640, 200], [851, 393]] as const) {
+    await page.setViewportSize({ width: w, height: hgt });
+    // The parcel: its shield chip shows beside the lives, as wide as the HUD's left side gets in the hall.
+    await seed(page, kanoSave(true));
+    await home(page);
+    await enterBorehole(page);
+    // Past his first whirl: valve 1 says STUCK (WAIT before it); look at both.
+    for (const after of [0.5, 2.3]) {
+      await expect.poll(() => page.evaluate(() => (window.__game!.arena as { time?: number } | null)?.time ?? 0)).toBeGreaterThan(after);
+      const r = await page.evaluate(() => {
+        const rect = (e: Element, name: string, lip = 0) => {
+          const b = e.getBoundingClientRect();
+          return { x: b.left, y: b.top, w: b.width, h: b.height + lip, name };
+        };
+        const shown = (e: Element) => e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility !== 'hidden';
+        // Each chip has a 3 px lip under it (box-shadow), counted as covered.
+        const hud = [...[...document.querySelectorAll('.hud-left > *')].filter(shown).map((e) => rect(e, e.className, 3)), ...[...document.querySelectorAll('.hud-right > *')].filter(shown).map((e) => rect(e, e.className))];
+        const c = document.querySelector('canvas')!.getBoundingClientRect();
+        const a = window.__game!.arena as unknown as { valve: string; screen: { z: number; tagLeft: boolean[]; seen: { valves: Box[]; tags: Box[]; pipe: Box; counter: Box } } };
+        const at = (b: Box, name: string) => ({ ...b, x: b.x + c.left, y: b.y + c.top, name });
+        const s = a.screen.seen;
+        return {
+          valve: a.valve,
+          z: a.screen.z,
+          tagLeft: a.screen.tagLeft,
+          hud,
+          things: [...s.valves.map((b, i) => at(b, `valve ${i + 1}`)), ...s.tags.map((b, i) => at(b, `valve ${i + 1}'s tag`)), at(s.pipe, 'the pipe between the valves'), at(s.counter, 'the counter')],
+        };
+      });
+      expect(r.hud.some((b) => /hud-food/.test(b.name)), 'the shield chip shows').toBe(true);
+      expect(r.valve).toBe(after < 2 ? 'shut' : 'stuck');
+      for (const t of r.things) {
+        for (const b of r.hud) expect(overlap(t, b), `${w} x ${hgt}: ${t.name} under ${b.name}`).toBe(false);
+        expect(t.x >= 0 && t.y >= 0 && t.x + t.w <= w && t.y + t.h <= hgt, `${w} x ${hgt}: ${t.name} on screen`).toBe(true);
+      }
+      if (w === 320) {
+        // Drawn a little smaller, never tiny; valve 3's tag hangs left, clear of Sound.
+        expect(r.z).toBeLessThan(1);
+        expect(r.z).toBeGreaterThanOrEqual(0.8);
+        expect(r.tagLeft).toEqual([false, false, true]);
+      } else {
+        // As before: full size, every tag on the right.
+        expect(r.z).toBe(1);
+        expect(r.tagLeft).toEqual([false, false, false]);
+      }
+    }
+    if (w === 320 && FIT_SHOT) await page.screenshot({ path: FIT_SHOT });
+    await shot(page, `fit-${w}x${hgt}`);
+  }
+  expect(errors).toEqual([]);
+});
