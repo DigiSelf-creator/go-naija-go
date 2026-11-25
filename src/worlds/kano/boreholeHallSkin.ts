@@ -7,7 +7,7 @@
  * Draw order (art's hookup notes): the hall's back, the gust's dust streaks (screen space), the
  * wash line and the running taps, the door people with the can and the cart, the water line and
  * the valves, the cloth frames, Rusty Borehole and his sneeze puff, the whirls, the hero, the
- * hall's front walls and his word, then the valve counter at the top of the screen.
+ * hall's front walls, the KN-R16 hint arrows and his word, then the valve counter at the top of the screen.
  *
  * K5c, short screens: the HUD row (lives and the parcel chip at the left, Sound and Pause at the
  * right) must never cover a valve, its tag or the counter. Where it would (320 x 240), the hall is
@@ -72,7 +72,63 @@ export const BH_LOOK = {
   fff: 0.5,
   /** KN-R14: the dust puff runs along the pipe to the valve over this long as it shakes loose, s. */
   pipeDust: 0.5,
+  /** KN-R16: the hint arrows bob this far (u) toward what they point at, this often (per s). */
+  arrowBob: 5,
+  arrowHz: 1.6,
+  /** The head arrow's middle this far over the hero's head; the down arrow's tip this far over the valve. */
+  arrowOverHead: 26,
+  arrowOverValve: 3,
+  /** The down arrow is drawn smaller (not below this size) where the hall's top is close over the valves. */
+  arrowSmallest: 0.6,
 } as const;
+
+/** KN-R16: the hint arrow's shape (u): length, shaft and head widths, head length. */
+export const BH_ARROW = { len: 40, shaft: 12, head: 30, headLen: 18 } as const;
+
+/**
+ * KN-R16: a big hint arrow, tip at (x, y), pointing along (dx, dy) (a unit step: right, left or
+ * down). A dark arrow with a thick white edge and a dark line round it, so it reads on any wall by
+ * its shape (and its bob), never by colour alone.
+ */
+export function drawHintArrow(g: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number, k = 1): void {
+  const A = { len: BH_ARROW.len * k, shaft: BH_ARROW.shaft * k, head: BH_ARROW.head * k, headLen: BH_ARROW.headLen * k };
+  const px = -dy;
+  const py = dx;
+  const at = (along: number, side: number): [number, number] => [x - dx * along + px * side, y - dy * along + py * side];
+  const pts = [at(0, 0), at(A.headLen, A.head / 2), at(A.headLen, A.shaft / 2), at(A.len, A.shaft / 2), at(A.len, -A.shaft / 2), at(A.headLen, -A.shaft / 2), at(A.headLen, -A.head / 2)];
+  g.beginPath();
+  pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b)));
+  g.closePath();
+  g.lineJoin = 'round';
+  g.strokeStyle = '#2a1a10';
+  g.lineWidth = 7;
+  g.stroke();
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 4;
+  g.stroke();
+  g.fillStyle = '#3a2618';
+  g.fill();
+}
+
+/**
+ * KN-R16: where the two hint arrows are drawn now (world u), or null while hidden. `top` is the
+ * world y at the screen's top: the down arrow is made smaller (k) to fit between it and the valve.
+ */
+export function hintArrows(f: RustyFight, clock: number, still: boolean, top = -Infinity): { head: { x: number; y: number; dx: number }; valve: { x: number; y: number; k: number } } | null {
+  if (!f.arrows) return null;
+  const h = f.heroAt;
+  const vx = f.data.valves.x[f.stuck]!;
+  const bob = still ? 0 : BH_LOOK.arrowBob * (0.5 + 0.5 * Math.sin(clock * BH_LOOK.arrowHz * 2 * Math.PI));
+  const dx = vx < h.x ? -1 : 1;
+  const midY = h.head - BH_LOOK.arrowOverHead;
+  const tip = f.data.valves.bottom - f.data.valves.h - BH_LOOK.arrowOverValve;
+  const room = tip - BH_LOOK.arrowBob - (top + 2);
+  const k = Math.max(BH_LOOK.arrowSmallest, Math.min(1, room / BH_ARROW.len));
+  return {
+    head: { x: h.x + dx * (BH_ARROW.len / 2 + bob), y: midY, dx },
+    valve: { x: vx, y: tip - bob, k },
+  };
+}
 
 /**
  * The HUD row as screens.css lays it out (CSS px, measured in the hall): the lives chip and the
@@ -295,6 +351,12 @@ export function boreholeHallSkin(): StreetSkin {
       }
       hero();
       drawBoreholeHallFront(g, camX, viewW, H);
+      // KN-R16: the hint arrows (to the valve's cloth over the hero's head, and down at the valve).
+      const arrows = fin ? null : hintArrows(f, clock, still, lift);
+      if (arrows) {
+        drawHintArrow(g, arrows.head.x, arrows.head.y, arrows.head.dx, 0);
+        drawHintArrow(g, arrows.valve.x, arrows.valve.y, 0, 1, arrows.valve.k);
+      }
       // His words: "hic!" after a hit, his finish words; the valve's "SQUEAK... GLUG!".
       const W = KANO_WORDS.hall;
       if (fin?.say) drawRustyWord(g, W.rusty[fin.say], BH_HALL.cx - 30, gy - 190);

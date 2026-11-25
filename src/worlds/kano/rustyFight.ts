@@ -27,6 +27,10 @@
  *   phase's first whirl has left him; then it shakes loose ("STUCK") and stays ready for the
  *   phase (boss.valveNeedsWhirl). So every phase has a whirl to beat, and he only coughs once
  *   the hero is down. Bouncing 3 s on a "WAIT" valve: one hint a try (boss.waitHintAfter).
+ * - KN-R16: once the valve has said "STUCK" for boss.valveHint.after s (Gentle gentleAfter) with
+ *   no hit, the hint arrows show (one over the hero's head pointing to that valve's cloth, one
+ *   pointing down at the valve), hidden while the hero is over that cloth, gone on the hit, back
+ *   each phase. The first arrows of a try bring "Go back. Bounce under it!". No rule changes.
  * - A hit: every whirl puffs apart, the gust ends, no coughs for 1.5 s, then the next phase.
  *   Gentle mode: every cough 0.4 s later.
  * - The third valve: the funny, kind finish (5.5), the Win at 6 s. Nothing can hurt the hero.
@@ -74,6 +78,8 @@ export interface RustyData {
   valveNeedsWhirl: boolean;
   /** KN-R14: the "Come down and let him cough!" hint after this long bouncing on a "WAIT" valve, s. */
   waitHintAfter: number;
+  /** KN-R16: the hint arrows show once the valve has said "STUCK" this long with no hit, s (Gentle: gentleAfter). */
+  valveHint: { after: number; gentleAfter: number };
   phases: readonly RustyPhase[];
   /** KN-R15: clearGap, u of clear floor a whirl needs between its box and the hero's to leave him (0: none). */
   whirl: { speed: number; w: number; h: number; fromX: number; bounceVy: number; clearGap: number };
@@ -133,6 +139,7 @@ export function parseRustyHall(raw: unknown): RustyData {
     heldWhirlDelay: b['heldWhirlDelay'] === undefined ? 0 : num(b['heldWhirlDelay'], 'boss.heldWhirlDelay'),
     valveNeedsWhirl: b['valveNeedsWhirl'] === undefined ? false : typeof b['valveNeedsWhirl'] === 'boolean' ? b['valveNeedsWhirl'] : bad('boss.valveNeedsWhirl', 'true or false'),
     waitHintAfter: b['waitHintAfter'] === undefined ? 3 : pos(b['waitHintAfter'], 'boss.waitHintAfter'),
+    valveHint: b['valveHint'] === undefined ? { after: Infinity, gentleAfter: Infinity } : (nums(obj(b['valveHint'], 'boss.valveHint'), 'boss.valveHint', ['after', 'gentleAfter']) as RustyData['valveHint']),
     phases,
     whirl: { ...nums(whirlRaw, 'boss.whirl', ['speed', 'w', 'h', 'fromX', 'bounceVy']), clearGap: whirlRaw['clearGap'] === undefined ? 0 : num(whirlRaw['clearGap'], 'boss.whirl.clearGap') } as RustyData['whirl'],
     gust: nums(obj(b['gust'], 'boss.gust'), 'boss.gust', ['lasts', 'warn', 'airScale']) as RustyData['gust'],
@@ -141,6 +148,7 @@ export function parseRustyHall(raw: unknown): RustyData {
     huff: b['huff'] === undefined ? { after: Infinity, back: 0, speed: 1 } : (nums(obj(b['huff'], 'boss.huff'), 'boss.huff', ['after', 'back', 'speed']) as RustyData['huff']),
     gentle: { ...nums(gentleRaw, 'boss.gentle', ['whirlSpeed', 'later', 'gustAirScale']), huffAfter: gentleRaw['huffAfter'] === undefined ? Infinity : num(gentleRaw['huffAfter'], 'boss.gentle.huffAfter') } as RustyData['gentle'],
   };
+  if (!(d.valveHint.after > 0) || !(d.valveHint.gentleAfter > 0)) bad('boss.valveHint', 'after and gentleAfter above 0');
   if (d.heldWhirlDelay < 0) bad('boss.heldWhirlDelay', '0 or more');
   if (d.whirl.clearGap < 0) bad('boss.whirl.clearGap', '0 or more');
   if (!(d.huff.after > 0) || !(d.gentle.huffAfter > 0) || d.huff.back < 0 || !(d.huff.speed > 0)) bad('boss.huff', 'after and speed above 0, back 0 or more');
@@ -194,6 +202,11 @@ export class RustyFight implements ArenaRules {
   /** Head bumps on the "WAIT" valve ("clonk"), and the hint to come down (once a try). */
   clonks = 0;
   waitHints = 0;
+  /** KN-R16: the phases (hits before) the hint arrows have shown in this try, and "Go back. Bounce under it!" (once a try). */
+  readonly arrowPhases: number[] = [];
+  arrowWords = 0;
+  /** KN-R16: the step the valve to hit began to say "STUCK" (after the last hit, or from the start without KN-R14). */
+  private stuckFrom = 0;
   /** Step the hero's bounces began (the first cloth bounce since the floor), and the valve went "WAIT". */
   private bounceFrom = -Infinity;
   private waitFrom = 0;
@@ -323,6 +336,33 @@ export class RustyFight implements ArenaRules {
     return this.ready ? 'stuck' : 'shut';
   }
 
+  /** KN-R16: seconds the valve must say "STUCK" with no hit before the hint arrows (Gentle: shorter). */
+  get arrowAfter(): number {
+    return this.run.gentle ? this.data.valveHint.gentleAfter : this.data.valveHint.after;
+  }
+
+  /** KN-R16: the arrows are due: the valve to hit has said "STUCK" arrowAfter s with no hit. */
+  get arrowDue(): boolean {
+    return !this.defeated && this.ready && this.stuck >= 0 && this.steps - this.stuckFrom >= secs(this.arrowAfter);
+  }
+
+  /** KN-R16: x over the cloth frame under the valve to hit (where the arrows hide). */
+  overCloth(x: number): boolean {
+    const i = this.stuck;
+    return i >= 0 && Math.abs(x - this.data.valves.x[i]!) <= this.data.springs.w / 2;
+  }
+
+  /** The hero's middle x, feet y and head y now (for the look). */
+  get heroAt(): { x: number; y: number; head: number } {
+    const h = this.run.hero;
+    return { x: h.x, y: h.y, head: h.y - RUN_NUMBERS.heroH };
+  }
+
+  /** KN-R16: the hint arrows show now (due, and the hero is not over that cloth). */
+  get arrows(): boolean {
+    return this.arrowDue && !this.overCloth(this.run.hero.x);
+  }
+
   /** 0 to 1 through the warning before the next cough (the wheeze or the puffing), or -1 when none shows. */
   get warn(): number {
     if (this.defeated || this.steps < this.breakUntil) return -1;
@@ -404,6 +444,14 @@ export class RustyFight implements ArenaRules {
       this.cue(ev, undefined, KANO_WORDS.hall.waitHint, RUSTY_RULES.hintMs);
     }
     this.coughs(run, ev);
+    // KN-R16: the hint arrows, and with the first of a try the words.
+    if (this.arrows && !this.arrowPhases.includes(this.hits)) {
+      this.arrowPhases.push(this.hits);
+      if (this.arrowWords === 0) {
+        this.arrowWords++;
+        this.cue(ev, undefined, KANO_WORDS.hall.valveHint, RUSTY_RULES.hintMs);
+      }
+    }
     run.moveHazards(dt, ev);
     for (const z of run.hazards) if (z.kind === 'whirl' && z.mode === 'move' && z.x - RUN_NUMBERS.whirlHalfW <= this.data.leftLimit) this.puff(z, ev);
     const before = ev.length;
@@ -454,6 +502,7 @@ export class RustyFight implements ArenaRules {
     this.crowdFrom = -1;
     this.ready = !this.data.valveNeedsWhirl;
     this.readyAt = -Infinity;
+    this.stuckFrom = s;
     this.waitFrom = s;
     const left = this.data.valves.x.length - this.hits;
     if (left <= 0) {
@@ -516,6 +565,7 @@ export class RustyFight implements ArenaRules {
     if (!this.ready) {
       this.ready = true;
       this.readyAt = s;
+      this.stuckFrom = s;
     }
   }
 
@@ -565,6 +615,10 @@ export class RustyFight implements ArenaRules {
       valve: this.stuck < 0 ? 'open' : this.valveState(this.stuck),
       clonks: this.clonks,
       waitHints: this.waitHints,
+      arrows: this.arrows,
+      arrowDue: this.arrowDue,
+      arrowPhases: this.arrowPhases.length,
+      arrowWords: this.arrowWords,
       valves: this.data.valves.x,
       valveBottom: this.data.valves.bottom,
       defeated: this.defeated,
