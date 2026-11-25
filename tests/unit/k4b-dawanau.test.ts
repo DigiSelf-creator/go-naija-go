@@ -16,7 +16,8 @@ import kano3 from '../../src/data/levels/kano-3.json';
 import kanoWell from '../../src/data/levels/kano-well.json';
 import { PHYSICS } from '../../src/engine/physics';
 import { parseLevel, type Level } from '../../src/game/level';
-import { HAZARD_BOX, RULES, Run, STEPS_PER_SECOND, type HazardState, type RunEvent } from '../../src/game/run';
+import { HAZARD_BOX, RULES, STEPS_PER_SECOND, type HazardState, type RunEvent } from '../../src/game/run';
+import { Run, KANO_RUN } from './kano-run';
 import { pitsOf } from '../../src/game/pits';
 import { parseRoom } from '../../src/game/well';
 import type { SkinNow } from '../../src/game/skin';
@@ -122,9 +123,9 @@ describe('K4b: Dawanau as the game reads it (kano.md 3.6, 3.8)', () => {
 
   it('the hit box is art\'s 30 x 50, the puff art\'s 0.45 s', () => {
     expect(HAZARD_BOX.whirl).toEqual({ halfW: whirlArt.WHIRL.w / 2, h: whirlArt.WHIRL.h });
-    expect(RULES.whirlPuffSteps).toBe(Math.round(whirlArt.WHIRL.puffS * STEPS_PER_SECOND));
-    expect(RULES.whirlSpeed).toBe(50);
-    expect(RULES.whirlSpeedGentle).toBe(40);
+    expect(KANO_RUN.whirlPuffSteps).toBe(Math.round(whirlArt.WHIRL.puffS * STEPS_PER_SECOND));
+    expect(KANO_RUN.whirlSpeed).toBe(50);
+    expect(KANO_RUN.whirlSpeedGentle).toBe(40);
     expect(RULES.furaSteps).toBe(12 * STEPS_PER_SECOND);
   });
 
@@ -177,7 +178,7 @@ describe('K4b: the dust whirl (kano.md 3.3)', () => {
     expect(run.hero.airJump).toBe(true);
     expect(z.mode).toBe('puff');
     expect(run.lives).toBe(RULES.lives);
-    steps(run, RULES.whirlPuffSteps - 1);
+    steps(run, KANO_RUN.whirlPuffSteps - 1);
     expect(z.mode).toBe('puff');
     steps(run, 1);
     expect(z.mode).toBe('gone');
@@ -391,7 +392,7 @@ describe('K4b: Dawanau\'s look from the Kano part', () => {
     skin.hazard!(G, z, now({ clock: 2 }, run));
     expect(draw).toHaveBeenLastCalledWith(expect.anything(), z.x, GY, 2, { still: false, seed: z.x0 * 0.37, puff: whirlArt.whirlPuffK(9 / 60) });
     draw.mockClear();
-    z.t = RULES.whirlPuffSteps;
+    z.t = KANO_RUN.whirlPuffSteps;
     skin.hazard!(G, z, now({}, run));
     expect(draw).not.toHaveBeenCalled();
     const goat = run.hazards.find((q) => q.kind === 'goat')!;

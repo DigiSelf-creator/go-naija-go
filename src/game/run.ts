@@ -10,7 +10,7 @@ import { BossFight, throwBox, type BossEvent } from './boss';
 import { CRATE_RULES, freshCrates, refillCrates, stepCrates, type CrateEvent, type CrateState } from './crates';
 import { featureOn } from './features';
 import { ballsOut, FUFU_RULES, stepBall, tossBall, type BallWorld, type FufuBall } from './fufu';
-import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type MudData, type ThrowKind, type WellData, type WindData } from './level';
+import { EGRET_SPEED, isBird, type BirdKind, type FoodKind, type HazardKind, type Level, type MudData, type ThrowKind, type WellData } from './level';
 import type { SoundName } from '../engine/sound';
 import { pitKind, pitsOf, withBlocks, BIG_PIT, type Pit, type PitKind } from './pits';
 import { GENTLE_HINTS } from '../screens/words';
@@ -38,23 +38,6 @@ export const RULES = {
   kilishiSteps: secs(12),
   /** K4b (kano.md 4.1): fura da nono's cool and calm last 12 s. */
   furaSteps: secs(12),
-  /**
-   * K4b (kano.md 3.3): a dust whirl drifts left at 50 u/s (Gentle: 40) and puffs apart over 0.45 s
-   * (art's WHIRL.puffS): landed on, touched with fura, smashed with amala, hit by a fufu ball, or
-   * at a pit's lip (dust never falls in).
-   */
-  whirlSpeed: 50,
-  whirlSpeedGentle: 40,
-  whirlPuffSteps: secs(0.45),
-  /**
-   * K2b (kano.md 3.3): in the air, a wind behind you adds a quarter to your speed forward; one in
-   * your face takes a quarter away (Gentle mode: an eighth; kilishi: nothing). The ground is not changed.
-   */
-  tailwind: 0.25,
-  headwind: 0.25,
-  headwindGentle: 0.125,
-  /** The soft "whoosh" plays again this often while the hero is in a wind stretch. */
-  whooshSteps: secs(0.9),
   /**
    * O3b (ogun.md 3.3): a crack rumbles open when the hero first comes this near its left lip
    * (Gentle mode: farther), over this long (art's CRACK.openTime), and then it is a pothole.
@@ -348,6 +331,27 @@ export interface RunOptions {
   dash?: boolean;
   /** O5b: a hall whose boss lives in a later state's lazy part (King Pothole): its fight, made for this try. */
   arena?: ((run: Run) => ArenaRules) | undefined;
+  /** K-size: a later state's own street rules (Kano's wind, gate and dust whirls), made for this play. */
+  rules?: ((run: Run) => StreetRules) | undefined;
+}
+
+/**
+ * K-size (kano.md 9.1): a later state's own street rules from its lazy part (Kano's wind, gate
+ * and dust whirls, src/worlds/kano/rules.ts), so only this shape is in the first load.
+ */
+export interface StreetRules {
+  /** Each street step, before the hero moves (the wind on its air speed). */
+  before?(h: Body): void;
+  /** After the hints and the arch: its own events (the gate, the whoosh). */
+  after?(ev: RunEvent[]): void;
+  /** A hazard waking: its speed toward the hero (u/s), or undefined for the run's own. */
+  speed?(z: HazardState): number | undefined;
+  /** A moving hazard going to nx; true: done (the run's own move is skipped). */
+  move?(z: HazardState, nx: number, ev: RunEvent[]): boolean;
+  /** A hazard landed on, smashed with amala, hit by a ball, or touched; for a touch, true: no hurt. */
+  hit?(z: HazardState, how: 'stomp' | 'amala' | 'fufu' | 'touch', ev: RunEvent[]): boolean;
+  /** A hazard in a mode of its own ('puff'), each step. */
+  tick?(z: HazardState): void;
 }
 
 /**
@@ -417,9 +421,8 @@ export class Run {
   readonly cracks: CrackState[];
   /** O2b: the arch's welcome showed in this play. */
   private archShown = false;
-  private gateShown = false;
-  /** K2b: steps to the next whoosh while in a wind stretch. */
-  private whooshIn = 0;
+  /** K-size: the later state's own street rules for this play, or null. */
+  private readonly rules: StreetRules | null;
   /** O2b: the feet were in mud since they last stood on firm road (ogun.md 3.3: the run timer starts again on leaving it). */
   private wasMud = false;
   /** Hints already shown in this play of the level (not again after a fall). */
@@ -496,6 +499,7 @@ export class Run {
     this.hazards = level.hazards.map((h) => freshHazard(h.kind, h.x, level.groundY));
     this.crates = featureOn('crates') ? freshCrates(level.crates) : [];
     this.mud = [...level.mud];
+    this.rules = opts.rules?.(this) ?? null;
     this.parcelShield = level.hall !== null && (opts.parcel ?? false);
     if (level.hall) {
       // S2.7: the fight starts at once, the hero inside by the left door, standing, facing right.
@@ -624,7 +628,7 @@ export class Run {
 
     if (h.dash > 0 && this.power.corn > 0) endDash(h); // corn is faster already
     this.mudStep(h);
-    if (h.manual) h.wind = this.level.wind.length > 0 ? this.windFactor(h.x) : 1;
+    this.rules?.before?.(h);
     const dash0 = h.dash > 0;
     const rest0 = resting(h);
     step(h, this.terrain, dt);
@@ -685,19 +689,8 @@ export class Run {
       this.archShown = true;
       ev.push({ type: 'arch' });
     }
-    // K2b (kano.md 3.4): through the gate in the old wall, "Welcome to Kano!" (once a play).
-    const gate = this.level.gate;
-    if (gate !== null && !this.gateShown && h.x >= gate) {
-      this.gateShown = true;
-      ev.push({ type: 'gate' });
-    }
-    if (this.level.wind.length > 0) {
-      if (!this.windAt(h.x)) this.whooshIn = 0;
-      else if (--this.whooshIn <= 0) {
-        this.whooshIn = RULES.whooshSteps;
-        ev.push({ type: 'whoosh' });
-      }
-    }
+    // K2b: a later state's own (Kano's gate and the wind's whoosh).
+    this.rules?.after?.(ev);
     if (this.cracks.length > 0) this.stepCracks(ev);
     this.pickUps(ev);
     this.moveHazards(dt, ev);
@@ -1052,26 +1045,6 @@ export class Run {
     step(h, this.terrain, dt);
   }
 
-  // ---------- Wind and kilishi (K2b, kano.md 3.3, 4.1) ----------
-
-  /** The wind stretch at x (its start to its end), or null. */
-  windAt(x: number): WindData | null {
-    for (const w of this.level.wind) if (x >= w.x && x <= w.x + w.w) return w;
-    return null;
-  }
-
-  /**
-   * How much of the air speed forward the hero covers at x (physics Body.wind): 1.25 in a wind
-   * behind you, 0.75 in your face (Gentle: 0.875), 1 with kilishi in your face or with no wind.
-   */
-  windFactor(x: number): number {
-    const w = this.windAt(x);
-    if (!w) return 1;
-    if (w.dir === 'back') return 1 + RULES.tailwind;
-    if (this.power.kilishi > 0) return 1;
-    return 1 - (this.gentle ? RULES.headwindGentle : RULES.headwind);
-  }
-
   // ---------- Mud (O2b, ogun.md 3.3) ----------
 
   /** True when x is on a mud patch (its left edge to its right edge). */
@@ -1282,7 +1255,7 @@ export class Run {
             z.t = 0;
             this.kobo += FUFU_RULES.knockKobo;
             ev.push({ type: 'fufuKnock', kind: z.kind, x: z.x, y: z.y });
-            if (z.kind === 'whirl') this.puff(z, 'fufu', ev); // K4b: a ball puffs it (+1 kobo, as every hazard)
+            this.rules?.hit?.(z, 'fufu', ev); // K4b: a ball puffs a whirl (+1 kobo, as every hazard)
             break;
           }
           case 'fufuGoat': {
@@ -1345,14 +1318,16 @@ export class Run {
         case 'wait':
           if (z.x - heroX <= wakeDistance) {
             z.mode = 'move';
-            z.vx = z.kind === 'whirl' && this.gentle ? -RULES.whirlSpeedGentle : -speedOf(hazardSpeeds, z.kind); // towards the hero (an egret pecks first)
+            z.vx = -(this.rules?.speed?.(z) ?? speedOf(hazardSpeeds, z.kind)); // towards the hero (an egret pecks first)
             if (z.kind === 'egret') z.t = RULES.egretPeckSteps;
             ev.push({ type: 'wake', kind: z.kind, x: z.x }); // the drum's "dum" (K1)
           }
           break;
         case 'move': {
           const nx = z.x + z.vx * dt;
-          if (z.kind === 'goat') {
+          if (this.rules?.move?.(z, nx, ev)) {
+            // K4b: a later state's own hazard (Kano's whirl puffs apart at a pit's lip)
+          } else if (z.kind === 'goat') {
             // Goats turn back at pothole edges (they never fall in).
             const front = nx + Math.sign(z.vx) * HAZARD_BOX.goat.halfW;
             // S2.16 B5: they turn back at a gutter's edge too.
@@ -1364,10 +1339,6 @@ export class Run {
             // Hovers in place over the pile: the box never moves.
           } else if (z.kind === 'gravel') {
             this.hopGravel(z, nx, ev);
-          } else if (z.kind === 'whirl') {
-            // K4b: dust never falls in a pit; it puffs apart at the lip.
-            if (!groundAt(terrain, nx - HAZARD_BOX.whirl.halfW)) this.puff(z, 'pit', ev);
-            else z.x = nx;
           } else {
             z.x = nx;
             z.rot += (z.vx * dt) / 11;
@@ -1396,7 +1367,7 @@ export class Run {
           if (++z.t >= FUFU_RULES.knockSteps) z.mode = 'gone';
           break;
         case 'puff':
-          if (++z.t >= RULES.whirlPuffSteps) z.mode = 'gone';
+          this.rules?.tick?.(z);
           break;
         case 'flyOff': {
           // Up and to the right at 45 degrees; it has no box now and can hurt no one.
@@ -1426,7 +1397,6 @@ export class Run {
         continue;
       }
       const gravel = z.kind === 'gravel';
-      const whirl = z.kind === 'whirl';
       if (h.vy > 0 && h.prevY <= top + (gravel ? RULES.gravelStompSlack : RULES.stompSlack)) {
         // Landed on it: bounce. The goat runs off unhurt; the tyre is knocked away; gravel crumbles.
         // K4b: a whirl puffs apart (the bounce is vy -480, as every hazard's).
@@ -1434,15 +1404,14 @@ export class Run {
         h.y = Math.min(h.y, top);
         this.knockAway(z);
         ev.push({ type: 'bounce', kind: z.kind, x: z.x, y: top });
-        if (whirl) this.puff(z, 'stomp', ev);
+        this.rules?.hit?.(z, 'stomp', ev);
       } else if (this.power.amala > 0) {
         this.knockAway(z);
         this.kobo += RULES.smashKobo;
         ev.push({ type: 'smash', kind: z.kind, x: z.x, y: top });
-        if (whirl) this.puff(z, 'amala', ev);
-      } else if (whirl && this.power.fura > 0) {
-        // K4b (kano.md 4.1): with fura da nono a touch puffs it apart, no hurt, no kobo (as OG-R14).
-        this.puff(z, 'fura', ev);
+        this.rules?.hit?.(z, 'amala', ev);
+      } else if (this.rules?.hit?.(z, 'touch', ev)) {
+        // K4b (kano.md 4.1): with fura da nono a whirl puffs apart at a touch, no hurt, no kobo (as OG-R14).
       } else if (gravel && this.power.ikokore > 0) {
         // O4b (ogun.md 4.1): with ikokore's firm feet a touch crumbles it, no hurt.
         this.knockAway(z);
@@ -1537,13 +1506,6 @@ export class Run {
     z.y = k > 0 ? gy - RULES.gravelHop * 4 * k * (1 - k) : gy;
     if (p === 0) ev.push({ type: 'gravelHop', x: z.x });
     if (z.y >= gy && !groundAt(this.terrain, z.x)) z.mode = 'falling';
-  }
-
-  /** K4b: a dust whirl puffs apart where it is (no box from now on; gone after 0.45 s). */
-  private puff(z: HazardState, why: WhirlWhy, ev: RunEvent[]): void {
-    z.mode = 'puff';
-    z.t = 0;
-    ev.push({ type: 'whirlPuff', x: z.x, why });
   }
 
   private knockAway(z: HazardState): void {
@@ -1651,8 +1613,7 @@ function speedOf(speeds: Level['hazardSpeeds'], kind: HazardKind): number {
   if (kind === 'egret') return speeds.egret ?? EGRET_SPEED;
   if (kind === 'crow') return 0;
   if (kind === 'gravel') return speeds.gravel ?? RULES.gravelSpeed;
-  if (kind === 'whirl') return speeds.whirl ?? RULES.whirlSpeed;
-  return speeds[kind];
+  return speeds[kind as 'goat'];
 }
 
 /**

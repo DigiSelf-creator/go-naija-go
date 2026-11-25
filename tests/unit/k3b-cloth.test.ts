@@ -15,7 +15,8 @@ import kano2 from '../../src/data/levels/kano-2.json';
 import kanoWell from '../../src/data/levels/kano-well.json';
 import { PHYSICS, createWalker, groundAt, press, steer, step, type Body, type Terrain } from '../../src/engine/physics';
 import { SPRING, parseLevel, type Level } from '../../src/game/level';
-import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { RULES, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { Run, KANO_RUN } from './kano-run';
 import { WELL_RULES, parseRoom } from '../../src/game/well';
 import { KEY_PROGRESS, Progress } from '../../src/game/progress';
 import { createStore } from '../../src/storage';
@@ -152,7 +153,7 @@ describe('K3b: no bounce on Kofar Mata ever comes down in a pit (kano.md 3.3 fai
   const reach = (RULES.cornSteps / STEPS_PER_SECOND) * L.cornSpeed;
   const windAt = (x: number): number => {
     const w = L.wind.find((q) => x >= q.x && x <= q.x + q.w);
-    return !w ? 1 : w.dir === 'back' ? 1 + RULES.tailwind : 1 - RULES.headwind;
+    return !w ? 1 : w.dir === 'back' ? 1 + KANO_RUN.tailwind : 1 - KANO_RUN.headwind;
   };
 
   for (const s of L.springs) {

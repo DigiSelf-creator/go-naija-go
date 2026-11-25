@@ -26,6 +26,8 @@ import { KANO_WHIRL_SOUNDS } from './whirl';
 import { KANO_WORDS } from './words';
 import { BOREHOLE_HALL_TUNE, RUSTY_SOUNDS } from './boreholeHall';
 import { newRustyVisit, parseRustyHall, rustyArena } from './rustyFight';
+import { KANO_MISSIONS, kanoMissionIcon } from './missions';
+import { kanoRules } from './rules';
 
 const files = import.meta.glob<unknown>('../../data/levels/kano-*.json', { eager: true, import: 'default' });
 
@@ -45,10 +47,11 @@ export const part: WorldPart = {
   levels,
   ui,
   street: kanoStreet,
+  rules: kanoRules,
   sounds: { ...KANO_WIND_SOUNDS, ...KANO_CLOTH_SOUNDS, ...KANO_WHIRL_SOUNDS, ...RUSTY_SOUNDS },
   words: KANO_WORDS,
   // K6b: Kano from above (its home, from the first visit), its challenge road and Harmattan Road.
-  city: kanoCity,
+  city: (hooks) => kanoCity(hooks, part.hall !== undefined),
   road: (v, play) => kanoRoad(v, play),
   lane: {
     level: levels['kano-lane'],
@@ -60,6 +63,8 @@ export const part: WorldPart = {
     },
   },
   left: (own, spot) => (spot in KANO_PRICES ? leftOn(readKanoCity(own), spot as KanoBoard) : 0),
+  // KM1 to KM5: Kano's five quick missions (kano.md 6.2).
+  missions: { list: KANO_MISSIONS, icon: kanoMissionIcon },
   ...hall(),
 };
 

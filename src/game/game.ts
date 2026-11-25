@@ -231,7 +231,7 @@ export class Game {
    * try that starts with the garri shield on (S2.7). parcelSaved: the state already has a saved
    * parcel, so well rooms show 5 kobo instead (S2.5 gift rule 6).
    */
-  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash' | 'arena'> = {}): void {
+  begin(gentle: boolean, level: Level = this.level, opts: Pick<RunOptions, 'parcel' | 'parcelSaved' | 'dash' | 'arena' | 'rules'> = {}): void {
     this.level = level;
     this.run = new Run(this.level, { gentle, rooms: this.rooms, ...opts });
     this.newCamera();

@@ -16,7 +16,8 @@ import ogun1 from '../../src/data/levels/ogun-1.json';
 import lagos1 from '../../src/data/levels/lagos-1.json';
 import { PHYSICS } from '../../src/engine/physics';
 import { LevelError, parseLevel, type Level } from '../../src/game/level';
-import { RULES, Run, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { RULES, STEPS_PER_SECOND, type RunEvent } from '../../src/game/run';
+import { Run, KANO_RUN, windFactor } from './kano-run';
 import { KANO_WORDS as FIRST } from '../../src/screens/words';
 import { KANO_WORDS } from '../../src/worlds/kano/words';
 import { formatMoney } from '../../src/game/money';
@@ -109,18 +110,18 @@ describe('kano.md 3.3: wind in the air', () => {
 
   it('wind behind you: a quarter farther', () => {
     const r = jumpFrom(new Run(street(over('back'))));
-    expect(r.far / still.far).toBeCloseTo(1 + RULES.tailwind, 1);
-    expect(RULES.tailwind).toBe(0.25);
+    expect(r.far / still.far).toBeCloseTo(1 + KANO_RUN.tailwind, 1);
+    expect(KANO_RUN.tailwind).toBe(0.25);
   });
 
   it('wind in your face: a quarter shorter', () => {
     const r = jumpFrom(new Run(street(over('face'))));
-    expect(r.far / still.far).toBeCloseTo(1 - RULES.headwind, 1);
-    expect(RULES.headwind).toBe(0.25);
+    expect(r.far / still.far).toBeCloseTo(1 - KANO_RUN.headwind, 1);
+    expect(KANO_RUN.headwind).toBe(0.25);
   });
 
   it('Gentle mode: a headwind takes away only an eighth; a tailwind still gives a quarter', () => {
-    expect(RULES.headwindGentle).toBe(0.125);
+    expect(KANO_RUN.headwindGentle).toBe(0.125);
     const face = jumpFrom(new Run(street(over('face')), { gentle: true }));
     expect(face.far / still.far).toBeCloseTo(1 - 0.125, 1);
     const back = jumpFrom(new Run(street(over('back')), { gentle: true }));
@@ -145,7 +146,7 @@ describe('kano.md 3.3: wind in the air', () => {
 
   it('going back (left) in the air is not changed', () => {
     const run = new Run(street(over('back')));
-    expect(run.windFactor(1000)).toBe(1.25);
+    expect(windFactor(run, 1000)).toBe(1.25);
     run.hero.x = 1200;
     run.steer(-1);
     steps(run, 90);
@@ -167,7 +168,7 @@ describe('kano.md 3.3: wind in the air', () => {
 
   it('only inside a stretch: outside it the air is still', () => {
     const run = new Run(street({ wind: [[2000, 400, 'face']] }));
-    expect([run.windFactor(1999), run.windFactor(2000), run.windFactor(2400), run.windFactor(2401)]).toEqual([1, 0.75, 0.75, 1]);
+    expect([windFactor(run, 1999), windFactor(run, 2000), windFactor(run, 2400), windFactor(run, 2401)]).toEqual([1, 0.75, 0.75, 1]);
     expect(jumpFrom(run).far).toBeCloseTo(still.far, 6);
   });
 });
@@ -206,7 +207,7 @@ describe('kano.md 4.1: kilishi', () => {
     expect(ev.filter((e) => e.type === 'tick')).toHaveLength(2);
     expect(ev).toContainEqual({ type: 'powerEnd', kind: 'kilishi' });
     expect(run.power.kilishi).toBe(0);
-    expect(run.windFactor(1000)).toBe(0.75);
+    expect(windFactor(run, 1000)).toBe(0.75);
   });
 
   it('a fall ends it, like every food', () => {
@@ -227,7 +228,7 @@ describe('kano.md 3.3 and 3.4: the whoosh and the gate', () => {
     expect(at[0]).toBeGreaterThanOrEqual(400);
     expect(at[0]).toBeLessThan(410);
     for (const x of at) expect(x >= 400 && x <= 800).toBe(true);
-    expect(RULES.whooshSteps).toBe(Math.round(0.9 * STEPS_PER_SECOND));
+    expect(KANO_RUN.whooshSteps).toBe(Math.round(0.9 * STEPS_PER_SECOND));
   });
 
   it('through the gate, "Welcome to Kano!" once a play', () => {
@@ -265,7 +266,7 @@ describe('kano.md 3.3 fair rules on every Kano street (as parsed by the game)', 
       const up = -PHYSICS.jumpVy / PHYSICS.holdGravity;
       const rise = (PHYSICS.jumpVy * PHYSICS.jumpVy) / (2 * PHYSICS.holdGravity);
       const down = Math.sqrt((2 * rise) / PHYSICS.gravity);
-      const far = L.runSpeed * (up + down) * (1 - RULES.headwind);
+      const far = L.runSpeed * (up + down) * (1 - KANO_RUN.headwind);
       for (const s of L.wind.filter((q) => q.dir === 'face')) {
         for (const p of pits.filter((q) => q.a < s.x + s.w + 160 && q.b > s.x)) expect(far, `pit at ${p.a}`).toBeGreaterThan(p.w + 2 * RULES.heroHalfW);
       }

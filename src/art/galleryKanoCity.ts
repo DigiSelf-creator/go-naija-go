@@ -12,9 +12,16 @@ import { drawFolkBust, drawFolkFrame, type FolkFrame, type FolkLook } from './fo
 import { CITY_FOLK_SCALE } from './folkCasts';
 import { setInkRatio } from './ink';
 import { INK } from './palette';
-import * as lane from './lane';
-import * as shade from './lane-shade';
-import * as things from './lane-things';
+// Named imports only: a namespace import (`* as`) here made the bundler build module objects in
+// the first load's lane chunk, with a runtime file of its own (K-size).
+import { LANE_CAMERA, ROAD, laneCentre, laneView, project } from './lane';
+import { bake, blitBaked, line, oval, poly, rand, shape, type Baked } from './lane-shade';
+import { LANE_BOXES, bakeLaneThings, drawLaneThing, laneKey } from './lane-things';
+
+/** The lane pieces Kano's Harmattan Road is made from, as the lane session hands them in. */
+const lane = { LANE_CAMERA, ROAD, project };
+const shade = { bake, shape, line, oval, poly, rand };
+const things = { LANE_BOXES, bakeLaneThings, drawLaneThing };
 
 type G = CanvasRenderingContext2D;
 type Kano = typeof import('../worlds/kano/galleryArt');
@@ -141,7 +148,7 @@ function closeUps(g: G, k: Kano, time: number): void {
 function laneFrame(g: G, k: Kano, x: number, y: number, w: number, h: number, time: number): void {
   const look = k.harmattanLook({ lane, shade, things, folk: { drawFolkFrame, drawFolkBust } });
   const dpr = g.getTransform().a;
-  const v = lane.laneView(w, h);
+  const v = laneView(w, h);
   const dist = time * 10;
   g.save();
   g.beginPath();
@@ -151,16 +158,16 @@ function laneFrame(g: G, k: Kano, x: number, y: number, w: number, h: number, ti
   const sky = look.sky(w, v.horizonY);
   if (sky) g.drawImage(sky as CanvasImageSource, 0, 0);
   look.road(g, v, dist);
-  const ppmAt = (z: number): number => v.f / (z + lane.LANE_CAMERA.back);
+  const ppmAt = (z: number): number => v.f / (z + LANE_CAMERA.back);
   const near = look.things(ppmAt(0) * dpr);
   const scen = look.scenery(ppmAt(12) * dpr);
-  const blit = (key: string, set: Map<string, shade.Baked>, px: number, z: number, up = 0): void => {
-    const p = lane.project(v, px, z, up);
+  const blit = (key: string, set: Map<string, Baked>, px: number, z: number, up = 0): void => {
+    const p = project(v, px, z, up);
     const b = set.get(key);
     if (!p || !b) return;
-    shade.blitBaked(g, b, p.x, p.y, p.ppm);
+    blitBaked(g, b, p.x, p.y, p.ppm);
   };
-  const R = lane.ROAD;
+  const R = ROAD;
   for (let d = Math.floor((dist + 60) / 25) * 25; d > dist; d -= 25) {
     const i = Math.round(d / 25);
     const side = i % 2 === 0 ? 1 : -1;
@@ -168,9 +175,9 @@ function laneFrame(g: G, k: Kano, x: number, y: number, w: number, h: number, ti
   }
   blit('busStop', scen, R.half + R.kerb + 2.6, 52);
   const veh: [number, number][] = [[40, 0], [30, 2], [18, 1]];
-  for (const [z, l] of veh) blit(look.danfo(z + 7, l, 0), near, lane.laneCentre(l), z);
-  for (let c = 0; c < 4; c++) blit(things.laneKey('coin', 2), near, lane.laneCentre(2), 9 + c * 3, 0.6);
-  blit(things.laneKey('bulb'), near, lane.laneCentre(0), 12, 0.8);
+  for (const [z, l] of veh) blit(look.danfo(z + 7, l, 0), near, laneCentre(l), z);
+  for (let c = 0; c < 4; c++) blit(laneKey('coin', 2), near, laneCentre(2), 9 + c * 3, 0.6);
+  blit(laneKey('bulb'), near, laneCentre(0), 12, 0.8);
   g.restore();
   g.strokeStyle = INK;
   g.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
@@ -186,10 +193,10 @@ function lanePage(g: G, k: Kano, time: number): void {
   const ppm = 30;
   const tm = look.things(ppm);
   const sc = look.scenery(ppm);
-  const items: [string, Map<string, shade.Baked>][] = [['grainTruck#1', tm], ['danfo#0', tm], ...look.sceneryKeys.map((key): [string, Map<string, shade.Baked>] => [key, sc]), ['busStopBright', sc]];
+  const items: [string, Map<string, Baked>][] = [['grainTruck#1', tm], ['danfo#0', tm], ...look.sceneryKeys.map((key): [string, Map<string, Baked>] => [key, sc]), ['busStopBright', sc]];
   items.forEach(([key, set], i) => {
     const b = set.get(key);
-    if (b) shade.blitBaked(g, b, 380 + (i % 5) * 100 + (key === 'busStopBright' ? 140 : 0), 560 + Math.floor(i / 5) * 130, ppm);
+    if (b) blitBaked(g, b, 380 + (i % 5) * 100 + (key === 'busStopBright' ? 140 : 0), 560 + Math.floor(i / 5) * 130, ppm);
   });
   g.save();
   g.translate(880, 700);
