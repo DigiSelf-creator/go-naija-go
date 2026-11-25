@@ -84,13 +84,15 @@ test('Kurmi by hand from Kano\'s home: the gate, wind, kilishi, the bus, the cle
   // The cleared card: Kurmi's line, Take it home, Next street (K3b: on to Kofar Mata) and Play again (no Challenge road yet).
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
-  const money = (await page.evaluate(() => window.__game!.run.kobo)) * 10;
+  // K6b (city.md W3, as Ogun's streets): the card's money is the coins plus the ₦5 win prize; the best is the coins.
+  const coins = (await page.evaluate(() => window.__game!.run.kobo)) * 10;
+  const money = coins + 500;
   await expect(dialog.getByText(`Kurmi is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
   for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
   const s = await saved(page);
   expect(s.states?.kano?.streets?.['1']?.done).toBe(true);
-  expect(s.states?.kano?.streets?.['1']?.best).toBe(money);
+  expect(s.states?.kano?.streets?.['1']?.best).toBe(coins);
   expect(s.states?.kano?.arrived).toBe(true);
   expect(s.states?.lagos).toEqual(DONE);
   expect(s.city?.kobo).toBe(1000 + money);
@@ -104,7 +106,7 @@ test('Kurmi by hand from Kano\'s home: the gate, wind, kilishi, the bus, the cle
   expect(errors).toEqual([]);
 });
 
-test('Kurmi\'s Pause: Home back to Kano, no Challenge road', async ({ page }) => {
+test('Kurmi\'s Pause: Challenge road (K6b, Pause as Lagos and Ogun) opens Kano\'s road; Home back to Kano', async ({ page }) => {
   await page.goto('./');
   await page.evaluate(
     ({ look, p }) => {
@@ -123,7 +125,20 @@ test('Kurmi\'s Pause: Home back to Kano, no Challenge road', async ({ page }) =>
   await page.getByRole('button', { name: 'Pause' }).tap();
   const pause = page.getByRole('dialog', { name: 'Paused' });
   await expect(pause).toBeVisible();
-  await expect(pause.getByRole('button', { name: 'Challenge road' })).toHaveCount(0);
+  // K6b: Kano has its challenge road now; Pause is Lagos's (kano.md part 8), so it shows it.
+  await expect(pause.getByRole('button', { name: 'Challenge road' })).toBeVisible();
+  await waitOutTapLock(page);
+  await pause.getByRole('button', { name: 'Challenge road' }).tap();
+  await expect.poll(() => screenNow(page)).toBe('road');
+  expect(await page.locator('.road-stop').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset['where']))).toEqual(['toOgun', 'kurmi', 'lane', 'kofarMata', 'dawanau', 'hall', 'wayOn']);
+  // Back in Kurmi, Pause, Home: Kano's city.
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.locator('[data-where="kurmi"]').tap();
+  await page.waitForTimeout(PAST_DOUBLE_TAP_MS);
+  await page.getByRole('dialog').getByRole('button', { name: /^(Run|Play) Kurmi$/ }).tap();
+  await expect.poll(() => screenNow(page)).toBe('play');
+  await page.getByRole('button', { name: 'Pause' }).tap();
+  await expect(pause).toBeVisible();
   await waitOutTapLock(page);
   await pause.getByRole('button', { name: 'Home' }).tap();
   await expect.poll(() => screenNow(page)).toBe('kano');

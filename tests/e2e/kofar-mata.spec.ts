@@ -167,13 +167,15 @@ test('Kofar Mata by hand from Kano\'s home: springy cloth, the groundnut store a
   // The cleared card: Kofar Mata's line and the parcel's; Take it home, Next street (K4b: on to Dawanau) and Play again.
   const dialog = page.getByRole('dialog', { name: 'Street cleared!' });
   await expect(dialog).toBeVisible({ timeout: 8000 });
-  const money = (await page.evaluate(() => window.__game!.run.kobo)) * 10;
+  // K6b (city.md W3, as Ogun's streets): the card's money is the coins plus the ₦5 win prize; the best is the coins.
+  const coins = (await page.evaluate(() => window.__game!.run.kobo)) * 10;
+  const money = coins + 500;
   await expect(dialog.getByText(`Kofar Mata is moving again, thanks to you! You got ${formatMoney(money)}.`)).toBeVisible();
   await expect(dialog.getByText('Your garri parcel is saved for Borehole Hall.')).toBeVisible();
   for (const b of ['Take it home', 'Next street', 'Play again']) await expect(dialog.getByRole('button', { name: b, exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Challenge road', exact: true })).toHaveCount(0);
   const s = await saved(page);
-  expect(s.states?.kano?.streets?.['2']).toEqual({ done: true, best: money });
+  expect(s.states?.kano?.streets?.['2']).toEqual({ done: true, best: coins });
   expect(s.states?.kano?.streets?.['1']).toEqual({ done: true, best: 900 });
   expect(s.states?.kano?.parcel).toBe(true);
   expect(s.states?.lagos).toEqual(DONE);
