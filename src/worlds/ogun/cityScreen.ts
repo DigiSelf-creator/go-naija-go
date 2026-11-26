@@ -548,7 +548,30 @@ export class OgunCityScreen implements WorldCity {
     const vh = this.view.h;
     const inView = (b: Box): boolean => b.x >= 0 && b.y >= 0 && b.x + b.w <= vw && b.y + b.h <= vh;
     const strict = (b: Box): boolean => inView(b) && !hard.some((t) => near(t, b, 2)) && !taken.some((t) => near(t, b, 2));
-    // A tiny screen with no clear room: never over a button or off the map; a pin or sign may be under it.
+    const pinBoxes = hard.slice(0, this.pins.length);
+    // No clear room near its place: anywhere on the map that is clear of every pin, button and sign,
+    // with no gap (a sign on a small screen never covers a shown pin; K7 as Kano).
+    const snug = (b: Box): boolean => inView(b) && !pinBoxes.some((t) => near(t, b, 0)) && !this.covers.some((t) => near(t, b, 2)) && !(this.hintWant && near(this.hintWant, b, 0)) && !taken.some((t) => near(t, b, 0));
+    /** The clear spot nearest its own place, 8 px apart over the whole map. */
+    const scan = (want: Box): Box | null => {
+      let best: Box | null = null;
+      let bestD = Infinity;
+      for (let y = 0; y + want.h <= vh; y += 8)
+        for (let x = 0; x + want.w <= vw; x += 8) {
+          const d = Math.hypot(x - want.x, (y - want.y) / 0.75);
+          if (d >= bestD) continue;
+          const c = { ...want, x, y };
+          if (snug(c)) {
+            best = c;
+            bestD = d;
+          }
+        }
+      return best;
+    };
+    // Only the tiny screen (320 x 240, city.md W15) lets a short board stand over a pin or sign,
+    // never over a button or off the map. Anywhere else a sign with no clear spot hides, and an
+    // edge arrow points to its place (K7 as Kano): a shown pin is never covered.
+    const tiny = vw < 400;
     const loose = (b: Box): boolean => inView(b) && !this.covers.some((t) => near(t, b, 2));
     /** Its own place, its last place, then rings round its own place, 8 px apart (the nearest clear one). */
     const fit = (id: string, want: Box, clear = strict): Box | null => {
@@ -578,7 +601,7 @@ export class OgunCityScreen implements WorldCity {
     };
     this.boardShort.clear();
     this.roomless.clear();
-    /** No room at all on this screen: it hides until the camera moves (never over a button). */
+    /** No room at all on this screen: it hides until the camera moves (never over a button or pin); its edge arrow shows the way (drawArrows). */
     const hide = (id: string, b: Box): Box => {
       this.roomless.add(id);
       return { ...b, x: -10_000 - b.w };
@@ -595,7 +618,7 @@ export class OgunCityScreen implements WorldCity {
         else if (ctx) {
           // No room at full size: the short stick (W15).
           const short = at(foot, this.relBox(`b|${b}|${left}|${done}|s`, () => priceBoardBox(ctx, 0, 0, boardOf(b), left, { done, short: true })));
-          const s2 = fit(`b|${b}`, short) ?? fit(`b|${b}`, short, loose);
+          const s2 = fit(`b|${b}`, short) ?? fit(`b|${b}`, short, snug) ?? scan(short) ?? (tiny ? fit(`b|${b}`, short, loose) : null);
           if (s2) {
             box = s2;
             this.boardShort.add(b);
@@ -614,7 +637,7 @@ export class OgunCityScreen implements WorldCity {
       const box0 = ctx ? at(foot, this.relBox(`t|${text}|${full}`, () => trayBubbleBox(ctx, 0, 0, text, full))) : { x: foot.x - 50, y: foot.y - 34, w: 100, h: 34 };
       let box = box0;
       if (!offScreen(box0)) {
-        box = fit(`t|${p}`, box0) ?? fit(`t|${p}`, box0, loose) ?? hide(p, box0);
+        box = fit(`t|${p}`, box0) ?? fit(`t|${p}`, box0, snug) ?? scan(box0) ?? hide(p, box0);
         keep(`t|${p}`, box0, box);
       }
       taken.push(box);
@@ -649,6 +672,9 @@ export class OgunCityScreen implements WorldCity {
     }
     for (const [b, box] of this.boardBox) if (off(box) && !this.roomless.has(b)) want.push({ icon: OGUN_PRICES[b].bucket, at: { x: box.x + box.w / 2, y: box.y + box.h / 2 }, go: () => this.goPay(b), label: OGUN_CITY_WORDS.board[b] });
     for (const [p, box] of this.bubbleBox) if (off(box) && !this.roomless.has(p)) want.push({ icon: 'naira', at: { x: box.x + box.w / 2, y: box.y + box.h / 2 }, go: () => this.walkTo(OGUN_DOORS[p]), label: OGUN_CITY_WORDS.placeName[p] });
+    // K7 as Kano: a board or bubble with no room on the map points the way to its mat or door.
+    for (const b of this.boardBox.keys()) if (this.roomless.has(b)) want.push({ icon: OGUN_PRICES[b].bucket, at: this.toScreen(OGUN_MATS[b]), go: () => this.goPay(b), label: OGUN_CITY_WORDS.board[b] });
+    for (const p of this.bubbleBox.keys()) if (this.roomless.has(p)) want.push({ icon: 'naira', at: this.toScreen(OGUN_DOORS[p]), go: () => this.walkTo(OGUN_DOORS[p]), label: OGUN_CITY_WORDS.placeName[p] });
     const avoid: Box[] = [...this.covers, ...(this.hintWant ? [this.hintWant] : []), ...[...this.boardBox.values(), ...this.bubbleBox.values()].filter(onView), ...this.pins.map((p) => this.pinBox(p.spot, p.word)).filter(onView)];
     this.arrowBox = [];
     while (this.arrowEls.length < want.length) {
@@ -661,8 +687,10 @@ export class OgunCityScreen implements WorldCity {
       const a = want[i];
       el.hidden = !a;
       if (!a) return;
-      const base = edgeArrowPlace(a.at.x, a.at.y, vw, vh, top, inset);
-      const spot = base ? this.arrowSpot(base, avoid, inset) : null;
+      // A place on the map but with no room for its sign: the nearest spot on the edge band.
+      const clamp = (v: number, lo: number, hi: number): number => Math.min(Math.max(v, lo), Math.max(lo, hi));
+      const base = edgeArrowPlace(a.at.x, a.at.y, vw, vh, top, inset) ?? { x: clamp(a.at.x, inset, vw - inset), y: clamp(a.at.y, top + inset, vh - inset) };
+      const spot = this.arrowSpot(base, avoid, inset);
       if (!spot) {
         el.hidden = true;
         return;
