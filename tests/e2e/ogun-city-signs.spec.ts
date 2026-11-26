@@ -19,6 +19,21 @@ const CITY = { kobo: 400, power: 0, tech: 0, fixed: ['potholes'], fixes: 1, buil
 /** Ogun's city with the adire market built and a full tray, and no other fix: five boards, two pins, a bubble. */
 const OGUN_CITY = { fixed: [], fixes: 0, built: ['adire'], trays: { adire: 120 }, boom: 4, hints: ['walk', 'taxOgun', 'pin', 'gate'] };
 const SAVE = { v: 2, states: { lagos: LAGOS, ogun: { arrived: true, streets: { 1: D, 2: D, 3: D }, hall: D, city: OGUN_CITY } }, city: CITY, where: 'ogun' };
+/** The road fixed and the garri mill built too: two bubbles (qa's 640 x 200 case). */
+const OGUN_CITY_B = { ...OGUN_CITY, fixed: ['potholes'], fixes: 1, built: ['adire', 'mill'], trays: { adire: 120, mill: 60 } };
+const SAVE_B = { ...SAVE, states: { ...SAVE.states, ogun: { ...SAVE.states.ogun, city: OGUN_CITY_B } } };
+/** qa mimicked CI's fonts with a wide mono font on the canvas: signs measure wider. */
+const MONO = (): void => {
+  const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font')!;
+  Object.defineProperty(CanvasRenderingContext2D.prototype, 'font', {
+    get(this: CanvasRenderingContext2D) {
+      return d.get!.call(this);
+    },
+    set(this: CanvasRenderingContext2D, v: string) {
+      d.set!.call(this, v.replace(/(\d+(?:\.\d+)?px)\s.*$/, '$1 "DejaVu Sans Mono", monospace'));
+    },
+  });
+};
 
 type Box = { x: number; y: number; w: number; h: number };
 type Shot = { boards: Record<string, Box>; bubbles: Record<string, Box>; pins: Record<string, Box>; arrows: { icon: string; x: number; y: number; tap: number; for: string }[]; folk: number; roomless: string[]; short: string[] };
@@ -26,9 +41,10 @@ const shot = (page: Page) => page.evaluate(() => (window.__game!.ogunCity as unk
 const settle = (page: Page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))));
 const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w - 0.5 && b.x < a.x + a.w - 0.5 && a.y < b.y + b.h - 0.5 && b.y < a.y + a.h - 0.5;
 const NAMES: Record<string, string> = { potholes: 'New road', adire: 'Adire market', dryTaps: 'Water pump', lightsOut: 'Lamps', slowInternet: 'Mast', mill: 'Garri mill', kola: 'Kola market' };
+const PLACE_NAMES: Record<string, string> = { adire: 'the adire market', mill: 'the garri mill', kola: 'the kola market' };
 const PIN_NAMES: Record<string, string> = { potholes: 'Potholes', dryTaps: 'Dry taps', lightsOut: 'Lights out', slowInternet: 'Slow internet', badRoad: 'Bad road' };
 
-async function open(page: Page): Promise<string[]> {
+async function open(page: Page, save: object = SAVE): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -40,7 +56,7 @@ async function open(page: Page): Promise<string[]> {
       localStorage.setItem('gidi-progress', p);
       localStorage.setItem('gidi-busRide', 'false');
     },
-    { look: LOOK, p: JSON.stringify(SAVE) },
+    { look: LOOK, p: JSON.stringify(save) },
   );
   await page.reload();
   await page.getByRole('button', { name: 'Play' }).tap();
@@ -70,9 +86,10 @@ async function check(page: Page, at: string, found: string[], tiny = false): Pro
   const centreOff = (b: Box): boolean => b.x + b.w / 2 < 0 || b.y + b.h / 2 < 0 || b.x + b.w / 2 > vw || b.y + b.h / 2 > vh;
   const signs: [string, Box][] = [...Object.entries(s.boards).map(([k, b]) => [`board ${k}`, b] as [string, Box]), ...Object.entries(s.bubbles).map(([k, b]) => [`bubble ${k}`, b] as [string, Box])];
   for (const [name, b] of signs) {
-    const label = name.startsWith('board') ? NAMES[name.slice(6)]! : 'the adire market';
+    const label = name.startsWith('board') ? NAMES[name.slice(6)]! : PLACE_NAMES[name.slice(7)]!;
     if (s.roomless.includes(name.split(' ')[1]!)) {
-      if (!tiny) bad(`${name} found no room`);
+      // No room on the map: it hides, and (but on the tiny screen) an edge arrow shows its place.
+      if (!tiny && !s.arrows.some((a) => a.for === label)) bad(`${name} found no room and has no arrow`);
       continue;
     }
     if (centreOff(b)) {
@@ -99,14 +116,21 @@ async function check(page: Page, at: string, found: string[], tiny = false): Pro
   }
 }
 
-test('OG-R43 b: Ogun\'s boards, bubble and pins stay whole and clear on small screens, or get an edge arrow that works', async ({ page }) => {
-  test.setTimeout(120_000);
-  const errors = await open(page);
+for (const [run, save, mono] of [
+  ['', SAVE, false],
+  [' (mono font)', SAVE, true],
+  [' (mill too, mono font)', SAVE_B, true],
+] as const)
+test(`OG-R43 b: Ogun's boards, bubble and pins stay whole and clear on small screens, or get an edge arrow that works${run}`, async ({ page }) => {
+  test.setTimeout(150_000);
+  if (mono) await page.addInitScript(MONO);
+  const errors = await open(page, save);
   const found: string[] = [];
   let arrows = 0;
   for (const size of [
     { width: 320, height: 240 },
     { width: 568, height: 320 },
+    { width: 640, height: 200 },
     { width: 851, height: 393 },
   ]) {
     await page.setViewportSize(size);
